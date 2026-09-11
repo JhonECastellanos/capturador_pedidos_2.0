@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #1f2a3c;
+  --color-ink-soft: #52607a;
+  --color-ink-faint: #8b95a8;
+
+  --color-paper: #eef0ea;
+  --color-paper-raised: #ffffff;
+  --color-paper-sunken: #e3e6dd;
+
+  --color-accent: #e29b2b;
+  --color-accent-dark: #b87c17;
+  --color-accent-soft: #fbebd0;
+
+  --color-teal: #2f7a6c;
+  --color-teal-soft: #dcece8;
+
+  --color-success: #3c7a4d;
+  --color-success-soft: #dcede0;
+
+  --color-danger: #b5442e;
+  --color-danger-soft: #f3ded9;
+
+  --color-line: #d6dace;
+
+  --font-display: "Space Grotesk", ui-sans-serif, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: var(--color-paper-sunken);
+  overscroll-behavior-y: none;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+.app-viewport {
+  min-height: 100dvh;
+  width: 100%;
+  background: var(--color-paper);
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 1280px) {
+  .app-viewport-outer {
+    min-height: 100dvh;
+    display: flex;
+    justify-content: center;
+    background: var(--color-paper-sunken);
+    padding: 2rem 0;
+  }
+  .app-viewport {
+    min-height: calc(100dvh - 4rem);
+    max-width: 640px;
+    border-radius: 1.5rem;
+    border: 1px solid var(--color-line);
+    box-shadow: 0 25px 50px -25px rgba(31, 42, 60, 0.3);
+    overflow: hidden;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.ticket-edge {
+  background-image: radial-gradient(
+    circle,
+    var(--color-paper-sunken) 3px,
+    transparent 3.5px
+  );
+  background-size: 14px 14px;
+  background-position: left center;
+  background-repeat: repeat-x;
+  height: 3px;
+  flex-shrink: 0;
+}
