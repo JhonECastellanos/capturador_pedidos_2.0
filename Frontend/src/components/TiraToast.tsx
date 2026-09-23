@@ -8,29 +8,24 @@ const clasesPorTipo = {
 
 interface TiraToastProps {
   aviso: Aviso | null;
-  /** Se llama después de ejecutar Deshacer (para cerrar la tira). */
+  /** Se llama después de ejecutar Deshacer (para cerrar el aviso). */
   alCerrar: () => void;
-  /**
-   * Flotante: se muestra sobre el contenedor sin mover el contenido.
-   * El padre debe ser `relative`. Fija: tira en flujo sobre la barra inferior.
-   */
-  flotante?: boolean;
 }
 
 /**
- * Tira de confirmación por cada elemento agregado.
- * En flujo va fija sobre la barra inferior;
- * flotante va sobre el contenedor de la lista.
+ * Aviso flotante al centro de la pantalla: no mueve el contenido,
+ * se lee de un vistazo y desaparece rápido (ver `useAviso`).
+ * No bloquea la interacción salvo el botón Deshacer.
  */
-export function TiraToast({ aviso, alCerrar, flotante = false }: TiraToastProps) {
+export function TiraToast({ aviso, alCerrar }: TiraToastProps) {
   if (!aviso) return null;
   return (
-    <div className={flotante ? "pointer-events-none absolute inset-x-2 bottom-2 z-20" : "flex-shrink-0 px-5 pb-2 md:px-6 lg:px-8"}>
+    <div className="pointer-events-none fixed inset-0 z-[70] flex items-center justify-center px-6">
       <div
         role="status"
-        className={`flex items-center justify-between gap-3 rounded-xl px-4 py-2.5 text-[13px] font-semibold text-white shadow-lg ${clasesPorTipo[aviso.tipo]} ${flotante ? "pointer-events-auto" : ""}`}
+        className={`pointer-events-auto flex max-w-sm items-center justify-between gap-3 rounded-2xl px-4 py-3 text-[13px] font-semibold text-white shadow-2xl ${clasesPorTipo[aviso.tipo]}`}
       >
-        <span className="min-w-0 truncate">{aviso.mensaje}</span>
+        <span className="min-w-0">{aviso.mensaje}</span>
         {aviso.deshacer && (
           <button
             type="button"

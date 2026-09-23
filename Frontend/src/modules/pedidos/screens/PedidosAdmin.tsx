@@ -1,15 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { ConfirmarAccion } from "../../../components/ConfirmarAccion";
 import { GuiaAyuda } from "../../../components/GuiaAyuda";
-import { IconX } from "../../../components/Icons";
-import { Paginacion, POR_PAGINA, paginar } from "../../../components/Paginacion";
-import { TiraToast } from "../../../components/TiraToast";
-import { useAviso } from "../../../components/useAviso";
+import { Paginacion } from "../../../components/Paginacion";
+import { POR_PAGINA, paginar } from "../../../utils/paginacion";
 import { useOperaciones } from "../../../context/OperacionesContext";
 import type { EstadoPedido } from "../../../types";
 import { formatoMoneda } from "../../../utils/formato";
 import { exportarPedidosCSV } from "../../../utils/exportar";
 import { EtiquetaPago } from "../../administracion/components/EtiquetaPago";
+import { PedidoDetalle } from "../../ventas/screens/PedidoDetalle";
 
 type Segmento = "hoy" | "historial";
 type Periodo = "hoy" | "ayer" | "semana" | "mes" | "todo";
@@ -65,8 +63,16 @@ function formatoFechaHora(iso: string): string {
   return new Date(iso).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
 }
 
+/** Color del badge según el estado del pedido. */
+function claseEstado(estado: EstadoPedido): string {
+  if (estado === "entregado") return "bg-success-soft text-success";
+  if (estado === "cancelado") return "bg-danger-soft text-danger";
+  if (estado === "en-preparacion") return "bg-accent-soft text-accent-dark";
+  return "bg-paper-sunken text-ink-soft";
+}
+
 export function PedidosAdmin() {
-  const { pedidos, obtenerCliente, actualizarEstadoPedido, adjuntarComprobante } = useOperaciones();
+  const { pedidos, obtenerCliente } = useOperaciones();
   const [segmento, setSegmento] = useState<Segmento>("hoy");
   const [periodo, setPeriodo] = useState<Periodo>("todo");
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>("todos");
@@ -76,8 +82,6 @@ export function PedidosAdmin() {
   const [mostrarFiltroFecha, setMostrarFiltroFecha] = useState(false);
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const [pagina, setPagina] = useState(1);
-  const [confirmarCancelarId, setConfirmarCancelarId] = useState<string | null>(null);
-  const { aviso, mostrarAviso, cerrarAviso } = useAviso();
 
   const hoy = useMemo(() => new Date(), []);
 
@@ -106,6 +110,11 @@ export function PedidosAdmin() {
   }, [busqueda, fechaDesde, fechaHasta, filtroEstado, hoy, obtenerCliente, pedidos, periodo, segmento]);
 
   const conteoHoy = pedidos.filter((p) => esMismoDia(p.creadoEn, hoy)).length;
+
+  // El detalle se abre a pantalla completa y compacto (una sola pantalla, sin scroll general).
+  if (pedidoDetalle) {
+    return <PedidoDetalle pedido={pedidoDetalle} onVolver={() => setDetalleId(null)} varianteHeader="compacto" />;
+  }
 
   return (
     <div className="flex h-full flex-col min-h-0">
@@ -254,9 +263,14 @@ export function PedidosAdmin() {
                   <div className="min-w-0">
                     <p className="font-mono text-[12px] font-semibold text-ink-faint">{pedido.numero} · {formatoFechaHora(pedido.creadoEn)}</p>
                     <p className="mt-1 truncate text-[14px] font-semibold text-ink">{cliente?.nombre ?? "Cliente"} {cliente?.alias ? `“${cliente.alias}”` : ""}</p>
-                    <p className="text-[12px] text-ink-soft">{pedido.lineas.length} referencias · {formatoMoneda(pedido.total)} · <span className="capitalize">{pedido.estado.replace("-", " ")}</span></p>
+                    <p className="text-[12px] text-ink-soft">{pedido.lineas.length} referencias · {formatoMoneda(pedido.total)}</p>
                   </div>
-                  <EtiquetaPago metodo={pedido.pago.metodo} pendiente={pedido.pago.saldoPendiente > 0} />
+                  <div className="flex flex-shrink-0 flex-col items-end gap-1">
+                    <span className={`rounded-full px-2.5 py-1 text-[10.5px] font-semibold capitalize ${claseEstado(pedido.estado)}`}>
+                      {pedido.estado.replace("-", " ")}
+                    </span>
+                    <EtiquetaPago metodo={pedido.pago.metodo} pendiente={pedido.pago.saldoPendiente > 0} />
+                  </div>
                 </div>
                 <p className="mt-2 text-[11.5px] font-semibold text-teal">Ver detalle auditado →</p>
               </article>
@@ -268,135 +282,10 @@ export function PedidosAdmin() {
         </div>
       </div>
 
-      <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
-
       {/* Paginación fija */}
       <div className="flex-shrink-0 mt-2">
         <Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil(pedidosFiltrados.length / POR_PAGINA))} total={pedidosFiltrados.length} porPagina={POR_PAGINA} onChange={setPagina} />
       </div>
-
-      <ConfirmarAccion
-        abierto={confirmarCancelarId !== null}
-        titulo="Cancelar pedido"
-        mensaje={`Se cancelará ${pedidos.find((p) => p.id === confirmarCancelarId)?.numero ?? "el pedido"} y se reversan stock, caja y cartera. Esta acción queda auditada.`}
-        textoConfirmar="Sí, cancelar"
-        tono="peligro"
-        alCancelar={() => setConfirmarCancelarId(null)}
-        alConfirmar={() => {
-          if (confirmarCancelarId) {
-            const numero = pedidos.find((p) => p.id === confirmarCancelarId)?.numero ?? "";
-            actualizarEstadoPedido(confirmarCancelarId, "cancelado");
-            setDetalleId(null);
-            setConfirmarCancelarId(null);
-            mostrarAviso(`Pedido ${numero} cancelado · reverso aplicado`, "exito");
-          }
-        }}
-      />
-
-      {/* Hoja detalle - bottom sheet */}
-      {pedidoDetalle && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Detalle pedido"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-0 lg:items-center lg:p-6"
-          onClick={() => setDetalleId(null)}
-        >
-          <div
-            className="max-h-[85dvh] w-full max-w-lg overflow-y-auto no-scrollbar rounded-t-2xl bg-paper-raised px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-5 lg:rounded-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="font-mono text-[12px] font-semibold text-ink-faint">{pedidoDetalle.numero}</p>
-                <h3 className="mt-1 text-[16px] font-semibold text-ink">{obtenerCliente(pedidoDetalle.clienteId)?.nombre ?? "Cliente"}</h3>
-                <p className="text-[12px] text-ink-soft">{formatoFechaHora(pedidoDetalle.creadoEn)} · {pedidoDetalle.lineas.length} referencias</p>
-              </div>
-              <button type="button" onClick={() => setDetalleId(null)} aria-label="Cerrar" className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-faint active:bg-paper-sunken">
-                <IconX width={20} height={20} />
-              </button>
-            </div>
-
-            <div className="mt-4 rounded-xl border border-line p-3">
-              <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Productos</p>
-              <ul className="mt-2 divide-y divide-line">
-                {pedidoDetalle.lineas.map((linea) => (
-                  <li key={linea.productoId} className="flex justify-between gap-3 py-2 text-[13px]">
-                    <span className="truncate text-ink">{linea.cantidad} × {linea.nombre}</span>
-                    <span className="font-mono text-ink">{formatoMoneda(linea.subtotal)}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-3 flex items-center justify-between">
-                <span className="text-[13px] font-semibold text-ink">Total</span>
-                <span className="font-mono text-[16px] font-semibold text-ink">{formatoMoneda(pedidoDetalle.total)}</span>
-              </div>
-              <div className="mt-1 flex items-center justify-between text-[12px]">
-                <span className="text-ink-soft">Pago {pedidoDetalle.pago.metodo}</span>
-                <span className={pedidoDetalle.pago.saldoPendiente > 0 ? "font-semibold text-danger" : "font-semibold text-success"}>{pedidoDetalle.pago.saldoPendiente > 0 ? `Pendiente ${formatoMoneda(pedidoDetalle.pago.saldoPendiente)}` : "Pagado"}</span>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Estado auditado</p>
-              <div className="mt-2 space-y-2">
-                {pedidoDetalle.historialEstados.map((entrada, idx) => (
-                  <div key={`${entrada.fecha}-${idx}`} className="flex items-center gap-3 rounded-lg bg-paper-sunken px-3 py-2.5">
-                    <span className={`h-2.5 w-2.5 rounded-full ${entrada.estado === "entregado" ? "bg-success" : entrada.estado === "cancelado" ? "bg-danger" : entrada.estado === "en-preparacion" ? "bg-accent" : "bg-ink-faint"}`} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] font-medium capitalize text-ink">{entrada.estado.replace("-", " ")}</p>
-                      <p className="text-[11.5px] text-ink-soft">{entrada.usuarioId} · {formatoFechaHora(entrada.fecha)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                {(["pendiente", "en-preparacion", "entregado", "cancelado"] as EstadoPedido[]).map((estado) => (
-                  <button
-                    key={estado}
-                    type="button"
-                    disabled={pedidoDetalle.estado === estado}
-                    onClick={() => {
-                      if (estado === "cancelado") {
-                        setConfirmarCancelarId(pedidoDetalle.id);
-                        return;
-                      }
-                      actualizarEstadoPedido(pedidoDetalle.id, estado);
-                      mostrarAviso(`Pedido ${pedidoDetalle.numero} → ${estado.replace("-", " ")}`, "exito");
-                    }}
-                    className={`rounded-lg border px-3 py-2.5 text-[12px] font-semibold capitalize ${pedidoDetalle.estado === estado ? "border-ink bg-ink text-white" : estado === "cancelado" ? "border-danger-soft bg-danger-soft text-danger" : "border-line bg-paper text-ink active:bg-paper-sunken"}`}
-                  >
-                    {estado.replace("-", " ")}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Comprobante</p>
-              <label className="mt-2 flex cursor-pointer items-center justify-center rounded-xl border border-dashed border-line px-4 py-3 text-[13px] font-semibold text-ink-soft active:bg-paper-sunken">
-                <input
-                  type="file"
-                  accept="image/*,.pdf"
-                  className="sr-only"
-                  onChange={(evento) => {
-                    const archivo = evento.target.files?.[0];
-                    if (archivo) void adjuntarComprobante(pedidoDetalle.id, archivo);
-                  }}
-                />
-                {pedidoDetalle.comprobantePagoUrl ? "Cambiar comprobante" : "Adjuntar pago (foto/PDF)"}
-              </label>
-              {pedidoDetalle.comprobantePagoUrl && (
-                <a href={pedidoDetalle.comprobantePagoUrl} target="_blank" rel="noreferrer" className="mt-2 block truncate text-[12px] text-teal underline">
-                  {pedidoDetalle.comprobantePagoNombre}
-                </a>
-              )}
-            </div>
-
-            <button type="button" onClick={() => setDetalleId(null)} className="mt-6 w-full rounded-xl bg-ink py-3 text-[13px] font-semibold text-white active:bg-ink/90">Cerrar</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -25,6 +25,12 @@ const iconosPorTono = {
  * (cancelar pedido, cambiar precio, abonar, eliminar, ajustar stock).
  * Hoja inferior en móvil, diálogo centrado en escritorio.
  */
+/**
+ * Confirmación antes de operaciones críticas
+ * (cancelar pedido, cambiar precio, abonar, eliminar, ajustar stock…).
+ * Se muestra como un módulo flotante al centro de la pantalla, con el
+ * mismo diseño de la app en todos los módulos.
+ */
 export function ConfirmarAccion({
   abierto,
   titulo,
@@ -40,11 +46,11 @@ export function ConfirmarAccion({
       role="dialog"
       aria-modal="true"
       aria-label={titulo}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/50 p-0 sm:items-center sm:p-6"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/50 p-6"
       onClick={alCancelar}
     >
       <div
-        className="w-full max-w-sm rounded-t-2xl bg-paper-raised px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 shadow-2xl sm:rounded-2xl"
+        className="w-full max-w-sm rounded-2xl border border-line bg-paper-raised px-5 py-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3">

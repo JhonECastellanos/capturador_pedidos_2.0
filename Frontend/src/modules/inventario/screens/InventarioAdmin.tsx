@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { BarraInferior } from "../../../components/BarraInferior";
 import { Boton } from "../../../components/Boton";
 import { ConfirmarAccion } from "../../../components/ConfirmarAccion";
 import { GuiaAyuda } from "../../../components/GuiaAyuda";
 import { IconArrowLeft, IconChartBar, IconChevronRight, IconClipboard, IconPackage, IconPlus } from "../../../components/Icons";
-import { Paginacion, POR_PAGINA, paginar } from "../../../components/Paginacion";
+import { Paginacion } from "../../../components/Paginacion";
+import { POR_PAGINA, paginar } from "../../../utils/paginacion";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
 import { VistaImagenProducto } from "../../../components/VistaImagenProducto";
 import { useOperaciones } from "../../../context/OperacionesContext";
+import { lineasContadasDe, resumenConteo } from "../../../dominio/servicios";
 import { categorias } from "../../../data/semilla";
 import type { NuevoProducto } from "../../../types";
 import { formatoMoneda } from "../../../utils/formato";
@@ -50,10 +53,14 @@ export function InventarioAdmin() {
   const [turno, setTurno] = useState("mañana");
   const [conteoActivoId, setConteoActivoId] = useState<string | null>(null);
   const [indice, setIndice] = useState(0);
+  const [borradorConteo, setBorradorConteo] = useState<Record<string, string>>({});
+  const [conteoDetalleId, setConteoDetalleId] = useState<string | null>(null);
+  const [paginaConteos, setPaginaConteos] = useState(1);
   // General filtros
   const [busquedaGeneral, setBusquedaGeneral] = useState("");
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstadoInv>("todos");
   // Ajuste manual
+  const [pasoAjuste, setPasoAjuste] = useState<1 | 2>(1);
   const [mostrarAjusteManual, setMostrarAjusteManual] = useState(false);
   const [busquedaAjuste, setBusquedaAjuste] = useState("");
   const [productoAjusteId, setProductoAjusteId] = useState<string | null>(null);
@@ -70,10 +77,17 @@ export function InventarioAdmin() {
   useEffect(() => { setPagina(1); }, [busquedaGeneral, filtroEstado, vista]);
 
   const conteoEnCurso = useMemo(() => conteos.find((c) => c.id === conteoActivoId) ?? conteos.find((c) => c.estado === "en-curso") ?? null, [conteoActivoId, conteos]);
+  const conteoDetalle = useMemo(() => conteos.find((c) => c.id === conteoDetalleId) ?? null, [conteoDetalleId, conteos]);
+  const conteosOrdenados = useMemo(
+    () => [...conteos].sort((a, b) => (b.iniciadoEn < a.iniciadoEn ? -1 : b.iniciadoEn > a.iniciadoEn ? 1 : 0)),
+    [conteos],
+  );
   const lineasConDiferencia = useMemo(() => {
     const confirmados = conteos.filter((c) => c.estado === "confirmado");
     return confirmados.flatMap((conteo) =>
-      conteo.lineas.filter((l) => l.diferencia !== 0).map((l) => ({ ...l, conteoId: conteo.id, turno: conteo.turno, usuarioId: conteo.usuarioId, finalizadoEn: conteo.finalizadoEn ?? conteo.iniciadoEn })),
+      lineasContadasDe(conteo)
+        .filter((l) => l.diferencia !== 0)
+        .map((l) => ({ ...l, conteoId: conteo.id, turno: conteo.turno, usuarioId: conteo.usuarioId, finalizadoEn: conteo.finalizadoEn ?? conteo.iniciadoEn })),
     );
   }, [conteos]);
 
@@ -127,6 +141,8 @@ export function InventarioAdmin() {
     const conteo = iniciarConteo(tipo, cantidad, turno);
     setConteoActivoId(conteo.id);
     setIndice(0);
+    setBorradorConteo({});
+    setConteoDetalleId(null);
     mostrarAviso(`Conteo ${tipo} iniciado · turno ${turno}`, "exito");
   }
 
@@ -142,10 +158,22 @@ export function InventarioAdmin() {
     setComentarioAjuste("");
     setMotivoAjuste("corrección");
     setMostrarAjusteManual(false);
+    setPasoAjuste(1);
   }
 
   const productoAjuste = productoAjusteId ? inventario.find((p) => p.id === productoAjusteId) : null;
   const lineaActual = conteoEnCurso ? conteoEnCurso.lineas[indice] : null;
+  // Un conteo viejo sin marcas se considera contado completo.
+  const idsContados = useMemo(() => {
+    if (!conteoEnCurso) return new Set<string>();
+    if (!conteoEnCurso.lineasContadas) return new Set(conteoEnCurso.lineas.map((l) => l.productoId));
+    return new Set(conteoEnCurso.lineasContadas);
+  }, [conteoEnCurso]);
+  const lineaContada = lineaActual ? idsContados.has(lineaActual.productoId) : false;
+  const conteoCompleto = conteoEnCurso ? idsContados.size >= conteoEnCurso.lineas.length : false;
+  const textoFisico = lineaActual
+    ? borradorConteo[lineaActual.productoId] ?? (lineaContada ? String(lineaActual.stockFisico) : "")
+    : "";
 
   function volverAlMenu() {
     setMostrarProducto(false);
@@ -374,91 +402,244 @@ export function InventarioAdmin() {
         </div>
       )}
 
-      {vista === "conteo" && (
-        <div className="mt-3 flex-1 min-h-0 overflow-y-auto no-scrollbar rounded-xl border border-line bg-paper-raised p-4 max-w-xl">
-          {!conteoEnCurso || conteoEnCurso.estado !== "en-curso" ? (
-            <>
-              <p className="font-semibold text-ink">Iniciar conteo</p>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">Captura producto a producto con input grande. El sistema guarda fecha-hora, usuario y turno para auditoría.</p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <select value={turno} onChange={(e) => setTurno(e.target.value)} className={campo}>
-                  <option value="mañana">Turno mañana</option>
-                  <option value="tarde">Turno tarde</option>
-                  <option value="noche">Turno noche</option>
-                </select>
-                <input type="number" min={1} max={inventario.length} value={cantidadAleatoria} onChange={(e) => setCantidadAleatoria(e.target.value)} placeholder="N aleatorio" className={campo} />
+      {/* ─── Conteo: detalle de un conteo del historial ─── */}
+      {vista === "conteo" && conteoDetalle && (() => {
+        const resumen = resumenConteo(conteoDetalle);
+        const yaAjustado = ajustes.some((a) => a.conteoId === conteoDetalle.id);
+        const lineasDetalle = lineasContadasDe(conteoDetalle);
+        return (
+          <div className="mt-2.5 flex min-h-0 flex-1 flex-col">
+            <div className="flex-shrink-0 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setConteoDetalleId(null)}
+                aria-label="Volver al historial de conteos"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-line bg-paper-raised text-ink active:bg-paper-sunken"
+              >
+                <IconArrowLeft width={16} height={16} />
+              </button>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">Detalle del conteo</p>
+            </div>
+
+            <div className="mt-2 flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-2.5 max-w-xl">
+              <div className="rounded-2xl border border-line bg-paper-raised p-3.5">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-semibold capitalize text-ink">Conteo {conteoDetalle.tipo} · turno {conteoDetalle.turno}</p>
+                    <p className="mt-0.5 text-[11.5px] text-ink-soft">
+                      Inició {new Date(conteoDetalle.iniciadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}
+                      {conteoDetalle.finalizadoEn ? ` · cerró ${new Date(conteoDetalle.finalizadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}` : ""}
+                    </p>
+                    <p className="text-[11.5px] text-ink-faint">Usuario {conteoDetalle.usuarioId}</p>
+                  </div>
+                  <span className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-semibold capitalize ${
+                    conteoDetalle.estado === "confirmado" ? "bg-success-soft text-success" : conteoDetalle.estado === "cancelado" ? "bg-danger-soft text-danger" : "bg-accent-soft text-accent-dark"
+                  }`}>
+                    {conteoDetalle.estado.replace("-", " ")}
+                  </span>
+                </div>
+
+                <div className="mt-3 grid grid-cols-3 gap-1.5">
+                  <div className="rounded-xl border border-line bg-paper px-2.5 py-2">
+                    <p className="font-mono text-[13px] font-semibold text-ink">{resumen.contadas}/{conteoDetalle.lineas.length}</p>
+                    <p className="text-[10px] text-ink-soft">Contados</p>
+                  </div>
+                  <div className="rounded-xl border border-line bg-success-soft px-2.5 py-2">
+                    <p className="font-mono text-[13px] font-semibold text-success">{resumen.sobrantes}</p>
+                    <p className="text-[10px] text-success">Sobrantes</p>
+                  </div>
+                  <div className="rounded-xl border border-line bg-danger-soft px-2.5 py-2">
+                    <p className="font-mono text-[13px] font-semibold text-danger">{resumen.faltantes}</p>
+                    <p className="text-[10px] text-danger">Faltantes</p>
+                  </div>
+                </div>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => handleIniciar("general")} className="rounded-xl bg-ink py-3 text-[13px] font-semibold text-white active:bg-ink/90">General ({inventario.length})</button>
-                <button type="button" onClick={() => handleIniciar("aleatorio")} className="rounded-xl border border-line bg-paper py-3 text-[13px] font-semibold text-ink active:bg-paper-sunken">Aleatorio ({cantidadAleatoria})</button>
-              </div>
-              {conteos.filter((c) => c.estado === "confirmado").length > 0 && (
-                <div className="mt-4">
-                  <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Historial conteos</p>
-                  <ul className="mt-2 space-y-2">
-                    {conteos.filter((c) => c.estado === "confirmado").slice(0, 5).map((conteo) => (
-                      <li key={conteo.id} className="flex items-center justify-between rounded-lg bg-paper-sunken px-3 py-2.5 text-[12.5px]">
-                        <span className="text-ink font-medium capitalize">{conteo.tipo} · {conteo.turno}</span>
-                        <span className="text-ink-soft">{new Date(conteo.finalizadoEn ?? conteo.iniciadoEn).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}</span>
+
+              <div className="rounded-2xl border border-line bg-paper-sunken/30 p-2">
+                <p className="px-1 pb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-ink-faint">
+                  Productos contados ({lineasDetalle.length})
+                </p>
+                {lineasDetalle.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-line bg-paper-raised px-3 py-6 text-center text-[12.5px] text-ink-soft">
+                    Este conteo no tiene productos contados.
+                  </p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {lineasDetalle.map((linea) => (
+                      <li key={linea.productoId} className="flex items-center justify-between gap-3 rounded-xl border border-line bg-paper-raised px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-[12.5px] font-medium text-ink">{linea.nombre}</p>
+                          <p className="text-[11px] text-ink-soft">Teórico {linea.stockTeorico} · Físico {linea.stockFisico}</p>
+                        </div>
+                        <span className={`flex-shrink-0 font-mono text-[12.5px] font-bold ${linea.diferencia < 0 ? "text-danger" : linea.diferencia > 0 ? "text-success" : "text-ink-faint"}`}>
+                          {linea.diferencia > 0 ? "+" : ""}{linea.diferencia}
+                        </span>
                       </li>
                     ))}
                   </ul>
+                )}
+              </div>
+            </div>
+
+            <BarraInferior>
+              {conteoDetalle.estado === "en-curso" && (
+                <Boton onClick={() => { setConteoActivoId(conteoDetalle.id); setIndice(0); setBorradorConteo({}); setConteoDetalleId(null); }}>
+                  Continuar el conteo
+                </Boton>
+              )}
+              {conteoDetalle.estado === "confirmado" && !yaAjustado && (
+                <Boton onClick={() => setConfirmarAplicarConteoId(conteoDetalle.id)}>Aplicar ajuste al stock</Boton>
+              )}
+              {conteoDetalle.estado === "confirmado" && yaAjustado && (
+                <div role="status" className="rounded-xl border border-success/30 bg-success-soft py-3 text-center text-[13px] font-semibold text-success">
+                  ✓ Ajuste ya aplicado al stock
                 </div>
               )}
-            </>
-          ) : (
-            <>
-              <div className="flex items-center justify-between">
-                <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Conteo {conteoEnCurso.tipo} · {conteoEnCurso.turno} · {indice + 1} / {conteoEnCurso.lineas.length}</p>
-                <button type="button" onClick={() => setConfirmarCancelarConteo(true)} className="text-[12px] font-semibold text-danger">Cancelar</button>
+              {conteoDetalle.estado === "cancelado" && (
+                <p className="py-2 text-center text-[12.5px] text-ink-soft">Conteo cancelado: no modificó el stock.</p>
+              )}
+            </BarraInferior>
+          </div>
+        );
+      })()}
+
+      {/* ─── Conteo: iniciar o capturar producto a producto ─── */}
+      {vista === "conteo" && !conteoDetalle && (conteoEnCurso && conteoEnCurso.estado === "en-curso" ? (
+        <div className="mt-3 flex-1 min-h-0 overflow-y-auto no-scrollbar rounded-2xl border border-line bg-paper-raised p-4 max-w-xl">
+          <div className="flex items-center justify-between">
+            <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">
+              Conteo {conteoEnCurso.tipo} · {conteoEnCurso.turno} · {indice + 1} / {conteoEnCurso.lineas.length}
+            </p>
+            <button type="button" onClick={() => setConfirmarCancelarConteo(true)} className="text-[12px] font-semibold text-danger">Cancelar</button>
+          </div>
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-paper-sunken">
+            <div className="h-full bg-ink transition-all" style={{ width: `${(idsContados.size / conteoEnCurso.lineas.length) * 100}%` }} />
+          </div>
+          {lineaActual && (() => {
+            const producto = inventario.find((p) => p.id === lineaActual.productoId);
+            return (
+              <div className="mt-4 text-center">
+                {producto && <div className="mx-auto flex justify-center"><VistaImagenProducto producto={producto} tamano="sm" clickable productos={inventario} /></div>}
+                <p className="mt-3 truncate text-[16px] font-semibold text-ink">{lineaActual.nombre}</p>
+                <p className="text-[12.5px] text-ink-soft">Teórico: {lineaActual.stockTeorico} · físico</p>
+                <input
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  placeholder="0"
+                  value={textoFisico}
+                  onChange={(e) => {
+                    const valor = e.target.value.replace(/[^0-9]/g, "");
+                    setBorradorConteo((previo) => ({ ...previo, [lineaActual.productoId]: valor }));
+                    if (valor !== "") actualizarConteoLinea(conteoEnCurso.id, lineaActual.productoId, Number(valor));
+                  }}
+                  className="mt-3 w-full rounded-2xl border-2 border-ink bg-paper px-4 py-6 text-center text-[36px] font-semibold tabular-nums text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
+                  autoFocus
+                />
+                <p className={`mt-2 text-[13px] font-semibold ${!lineaContada ? "text-ink-faint" : lineaActual.diferencia === 0 ? "text-success" : "text-danger"}`}>
+                  {!lineaContada ? "Sin contar" : lineaActual.diferencia === 0 ? "Cuadra" : `Diferencia: ${lineaActual.diferencia > 0 ? "+" : ""}${lineaActual.diferencia}`}
+                </p>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <button type="button" disabled={indice === 0} onClick={() => setIndice((i) => Math.max(0, i - 1))} className="rounded-xl border border-line bg-paper py-3 text-[13px] font-semibold text-ink disabled:opacity-40">← Anterior</button>
+                  {indice < conteoEnCurso.lineas.length - 1 ? (
+                    <button type="button" onClick={() => setIndice((i) => i + 1)} className="rounded-xl bg-ink py-3 text-[13px] font-semibold text-white active:bg-ink/90">Siguiente →</button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={!conteoCompleto}
+                      onClick={() => {
+                        finalizarConteoActivo(conteoEnCurso.id);
+                        setIndice(0);
+                        setBorradorConteo({});
+                        setConteoDetalleId(conteoEnCurso.id);
+                        mostrarAviso("Conteo registrado · revisa los descuadres", "exito");
+                      }}
+                      className="rounded-xl bg-success py-3 text-[13px] font-semibold text-white active:opacity-90 disabled:opacity-40"
+                    >
+                      Finalizar conteo
+                    </button>
+                  )}
+                </div>
+                {!conteoCompleto && (
+                  <p className="mt-2 text-[11.5px] text-ink-faint">
+                    Faltan {conteoEnCurso.lineas.length - idsContados.size} productos por contar. Puedes moverte con Anterior y Siguiente.
+                  </p>
+                )}
               </div>
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-paper-sunken">
-                <div className="h-full bg-ink transition-all" style={{ width: `${((indice + 1) / conteoEnCurso.lineas.length) * 100}%` }} />
-              </div>
-              {lineaActual && (() => {
-                const producto = inventario.find((p) => p.id === lineaActual.productoId);
-                return (
-                  <div className="mt-4 text-center">
-                    {producto && <div className="mx-auto flex justify-center"><VistaImagenProducto producto={producto} tamano="sm" clickable productos={inventario} /></div>}
-                    <p className="mt-3 truncate text-[16px] font-semibold text-ink">{lineaActual.nombre}</p>
-                    <p className="text-[12.5px] text-ink-soft">Teórico: {lineaActual.stockTeorico} · físico</p>
-                    <input
-                      type="number"
-                      min={0}
-                      inputMode="numeric"
-                      value={String(lineaActual.stockFisico)}
-                      onChange={(e) => actualizarConteoLinea(conteoEnCurso.id, lineaActual.productoId, Number(e.target.value) || 0)}
-                      className="mt-3 w-full rounded-2xl border-2 border-ink bg-paper px-4 py-6 text-center text-[36px] font-semibold tabular-nums text-ink focus:border-accent focus:outline-none"
-                      autoFocus
-                    />
-                    <p className={`mt-2 text-[13px] font-semibold ${lineaActual.diferencia === 0 ? "text-success" : "text-danger"}`}>
-                      {lineaActual.diferencia === 0 ? "Cuadra" : `Diferencia: ${lineaActual.diferencia > 0 ? "+" : ""}${lineaActual.diferencia}`}
-                    </p>
-                    <div className="mt-4 grid grid-cols-2 gap-2">
-                      <button type="button" disabled={indice === 0} onClick={() => setIndice((i) => Math.max(0, i - 1))} className="rounded-xl border border-line bg-paper py-3 text-[13px] font-semibold text-ink disabled:opacity-40">← Anterior</button>
-                      {indice < conteoEnCurso.lineas.length - 1 ? (
-                        <button type="button" onClick={() => setIndice((i) => i + 1)} className="rounded-xl bg-ink py-3 text-[13px] font-semibold text-white active:bg-ink/90">Siguiente →</button>
-                      ) : (
+            );
+          })()}
+        </div>
+      ) : (
+        <div className="mt-3 flex min-h-0 flex-1 flex-col gap-2.5 max-w-xl">
+          <div className="flex-shrink-0 rounded-2xl border border-line bg-paper-raised p-4">
+            <p className="font-semibold text-ink">Iniciar conteo</p>
+            <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">
+              Captura producto a producto con input grande. Solo lo que digites queda contado; el sistema guarda fecha-hora, usuario y turno para auditoría.
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <select value={turno} onChange={(e) => setTurno(e.target.value)} className={campo}>
+                <option value="mañana">Turno mañana</option>
+                <option value="tarde">Turno tarde</option>
+                <option value="noche">Turno noche</option>
+              </select>
+              <input type="number" min={1} max={inventario.length} value={cantidadAleatoria} onChange={(e) => setCantidadAleatoria(e.target.value)} placeholder="N aleatorio" className={campo} />
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => handleIniciar("general")} className="rounded-xl bg-ink py-3 text-[13px] font-semibold text-white active:bg-ink/90">General ({inventario.length})</button>
+              <button type="button" onClick={() => handleIniciar("aleatorio")} className="rounded-xl border border-line bg-paper py-3 text-[13px] font-semibold text-ink active:bg-paper-sunken">Aleatorio ({cantidadAleatoria})</button>
+            </div>
+          </div>
+
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
+            <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
+              <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Historial de conteos ({conteos.length})</p>
+              <span className="text-[11px] text-ink-soft">Toca para ver el detalle</span>
+            </div>
+            <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
+              {conteos.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-line bg-paper-raised px-4 py-8 text-center text-[13px] text-ink-soft">
+                  Aún no hay conteos registrados.
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {paginar(conteosOrdenados, paginaConteos, POR_PAGINA).items.map((conteo) => {
+                    const resumen = resumenConteo(conteo);
+                    return (
+                      <li key={conteo.id}>
                         <button
                           type="button"
-                          onClick={() => {
-                            finalizarConteoActivo(conteoEnCurso.id);
-                            setIndice(0);
-                            mostrarAviso("Conteo finalizado · revisa Descuadres", "exito");
-                          }}
-                          className="rounded-xl bg-success py-3 text-[13px] font-semibold text-white active:opacity-90"
+                          onClick={() => setConteoDetalleId(conteo.id)}
+                          className="flex w-full items-center gap-3 rounded-xl border border-line bg-paper-raised px-3 py-2.5 text-left active:bg-paper-sunken"
                         >
-                          Finalizar conteo
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[13px] font-semibold capitalize text-ink">{conteo.tipo} · turno {conteo.turno}</span>
+                            <span className="block truncate text-[11px] text-ink-soft">
+                              {new Date(conteo.finalizadoEn ?? conteo.iniciadoEn).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })} · {resumen.contadas} contados
+                            </span>
+                            <span className={`block text-[11px] font-semibold capitalize ${
+                              conteo.estado === "confirmado" ? "text-success" : conteo.estado === "cancelado" ? "text-danger" : "text-accent-dark"
+                            }`}>
+                              {conteo.estado.replace("-", " ")}
+                              {resumen.faltantes > 0 ? ` · ${resumen.faltantes} faltante(s)` : ""}
+                              {resumen.sobrantes > 0 ? ` · ${resumen.sobrantes} sobrante(s)` : ""}
+                            </span>
+                          </span>
+                          <IconChevronRight width={18} height={18} className="flex-shrink-0 text-ink-faint" />
                         </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
-            </>
-          )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+            {conteos.length > POR_PAGINA && (
+              <div className="flex-shrink-0 border-t border-line bg-paper-raised px-3 py-2">
+                <Paginacion pagina={paginaConteos} totalPaginas={Math.max(1, Math.ceil(conteos.length / POR_PAGINA))} total={conteos.length} porPagina={POR_PAGINA} onChange={setPaginaConteos} />
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      ))}
 
       {vista === "descuadres" && (
         <div className="flex min-h-0 flex-1 flex-col py-2.5">
@@ -502,12 +683,19 @@ export function InventarioAdmin() {
       )}
 
       {vista === "ajustes" && (
-        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-3 mt-3">
+        <div className="flex flex-1 flex-col min-h-0 mt-3">
           {!mostrarAjusteManual ? (
-            <>
+            <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-3">
               <button
                 type="button"
-                onClick={() => setMostrarAjusteManual(true)}
+                onClick={() => {
+                  setMostrarAjusteManual(true);
+                  setPasoAjuste(1);
+                  setProductoAjusteId(null);
+                  setStockFisicoAjuste("");
+                  setComentarioAjuste("");
+                  setMotivoAjuste("corrección");
+                }}
                 className="w-full rounded-xl bg-ink py-3 text-[13px] font-semibold text-white active:bg-ink/90"
               >
                 + Nuevo ajuste manual
@@ -532,81 +720,124 @@ export function InventarioAdmin() {
                   ))
                 )}
               </div>
-            </>
-          ) : (
-            <div className="rounded-2xl border border-line bg-paper-raised p-4">
-              <div className="flex items-center justify-between">
-                <p className="font-semibold text-ink">Paso 1 · Elige producto</p>
-                <button type="button" onClick={() => setMostrarAjusteManual(false)} className="text-[12px] font-semibold text-danger">Cancelar</button>
-              </div>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">Corrige stock por pérdida, robo, reversión de compra o error. Queda auditado con producto, motivo y usuario.</p>
-              <div className="mt-3">
-                <input
-                  value={busquedaAjuste}
-                  onChange={(e) => setBusquedaAjuste(e.target.value)}
-                  placeholder="Buscar producto por nombre o código"
-                  className="w-full rounded-xl border border-line bg-paper px-3.5 py-3 text-[13px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
-                />
-                <div className="mt-2 overflow-hidden rounded-xl border border-line bg-paper-sunken/40">
-                  <div className="border-b border-line bg-paper-raised px-3 py-1.5">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
-                      Resultados ({productosFiltradosAjuste.length})
-                    </p>
-                  </div>
-                  <div className="no-scrollbar max-h-32 space-y-1.5 overflow-y-auto p-1.5">
-                    {productosFiltradosAjuste.slice(0, 6).map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => setProductoAjusteId(p.id)}
-                        className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left text-[13px] ${productoAjusteId === p.id ? "border-ink bg-ink text-white" : "border-line bg-paper text-ink"}`}
-                      >
-                        <span className="truncate">{p.nombre} · stock {p.stock}</span>
-                        {productoAjusteId === p.id && <span>✓</span>}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              {productoAjuste && (
-                <div className="mt-3 rounded-xl bg-paper-sunken p-3">
-                  <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Paso 2 · Físico y motivo</p>
-                  <p className="mt-1 text-[14px] font-semibold text-ink">{productoAjuste.nombre} · {productoAjuste.codigoInterno}</p>
-                  <p className="text-[12px] text-ink-soft">Teórico: {productoAjuste.stock} · stock mínimo {productoAjuste.stockMinimo}</p>
-                  <label className="mt-3 block text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Stock físico corregido</label>
-                  <input
-                    type="number"
-                    min={0}
-                    inputMode="numeric"
-                    value={stockFisicoAjuste}
-                    onChange={(e) => setStockFisicoAjuste(e.target.value)}
-                    placeholder="Ej. 45"
-                    className="mt-1.5 w-full rounded-2xl border-2 border-ink bg-paper px-4 py-5 text-center text-[28px] font-semibold tabular-nums text-ink focus:border-accent focus:outline-none"
-                  />
-                  {stockFisicoAjuste !== "" && (
-                    <p className={`mt-2 text-center text-[12px] font-semibold ${Number(stockFisicoAjuste) - productoAjuste.stock === 0 ? "text-success" : "text-danger"}`}>
-                      Diferencia: {Number(stockFisicoAjuste) - productoAjuste.stock > 0 ? "+" : ""}{Number(stockFisicoAjuste) - productoAjuste.stock}
-                    </p>
-                  )}
-                  <p className="mt-3 text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Motivo</p>
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {motivosAjuste.map((mot) => (
-                      <button
-                        key={mot}
-                        type="button"
-                        onClick={() => setMotivoAjuste(mot)}
-                        className={`rounded-full border px-3 py-1.5 text-[11.5px] font-semibold capitalize ${motivoAjuste === mot ? "border-ink bg-ink text-white" : "border-line bg-paper-raised text-ink-soft"}`}
-                      >
-                        {mot}
-                      </button>
-                    ))}
-                  </div>
-                  <label className="mt-3 block text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Comentario (opcional)</label>
-                  <textarea value={comentarioAjuste} onChange={(e) => setComentarioAjuste(e.target.value)} placeholder="Ej. Faltante en bodega, factura 123 revertida..." rows={2} className="mt-1.5 w-full rounded-xl border border-line bg-paper px-3 py-2.5 text-[13px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none" />
-                  <Boton onClick={() => setConfirmarAjusteManual(true)} disabled={!productoAjusteId || stockFisicoAjuste === ""} className="mt-3">Revisar ajuste</Boton>
-                </div>
-              )}
             </div>
+          ) : (
+            <>
+              {pasoAjuste === 1 && (
+                <>
+                  <div className="flex-shrink-0 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">Paso 1 de 2 · Elige producto</p>
+                      <button type="button" onClick={() => setMostrarAjusteManual(false)} className="text-[12px] font-semibold text-danger">Cancelar</button>
+                    </div>
+                    <input
+                      autoFocus
+                      value={busquedaAjuste}
+                      onChange={(e) => setBusquedaAjuste(e.target.value)}
+                      placeholder="Buscar producto por nombre o código"
+                      className="w-full rounded-xl border border-line bg-paper-raised px-3.5 py-2.5 text-[13.5px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
+                    />
+                  </div>
+                  <div className="mt-2.5 flex-1 min-h-0 overflow-y-auto no-scrollbar rounded-2xl border border-line bg-paper-sunken/30 p-2">
+                    <ul className="space-y-1.5">
+                      {productosFiltradosAjuste.map((p) => (
+                        <li key={p.id}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProductoAjusteId(p.id);
+                              setStockFisicoAjuste(String(p.stock));
+                              setPasoAjuste(2);
+                            }}
+                            className="flex w-full items-center justify-between gap-2 rounded-xl border border-line bg-paper-raised px-3 py-2.5 text-left active:bg-paper-sunken"
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate text-[13px] font-semibold text-ink">{p.nombre}</span>
+                              <span className="block truncate text-[11px] text-ink-soft">{p.codigoInterno} · teórico {p.stock}</span>
+                            </span>
+                            <IconChevronRight width={18} height={18} className="flex-shrink-0 text-ink-faint" />
+                          </button>
+                        </li>
+                      ))}
+                      {productosFiltradosAjuste.length === 0 && (
+                        <li className="rounded-xl border border-dashed border-line bg-paper-raised p-6 text-center text-[12.5px] text-ink-soft">
+                          Sin productos con ese filtro.
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                </>
+              )}
+
+              {pasoAjuste === 2 && productoAjuste && (
+                <>
+                  <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-3">
+                    <div className="rounded-2xl border border-line bg-paper-raised p-3.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">Paso 2 de 2 · Físico y motivo</p>
+                      <p className="mt-1 truncate text-[14px] font-semibold text-ink">{productoAjuste.nombre}</p>
+                      <p className="text-[11.5px] text-ink-soft">
+                        {productoAjuste.codigoInterno} · teórico {productoAjuste.stock} · mín {productoAjuste.stockMinimo}
+                      </p>
+                      <label className="mt-3 block text-[11px] font-semibold uppercase tracking-wide text-ink-faint">Stock físico corregido *</label>
+                      <input
+                        type="number"
+                        min={0}
+                        inputMode="numeric"
+                        autoFocus
+                        value={stockFisicoAjuste}
+                        onChange={(e) => setStockFisicoAjuste(e.target.value)}
+                        placeholder="Ej. 45"
+                        className="mt-1.5 w-full rounded-2xl border-2 border-ink bg-paper px-4 py-4 text-center text-[28px] font-semibold tabular-nums text-ink focus:border-accent focus:outline-none"
+                      />
+                      {stockFisicoAjuste !== "" && (
+                        <p className={`mt-2 text-center text-[12.5px] font-semibold ${Number(stockFisicoAjuste) - productoAjuste.stock === 0 ? "text-success" : "text-danger"}`}>
+                          Diferencia: {Number(stockFisicoAjuste) - productoAjuste.stock > 0 ? "+" : ""}{Number(stockFisicoAjuste) - productoAjuste.stock}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="rounded-2xl border border-line bg-paper-raised p-3.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-faint">Motivo *</p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {motivosAjuste.map((mot) => (
+                          <button
+                            key={mot}
+                            type="button"
+                            onClick={() => setMotivoAjuste(mot)}
+                            className={`rounded-full border px-3 py-1.5 text-[11.5px] font-semibold capitalize ${motivoAjuste === mot ? "border-ink bg-ink text-white" : "border-line bg-paper text-ink-soft"}`}
+                          >
+                            {mot}
+                          </button>
+                        ))}
+                      </div>
+                      <label className="mt-3 block text-[11px] font-semibold uppercase tracking-wide text-ink-faint">Comentario (opcional)</label>
+                      <textarea
+                        value={comentarioAjuste}
+                        onChange={(e) => setComentarioAjuste(e.target.value)}
+                        placeholder="Ej. Faltante en bodega, factura 123 revertida..."
+                        rows={2}
+                        className="mt-1.5 w-full rounded-xl border border-line bg-paper px-3 py-2.5 text-[13px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <BarraInferior>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPasoAjuste(1)}
+                        className="rounded-xl border border-line bg-paper py-3 text-[13px] font-semibold text-ink"
+                      >
+                        ← Cambiar
+                      </button>
+                      <Boton onClick={() => setConfirmarAjusteManual(true)} disabled={stockFisicoAjuste === ""}>
+                        Revisar ajuste
+                      </Boton>
+                    </div>
+                  </BarraInferior>
+                </>
+              )}
+            </>
           )}
         </div>
       )}

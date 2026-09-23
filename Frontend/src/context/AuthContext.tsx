@@ -11,11 +11,6 @@ interface AuthContextValue {
   cerrarSesion: () => void;
 }
 
-export const perfilesDemostracion = [
-  { nombre: "Perfil administrador", rol: "administrador" as const, email: "admin@ambie.local", password: "admin123" },
-  { nombre: "Perfil vendedor", rol: "vendedor" as const, email: "vendedor@ambie.local", password: "vendedor123" },
-];
-
 const CLAVE_SESION = "sesion-usuario";
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);

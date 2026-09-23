@@ -9,6 +9,8 @@ export type MetodoPago = "efectivo" | "nequi" | "credito";
 export type EstadoPedido = "pendiente" | "en-preparacion" | "entregado" | "cancelado";
 export type RolUsuario = "administrador" | "vendedor";
 export type EstadoCuenta = "al-dia" | "pendiente";
+/** Periodicidad pactada de pago para el crédito del cliente. */
+export type TipoCredito = "diario" | "semanal" | "quincenal" | "mensual";
 
 // ─── Clientes ─────────────────────────────────────────────────────
 
@@ -23,14 +25,52 @@ export interface Cliente {
   estadoCuenta: EstadoCuenta;
   saldoPendiente: number;
   creadoEn: string;
+  /** Fecha de nacimiento (YYYY-MM-DD), opcional. */
+  fechaNacimiento?: string;
+  /** Periodicidad pactada del crédito: define cada cuántos días recordar. */
+  tipoCredito?: TipoCredito;
   /** Cada cuántos días recordar la deuda por WhatsApp (personalizable, por defecto 2) */
   frecuenciaCreditoDias?: number;
   ultimoRecordatorioCreditoEn?: string;
   ultimoAbonoCreditoEn?: string;
 }
 
-/** Datos del formulario de alta rápida de cliente. */
-export type NuevoCliente = Omit<Cliente, "id" | "estadoCuenta" | "saldoPendiente" | "creadoEn" | "frecuenciaCreditoDias" | "ultimoRecordatorioCreditoEn" | "ultimoAbonoCreditoEn">;
+/**
+ * Datos del formulario de alta de cliente (5 campos).
+ * Los campos extra (alias, identificación, ciudad) son opcionales y
+ * se derivan del nombre cuando no se envían.
+ */
+export interface NuevoCliente {
+  nombre: string;
+  telefono: string;
+  /** Sitio / dirección de entrega. */
+  direccion: string;
+  fechaNacimiento?: string;
+  tipoCredito?: TipoCredito;
+  alias?: string;
+  identificacion?: string;
+  ciudad?: string;
+}
+
+/** Días de recordatorio por defecto según la periodicidad del crédito. */
+export const FRECUENCIA_POR_TIPO_CREDITO: Record<TipoCredito, number> = {
+  diario: 1,
+  semanal: 7,
+  quincenal: 15,
+  mensual: 30,
+};
+
+export const ETIQUETA_TIPO_CREDITO: Record<TipoCredito, string> = {
+  diario: "Diario",
+  semanal: "Semanal",
+  quincenal: "Quincenal",
+  mensual: "Mensual",
+};
+
+export function frecuenciaDeTipoCredito(tipo: TipoCredito | undefined): number {
+  if (!tipo) return 2;
+  return FRECUENCIA_POR_TIPO_CREDITO[tipo];
+}
 
 // ─── Créditos y abonos ────────────────────────────────────────────
 
@@ -217,6 +257,8 @@ export interface ConteoInventario {
   iniciadoEn: string;
   finalizadoEn?: string;
   lineas: LineaConteo[];
+  /** Productos cuyo físico ya se digitó. Lo no contado no ajusta stock. */
+  lineasContadas?: string[];
   estado: "en-curso" | "confirmado" | "cancelado";
 }
 

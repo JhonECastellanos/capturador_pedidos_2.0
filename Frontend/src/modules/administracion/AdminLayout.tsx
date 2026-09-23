@@ -1,5 +1,6 @@
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
+  IconCart,
   IconCash,
   IconChartBar,
   IconClipboard,
@@ -22,6 +23,7 @@ interface ItemNavegacion {
 
 const navegacionPrincipal: ItemNavegacion[] = [
   { to: "/admin", etiqueta: "Inicio", icono: IconHome, fin: true },
+  { to: "/admin/ventas", etiqueta: "Ventas", icono: IconCart },
   { to: "/admin/pedidos", etiqueta: "Pedidos", icono: IconClipboard },
   { to: "/admin/creditos", etiqueta: "Créditos", icono: IconChartBar },
   { to: "/admin/inventario", etiqueta: "Inventario", icono: IconPackage },

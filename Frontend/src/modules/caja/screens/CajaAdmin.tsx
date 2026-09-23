@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { GuiaAyuda } from "../../../components/GuiaAyuda";
-import { Paginacion, POR_PAGINA, paginar } from "../../../components/Paginacion";
+import { Paginacion } from "../../../components/Paginacion";
+import { POR_PAGINA, paginar } from "../../../utils/paginacion";
 import { useOperaciones } from "../../../context/OperacionesContext";
 import { formatoMoneda } from "../../../utils/formato";
 import { TarjetaMetrica } from "../../administracion/components/TarjetaMetrica";
@@ -41,11 +42,24 @@ function dentroDePeriodo(fechaIso: string, periodo: PeriodoCaja, hoy: Date): boo
   return true;
 }
 
-type FiltroMedio = "efectivo" | "nequi" | "credito" | null;
+type FiltroMedio = "ingresos" | "egresos" | "efectivo" | "nequi" | "credito" | null;
+type VistaCaja = "movimientos" | "ganancias";
+
+const ETIQUETA_PERIODO: Record<PeriodoCaja, string> = {
+  hoy: "Hoy",
+  ayer: "Ayer",
+  semana: "Semanal",
+  mes: "Mensual",
+  "año": "Año",
+  todo: "Todo",
+};
+
+const PERIODOS: PeriodoCaja[] = ["hoy", "ayer", "semana", "mes", "año", "todo"];
 
 export function CajaAdmin() {
   const { movimientosCaja, pedidos, abonos, obtenerCliente } = useOperaciones();
   const [periodo, setPeriodo] = useState<PeriodoCaja>("hoy");
+  const [vistaCaja, setVistaCaja] = useState<VistaCaja>("movimientos");
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
   const [filtroMedio, setFiltroMedio] = useState<FiltroMedio>(null);
@@ -98,12 +112,26 @@ export function CajaAdmin() {
   const creditoPendiente = pedidosCreditoPeriodo.reduce((s, p) => s + p.pago.saldoPendiente, 0);
 
   const movimientosVista = useMemo(() => {
+    if (filtroMedio === "ingresos") return movimientosPeriodo.filter((m) => m.tipo === "ingreso");
+    if (filtroMedio === "egresos") return movimientosPeriodo.filter((m) => m.tipo === "egreso");
     if (filtroMedio === "efectivo") return movimientosPeriodo.filter((m) => m.tipo === "ingreso" && m.metodo === "efectivo");
     if (filtroMedio === "nequi") return movimientosPeriodo.filter((m) => m.tipo === "ingreso" && m.metodo === "nequi");
     return movimientosPeriodo;
   }, [filtroMedio, movimientosPeriodo]);
 
+  const balance = ingresos - egresos;
   const esVistaCredito = filtroMedio === "credito";
+
+  // Ganancias por periodo: lo cobrado menos compras y gastos, sin el filtro de búsqueda.
+  const resumenPorPeriodo = useMemo(() => {
+    return PERIODOS.map((p) => {
+      const movs = movimientosCaja.filter((m) => dentroDePeriodo(m.creadoEn, p, hoy));
+      const entra = movs.filter((m) => m.tipo === "ingreso").reduce((s, m) => s + m.monto, 0);
+      const sale = movs.filter((m) => m.tipo === "egreso").reduce((s, m) => s + m.monto, 0);
+      return { periodo: p, ingresos: entra, egresos: sale, neto: entra - sale };
+    });
+  }, [hoy, movimientosCaja]);
+  const gananciaPeriodo = resumenPorPeriodo.find((fila) => fila.periodo === periodo) ?? { periodo, ingresos: 0, egresos: 0, neto: 0 };
   const totalVista = esVistaCredito ? pedidosCreditoPeriodo.length : movimientosVista.length;
   const { items: paginaMovs, totalPaginas: paginasMovs } = useMemo(() => paginar(movimientosVista, pagina, POR_PAGINA), [movimientosVista, pagina]);
   const { items: paginaCred, totalPaginas: paginasCred } = useMemo(() => paginar(pedidosCreditoPeriodo, pagina, POR_PAGINA), [pedidosCreditoPeriodo, pagina]);
@@ -121,18 +149,34 @@ export function CajaAdmin() {
           <GuiaAyuda
             pantalla="Cuadre de caja"
             pasos={[
-              { titulo: "1 · Tarjetas por medio", texto: "Ingresos, egresos y balance del periodo. Toca Efectivo, Nequi o Crédito para filtrar el historial. El crédito pendiente aún no es caja, se cobra en Créditos." },
-              { titulo: "2 · Filtros hoy → todo", texto: "Hoy solo hoy, ayer solo ayer, semana/mes/año los últimos días. Todo al final muestra todo sin duplicar registros." },
-              { titulo: "3 · Buscador e ingresos", texto: "Busca por concepto, pedido o cliente. Verde = efectivo, teal = Nequi, rojo = egreso o crédito." },
-              { titulo: "4 · Dónde registrar", texto: "Los egresos se crean en Compras (gastos o recepciones). Los abonos de crédito crean aquí el ingreso." },
+              { titulo: "1 · Tarjetas que filtran", texto: "Toca Ingresos, Egresos, Efectivo, Nequi o Crédito para filtrar el historial; tócalas de nuevo para quitar el filtro. El Balance solo muestra el resultado del periodo." },
+              { titulo: "2 · Ganancias por periodo", texto: "La pestaña Ganancias muestra cuánto quedó después de compras y gastos, con el historial de hoy, ayer, semanal, mensual, año y todo." },
+              { titulo: "3 · Filtros hoy → todo", texto: "Hoy solo hoy, ayer solo ayer, semana/mes/año los últimos días. Todo al final muestra todo sin duplicar registros." },
+              { titulo: "4 · Buscador y colores", texto: "Busca por concepto, pedido o cliente. Verde = ingreso en efectivo, teal = Nequi, rojo = egreso o crédito." },
+              { titulo: "5 · Dónde registrar", texto: "Los egresos se crean en Compras (gastos o recepciones). Los abonos de crédito crean aquí el ingreso." },
             ]}
           />
         </div>
       </div>
 
       <div className="flex-shrink-0 space-y-2 pt-2">
+        <div className="inline-flex w-full rounded-full border border-line bg-paper-raised p-1">
+          {(["movimientos", "ganancias"] as VistaCaja[]).map((vista) => (
+            <button
+              key={vista}
+              type="button"
+              onClick={() => setVistaCaja(vista)}
+              className={`flex-1 rounded-full px-3 py-1 text-[12px] font-semibold capitalize transition-colors ${
+                vistaCaja === vista ? "bg-ink text-white" : "text-ink-soft hover:text-ink"
+              }`}
+            >
+              {vista === "movimientos" ? "Movimientos" : "Ganancias"}
+            </button>
+          ))}
+        </div>
+
         <div className="no-scrollbar flex gap-1.5 overflow-x-auto pb-0.5">
-          {(["hoy", "ayer", "semana", "mes", "año", "todo"] as PeriodoCaja[]).map((p) => (
+          {PERIODOS.map((p) => (
             <button
               key={p}
               type="button"
@@ -146,23 +190,43 @@ export function CajaAdmin() {
           ))}
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
-          <TarjetaMetrica etiqueta="Ingresos" valor={formatoMoneda(ingresos)} tono="teal" />
-          <TarjetaMetrica etiqueta="Egresos" valor={formatoMoneda(egresos)} tono="danger" />
-          <TarjetaMetrica etiqueta="Balance" valor={formatoMoneda(ingresos - egresos)} tono="ink" />
+        {vistaCaja === "movimientos" && (
+          <>
+        {/* Tarjetas compactas: Ingresos, Egresos y Balance también filtran el historial */}
+        <div className="grid grid-cols-3 gap-1.5">
+          <button type="button" onClick={() => alternarFiltro("ingresos")} aria-pressed={filtroMedio === "ingresos"} className={`rounded-xl text-left transition-all ${filtroMedio === "ingresos" ? "ring-2 ring-teal" : ""}`}>
+            <TarjetaMetrica tamano="sm" etiqueta="Ingresos" valor={formatoMoneda(ingresos)} tono="teal" />
+          </button>
+          <button type="button" onClick={() => alternarFiltro("egresos")} aria-pressed={filtroMedio === "egresos"} className={`rounded-xl text-left transition-all ${filtroMedio === "egresos" ? "ring-2 ring-danger" : ""}`}>
+            <TarjetaMetrica tamano="sm" etiqueta="Egresos" valor={formatoMoneda(egresos)} tono="danger" />
+          </button>
+          <TarjetaMetrica
+            tamano="sm"
+            etiqueta="Balance"
+            valor={formatoMoneda(balance)}
+            tono={balance > 0 ? "success" : balance < 0 ? "danger" : "ink"}
+          />
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-1.5">
           <button type="button" onClick={() => alternarFiltro("efectivo")} aria-pressed={filtroMedio === "efectivo"} className={`rounded-xl text-left transition-all ${filtroMedio === "efectivo" ? "ring-2 ring-success" : ""}`}>
-            <TarjetaMetrica etiqueta="Efectivo" valor={formatoMoneda(efectivo)} tono="teal" />
+            <TarjetaMetrica tamano="sm" etiqueta="Efectivo" valor={formatoMoneda(efectivo)} tono="success" />
           </button>
           <button type="button" onClick={() => alternarFiltro("nequi")} aria-pressed={filtroMedio === "nequi"} className={`rounded-xl text-left transition-all ${filtroMedio === "nequi" ? "ring-2 ring-teal" : ""}`}>
-            <TarjetaMetrica etiqueta="Nequi" valor={formatoMoneda(nequi)} tono="ink" />
+            <TarjetaMetrica tamano="sm" etiqueta="Nequi" valor={formatoMoneda(nequi)} tono="teal" />
           </button>
           <button type="button" onClick={() => alternarFiltro("credito")} aria-pressed={filtroMedio === "credito"} className={`rounded-xl text-left transition-all ${filtroMedio === "credito" ? "ring-2 ring-danger" : ""}`}>
-            <TarjetaMetrica etiqueta="Crédito" valor={formatoMoneda(creditoPendiente)} tono="danger" />
+            <TarjetaMetrica tamano="sm" etiqueta="Crédito" valor={formatoMoneda(creditoPendiente)} tono="accent" />
           </button>
         </div>
+
+        <p className="text-[10.5px] text-ink-faint">
+          {filtroMedio === "credito"
+            ? "Crédito pendiente del periodo (aún no es caja, se cobra en Créditos)"
+            : filtroMedio
+              ? `Filtrando: ${filtroMedio} · toca de nuevo la tarjeta para quitarlo`
+              : "Toca una tarjeta para filtrar el historial"}
+        </p>
 
         <input
           value={busqueda}
@@ -170,9 +234,70 @@ export function CajaAdmin() {
           placeholder="Buscar por concepto, pedido o cliente"
           className="w-full rounded-xl border border-line bg-paper-raised px-3.5 py-2 text-[13.5px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
         />
+          </>
+        )}
       </div>
 
+      {vistaCaja === "ganancias" && (
+        <div className="flex min-h-0 flex-1 flex-col py-2.5">
+          <div className="flex-shrink-0 rounded-2xl border border-line bg-paper-raised p-3.5">
+            <p className="text-[10.5px] font-semibold uppercase tracking-wide text-ink-faint">
+              Ganancia neta · {ETIQUETA_PERIODO[periodo]}
+            </p>
+            <p className={`mt-1 font-mono text-[30px] font-bold ${gananciaPeriodo.neto > 0 ? "text-success" : gananciaPeriodo.neto < 0 ? "text-danger" : "text-ink"}`}>
+              {formatoMoneda(gananciaPeriodo.neto)}
+            </p>
+            <p className="text-[11.5px] text-ink-soft">Ventas y abonos cobrados menos compras y gastos del periodo.</p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-line bg-teal-soft px-3 py-2">
+                <p className="font-mono text-[14px] font-semibold text-teal">{formatoMoneda(gananciaPeriodo.ingresos)}</p>
+                <p className="mt-0.5 text-[10.5px] text-teal">Entró · ventas y abonos</p>
+              </div>
+              <div className="rounded-xl border border-line bg-danger-soft px-3 py-2">
+                <p className="font-mono text-[14px] font-semibold text-danger">{formatoMoneda(gananciaPeriodo.egresos)}</p>
+                <p className="mt-0.5 text-[10.5px] text-danger">Salió · compras y gastos</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-2.5 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
+            <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
+              <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Historial de ganancias</p>
+              <span className="text-[11px] text-ink-soft">Toca un periodo</span>
+            </div>
+            <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
+              <ul className="space-y-2">
+                {resumenPorPeriodo.map((fila) => (
+                  <li key={fila.periodo}>
+                    <button
+                      type="button"
+                      onClick={() => setPeriodo(fila.periodo)}
+                      aria-pressed={periodo === fila.periodo}
+                      className={`flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                        periodo === fila.periodo ? "border-ink bg-paper-raised ring-1 ring-ink/20" : "border-line bg-paper-raised active:bg-paper-sunken"
+                      }`}
+                    >
+                      <span className="min-w-0">
+                        <span className="block text-[13px] font-semibold text-ink">{ETIQUETA_PERIODO[fila.periodo]}</span>
+                        <span className="block truncate text-[11px] text-ink-soft">
+                          Entró {formatoMoneda(fila.ingresos)} · Salió {formatoMoneda(fila.egresos)}
+                        </span>
+                      </span>
+                      <span className={`flex-shrink-0 font-mono text-[14px] font-bold ${fila.neto > 0 ? "text-success" : fila.neto < 0 ? "text-danger" : "text-ink-soft"}`}>
+                        {formatoMoneda(fila.neto)}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Lista con scroll propio */}
+      {vistaCaja === "movimientos" && (
+        <>
       <div className="flex min-h-0 flex-1 flex-col px-0 py-2.5">
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
           <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
@@ -251,6 +376,8 @@ export function CajaAdmin() {
       <div className="flex-shrink-0 mt-2">
         <Paginacion pagina={pagina} totalPaginas={totalPaginas} total={totalVista} porPagina={POR_PAGINA} onChange={setPagina} />
       </div>
+        </>
+      )}
     </div>
   );
 }

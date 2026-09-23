@@ -25,6 +25,7 @@ import {
   aplicarAbonoEnPedidos,
   aplicarAjusteEnInventario,
   aplicarCambioPrecioEnInventario,
+  aplicarPagoDirectoEnPedido,
   aplicarPedidoEnClientes,
   aplicarPedidoEnInventario,
   aplicarRecepcionEnInventario,
@@ -122,8 +123,7 @@ interface OperacionesContextValue {
   trasladarPedidoAHoy: (pedidoId: string) => void;
   // Créditos
   registrarAbono: (clienteId: string, monto: number, metodo: AbonoCredito["metodo"], comentario?: string) => AbonoCredito | null;
-  actualizarFrecuenciaCredito: (clienteId: string, dias: number) => void;
-  registrarRecordatorioCredito: (clienteId: string) => void;
+  registrarPagoPedido: (pedidoId: string, metodo: AbonoCredito["metodo"], comentario?: string) => AbonoCredito | null;
 }
 
 const OperacionesContext = createContext<OperacionesContextValue | undefined>(undefined);
@@ -196,6 +196,7 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
       const fecha = new Date().toISOString();
       const pedidoActual = pedidos.find((p) => p.id === pedidoId);
       const esCancelacion = pedidoActual && pedidoActual.estado !== "cancelado" && estado === "cancelado";
+      const esReactivacion = pedidoActual && pedidoActual.estado === "cancelado" && estado !== "cancelado";
       setPedidos((actuales) => {
         const siguientes = actuales.map((pedido) =>
           pedido.id === pedidoId ? registrarCambioEstado(pedido, estado, usuarioId, fecha) : pedido,
@@ -203,12 +204,16 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
         guardarPedidos(siguientes);
         return siguientes;
       });
-      // Al cancelar se revierte stock, cartera y caja para no dejar datos inconsistentes.
-      if (esCancelacion && pedidoActual) {
+      // Cancelar reversa stock, cartera y caja; revivir el pedido vuelve a aplicarlos.
+      if (pedidoActual && (esCancelacion || esReactivacion)) {
         setInventario((actuales) => {
           const siguientes = actuales.map((producto) => {
             const linea = pedidoActual.lineas.find((l) => l.productoId === producto.id);
-            return linea ? { ...producto, stock: producto.stock + linea.cantidad } : producto;
+            if (!linea) return producto;
+            const stock = esCancelacion
+              ? producto.stock + linea.cantidad
+              : Math.max(0, producto.stock - linea.cantidad);
+            return { ...producto, stock };
           });
           guardarProductos(siguientes);
           return siguientes;
@@ -217,25 +222,29 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
           setClientes((actuales) => {
             const siguientes = actuales.map((cliente) => {
               if (cliente.id !== pedidoActual.clienteId) return cliente;
-              const nuevoSaldo = Math.max(0, cliente.saldoPendiente - pedidoActual.pago.saldoPendiente);
-              return { ...cliente, saldoPendiente: nuevoSaldo, estadoCuenta: (nuevoSaldo > 0 ? "pendiente" : "al-dia") as Cliente["estadoCuenta"] };
+              const saldo = esCancelacion
+                ? Math.max(0, cliente.saldoPendiente - pedidoActual.pago.saldoPendiente)
+                : cliente.saldoPendiente + pedidoActual.pago.saldoPendiente;
+              return { ...cliente, saldoPendiente: saldo, estadoCuenta: (saldo > 0 ? "pendiente" : "al-dia") as Cliente["estadoCuenta"] };
             });
             guardarClientes(siguientes);
             return siguientes;
           });
         }
         if (pedidoActual.pago.montoRecibido > 0) {
-          const reverso: MovimientoCaja = {
-            id: nuevoId(),
-            tipo: "egreso",
-            concepto: `Reverso ${pedidoActual.numero}`,
-            monto: pedidoActual.pago.montoRecibido,
-            usuarioId,
-            referenciaId: pedidoActual.id,
-            creadoEn: fecha,
-          };
+          const movimiento: MovimientoCaja = esCancelacion
+            ? {
+                id: nuevoId(),
+                tipo: "egreso",
+                concepto: `Reverso ${pedidoActual.numero}`,
+                monto: pedidoActual.pago.montoRecibido,
+                usuarioId,
+                referenciaId: pedidoActual.id,
+                creadoEn: fecha,
+              }
+            : { ...ingresoCajaDePedido(pedidoActual, nuevoId()), creadoEn: fecha };
           setMovimientosCaja((actuales) => {
-            const siguientes = [reverso, ...actuales];
+            const siguientes = [movimiento, ...actuales];
             guardarMovimientosCaja(siguientes);
             return siguientes;
           });
@@ -506,23 +515,54 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
     return abono;
   }, [clientes, pedidos, usuario]);
 
-  const actualizarFrecuenciaCredito = useCallback((clienteId: string, dias: number) => {
-    const frecuencia = Math.max(1, Math.min(90, Math.round(dias) || 2));
-    setClientes((actuales) => {
-      const siguientes = actuales.map((c) => (c.id === clienteId ? { ...c, frecuenciaCreditoDias: frecuencia } : c));
-      guardarClientes(siguientes);
-      return siguientes;
-    });
-  }, []);
-
-  const registrarRecordatorioCredito = useCallback((clienteId: string) => {
-    const fecha = new Date().toISOString();
-    setClientes((actuales) => {
-      const siguientes = actuales.map((c) => (c.id === clienteId ? { ...c, ultimoRecordatorioCreditoEn: fecha } : c));
-      guardarClientes(siguientes);
-      return siguientes;
-    });
-  }, []);
+  /**
+   * Cobra el saldo de un pedido puntual y lo deja pagado.
+   * Queda como abono en el historial de créditos, así el cuadre de caja
+   * y la cartera del cliente cuadran sin repartir el dinero en otras deudas.
+   */
+  const registrarPagoPedido = useCallback(
+    (pedidoId: string, metodo: AbonoCredito["metodo"], comentario?: string) => {
+      const pedido = pedidos.find((p) => p.id === pedidoId);
+      if (!pedido || pedido.pago.saldoPendiente <= 0) return null;
+      const montoAplicado = pedido.pago.saldoPendiente;
+      const creadoEn = new Date().toISOString();
+      const usuarioId = usuario?.id ?? "sistema";
+      const abono = construirAbono(
+        pedido.clienteId,
+        montoAplicado,
+        metodo,
+        usuarioId,
+        [{ pedidoId: pedido.id, numero: pedido.numero, montoAplicado }],
+        comentario,
+        nuevoId(),
+        creadoEn,
+      );
+      setAbonos((actuales) => {
+        const siguientes = [abono, ...actuales];
+        guardarAbonos(siguientes);
+        return siguientes;
+      });
+      setPedidos((actuales) => {
+        const siguientes = actuales.map((p) => (p.id === pedidoId ? aplicarPagoDirectoEnPedido(p, montoAplicado) : p));
+        guardarPedidos(siguientes);
+        return siguientes;
+      });
+      setClientes((actuales) => {
+        const siguientes = aplicarAbonoEnClientes(actuales, pedido.clienteId, montoAplicado, creadoEn);
+        guardarClientes(siguientes);
+        return siguientes;
+      });
+      const cliente = clientes.find((c) => c.id === pedido.clienteId);
+      const movimiento = ingresoCajaDeAbono(abono, cliente?.nombre ?? "Cliente", nuevoId());
+      setMovimientosCaja((actuales) => {
+        const siguientes = [movimiento, ...actuales];
+        guardarMovimientosCaja(siguientes);
+        return siguientes;
+      });
+      return abono;
+    },
+    [clientes, pedidos, usuario],
+  );
 
   const clienteActivo = useMemo(
     () => (clienteActivoId ? clientes.find((cliente) => cliente.id === clienteActivoId) ?? null : null),
@@ -566,8 +606,7 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
     actualizarPrecioProducto,
     trasladarPedidoAHoy,
     registrarAbono,
-    actualizarFrecuenciaCredito,
-    registrarRecordatorioCredito,
+    registrarPagoPedido,
   };
   return <OperacionesContext.Provider value={value}>{children}</OperacionesContext.Provider>;
 }

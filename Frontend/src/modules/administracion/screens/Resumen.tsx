@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ConfirmarAccion } from "../../../components/ConfirmarAccion";
 import { GuiaAyuda } from "../../../components/GuiaAyuda";
 import { limpiarTodo } from "../../../data/repositorios/almacenamiento";
 import { useOperaciones } from "../../../context/OperacionesContext";
@@ -20,6 +21,7 @@ function esAyer(iso: string, hoy: Date): boolean {
 export function Resumen() {
   const navegar = useNavigate();
   const { pedidos, inventario, movimientosCaja, conteos, obtenerCliente } = useOperaciones();
+  const [confirmarReinicio, setConfirmarReinicio] = useState(false);
   const hoy = useMemo(() => new Date(), []);
 
   const ingresos = movimientosCaja.filter((m) => m.tipo === "ingreso").reduce((s, m) => s + m.monto, 0);
@@ -182,17 +184,25 @@ export function Resumen() {
       <div className="mt-6 text-center">
         <button
           type="button"
-          onClick={() => {
-            const confirmar = window.confirm("¿Reiniciar datos de demostración? Se borrará todo y se recargará la página.");
-            if (!confirmar) return;
-            limpiarTodo();
-            window.location.reload();
-          }}
+          onClick={() => setConfirmarReinicio(true)}
           className="text-[11.5px] font-medium text-ink-faint underline active:text-ink"
         >
           Utilidad dev: reiniciar seed (borrar localStorage)
         </button>
       </div>
+
+      <ConfirmarAccion
+        abierto={confirmarReinicio}
+        titulo="Reiniciar datos"
+        mensaje="Se borrarán todos los datos guardados (clientes, pedidos, inventario, caja, créditos y usuarios) y la página se recargará con los datos de ejemplo."
+        textoConfirmar="Sí, reiniciar"
+        tono="peligro"
+        alCancelar={() => setConfirmarReinicio(false)}
+        alConfirmar={() => {
+          limpiarTodo();
+          window.location.reload();
+        }}
+      />
     </div>
     </div>
   );

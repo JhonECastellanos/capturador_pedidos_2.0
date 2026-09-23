@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { BarraInferior } from "../../../components/BarraInferior";
 import { BarraSuperior } from "../../../components/BarraSuperior";
-import { Boton } from "../../../components/Boton";
-import { GuiaAyuda } from "../../../components/GuiaAyuda";
+import { Boton } from "../../../components/Boton";import { ConfirmarAccion } from "../../../components/ConfirmarAccion";import { GuiaAyuda } from "../../../components/GuiaAyuda";
 import { IconChevronRight, IconSearch } from "../../../components/Icons";
-import { Paginacion, POR_PAGINA, paginar } from "../../../components/Paginacion";
+import { Paginacion } from "../../../components/Paginacion";
+import { POR_PAGINA, paginar } from "../../../utils/paginacion";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
 import { useOperaciones } from "../../../context/OperacionesContext";
@@ -76,6 +76,9 @@ export function ComprasAdmin() {
   // Gasto
   const [gastoForm, setGastoForm] = useState({ concepto: "", monto: "" });
 
+  // Confirmación de salida del wizard (modal propio, no del navegador)
+  const [confirmarSalida, setConfirmarSalida] = useState(false);
+
   const { aviso, mostrarAviso: mostrarToast, cerrarAviso } = useAviso();
 
   const hoy = useMemo(() => new Date(), []);
@@ -144,7 +147,11 @@ export function ComprasAdmin() {
       setPaso((p) => (p === 1 ? 1 : ((p - 1) as PasoRecepcion)));
       return;
     }
-    if (lineas.length > 0 && !window.confirm("¿Cancelar la recepción? Se perderán las líneas agregadas.")) return;
+    // Salir del paso 1 con líneas cargadas pide confirmación con el modal de la app.
+    if (lineas.length > 0) {
+      setConfirmarSalida(true);
+      return;
+    }
     cancelarRecepcion();
   }
 
@@ -596,7 +603,7 @@ export function ComprasAdmin() {
                   )}
                 </ul>
               </div>
-              <TiraToast flotante aviso={aviso} alCerrar={cerrarAviso} />
+              <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
             </div>
           </div>
 
@@ -744,8 +751,8 @@ export function ComprasAdmin() {
                   )}
                 </ul>
               </div>
-              {/* Aviso sobre el contenedor */}
-              <TiraToast flotante aviso={aviso} alCerrar={cerrarAviso} />
+              {/* Aviso flotante centrado */}
+              <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
             </div>
           </div>
 
@@ -823,15 +830,26 @@ export function ComprasAdmin() {
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  if (window.confirm("¿Cancelar la recepción? Se perderán las líneas.")) cancelarRecepcion();
-                }}
+                onClick={() => setConfirmarSalida(true)}
                 className="rounded-xl border border-danger-soft bg-danger-soft py-2.5 text-[13px] font-semibold text-danger active:opacity-80"
               >
                 Cancelar
               </button>
             </div>
           </BarraInferior>
+
+          <ConfirmarAccion
+            abierto={confirmarSalida}
+            titulo="Cancelar la recepción"
+            mensaje="Se perderán las líneas agregadas y no se modificará el stock ni la caja."
+            textoConfirmar="Sí, cancelar"
+            tono="peligro"
+            alCancelar={() => setConfirmarSalida(false)}
+            alConfirmar={() => {
+              setConfirmarSalida(false);
+              cancelarRecepcion();
+            }}
+          />
         </>
       )}
     </section>

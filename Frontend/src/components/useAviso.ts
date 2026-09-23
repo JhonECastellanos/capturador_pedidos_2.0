@@ -9,10 +9,11 @@ export interface Aviso {
 }
 
 /**
- * Avisos tipo toast en tira fija sobre la barra inferior.
- * Una sola tira por pantalla; el temporizador se reinicia en cada aviso.
+ * Avisos flotantes al centro de la pantalla.
+ * Una sola instancia por vista; el temporizador se reinicia en cada aviso.
+ * Duración corta para no estorbar la operación.
  */
-export function useAviso(duracion = 4000) {
+export function useAviso(duracion = 2200) {
   const [aviso, setAviso] = useState<Aviso | null>(null);
   const temporizador = useRef<number | null>(null);
 

@@ -6,8 +6,6 @@ import Acceso from "./screens/Acceso/Acceso";
 import NoEncontrado from "./screens/NoEncontrado/NoEncontrado";
 import VendedorInicio from "./screens/ClientesPedido/VendedorInicio";
 import CrearCliente from "./screens/ClientesPedido/CrearCliente";
-import PedidoRapido from "./screens/ClientesPedido/PedidoRapido";
-import PedidoCompletado from "./screens/ClientesPedido/PedidoCompletado";
 import { AdminLayout } from "./modules/administracion/AdminLayout";
 import { Resumen } from "./modules/administracion/screens/Resumen";
 import { PedidosAdmin } from "./modules/pedidos/screens/PedidosAdmin";
@@ -18,6 +16,15 @@ import { CierreAdmin } from "./modules/caja/screens/CierreAdmin";
 import { UsuariosAdmin } from "./modules/usuarios/screens/UsuariosAdmin";
 import { ComprasAdmin } from "./modules/compras/screens/ComprasAdmin";
 import { PreciosAdmin } from "./modules/precios/screens/PreciosAdmin";
+import {
+  AdminVentas,
+  AdminVentasClienteNuevo,
+  AdminVentasCompletado,
+  VendedorAbonos,
+  VendedorPedido,
+  VendedorPedidoCompletado,
+  VendedorPedidoDetalle,
+} from "./modules/ventas/screens/RutasVentas";
 
 /** Aplicación: decide si la vista usa el marco móvil o el marco amplio del admin. */
 function Contenido() {
@@ -31,13 +38,18 @@ function Contenido() {
 
           {/* ─── Flujo del vendedor (app móvil) ─── */}
           <Route path="/vendedor" element={<RutaProtegida roles={["vendedor"]}><VendedorInicio /></RutaProtegida>} />
-          <Route path="/vendedor/pedido" element={<RutaProtegida roles={["vendedor"]}><PedidoRapido /></RutaProtegida>} />
-          <Route path="/vendedor/pedido/completado" element={<RutaProtegida roles={["vendedor"]}><PedidoCompletado /></RutaProtegida>} />
+          <Route path="/vendedor/pedido" element={<RutaProtegida roles={["vendedor"]}><VendedorPedido /></RutaProtegida>} />
+          <Route path="/vendedor/pedido/completado" element={<RutaProtegida roles={["vendedor"]}><VendedorPedidoCompletado /></RutaProtegida>} />
+          <Route path="/vendedor/pedido/:pedidoId" element={<RutaProtegida roles={["vendedor"]}><VendedorPedidoDetalle /></RutaProtegida>} />
+          <Route path="/vendedor/abonos" element={<RutaProtegida roles={["vendedor"]}><VendedorAbonos /></RutaProtegida>} />
           <Route path="/vendedor/clientes/nuevo" element={<RutaProtegida roles={["vendedor"]}><CrearCliente /></RutaProtegida>} />
 
           {/* ─── Panel administrativo (rutas anidadas) ─── */}
           <Route path="/admin" element={<RutaProtegida roles={["administrador"]}><AdminLayout /></RutaProtegida>}>
             <Route index element={<Resumen />} />
+            <Route path="ventas" element={<AdminVentas />} />
+            <Route path="ventas/completado" element={<AdminVentasCompletado />} />
+            <Route path="ventas/clientes/nuevo" element={<AdminVentasClienteNuevo />} />
             <Route path="pedidos" element={<PedidosAdmin />} />
             <Route path="creditos" element={<CreditosAdmin />} />
             <Route path="inventario" element={<InventarioAdmin />} />

@@ -24,6 +24,7 @@ import type {
   RolUsuario,
   UsuarioSistema,
 } from "../types";
+import { frecuenciaDeTipoCredito } from "../types";
 
 /**
  * Reglas de negocio puras: reciben los datos actuales y devuelven
@@ -42,8 +43,28 @@ export function permisosDeRol(rol: RolUsuario): string[] {
 
 // ─── Clientes ─────────────────────────────────────────────────────
 
+/**
+ * Construye el cliente desde el alta de 5 campos.
+ * Alias, identificación y ciudad se derivan si no vienen,
+ * y la frecuencia de recordatorio nace del tipo de crédito pactado.
+ */
 export function construirCliente(datos: NuevoCliente, id: string, creadoEn: string): Cliente {
-  return { id, ...datos, estadoCuenta: "al-dia", saldoPendiente: 0, creadoEn };
+  const nombre = datos.nombre.trim();
+  return {
+    id,
+    nombre,
+    alias: datos.alias?.trim() || nombre,
+    identificacion: datos.identificacion?.trim() || "",
+    telefono: datos.telefono.trim(),
+    ciudad: datos.ciudad?.trim() || "",
+    direccion: datos.direccion.trim(),
+    estadoCuenta: "al-dia",
+    saldoPendiente: 0,
+    creadoEn,
+    fechaNacimiento: datos.fechaNacimiento || undefined,
+    tipoCredito: datos.tipoCredito,
+    frecuenciaCreditoDias: frecuenciaDeTipoCredito(datos.tipoCredito),
+  };
 }
 
 // ─── Pedidos ──────────────────────────────────────────────────────
@@ -112,6 +133,27 @@ export function registrarCambioEstado(pedido: Pedido, estado: EstadoPedido, usua
   if (pedido.estado === estado) return pedido;
   const entrada: HistorialEstadoPedido = { estado, usuarioId, fecha };
   return { ...pedido, estado, historialEstados: [...pedido.historialEstados, entrada] };
+}
+
+/**
+ * Aplica un pago directo al saldo de un pedido concreto.
+ * Se usa en el cobro al entregar, donde el dinero recibido es de ese pedido
+ * y no debe repartirse entre otras deudas del cliente.
+ */
+export function aplicarPagoDirectoEnPedido(pedido: Pedido, monto: number): Pedido {
+  const aplicado = Math.min(Math.max(0, monto), pedido.pago.saldoPendiente);
+  if (aplicado <= 0) return pedido;
+  const nuevoSaldo = pedido.pago.saldoPendiente - aplicado;
+  return {
+    ...pedido,
+    pago: {
+      ...pedido.pago,
+      saldoPendiente: nuevoSaldo,
+      montoRecibido: pedido.pago.montoRecibido + aplicado,
+      estado: nuevoSaldo === 0 ? "pagado" : "pendiente",
+      recordatorioWhatsApp: nuevoSaldo > 0,
+    },
+  };
 }
 
 /** Mueve un pedido pendiente a la fecha de hoy (no se contabiliza ayer). */
@@ -323,14 +365,16 @@ export function construirConteo(
     const mezclados = [...productos].sort(() => Math.random() - 0.5);
     lista = mezclados.slice(0, Math.min(cantidadAleatoria, productos.length));
   }
+  // Al abrir el conteo las líneas quedan sin contar: el físico solo existe
+  // cuando alguien lo digita, así un conteo a medias nunca pisa el stock.
   const lineas: LineaConteo[] = lista.map((producto) => ({
     productoId: producto.id,
     nombre: producto.nombre,
     stockTeorico: producto.stock,
     stockFisico: 0,
-    diferencia: -producto.stock,
+    diferencia: 0,
   }));
-  return { id, tipo, usuarioId, turno, iniciadoEn, lineas, estado: "en-curso" };
+  return { id, tipo, usuarioId, turno, iniciadoEn, lineas, lineasContadas: [], estado: "en-curso" };
 }
 
 export function actualizarLineaConteo(
@@ -341,7 +385,23 @@ export function actualizarLineaConteo(
   const lineas = conteo.lineas.map((linea) =>
     linea.productoId === productoId ? { ...linea, stockFisico, diferencia: stockFisico - linea.stockTeorico } : linea,
   );
-  return { ...conteo, lineas };
+  const contadas = conteo.lineasContadas ?? [];
+  return { ...conteo, lineas, lineasContadas: contadas.includes(productoId) ? contadas : [...contadas, productoId] };
+}
+
+/** Líneas del conteo con físico registrado (los conteos viejos se toman completos). */
+export function lineasContadasDe(conteo: ConteoInventario): LineaConteo[] {
+  if (!conteo.lineasContadas) return conteo.lineas;
+  return conteo.lineas.filter((linea) => conteo.lineasContadas?.includes(linea.productoId));
+}
+
+/** Totales de un conteo para el historial: contadas, sobrantes y faltantes. */
+export function resumenConteo(conteo: ConteoInventario): { contadas: number; sobrantes: number; faltantes: number; totalDiferencia: number } {
+  const lineas = lineasContadasDe(conteo);
+  const sobrantes = lineas.filter((linea) => linea.diferencia > 0).length;
+  const faltantes = lineas.filter((linea) => linea.diferencia < 0).length;
+  const totalDiferencia = lineas.reduce((suma, linea) => suma + linea.diferencia, 0);
+  return { contadas: lineas.length, sobrantes, faltantes, totalDiferencia };
 }
 
 export function finalizarConteo(conteo: ConteoInventario, finalizadoEn: string): ConteoInventario {
@@ -353,7 +413,7 @@ export function cancelarConteo(conteo: ConteoInventario): ConteoInventario {
 }
 
 export function construirAjuste(conteo: ConteoInventario, usuarioId: string, id: string, creadoEn: string): AjusteInventario {
-  return { id, conteoId: conteo.id, usuarioId, lineas: conteo.lineas, creadoEn };
+  return { id, conteoId: conteo.id, usuarioId, lineas: lineasContadasDe(conteo), creadoEn };
 }
 
 export function aplicarAjusteEnInventario(inventario: Producto[], ajuste: AjusteInventario): Producto[] {

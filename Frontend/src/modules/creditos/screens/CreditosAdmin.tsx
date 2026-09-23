@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
+import { BarraInferior } from "../../../components/BarraInferior";
 import { Boton } from "../../../components/Boton";
 import { ConfirmarAccion } from "../../../components/ConfirmarAccion";
 import { GuiaAyuda } from "../../../components/GuiaAyuda";
-import { Paginacion, POR_PAGINA, paginar } from "../../../components/Paginacion";
+import { IconArrowLeft } from "../../../components/Icons";
+import { Paginacion } from "../../../components/Paginacion";
+import { POR_PAGINA, paginar } from "../../../utils/paginacion";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
 import { useOperaciones } from "../../../context/OperacionesContext";
 import { diasEntre } from "../../../dominio/servicios";
 import type { AbonoCredito } from "../../../types";
 import { formatoMoneda } from "../../../utils/formato";
+import { PedidoDetalle } from "../../ventas/screens/PedidoDetalle";
 
 type TabCredito = "pendientes" | "historial";
 type Periodo = "hoy" | "ayer" | "semana" | "mes" | "todo";
@@ -42,12 +46,6 @@ function dentroDePeriodo(fechaIso: string, periodo: Periodo, hoy: Date): boolean
   return true;
 }
 
-function telefonoParaWhatsApp(telefono: string): string {
-  const digitos = telefono.replace(/\D/g, "");
-  if (!digitos) return "";
-  return digitos.startsWith("57") ? digitos : `57${digitos}`;
-}
-
 export function CreditosAdmin() {
   const {
     clientes,
@@ -55,17 +53,15 @@ export function CreditosAdmin() {
     abonos,
     obtenerCliente,
     registrarAbono,
-    actualizarFrecuenciaCredito,
-    registrarRecordatorioCredito,
   } = useOperaciones();
   const [tab, setTab] = useState<TabCredito>("pendientes");
   const [busqueda, setBusqueda] = useState("");
   const [periodo, setPeriodo] = useState<Periodo>("todo");
   const [clienteDetalleId, setClienteDetalleId] = useState<string | null>(null);
+  const [pedidoDetalleId, setPedidoDetalleId] = useState<string | null>(null);
   const [montoAbono, setMontoAbono] = useState("");
   const [metodoAbono, setMetodoAbono] = useState<AbonoCredito["metodo"]>("efectivo");
   const [comentarioAbono, setComentarioAbono] = useState("");
-  const [frecuenciaTmp, setFrecuenciaTmp] = useState<Record<string, string>>({});
   const [pagina, setPagina] = useState(1);
   const [confirmarAbono, setConfirmarAbono] = useState(false);
   const { aviso, mostrarAviso, cerrarAviso } = useAviso();
@@ -88,10 +84,7 @@ export function CreditosAdmin() {
         const total = ordenados.reduce((s, p) => s + p.pago.saldoPendiente, 0);
         const masAntiguo = ordenados[0]?.creadoEn ?? new Date().toISOString();
         const diasMora = diasEntre(masAntiguo, hoy);
-        const frecuencia = cliente?.frecuenciaCreditoDias ?? 2;
-        const diasDesdeRecordatorio = cliente?.ultimoRecordatorioCreditoEn ? diasEntre(cliente.ultimoRecordatorioCreditoEn, hoy) : 999;
-        const tocaRecordar = diasDesdeRecordatorio >= frecuencia;
-        return { clienteId, cliente, pedidos: ordenados, total, masAntiguo, diasMora, frecuencia, diasDesdeRecordatorio, tocaRecordar };
+        return { clienteId, cliente, pedidos: ordenados, total, masAntiguo, diasMora };
       })
       .sort((a, b) => b.total - a.total);
   }, [clientes, hoy, obtenerCliente, pedidos]);
@@ -117,10 +110,20 @@ export function CreditosAdmin() {
         if (!dentroDePeriodo(a.creadoEn, periodo, hoy)) return false;
         if (!q) return true;
         const cliente = obtenerCliente(a.clienteId);
-        return cliente?.nombre.toLowerCase().includes(q) || cliente?.alias.toLowerCase().includes(q) || a.id.toLowerCase().includes(q);
+        return (
+          cliente?.nombre.toLowerCase().includes(q) ||
+          cliente?.alias.toLowerCase().includes(q) ||
+          a.pedidosAfectados.some((p) => p.numero.toLowerCase().includes(q))
+        );
       })
       .sort((a, b) => (b.creadoEn < a.creadoEn ? -1 : b.creadoEn > a.creadoEn ? 1 : 0));
   }, [abonos, busqueda, hoy, obtenerCliente, periodo]);
+
+  /** Total efectivamente abonado a facturas a crédito en el periodo filtrado. */
+  const totalAbonadoPeriodo = useMemo(
+    () => abonosFiltrados.reduce((suma, a) => suma + a.monto, 0),
+    [abonosFiltrados],
+  );
 
   const totalPendiente = grupos.reduce((s, g) => s + g.total, 0);
   const clienteDetalle = grupos.find((g) => g.clienteId === clienteDetalleId) ?? null;
@@ -137,129 +140,147 @@ export function CreditosAdmin() {
     }
   }
 
-  function handleWhatsApp(grupo: (typeof grupos)[number]) {
-    const cliente = grupo.cliente;
-    if (!cliente?.telefono) return;
-    const total = formatoMoneda(grupo.total);
-    const mensaje = `Hola ${cliente.alias || cliente.nombre}, te recordamos tu saldo pendiente de ${total} por ${grupo.pedidos.length} pedido(s) (hace ${grupo.diasMora} día(s)). ¿Cuándo pasas a ponerte al día? ¡Gracias!`;
-    const url = `https://wa.me/${telefonoParaWhatsApp(cliente.telefono)}?text=${encodeURIComponent(mensaje)}`;
-    window.open(url, "_blank");
-    registrarRecordatorioCredito(grupo.clienteId);
+  // Paso: detalle del pedido en crédito (se abre al tocar un pedido que debe).
+  if (pedidoDetalleId) {
+    const pedido = pedidos.find((p) => p.id === pedidoDetalleId);
+    if (pedido) {
+      return (
+        <PedidoDetalle
+          pedido={pedido}
+          onVolver={() => setPedidoDetalleId(null)}
+          varianteHeader="compacto"
+          permitirCobro
+        />
+      );
+    }
   }
 
   if (clienteDetalle) {
     const c = clienteDetalle.cliente;
+    const valor = Number(montoAbono) || 0;
+    const saldoTrasAbono = Math.max(0, clienteDetalle.total - valor);
     return (
       <div className="flex h-full flex-col min-h-0">
-        <div className="flex-shrink-0 flex items-center justify-between border-b border-line pb-2.5">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => { setClienteDetalleId(null); setMontoAbono(""); setComentarioAbono(""); }}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-paper-raised text-ink active:bg-paper-sunken shadow-sm"
-              aria-label="Volver a pendientes"
-            >
-              ←
-            </button>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-accent">Gestión de crédito</p>
-              <h2 className="font-display text-[17px] font-semibold text-ink">{c?.nombre ?? "Cliente"}</h2>
-            </div>
+        {/* Cabecera compacta con volver (fija) */}
+        <div className="flex-shrink-0 flex items-center gap-2.5 border-b border-line pb-2.5">
+          <button
+            type="button"
+            onClick={() => { setClienteDetalleId(null); setMontoAbono(""); setComentarioAbono(""); }}
+            aria-label="Volver a pendientes"
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-line bg-paper-raised text-ink active:bg-paper-sunken"
+          >
+            <IconArrowLeft width={16} height={16} />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-accent">Gestión de crédito</p>
+            <h2 className="truncate font-display text-[15px] font-semibold text-ink">{c?.nombre ?? "Cliente"}</h2>
           </div>
           <GuiaAyuda
             pantalla="Cobrar crédito"
             pasos={[
-              { titulo: "1 · Pedidos del cliente", texto: "Ves cada pedido del cliente con fecha, número y saldo. El más antiguo se cobra primero." },
-              { titulo: "2 · Registrar pago", texto: "Escribe lo que te pagó y elige efectivo o Nequi. Se reparte solo y crea el ingreso en caja." },
-              { titulo: "3 · WhatsApp y frecuencia", texto: "Configura cada cuántos días recordar y envía el mensaje con un toque. Queda la fecha del recordatorio." },
+              { titulo: "1 · Saldo pendiente", texto: "Arriba, en rojo, ves cuánto debe el cliente y hace cuántos días." },
+              { titulo: "2 · Registrar pago", texto: "Escribe lo que te pagó y elige efectivo o Nequi. Se reparte al pedido más antiguo y crea el ingreso en caja." },
+              { titulo: "3 · Pedidos que debe", texto: "Toca cualquier pedido para ver su detalle completo y, si quieres, cobrarlo ahí mismo." },
             ]}
           />
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar py-3 space-y-3.5 max-w-xl">
-          <p className="text-[12.5px] text-ink-soft">
-            {c?.alias ? `“${c.alias}” · ` : ""}{c?.telefono ?? ""} · Hace {clienteDetalle.diasMora} día(s) · Total pendiente: <strong className="text-danger">{formatoMoneda(clienteDetalle.total)}</strong>
-          </p>
-
-          <div className="rounded-2xl border border-line bg-paper-raised p-3.5">
-            <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Pedidos pendientes ({clienteDetalle.pedidos.length})</p>
-            <ul className="mt-2 divide-y divide-line/60">
-              {clienteDetalle.pedidos.map((p) => (
-                <li key={p.id} className="flex items-center justify-between gap-2 py-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-[13px] font-medium text-ink">{p.numero} · {new Date(p.creadoEn).toLocaleDateString("es-CO")}</p>
-                    <p className="text-[11.5px] text-ink-soft">Hace {diasEntre(p.creadoEn, hoy)} día(s) · <span className="capitalize">{p.estado.replace("-", " ")}</span></p>
-                  </div>
-                  <span className="flex-shrink-0 font-mono text-[13px] font-semibold text-danger">{formatoMoneda(p.pago.saldoPendiente)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="rounded-2xl border border-line bg-paper-raised p-4">
-            <p className="font-semibold text-ink">Registrar pago / abono</p>
-            <div className="mt-3 inline-flex rounded-full border border-line bg-paper p-1">
-              {(["efectivo", "nequi"] as AbonoCredito["metodo"][]).map((m) => (
-                <button key={m} type="button" onClick={() => setMetodoAbono(m)} className={`rounded-full px-4 py-1.5 text-[12.5px] font-semibold capitalize ${metodoAbono === m ? "bg-ink text-white" : "text-ink-soft"}`}>
-                  {m}
-                </button>
-              ))}
+        {/* Scroll general: saldo, pago y pedidos (el pie queda fijo) */}
+        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-5 py-3 md:px-6">
+          <div className="space-y-2.5">
+            {/* 1 · Saldo pendiente en rojo */}
+            <div className="rounded-2xl border border-danger/20 bg-danger-soft px-3.5 py-2.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-danger/80">Saldo pendiente</p>
+              <p className="font-mono text-[21px] font-bold leading-tight text-danger">{formatoMoneda(clienteDetalle.total)}</p>
+              <p className="mt-0.5 truncate text-[11px] text-ink-soft">
+                {clienteDetalle.pedidos.length} pedido(s) · hace {clienteDetalle.diasMora} día(s) · {c?.telefono || "sin teléfono"}
+              </p>
             </div>
-            <input
-              type="number"
-              min={1}
-              value={montoAbono}
-              onChange={(e) => setMontoAbono(e.target.value)}
-              placeholder={`Monto (pendiente ${formatoMoneda(clienteDetalle.total)})`}
-              className="mt-3 w-full rounded-xl border border-line bg-paper px-3.5 py-3 font-mono text-[15px] font-semibold text-ink focus:border-ink focus:outline-none"
-            />
-            <input
-              value={comentarioAbono}
-              onChange={(e) => setComentarioAbono(e.target.value)}
-              placeholder="Comentario (opcional)"
-              className="mt-2 w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[13px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
-            />
-            <Boton onClick={() => setConfirmarAbono(true)} disabled={!Number(montoAbono)} className="mt-3">
-              Revisar abono {montoAbono ? formatoMoneda(Number(montoAbono)) : ""} por {metodoAbono}
-            </Boton>
-            <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">Se aplica al pedido más antiguo primero y descuenta del saldo del cliente. Crea ingreso en caja.</p>
-          </div>
 
-          <div className="rounded-2xl border border-line bg-paper-raised p-4">
-            <p className="font-semibold text-ink">Recordatorio WhatsApp</p>
-            <p className="mt-1 text-[12px] text-ink-soft">
-              Cada {clienteDetalle.frecuencia} día(s) ·{" "}
-              {clienteDetalle.diasDesdeRecordatorio >= 900 ? "nunca enviado" : `último hace ${clienteDetalle.diasDesdeRecordatorio} día(s)`} ·{" "}
-              {clienteDetalle.tocaRecordar ? "Toca recordar hoy" : "Al día"}
-            </p>
-            <div className="mt-3 flex gap-2">
+            {/* 2 · Registrar pago / abono */}
+            <div className="rounded-2xl border border-line bg-paper-raised p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-faint">Registrar pago / abono</p>
+                <div className="inline-flex rounded-full border border-line bg-paper p-0.5">
+                  {(["efectivo", "nequi"] as AbonoCredito["metodo"][]).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setMetodoAbono(m)}
+                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize transition-colors ${metodoAbono === m ? "bg-ink text-white" : "text-ink-soft"}`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
               <input
                 type="number"
                 min={1}
-                max={90}
-                value={frecuenciaTmp[c?.id ?? ""] ?? String(clienteDetalle.frecuencia)}
-                onChange={(e) => setFrecuenciaTmp((f) => ({ ...f, [c?.id ?? ""]: e.target.value }))}
-                className="w-20 rounded-lg border border-line bg-paper px-3 py-2 text-center text-[13px] text-ink focus:border-ink focus:outline-none"
+                inputMode="numeric"
+                value={montoAbono}
+                onChange={(e) => setMontoAbono(e.target.value)}
+                placeholder={`Monto (debe ${formatoMoneda(clienteDetalle.total)})`}
+                className="mt-2 w-full rounded-xl border border-line bg-paper px-3 py-2 font-mono text-[14px] font-semibold text-ink focus:border-ink focus:outline-none"
               />
-              <button
-                type="button"
-                onClick={() => c && actualizarFrecuenciaCredito(c.id, Number(frecuenciaTmp[c.id] ?? clienteDetalle.frecuencia))}
-                className="rounded-lg border border-line bg-paper px-3 py-2 text-[12px] font-semibold text-ink active:bg-paper-sunken"
-              >
-                Guardar días
-              </button>
-              <button
-                type="button"
-                onClick={() => handleWhatsApp(clienteDetalle)}
-                disabled={!c?.telefono}
-                className="flex-1 rounded-lg bg-success py-2 text-[12px] font-semibold text-white disabled:opacity-40"
-              >
-                WhatsApp 💬
-              </button>
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                <button type="button" onClick={() => setMontoAbono(String(clienteDetalle.total))} className="rounded-full border border-line bg-paper px-2.5 py-0.5 text-[10.5px] font-semibold text-ink active:bg-paper-sunken">
+                  Liquidar todo
+                </button>
+                <button type="button" onClick={() => setMontoAbono(String(Math.round(clienteDetalle.total / 2)))} className="rounded-full border border-line bg-paper px-2.5 py-0.5 text-[10.5px] font-semibold text-ink active:bg-paper-sunken">
+                  Mitad
+                </button>
+                {valor > 0 && (
+                  <span className={`text-[10.5px] font-semibold ${saldoTrasAbono === 0 ? "text-success" : "text-ink-soft"}`}>
+                    {saldoTrasAbono === 0 ? "✓ Liquida el crédito completo" : `Quedará debiendo ${formatoMoneda(saldoTrasAbono)}`}
+                  </span>
+                )}
+              </div>
+              <input
+                value={comentarioAbono}
+                onChange={(e) => setComentarioAbono(e.target.value)}
+                placeholder="Comentario (opcional)"
+                className="mt-1.5 w-full rounded-xl border border-line bg-paper px-3 py-1.5 text-[12px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
+              />
             </div>
-            {!c?.telefono && <p className="mt-2 text-[11.5px] text-danger">Sin teléfono para WhatsApp.</p>}
+
+            {/* 3 · Pedidos que debe (lista completa dentro del scroll general) */}
+            <div className="rounded-2xl border border-line bg-paper-sunken/30 p-2">
+              <p className="px-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+                Pedidos que debe ({clienteDetalle.pedidos.length})
+              </p>
+              <ul className="space-y-1.5">
+                {clienteDetalle.pedidos.map((p) => (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      onClick={() => setPedidoDetalleId(p.id)}
+                      className="flex w-full items-center justify-between gap-2 rounded-xl border border-line bg-paper-raised px-3 py-2 text-left active:bg-paper-sunken"
+                    >
+                      <span className="min-w-0">
+                        <span className="block truncate font-mono text-[12px] font-semibold text-ink">{p.numero}</span>
+                        <span className="block truncate text-[10.5px] text-ink-soft">
+                          {new Date(p.creadoEn).toLocaleDateString("es-CO")} · hace {diasEntre(p.creadoEn, hoy)} día(s) ·{" "}
+                          <span className="capitalize">{p.estado.replace("-", " ")}</span>
+                        </span>
+                      </span>
+                      <span className="flex-shrink-0 text-right">
+                        <span className="block font-mono text-[12.5px] font-bold text-danger">{formatoMoneda(p.pago.saldoPendiente)}</span>
+                        <span className="text-[10px] font-semibold text-teal">Ver detalle →</span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
+
+        <BarraInferior>
+          <Boton onClick={() => setConfirmarAbono(true)} disabled={valor <= 0}>
+            Registrar {valor > 0 ? formatoMoneda(valor) : "abono"} por {metodoAbono}
+          </Boton>
+        </BarraInferior>
 
         <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
 
@@ -288,8 +309,8 @@ export function CreditosAdmin() {
             pantalla="Créditos"
             pasos={[
               { titulo: "1 · Pendientes", texto: "Lista lo no pagado por cliente con fecha, pedidos y total. Busca por nombre, alias, teléfono o consecutivo." },
-              { titulo: "2 · Cobrar", texto: "Toca un cliente para ver sus pedidos y registrar lo que te pagó por efectivo o Nequi. Se reparte al más antiguo." },
-              { titulo: "3 · Contador y WhatsApp", texto: "Cada cliente tiene días de mora y frecuencia personalizable. Envía el recordatorio a WhatsApp con un toque." },
+              { titulo: "2 · Cobrar", texto: "Toca un cliente: verás el saldo en rojo, el formulario de pago y los pedidos que debe. Se reparte al más antiguo." },
+              { titulo: "3 · Detalle del pedido", texto: "Toca cualquier pedido en crédito para abrir su detalle completo y cobrarlo ahí mismo si lo necesitas." },
               { titulo: "4 · Historial", texto: "Pestaña Historial con todos los abonos, periodo y buscador, igual que los demás módulos." },
             ]}
           />
@@ -317,10 +338,19 @@ export function CreditosAdmin() {
           </div>
         )}
 
+        {tab === "historial" && (
+          <div className="flex items-center justify-between rounded-xl border border-success/25 bg-success-soft px-3 py-2">
+            <span className="text-[10.5px] font-semibold uppercase tracking-wide text-success">
+              Abonado a facturas en el periodo
+            </span>
+            <span className="font-mono text-[14px] font-bold text-success">{formatoMoneda(totalAbonadoPeriodo)}</span>
+          </div>
+        )}
+
         <input
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
-          placeholder={tab === "pendientes" ? "Buscar por cliente, teléfono o consecutivo" : "Buscar abono por cliente"}
+          placeholder={tab === "pendientes" ? "Buscar por cliente, teléfono o consecutivo" : "Buscar por cliente o nº de factura"}
           className="w-full rounded-xl border border-line bg-paper-raised px-3.5 py-2 text-[13.5px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
         />
       </div>
@@ -330,10 +360,10 @@ export function CreditosAdmin() {
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
           <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
             <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">
-              {tab === "pendientes" ? `Pendientes (${gruposFiltrados.length})` : `Abonos (${abonosFiltrados.length})`}
+              {tab === "pendientes" ? `Pendientes (${gruposFiltrados.length})` : `Abonos a crédito (${abonosFiltrados.length})`}
             </p>
             <span className="text-[11px] text-ink-soft">
-              {tab === "pendientes" ? "Toca para cobrar" : "Reparto al más antiguo"}
+              {tab === "pendientes" ? "Toca para cobrar" : "Cada abono muestra sus facturas"}
             </span>
           </div>
           <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
@@ -354,8 +384,8 @@ export function CreditosAdmin() {
                   <span className="flex-shrink-0 font-mono text-[13px] font-semibold text-danger">{formatoMoneda(g.total)}</span>
                 </div>
                 <div className="mt-2 flex items-center gap-2 text-[11.5px]">
-                  <span className={`rounded-full px-2.5 py-1 font-semibold ${g.tocaRecordar ? "bg-danger-soft text-danger" : "bg-success-soft text-success"}`}>
-                    {g.tocaRecordar ? "Toca recordar" : `Recordar cada ${g.frecuencia}d`}
+                  <span className={`rounded-full px-2.5 py-1 font-semibold ${g.diasMora >= 8 ? "bg-danger-soft text-danger" : "bg-paper-sunken text-ink-soft"}`}>
+                    {g.diasMora === 0 ? "Al día" : `${g.diasMora} día(s) de mora`}
                   </span>
                   <span className="text-teal font-semibold">Cobrar →</span>
                 </div>
@@ -369,20 +399,36 @@ export function CreditosAdmin() {
         ) : (
           paginar(abonosFiltrados, pagina, POR_PAGINA).items.map((a) => {
             const cliente = obtenerCliente(a.clienteId);
+            const facturas = a.pedidosAfectados.length;
             return (
               <article key={a.id} className="rounded-xl border border-line bg-paper-raised p-3.5 shadow-sm">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-[14px] font-semibold text-ink">{cliente?.nombre ?? "Cliente"}</p>
-                    <p className="text-[12px] text-ink-soft">{new Date(a.creadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })} · {a.metodo} · por {a.usuarioId.slice(0, 8)}</p>
+                    <p className="truncate text-[13.5px] font-semibold text-ink">{cliente?.nombre ?? "Cliente"}</p>
+                    <p className="truncate text-[11.5px] text-ink-soft">
+                      {new Date(a.creadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })} · {a.metodo} · por {a.usuarioId.slice(0, 8)}
+                    </p>
                   </div>
-                  <span className="flex-shrink-0 font-mono text-[13px] font-semibold text-success">+{formatoMoneda(a.monto)}</span>
+                  <span className="flex-shrink-0 font-mono text-[13.5px] font-bold text-success">+{formatoMoneda(a.monto)}</span>
                 </div>
-                <ul className="mt-2 divide-y divide-line/60 rounded-lg border border-line bg-paper p-1.5">
+
+                <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+                  Facturas a crédito abonadas ({facturas})
+                </p>
+                <ul className="mt-1 space-y-1">
                   {a.pedidosAfectados.map((p) => (
-                    <li key={p.pedidoId} className="flex justify-between px-2 py-1 text-[12px]">
-                      <span className="text-ink">{p.numero}</span>
-                      <span className="font-mono text-ink-soft">{formatoMoneda(p.montoAplicado)}</span>
+                    <li key={p.pedidoId}>
+                      <button
+                        type="button"
+                        onClick={() => setPedidoDetalleId(p.pedidoId)}
+                        className="flex w-full items-center justify-between gap-2 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-left active:bg-paper-sunken"
+                      >
+                        <span className="truncate font-mono text-[12px] font-semibold text-ink">{p.numero}</span>
+                        <span className="flex-shrink-0 text-right">
+                          <span className="font-mono text-[12px] font-semibold text-success">{formatoMoneda(p.montoAplicado)}</span>
+                          <span className="ml-1.5 text-[10px] font-semibold text-teal">Ver factura →</span>
+                        </span>
+                      </button>
                     </li>
                   ))}
                 </ul>
