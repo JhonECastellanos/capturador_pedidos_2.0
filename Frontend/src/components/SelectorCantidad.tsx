@@ -11,8 +11,9 @@ export function SelectorCantidad({
   onCambiar,
   tamano = "md",
 }: SelectorCantidadProps) {
-  const alto = tamano === "sm" ? "h-8" : "h-10";
-  const anchoBoton = tamano === "sm" ? "w-8" : "w-10";
+  // Objetivo táctil mínimo de 44px en ambas variantes.
+  const alto = "h-11";
+  const anchoBoton = tamano === "sm" ? "w-9" : "w-11";
 
   return (
     <div

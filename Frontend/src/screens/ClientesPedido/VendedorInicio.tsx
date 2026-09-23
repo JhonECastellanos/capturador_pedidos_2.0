@@ -9,8 +9,14 @@ export default function VendedorInicio() {
   const navegar = useNavigate();
   const { usuario, cerrarSesion } = useAuth();
   const { pedidos } = useOperaciones();
-  const ventasHoy = pedidos.reduce((total, pedido) => total + pedido.total, 0);
-  const creditosAbiertos = pedidos.filter((pedido) => pedido.pago.saldoPendiente > 0).length;
+  const esHoy = (iso: string) => {
+    const d = new Date(iso);
+    const h = new Date();
+    return d.getFullYear() === h.getFullYear() && d.getMonth() === h.getMonth() && d.getDate() === h.getDate();
+  };
+  const pedidosHoy = pedidos.filter((p) => esHoy(p.creadoEn) && p.estado !== "cancelado");
+  const ventasHoy = pedidosHoy.reduce((total, pedido) => total + pedido.total, 0);
+  const porCobrar = pedidos.filter((pedido) => pedido.estado !== "cancelado" && pedido.pago.saldoPendiente > 0).reduce((s, p) => s + p.pago.saldoPendiente, 0);
 
   function salir() {
     cerrarSesion();
@@ -24,20 +30,20 @@ export default function VendedorInicio() {
       </header>
 
       <main className="no-scrollbar flex-1 overflow-y-auto px-5 pb-8 md:px-6">
-        <section className="-mt-4 rounded-2xl bg-paper-raised p-4 shadow-[0_12px_28px_-16px_rgba(31,42,60,0.35)]">
+        <section className="-mt-4 rounded-2xl bg-paper-raised p-4 shadow-[0_12px_28px_-16px_rgba(48,77,37,0.35)]">
           <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Resumen de la jornada</p>
           <div className="mt-3 grid grid-cols-3 gap-2.5">
-            <div><p className="font-mono text-[16px] font-semibold text-ink">{pedidos.length}</p><p className="text-[12px] text-ink-soft">Pedidos</p></div>
-            <div><p className="font-mono text-[16px] font-semibold text-ink">{formatoMoneda(ventasHoy)}</p><p className="text-[12px] text-ink-soft">Ventas</p></div>
-            <div><p className="font-mono text-[16px] font-semibold text-danger">{creditosAbiertos}</p><p className="text-[12px] text-ink-soft">Por cobrar</p></div>
+            <div><p className="font-mono text-[16px] font-semibold text-ink">{pedidosHoy.length}</p><p className="text-[12px] text-ink-soft">Pedidos hoy</p></div>
+            <div><p className="font-mono text-[16px] font-semibold text-ink">{formatoMoneda(ventasHoy)}</p><p className="text-[12px] text-ink-soft">Ventas hoy</p></div>
+            <div><p className="font-mono text-[16px] font-semibold text-danger">{formatoMoneda(porCobrar)}</p><p className="text-[12px] text-ink-soft">Por cobrar</p></div>
           </div>
         </section>
 
         <section className="mt-7">
           <h2 className="font-display text-[13px] font-semibold uppercase tracking-wide text-ink-soft">Acciones rápidas</h2>
           <div className="mt-3 space-y-2.5">
-            <TarjetaAccion titulo="Crear Cliente" descripcion="Guarda un alias para reconocerlo al instante" icono={<IconUser width={24} height={24} />} tono="teal" onClick={() => navegar("/modulos/clientes/nuevo")} />
-            <TarjetaAccion titulo="Crear Pedido" descripcion="Selecciona cliente, productos y forma de pago" icono={<IconPackage width={24} height={24} />} tono="acento" onClick={() => navegar("/modulos/pedido-rapido")} />
+            <TarjetaAccion titulo="Crear Cliente" descripcion="Guarda un alias para reconocerlo al instante" icono={<IconUser width={24} height={24} />} tono="teal" onClick={() => navegar("/vendedor/clientes/nuevo")} />
+            <TarjetaAccion titulo="Crear Pedido" descripcion="Selecciona cliente, productos y forma de pago" icono={<IconPackage width={24} height={24} />} tono="acento" onClick={() => navegar("/vendedor/pedido")} />
           </div>
         </section>
 

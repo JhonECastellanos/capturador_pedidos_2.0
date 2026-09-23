@@ -1,45 +1,73 @@
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
-import { PedidoProvider } from "./context/PedidoContext";
 import { OperacionesProvider } from "./context/OperacionesContext";
 import { RutaProtegida } from "./components/RutaProtegida";
 import Acceso from "./screens/Acceso/Acceso";
-import Administracion from "./screens/Administracion/Administracion";
-import SeleccionCliente from "./screens/SeleccionCliente/SeleccionCliente";
-import Catalogo from "./screens/Catalogo/Catalogo";
-import Carrito from "./screens/Carrito/Carrito";
-import Confirmacion from "./screens/Confirmacion/Confirmacion";
-import PedidoExitoso from "./screens/PedidoExitoso/PedidoExitoso";
+import NoEncontrado from "./screens/NoEncontrado/NoEncontrado";
 import VendedorInicio from "./screens/ClientesPedido/VendedorInicio";
 import CrearCliente from "./screens/ClientesPedido/CrearCliente";
 import PedidoRapido from "./screens/ClientesPedido/PedidoRapido";
 import PedidoCompletado from "./screens/ClientesPedido/PedidoCompletado";
+import { AdminLayout } from "./modules/administracion/AdminLayout";
+import { Resumen } from "./modules/administracion/screens/Resumen";
+import { PedidosAdmin } from "./modules/pedidos/screens/PedidosAdmin";
+import { CreditosAdmin } from "./modules/creditos/screens/CreditosAdmin";
+import { InventarioAdmin } from "./modules/inventario/screens/InventarioAdmin";
+import { CajaAdmin } from "./modules/caja/screens/CajaAdmin";
+import { CierreAdmin } from "./modules/caja/screens/CierreAdmin";
+import { UsuariosAdmin } from "./modules/usuarios/screens/UsuariosAdmin";
+import { ComprasAdmin } from "./modules/compras/screens/ComprasAdmin";
+import { PreciosAdmin } from "./modules/precios/screens/PreciosAdmin";
+
+/** Aplicación: decide si la vista usa el marco móvil o el marco amplio del admin. */
+function Contenido() {
+  const location = useLocation();
+  const esAdmin = location.pathname.startsWith("/admin") || location.pathname === "/administracion";
+  return (
+    <div className="app-viewport-outer">
+      <div className={`app-viewport ${esAdmin ? "app-viewport--amplio" : ""}`}>
+        <Routes>
+          <Route path="/" element={<Acceso />} />
+
+          {/* ─── Flujo del vendedor (app móvil) ─── */}
+          <Route path="/vendedor" element={<RutaProtegida roles={["vendedor"]}><VendedorInicio /></RutaProtegida>} />
+          <Route path="/vendedor/pedido" element={<RutaProtegida roles={["vendedor"]}><PedidoRapido /></RutaProtegida>} />
+          <Route path="/vendedor/pedido/completado" element={<RutaProtegida roles={["vendedor"]}><PedidoCompletado /></RutaProtegida>} />
+          <Route path="/vendedor/clientes/nuevo" element={<RutaProtegida roles={["vendedor"]}><CrearCliente /></RutaProtegida>} />
+
+          {/* ─── Panel administrativo (rutas anidadas) ─── */}
+          <Route path="/admin" element={<RutaProtegida roles={["administrador"]}><AdminLayout /></RutaProtegida>}>
+            <Route index element={<Resumen />} />
+            <Route path="pedidos" element={<PedidosAdmin />} />
+            <Route path="creditos" element={<CreditosAdmin />} />
+            <Route path="inventario" element={<InventarioAdmin />} />
+            <Route path="compras" element={<ComprasAdmin />} />
+            <Route path="precios" element={<PreciosAdmin />} />
+            <Route path="caja" element={<CajaAdmin />} />
+            <Route path="cierre" element={<CierreAdmin />} />
+            <Route path="usuarios" element={<UsuariosAdmin />} />
+          </Route>
+
+          {/* ─── Redirecciones de rutas antiguas ─── */}
+          <Route path="/administracion" element={<Navigate to="/admin" replace />} />
+          <Route path="/modulos/vendedor" element={<Navigate to="/vendedor" replace />} />
+          <Route path="/modulos/clientes/nuevo" element={<Navigate to="/vendedor/clientes/nuevo" replace />} />
+          <Route path="/modulos/pedido-rapido" element={<Navigate to="/vendedor/pedido" replace />} />
+          <Route path="/modulos/pedido-completado" element={<Navigate to="/vendedor/pedido/completado" replace />} />
+
+          <Route path="*" element={<NoEncontrado />} />
+        </Routes>
+      </div>
+    </div>
+  );
+}
 
 export default function App() {
   return (
     <AuthProvider>
-      <PedidoProvider>
-        <OperacionesProvider>
-          <div className="app-viewport-outer">
-            <div className="app-viewport">
-              <Routes>
-                <Route path="/" element={<Acceso />} />
-                <Route path="/vendedor" element={<RutaProtegida roles={["vendedor"]}><VendedorInicio /></RutaProtegida>} />
-                <Route path="/administracion" element={<RutaProtegida roles={["administrador"]}><Administracion /></RutaProtegida>} />
-                <Route path="/cliente" element={<RutaProtegida roles={["vendedor"]}><SeleccionCliente /></RutaProtegida>} />
-                <Route path="/catalogo" element={<RutaProtegida roles={["vendedor"]}><Catalogo /></RutaProtegida>} />
-                <Route path="/carrito" element={<RutaProtegida roles={["vendedor"]}><Carrito /></RutaProtegida>} />
-                <Route path="/confirmacion" element={<RutaProtegida roles={["vendedor"]}><Confirmacion /></RutaProtegida>} />
-                <Route path="/pedido-exitoso" element={<RutaProtegida roles={["vendedor"]}><PedidoExitoso /></RutaProtegida>} />
-                <Route path="/modulos/vendedor" element={<RutaProtegida roles={["vendedor"]}><VendedorInicio /></RutaProtegida>} />
-                <Route path="/modulos/clientes/nuevo" element={<RutaProtegida roles={["vendedor"]}><CrearCliente /></RutaProtegida>} />
-                <Route path="/modulos/pedido-rapido" element={<RutaProtegida roles={["vendedor"]}><PedidoRapido /></RutaProtegida>} />
-                <Route path="/modulos/pedido-completado" element={<RutaProtegida roles={["vendedor"]}><PedidoCompletado /></RutaProtegida>} />
-              </Routes>
-            </div>
-          </div>
-        </OperacionesProvider>
-      </PedidoProvider>
+      <OperacionesProvider>
+        <Contenido />
+      </OperacionesProvider>
     </AuthProvider>
   );
 }

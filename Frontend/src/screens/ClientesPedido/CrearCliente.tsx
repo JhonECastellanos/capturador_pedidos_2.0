@@ -20,14 +20,14 @@ export default function CrearCliente() {
   function guardarCliente(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
     const cliente = crearCliente(formulario);
-    navegar("/modulos/pedido-rapido", { state: { clienteId: cliente.id } });
+    navegar("/vendedor/pedido", { state: { clienteId: cliente.id } });
   }
 
   const formularioValido = formulario.nombre.trim().length > 1 && formulario.alias.trim().length > 1;
 
   return (
     <div className="flex h-full flex-col">
-      <BarraSuperior titulo="Crear cliente" subtitulo="Paso 1 · Alta rápida" onVolver={() => navegar("/modulos/vendedor")} paso={{ actual: 1, total: 3 }} />
+      <BarraSuperior titulo="Crear cliente" subtitulo="Paso 1 · Alta rápida" onVolver={() => navegar("/vendedor")} paso={{ actual: 1, total: 3 }} />
       <main className="no-scrollbar flex-1 overflow-y-auto px-5 py-4 md:px-6">
         <div className="rounded-xl border border-teal/20 bg-teal-soft p-4"><div className="flex items-start gap-3"><IconUser width={20} height={20} className="mt-0.5 flex-shrink-0 text-teal" /><div><p className="text-[14px] font-semibold text-ink">Identificación natural</p><p className="mt-1 text-[12.5px] leading-relaxed text-ink-soft">El alias te ayuda a encontrar al cliente en el mostrador. Ejemplo: “Jaimito el de los pantalones”.</p></div></div></div>
         <form id="formulario-cliente" onSubmit={guardarCliente} className="mt-5 space-y-4">
