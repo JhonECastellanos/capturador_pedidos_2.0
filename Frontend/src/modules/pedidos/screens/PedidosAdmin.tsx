@@ -6,6 +6,7 @@ import { useOperaciones } from "../../../context/OperacionesContext";
 import type { EstadoPedido } from "../../../types";
 import { formatoMoneda } from "../../../utils/formato";
 import { exportarPedidosCSV } from "../../../utils/exportar";
+import { EtiquetaEstado } from "../../administracion/components/EtiquetaEstado";
 import { EtiquetaPago } from "../../administracion/components/EtiquetaPago";
 import { PedidoDetalle } from "../../ventas/screens/PedidoDetalle";
 
@@ -63,16 +64,8 @@ function formatoFechaHora(iso: string): string {
   return new Date(iso).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
 }
 
-/** Color del badge según el estado del pedido. */
-function claseEstado(estado: EstadoPedido): string {
-  if (estado === "entregado") return "bg-success-soft text-success";
-  if (estado === "cancelado") return "bg-danger-soft text-danger";
-  if (estado === "en-preparacion") return "bg-accent-soft text-accent-dark";
-  return "bg-paper-sunken text-ink-soft";
-}
-
 export function PedidosAdmin() {
-  const { pedidos, obtenerCliente } = useOperaciones();
+  const { pedidos, obtenerCliente, nombreUsuario } = useOperaciones();
   const [segmento, setSegmento] = useState<Segmento>("hoy");
   const [periodo, setPeriodo] = useState<Periodo>("todo");
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>("todos");
@@ -111,9 +104,9 @@ export function PedidosAdmin() {
 
   const conteoHoy = pedidos.filter((p) => esMismoDia(p.creadoEn, hoy)).length;
 
-  // El detalle se abre a pantalla completa y compacto (una sola pantalla, sin scroll general).
+  // El detalle es informativo: los estados y cobros se gestionan en Ventas.
   if (pedidoDetalle) {
-    return <PedidoDetalle pedido={pedidoDetalle} onVolver={() => setDetalleId(null)} varianteHeader="compacto" />;
+    return <PedidoDetalle pedido={pedidoDetalle} onVolver={() => setDetalleId(null)} varianteHeader="compacto" soloLectura />;
   }
 
   return (
@@ -126,7 +119,7 @@ export function PedidosAdmin() {
             pasos={[
               { titulo: "1 · Segmento HOY / HISTORIAL", texto: "HOY muestra solo lo de hoy. HISTORIAL con periodo hoy / ayer / semana / mes y todo al final." },
               { titulo: "2 · Buscador y filtros", texto: "Busca por cliente o consecutivo. Filtra por estado y por rango de fecha (Desde / Hasta) sin afectar el buscador." },
-              { titulo: "3 · Detalle auditado", texto: "Toca un pedido para ver líneas, total y pago. Cambia el estado con un toque; cancelar pide confirmación porque reversa stock, caja y cartera." },
+              { titulo: "3 · Consulta auditada", texto: "Toca un pedido para ver líneas, pagos recibidos y el historial de estados con nombres. Este panel es informativo: los estados y cobros se gestionan en Ventas." },
               { titulo: "4 · Comprobante y Excel", texto: "Adjunta foto o PDF del pago en el detalle. Usa Exportar Excel para descargar la tabla filtrada." },
             ]}
           />
@@ -264,15 +257,14 @@ export function PedidosAdmin() {
                     <p className="font-mono text-[12px] font-semibold text-ink-faint">{pedido.numero} · {formatoFechaHora(pedido.creadoEn)}</p>
                     <p className="mt-1 truncate text-[14px] font-semibold text-ink">{cliente?.nombre ?? "Cliente"} {cliente?.alias ? `“${cliente.alias}”` : ""}</p>
                     <p className="text-[12px] text-ink-soft">{pedido.lineas.length} referencias · {formatoMoneda(pedido.total)}</p>
+                    <p className="text-[10.5px] text-ink-faint">Generó {nombreUsuario(pedido.vendedorId)}</p>
                   </div>
                   <div className="flex flex-shrink-0 flex-col items-end gap-1">
-                    <span className={`rounded-full px-2.5 py-1 text-[10.5px] font-semibold capitalize ${claseEstado(pedido.estado)}`}>
-                      {pedido.estado.replace("-", " ")}
-                    </span>
+                    <EtiquetaEstado estado={pedido.estado} />
                     <EtiquetaPago metodo={pedido.pago.metodo} pendiente={pedido.pago.saldoPendiente > 0} />
                   </div>
                 </div>
-                <p className="mt-2 text-[11.5px] font-semibold text-teal">Ver detalle auditado →</p>
+                <p className="mt-2 text-[11.5px] font-semibold text-teal">Ver detalle informativo →</p>
               </article>
             );
           })

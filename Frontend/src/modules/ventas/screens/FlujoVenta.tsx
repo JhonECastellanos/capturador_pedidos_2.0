@@ -180,7 +180,9 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
           <p className="mb-2.5 text-[12.5px] text-ink-soft">Elige a quién le vas a vender hoy.</p>
           {clientesFiltrados.length === 0 ? (
             <div className="rounded-xl border border-dashed border-line bg-paper-raised px-4 py-8 text-center">
-              <p className="text-[13px] font-medium text-ink">No se encontró el cliente</p>
+              <p className="text-[13px] font-medium text-ink">
+                {clientes.length === 0 ? "Aún no hay clientes registrados" : "No se encontró el cliente"}
+              </p>
               <p className="mt-1 text-[12px] text-ink-soft">Créalo sin salir del flujo y quedará seleccionado.</p>
             </div>
           ) : (
@@ -310,7 +312,9 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
               })}
               {productosFiltrados.length === 0 && (
                 <li className="rounded-xl border border-dashed border-line bg-paper-raised p-8 text-center text-[13px] text-ink-soft">
-                  No hay productos con ese filtro.
+                  {inventario.length === 0
+                    ? "Aún no hay productos registrados. Créalos desde Inventario en el panel del administrador."
+                    : "No hay productos con ese filtro."}
                 </li>
               )}
             </ul>
@@ -333,7 +337,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
         <>
           <main className="no-scrollbar flex-1 min-h-0 overflow-y-auto px-5 py-4 md:px-6">
             <p className="text-[12.5px] leading-relaxed text-ink-soft">
-              Indica si el pedido ya se entregó o si queda por preparar (jugos, sándwiches, etc.). El administrador verá este estado en su panel de Pedidos.
+              Indica si el pedido ya se entregó o si queda por preparar (jugos, sándwiches, etc.). El estado queda visible en Pedidos para su seguimiento.
             </p>
             <div className="mt-3 space-y-2.5">
               <button

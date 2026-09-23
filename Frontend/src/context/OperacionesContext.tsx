@@ -94,6 +94,8 @@ interface OperacionesContextValue {
   cambiosPrecio: CambioPrecio[];
   abonos: AbonoCredito[];
   clienteActivo: Cliente | null;
+  /** Nombre legible del usuario que hizo una acción (auditoría). */
+  nombreUsuario: (usuarioId?: string) => string;
   crearCliente: (datos: NuevoCliente) => Cliente;
   seleccionarClienteActivo: (clienteId: string) => void;
   obtenerCliente: (clienteId: string) => Cliente | null;
@@ -158,6 +160,13 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
   const seleccionarClienteActivo = useCallback((clienteId: string) => setClienteActivoId(clienteId), []);
   const obtenerCliente = useCallback((clienteId: string) => clientes.find((cliente) => cliente.id === clienteId) ?? null, [clientes]);
   const obtenerProveedor = useCallback((id: string) => proveedores.find((p) => p.id === id) ?? null, [proveedores]);
+  const nombreUsuario = useCallback(
+    (usuarioId?: string) => {
+      if (!usuarioId || usuarioId === "sistema") return "Sistema";
+      return usuarios.find((u) => u.id === usuarioId)?.nombre ?? "Usuario retirado";
+    },
+    [usuarios],
+  );
 
   const registrarPedido = useCallback((datos: NuevoPedido) => {
     const pedido = construirPedido(datos, nuevoId(), siguienteConsecutivo("PED"), new Date().toISOString());
@@ -582,6 +591,7 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
     cambiosPrecio,
     abonos,
     clienteActivo,
+    nombreUsuario,
     crearCliente,
     seleccionarClienteActivo,
     obtenerCliente,

@@ -72,7 +72,7 @@ function fechaLocalStr(fecha: Date): string {
 }
 
 export function CierreAdmin() {
-  const { movimientosCaja, pedidos, obtenerCliente, actualizarEstadoPedido, trasladarPedidoAHoy } = useOperaciones();
+  const { movimientosCaja, pedidos, obtenerCliente, actualizarEstadoPedido, trasladarPedidoAHoy, nombreUsuario } = useOperaciones();
   const { usuario } = useAuth();
   const [cierres, setCierres] = useState<CierreDia[]>(cargarCierres);
 
@@ -710,6 +710,7 @@ export function CierreAdmin() {
                   <p className="text-[12px] text-ink-soft">
                     Ingresos {formatoMoneda(c.totalIngresos)} − Egresos {formatoMoneda(c.totalEgresos)}
                   </p>
+                  <p className="text-[11px] text-ink-faint">Cerró {nombreUsuario(c.usuarioId)}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-mono text-[14px] font-bold text-ink">

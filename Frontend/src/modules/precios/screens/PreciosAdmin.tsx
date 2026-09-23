@@ -15,7 +15,7 @@ import { formatoMoneda } from "../../../utils/formato";
 type Paso = 1 | 2;
 
 export function PreciosAdmin() {
-  const { inventario, cambiosPrecio, actualizarPrecioProducto } = useOperaciones();
+  const { inventario, cambiosPrecio, actualizarPrecioProducto, nombreUsuario } = useOperaciones();
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
   const [productoId, setProductoId] = useState<string | null>(null);
@@ -129,7 +129,7 @@ export function PreciosAdmin() {
                     <ul className="mt-1.5 space-y-1">
                       {historial.map((cambio) => (
                         <li key={cambio.id} className="text-[11.5px] text-ink-soft">
-                          {formatoMoneda(cambio.valorAnterior)} → <strong className="font-mono text-ink">{formatoMoneda(cambio.valorNuevo)}</strong> · {new Date(cambio.fecha).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}
+                          {formatoMoneda(cambio.valorAnterior)} → <strong className="font-mono text-ink">{formatoMoneda(cambio.valorNuevo)}</strong> · {new Date(cambio.fecha).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })} · {nombreUsuario(cambio.usuarioId)}
                         </li>
                       ))}
                     </ul>
@@ -228,7 +228,9 @@ export function PreciosAdmin() {
       <div className="mt-2.5 flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-2.5 rounded-2xl border border-line bg-paper-sunken/30 p-2 sm:p-3">
         {filtrados.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-line bg-paper-raised px-4 py-10 text-center text-[13px] text-ink-soft">
-            No se encontraron productos para esta búsqueda.
+            {inventario.length === 0
+              ? "Aún no hay productos. Créalos desde Inventario para poder cambiar sus precios."
+              : "No se encontraron productos para esta búsqueda."}
           </div>
         ) : (
           paginar(filtrados, pagina, POR_PAGINA).items.map((p) => {

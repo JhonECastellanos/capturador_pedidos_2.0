@@ -4,7 +4,6 @@ import { OperacionesProvider } from "./context/OperacionesContext";
 import { RutaProtegida } from "./components/RutaProtegida";
 import Acceso from "./screens/Acceso/Acceso";
 import NoEncontrado from "./screens/NoEncontrado/NoEncontrado";
-import VendedorInicio from "./screens/ClientesPedido/VendedorInicio";
 import CrearCliente from "./screens/ClientesPedido/CrearCliente";
 import { AdminLayout } from "./modules/administracion/AdminLayout";
 import { Resumen } from "./modules/administracion/screens/Resumen";
@@ -18,9 +17,13 @@ import { ComprasAdmin } from "./modules/compras/screens/ComprasAdmin";
 import { PreciosAdmin } from "./modules/precios/screens/PreciosAdmin";
 import {
   AdminVentas,
+  AdminVentasAbonos,
   AdminVentasClienteNuevo,
   AdminVentasCompletado,
+  AdminVentasPedido,
+  AdminVentasPedidoDetalle,
   VendedorAbonos,
+  VendedorInicio,
   VendedorPedido,
   VendedorPedidoCompletado,
   VendedorPedidoDetalle,
@@ -48,6 +51,9 @@ function Contenido() {
           <Route path="/admin" element={<RutaProtegida roles={["administrador"]}><AdminLayout /></RutaProtegida>}>
             <Route index element={<Resumen />} />
             <Route path="ventas" element={<AdminVentas />} />
+            <Route path="ventas/pedido" element={<AdminVentasPedido />} />
+            <Route path="ventas/pedido/:pedidoId" element={<AdminVentasPedidoDetalle />} />
+            <Route path="ventas/abonos" element={<AdminVentasAbonos />} />
             <Route path="ventas/completado" element={<AdminVentasCompletado />} />
             <Route path="ventas/clientes/nuevo" element={<AdminVentasClienteNuevo />} />
             <Route path="pedidos" element={<PedidosAdmin />} />

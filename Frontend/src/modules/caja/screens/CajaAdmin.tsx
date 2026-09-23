@@ -57,7 +57,7 @@ const ETIQUETA_PERIODO: Record<PeriodoCaja, string> = {
 const PERIODOS: PeriodoCaja[] = ["hoy", "ayer", "semana", "mes", "año", "todo"];
 
 export function CajaAdmin() {
-  const { movimientosCaja, pedidos, abonos, obtenerCliente } = useOperaciones();
+  const { movimientosCaja, pedidos, abonos, obtenerCliente, nombreUsuario } = useOperaciones();
   const [periodo, setPeriodo] = useState<PeriodoCaja>("hoy");
   const [vistaCaja, setVistaCaja] = useState<VistaCaja>("movimientos");
   const [busqueda, setBusqueda] = useState("");
@@ -358,6 +358,7 @@ export function CajaAdmin() {
                   }`}>
                     {movimiento.tipo === "egreso" ? "Egreso" : esNequi ? "Nequi" : esEfectivo ? "Efectivo" : movimiento.metodo ?? movimiento.tipo}
                   </span>
+                  <p className="mt-0.5 text-[10.5px] text-ink-faint">Registró {nombreUsuario(movimiento.usuarioId)}</p>
                 </div>
                 <p className={`flex-shrink-0 font-mono text-[13.5px] font-bold ${
                   movimiento.tipo === "ingreso" ? (esNequi ? "text-teal" : "text-success") : "text-danger"

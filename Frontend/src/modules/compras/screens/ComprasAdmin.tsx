@@ -47,7 +47,7 @@ function dentroDePeriodo(fechaIso: string, periodo: Periodo, hoy: Date): boolean
 }
 
 export function ComprasAdmin() {
-  const { inventario, proveedores, recepciones, gastos, crearProveedor, crearProducto, registrarRecepcion, registrarGasto, obtenerProveedor } =
+  const { inventario, proveedores, recepciones, gastos, crearProveedor, crearProducto, registrarRecepcion, registrarGasto, obtenerProveedor, nombreUsuario } =
     useOperaciones();
 
   // Vistas del módulo: historial | recepción | detalle
@@ -411,7 +411,7 @@ export function ComprasAdmin() {
                 <div className="min-w-0">
                   <p className="truncate text-[13px] font-semibold text-ink">{g.concepto}</p>
                   <p className="text-[11.5px] text-ink-soft">
-                    {new Date(g.creadoEn).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })} · {g.usuarioId.slice(0, 8)}
+                    {new Date(g.creadoEn).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })} · registró {nombreUsuario(g.usuarioId)}
                   </p>
                 </div>
                 <span className="flex-shrink-0 font-mono text-[13px] font-semibold text-danger">−{formatoMoneda(g.monto)}</span>
@@ -482,7 +482,7 @@ export function ComprasAdmin() {
             <div className="ticket-edge -mx-4 my-3" />
             <p className="text-[12px] text-ink-soft">
               {new Date(detalle.creadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })} · por{" "}
-              {detalle.usuarioId.slice(0, 8)}
+              {nombreUsuario(detalle.usuarioId)}
             </p>
           </section>
 

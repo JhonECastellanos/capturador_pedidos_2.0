@@ -1,6 +1,8 @@
 # Capturador de pedidos — AMBIÉ
 
-Aplicación web para registrar clientes, productos, pedidos, pagos, inventario, caja, compras y usuarios. Persistencia en `localStorage` versionada (`ambie:v1:`); datos sobreviven al refresh y se siembran desde `src/data/semilla.ts`.
+Aplicación web para registrar clientes, productos, pedidos, pagos, inventario, caja, compras y usuarios. Persistencia en `localStorage` versionada (`ambie:v1:`); los datos sobreviven al refresh.
+
+**El negocio arranca vacío**: no hay datos de ejemplo. Solo se crean los dos accesos oficiales (`src/data/semilla.ts`), y a partir de ahí todo —clientes, productos, pedidos, caja, compras, precios, conteos y cierres— se construye desde la interfaz. En Inicio hay un acceso de utilidad para borrar todos los datos y dejar la app como recién instalada.
 
 ## Tecnologías
 - React 19 + TypeScript
@@ -18,15 +20,15 @@ npm run lint  # oxlint
 
 ## Rutas
 - `/` Acceso (login solo credenciales + ojito)
-- `/vendedor` Inicio vendedor (métricas simples: pedidos hoy, ventas hoy, por cobrar, descuadre de caja) → lista de pedidos de hoy tappable
+- `/vendedor` Inicio de ventas (métricas: pedidos hoy, ventas hoy, por cobrar, descuadre de caja) → accesos rápidos y **pedidos de hoy en contenedor con scroll**, tappables al detalle de gestión
   - `/vendedor/pedido` Flujo guiado 4 pasos: Cliente → Productos → **Entrega** (Entregado ahora / Pendiente por preparar) → Pago → `/vendedor/pedido/completado` (`replace`, badge de estado)
   - `/vendedor/pedido/:pedidoId` Detalle del pedido **a pantalla completa y compacto** con botones de estado y `Cobrar al entregar`
   - `/vendedor/abonos` Pantalla independiente de abonos (icono de volver), liquida el crédito solo
   - `/vendedor/clientes/nuevo` Alta rápida de **5 campos** (nombre, teléfono, sitio/dirección, fecha de nacimiento, tipo de crédito) → vuelve al inicio con aviso
 - `/admin` (protegido administrador) `AdminLayout` con header compacto sticky (pills con centrado animado, orden: inicio, ventas, pedidos, créditos, inventarios, compras, precios, caja, cierre, usuarios):
-  - `/admin` Resumen (KPIs, barras CSS, tops, acceso a Créditos)
-  - `/admin/ventas` **Módulo de Ventas del administrador**: misma interfaz del vendedor para tomar pedidos y registrar clientes (`/admin/ventas/clientes/nuevo`, `/admin/ventas/completado`)
-  - `/admin/pedidos` HOY (n) | HISTORIAL (n), estado, periodo hoy→todo, filtro fecha separado, export Excel, paginación 20; detalle a pantalla completa (`PedidoDetalle`)
+  - `/admin` Resumen del negocio: KPIs del día (ventas, gastos, compras, ticket promedio, crédito pendiente y alertas de stock), hoy vs ayer, **dos gráficas con filtro día/semana/mes/año** (ventas contra compras y gastos en barras, rentabilidad en línea) y **top 5 de productos y clientes con lo vendido y la ganancia real**, filtrable por día/semana/mes/año/todo
+  - `/admin/ventas` **Módulo de Ventas del administrador**: el administrador también vende. Inicio con resumen de la jornada, accesos a Crear Pedido (`/admin/ventas/pedido`), Recibir Abono (`/admin/ventas/abonos`) y Crear Cliente (`/admin/ventas/clientes/nuevo`), y los **pedidos de hoy en un contenedor con scroll propio** donde se toca para gestionar (`/admin/ventas/pedido/:pedidoId` → estado y cobro). Al confirmar: `/admin/ventas/completado`
+  - `/admin/pedidos` HOY (n) | HISTORIAL (n), estado, periodo hoy→todo, filtro fecha separado, export Excel, paginación 20; detalle **solo lectura** (líneas, pagos recibidos y auditoría). Los estados y cobros se gestionan en Ventas
   - `/admin/creditos` PENDIENTES (n) | HISTORIAL (n), periodo hoy→todo, cobro por cliente (saldo en rojo → registrar pago → pedidos que debe, tappables al detalle) con scroll general y pie fijo; el HISTORIAL muestra cada abono con las **facturas a crédito abonadas** (tappables) y el total abonado del periodo; paginación 20
   - `/admin/inventario` General/Conteo/Descuadres/Ajustes, galería swipe, paginación 20; el **conteo guiado** registra solo las líneas digitadas, lista el historial completo de conteos y al tocar uno abre su detalle (contados, sobrantes, faltantes y productos contados) ocupando el espacio disponible
   - `/admin/compras` COMPRAS (n) | GASTOS (n), periodo hoy→todo, recepción inline (paso 2 con contenedor propio de scroll y pie fijo "Revisar y confirmar"), paginación 20
@@ -101,11 +103,15 @@ Lógica pura en `src/dominio/servicios.ts` (testeable).
 
 ## Componentes clave (`src/components/`)
 `BarraSuperior, BarraInferior, Boton, Icons, VistaImagenProducto (galería swipe ←/→ con ficha completa), SelectorCantidad (h-11 ≥44px), TarjetaProducto, FilaCarrito, TarjetaAccion, BuscadorInput, SegmentoControl, HojaDetalle, SelectorPeriodo, TablaResponsive, GraficaBarras, Paginacion, ConfirmarAccion (módulo flotante centrado), TiraToast + useAviso, GuiaAyuda (bombillo 💡 3-5 pasos)`
-Utilidades sin componente: `src/utils/paginacion.ts` (`POR_PAGINA`, `paginar`, `totalPaginasDe`) — separadas para no romper Fast Refresh.
+Badges reutilizables en `src/modules/administracion/components/`: `EtiquetaEstado` (color por estado del pedido) y `EtiquetaPago` (efectivo, Nequi, crédito pendiente o pagado).
+Utilidades sin componente: `src/utils/paginacion.ts` (`POR_PAGINA`, `paginar`, `totalPaginasDe`) y `src/utils/periodos.ts` (tramos de tiempo `día/semana/mes/año` y ventanas móviles para los listados) — separadas para no romper Fast Refresh.
 
 ## Flujos corregidos
 - **Módulo compartido de ventas** (`src/modules/ventas/screens/`): `FlujoVenta`, `PedidoCompletado`, `PedidoDetalle` y `Abonos` se reutilizan en vendedor y administrador (rutas en `RutasVentas.tsx`), sin duplicar pantallas.
-- **Vendedor**: inicio con métricas simples (pedidos hoy, ventas hoy, por cobrar y descuadre de caja = contado vs caja) → Crear Pedido / Recibir Abono / Crear Cliente; pedidos de hoy tappables al detalle a pantalla completa.
+- **Inicio de ventas compartido** (`InicioVentas`): la misma pantalla para vendedor y administrador; cambia el rótulo y las rutas. Resumen de la jornada, accesos a Crear Pedido / Recibir Abono / Crear Cliente y los pedidos de hoy dentro de un contenedor con scroll propio (la pantalla no scrollea).
+- **Pedidos informativo**: el módulo de Pedidos ya no cambia estados ni cobra; muestra badge de estado con color, etiqueta de pago (efectivo, Nequi, crédito pendiente o pagado), quién generó el pedido, los pagos recibidos y el historial de estados con nombres. La gestión vive en Ventas.
+- **Tablero del administrador**: KPIs del día (ventas, gastos, compras, ticket promedio, crédito pendiente y alertas), comparativo hoy vs ayer, dos gráficas con el eje X siempre en el tiempo (`GraficaBarrasDobles` ventas vs compras + gastos y `GraficaLinea` de rentabilidad, ambas con filtro día/semana/mes/año) y top 5 de productos y clientes con lo vendido y la ganancia (costo conocido del producto) más su porcentaje de margen, filtrable por día/semana/mes/año/todo.
+- **Auditoría con nombres**: cada registro muestra quién lo hizo en lenguaje natural (no el id): generó el pedido, cambió el estado, recibió el abono, registró el movimiento de caja, contó, ajustó, cambió precio, registró la compra o el gasto y cerró el día. Se resuelve con `nombreUsuario(usuarioId)` del contexto.
 - **Venta guiada (4 pasos)**: cliente → productos (categorías + tope stock) → **entrega** (Entregado ahora / Pendiente por preparar) → pago. El estado de entrega sincroniza con el panel de Pedidos del administrador.
 - **Cobrar al entregar**: desde el detalle del pedido el cobro se aplica **solo a ese pedido** (no se reparte en otras deudas del cliente), queda como abono en el historial de créditos y el pie cambia a “Pedido cobrado · $monto” en vez de seguir ofreciendo el botón.
 - **Persistencia de estados**: el cambio de estado se guarda en `localStorage` al instante y se refleja en el panel del vendedor (pedidos de hoy), en el módulo de Pedidos del administrador y en los demás módulos que leen pedidos; cancelar reversa stock/caja/cartera y **revivir un pedido cancelado vuelve a aplicar esos efectos**, sin datos inconsistentes.
@@ -146,8 +152,8 @@ Utilidades sin componente: `src/utils/paginacion.ts` (`POR_PAGINA`, `paginar`, `
 
 Mapa por módulo
 Módulo	Proceso	Cambio aplicado
-Vender	Cliente→Productos→Pago→Listo	✓ ya estaba; referencia del sistema
-Pedidos	Historial→Detalle→Estado	✓ confirmar cancelación (reversa stock/caja/cartera) + aviso
+Vender	Inicio→Cliente→Productos→Entrega→Pago	✓ inicio compartido con resumen, accesos y pedidos de hoy en contenedor con scroll; el detalle del pedido gestiona estado y cobro
+Pedidos	Consulta informativa	✓ solo lectura: estado con color, pago, quién generó, pagos recibidos y auditoría con nombres; sin cambios de estado ni cobro
 Créditos	Pendientes→Cliente→Abono	✓ saldo en rojo → registrar pago → pedidos que debe (scroll general, pie fijo); historial con facturas abonadas y total del periodo; confirmar abono + aviso
 Inventario	Menú 4 procesos	✓ Stock / Conteo guiado (historial completo + detalle por conteo) / Descuadres / Ajuste manual en pantallas separadas con volver; confirmar cancelar conteo, aplicar ajuste y ajuste manual + avisos
 Compras	Proveedor→Productos→Confirmar→Detalle	✓ unificado a componentes compartidos
@@ -155,5 +161,5 @@ Precios	Elegir producto→Nuevo precio→Confirmar	✓ Proceso de 2 pasos a pant
 Caja	Movimientos + Ganancias	✓ tarjetas compactas que filtran (ingresos/egresos/efectivo/nequi/crédito), balance con color según signo y ganancia neta con historial hoy→todo
 Cierre	Conteo→Resumen→Historial	✓ confirmar Eliminar pendiente + avisos (trasladar/eliminar)
 Usuarios	Lista→Datos→Confirmar	✓ paso 2 de resumen de acceso + aviso
-Dashboard/Resumen	KPIs + accesos	✓ sin cambios (un solo scroll interno)
+Dashboard/Resumen	KPIs + gráficas + tops	✓ KPIs del día, hoy vs ayer, barras ventas vs compras+gastos y línea de rentabilidad con filtro de tiempo, top 5 de productos y clientes con ganancia real
 

@@ -34,6 +34,7 @@ export function InventarioAdmin() {
     cancelarConteoActivo,
     aplicarAjusteDeConteo,
     registrarAjusteManual,
+    nombreUsuario,
   } = useOperaciones();
 
   // Cada proceso empresarial en su propia pantalla (sin scroll de página)
@@ -137,6 +138,10 @@ export function InventarioAdmin() {
   }
 
   function handleIniciar(tipo: "general" | "aleatorio") {
+    if (inventario.length === 0) {
+      mostrarAviso("Registra productos antes de iniciar un conteo", "error");
+      return;
+    }
     const cantidad = tipo === "aleatorio" ? Number(cantidadAleatoria) || 5 : null;
     const conteo = iniciarConteo(tipo, cantidad, turno);
     setConteoActivoId(conteo.id);
@@ -430,7 +435,7 @@ export function InventarioAdmin() {
                       Inició {new Date(conteoDetalle.iniciadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}
                       {conteoDetalle.finalizadoEn ? ` · cerró ${new Date(conteoDetalle.finalizadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}` : ""}
                     </p>
-                    <p className="text-[11.5px] text-ink-faint">Usuario {conteoDetalle.usuarioId}</p>
+                    <p className="text-[11.5px] text-ink-faint">Contó {nombreUsuario(conteoDetalle.usuarioId)}</p>
                   </div>
                   <span className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-semibold capitalize ${
                     conteoDetalle.estado === "confirmado" ? "bg-success-soft text-success" : conteoDetalle.estado === "cancelado" ? "bg-danger-soft text-danger" : "bg-accent-soft text-accent-dark"
@@ -585,9 +590,12 @@ export function InventarioAdmin() {
               <input type="number" min={1} max={inventario.length} value={cantidadAleatoria} onChange={(e) => setCantidadAleatoria(e.target.value)} placeholder="N aleatorio" className={campo} />
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <button type="button" onClick={() => handleIniciar("general")} className="rounded-xl bg-ink py-3 text-[13px] font-semibold text-white active:bg-ink/90">General ({inventario.length})</button>
-              <button type="button" onClick={() => handleIniciar("aleatorio")} className="rounded-xl border border-line bg-paper py-3 text-[13px] font-semibold text-ink active:bg-paper-sunken">Aleatorio ({cantidadAleatoria})</button>
+              <button type="button" disabled={inventario.length === 0} onClick={() => handleIniciar("general")} className="rounded-xl bg-ink py-3 text-[13px] font-semibold text-white active:bg-ink/90 disabled:opacity-40">General ({inventario.length})</button>
+              <button type="button" disabled={inventario.length === 0} onClick={() => handleIniciar("aleatorio")} className="rounded-xl border border-line bg-paper py-3 text-[13px] font-semibold text-ink active:bg-paper-sunken disabled:opacity-40">Aleatorio ({cantidadAleatoria})</button>
             </div>
+            {inventario.length === 0 && (
+              <p className="mt-2 text-[11.5px] text-ink-faint">Primero registra productos en Stock general para poder contarlos.</p>
+            )}
           </div>
 
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
@@ -666,7 +674,7 @@ export function InventarioAdmin() {
                       {linea.diferencia > 0 ? `+${linea.diferencia} sobra` : `${linea.diferencia} falta`}
                     </span>
                   </div>
-                  <p className="mt-1 text-[12px] text-ink-soft">Teórico {linea.stockTeorico} · Físico {linea.stockFisico} · {linea.turno} · {linea.usuarioId}</p>
+                  <p className="mt-1 text-[12px] text-ink-soft">Teórico {linea.stockTeorico} · Físico {linea.stockFisico} · {linea.turno} · {nombreUsuario(linea.usuarioId)}</p>
                   <p className="text-[11.5px] text-ink-faint">{conteo?.finalizadoEn ? new Date(conteo.finalizadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" }) : ""}</p>
                   {!yaAjustado && conteo?.estado === "confirmado" && (
                     <button type="button" onClick={() => setConfirmarAplicarConteoId(linea.conteoId)} className="mt-3 w-full rounded-lg bg-ink py-2.5 text-[12px] font-semibold text-white active:bg-ink/90">Revisar y aplicar al stock</button>
@@ -706,7 +714,7 @@ export function InventarioAdmin() {
                 ) : (
                   ajustes.map((ajuste) => (
                     <article key={ajuste.id} className="rounded-xl border border-line bg-paper-raised p-3.5 shadow-sm">
-                      <p className="text-[12px] font-semibold text-ink-faint">{new Date(ajuste.creadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })} · {ajuste.usuarioId} {ajuste.motivo ? `· ${ajuste.motivo}` : ""} {ajuste.conteoId === "manual" ? "· manual" : ""}</p>
+                      <p className="text-[12px] font-semibold text-ink-faint">{new Date(ajuste.creadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })} · {nombreUsuario(ajuste.usuarioId)} {ajuste.motivo ? `· ${ajuste.motivo}` : ""} {ajuste.conteoId === "manual" ? "· manual" : ""}</p>
                       {ajuste.comentario && <p className="mt-1 text-[12px] italic text-ink-soft">“{ajuste.comentario}”</p>}
                       <ul className="mt-2 divide-y divide-line rounded-lg border border-line">
                         {ajuste.lineas.map((l) => (

@@ -53,6 +53,7 @@ export function CreditosAdmin() {
     abonos,
     obtenerCliente,
     registrarAbono,
+    nombreUsuario,
   } = useOperaciones();
   const [tab, setTab] = useState<TabCredito>("pendientes");
   const [busqueda, setBusqueda] = useState("");
@@ -406,7 +407,7 @@ export function CreditosAdmin() {
                   <div className="min-w-0">
                     <p className="truncate text-[13.5px] font-semibold text-ink">{cliente?.nombre ?? "Cliente"}</p>
                     <p className="truncate text-[11.5px] text-ink-soft">
-                      {new Date(a.creadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })} · {a.metodo} · por {a.usuarioId.slice(0, 8)}
+                      {new Date(a.creadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })} · {a.metodo} · recibió {nombreUsuario(a.usuarioId)}
                     </p>
                   </div>
                   <span className="flex-shrink-0 font-mono text-[13.5px] font-bold text-success">+{formatoMoneda(a.monto)}</span>
