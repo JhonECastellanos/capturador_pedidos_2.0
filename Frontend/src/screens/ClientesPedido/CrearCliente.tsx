@@ -4,7 +4,8 @@ import { BarraInferior } from "../../components/BarraInferior";
 import { BarraSuperior } from "../../components/BarraSuperior";
 import { Boton } from "../../components/Boton";
 import { IconCalendar, IconUser } from "../../components/Icons";
-import { useOperaciones } from "../../context/OperacionesContext";
+import { SelectorOpciones } from "../../components/SelectorOpciones";
+import { useOperaciones } from "../../context/operaciones";
 import type { TipoCredito } from "../../types";
 import { ETIQUETA_TIPO_CREDITO, FRECUENCIA_POR_TIPO_CREDITO } from "../../types";
 
@@ -122,26 +123,17 @@ export default function CrearCliente({ rutaInicio = "/vendedor", rutaTrasGuardar
 
           <div>
             <p className="text-[12.5px] font-semibold text-ink">Tipo de crédito</p>
-            <div className="mt-1.5 grid grid-cols-2 gap-2">
-              {tiposCredito.map((tipo) => {
-                const activo = tipoCredito === tipo;
-                return (
-                  <button
-                    key={tipo}
-                    type="button"
-                    onClick={() => setTipoCredito(tipo)}
-                    aria-pressed={activo}
-                    className={`rounded-xl border px-3 py-2.5 text-left transition-colors ${
-                      activo ? "border-ink bg-ink text-white" : "border-line bg-paper-raised text-ink active:bg-paper-sunken"
-                    }`}
-                  >
-                    <span className="block text-[13px] font-semibold">{ETIQUETA_TIPO_CREDITO[tipo]}</span>
-                    <span className={`mt-0.5 block text-[10.5px] ${activo ? "text-white/65" : "text-ink-soft"}`}>
-                      Recordar cada {FRECUENCIA_POR_TIPO_CREDITO[tipo]} día(s)
-                    </span>
-                  </button>
-                );
-              })}
+            <div className="mt-1.5">
+              <SelectorOpciones
+                columnas={2}
+                valor={tipoCredito}
+                onChange={setTipoCredito}
+                opciones={tiposCredito.map((tipo) => ({
+                  valor: tipo,
+                  titulo: ETIQUETA_TIPO_CREDITO[tipo],
+                  descripcion: `Recordar cada ${FRECUENCIA_POR_TIPO_CREDITO[tipo]} día(s)`,
+                }))}
+              />
             </div>
             <p className="mt-1.5 text-[11px] leading-relaxed text-ink-faint">
               Define cada cuántos días se sugiere el recordatorio de pago. Podrás ajustarlo luego en Abonos.

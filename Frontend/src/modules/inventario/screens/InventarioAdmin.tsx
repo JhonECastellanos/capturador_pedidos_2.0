@@ -1,21 +1,25 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BarraInferior } from "../../../components/BarraInferior";
 import { Boton } from "../../../components/Boton";
+import { BuscadorInput } from "../../../components/BuscadorInput";
 import { ConfirmarAccion } from "../../../components/ConfirmarAccion";
 import { GuiaAyuda } from "../../../components/GuiaAyuda";
 import { IconArrowLeft, IconChartBar, IconChevronRight, IconClipboard, IconPackage, IconPlus } from "../../../components/Icons";
+import { ListaVacia } from "../../../components/ListaVacia";
+import { SegmentoControl } from "../../../components/SegmentoControl";
+import { TarjetaAccion } from "../../../components/TarjetaAccion";
 import { Paginacion } from "../../../components/Paginacion";
 import { POR_PAGINA, paginar } from "../../../utils/paginacion";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
 import { VistaImagenProducto } from "../../../components/VistaImagenProducto";
-import { useOperaciones } from "../../../context/OperacionesContext";
+import { useOperaciones } from "../../../context/operaciones";
 import { lineasContadasDe, resumenConteo } from "../../../dominio/servicios";
-import { categorias } from "../../../data/semilla";
-import type { NuevoProducto } from "../../../types";
 import { formatoMoneda } from "../../../utils/formato";
+import { FormularioProducto } from "../components/FormularioProducto";
 
 const campo = "rounded-lg border border-line bg-paper-raised px-3 py-2.5 text-[13px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none";
+
 type VistaInv = "menu" | "general" | "conteo" | "descuadres" | "ajustes";
 type FiltroEstadoInv = "todos" | "alerta" | "ok";
 
@@ -40,16 +44,6 @@ export function InventarioAdmin() {
   // Cada proceso empresarial en su propia pantalla (sin scroll de página)
   const [vista, setVista] = useState<VistaInv>("menu");
   const [mostrarProducto, setMostrarProducto] = useState(false);
-  const [archivoProducto, setArchivoProducto] = useState<File | null>(null);
-  const [productoNuevo, setProductoNuevo] = useState({
-    nombre: "",
-    categoria: "Abarrotes",
-    precioVenta: "",
-    costoActual: "",
-    unidad: "unidad",
-    stock: "",
-    stockMinimo: "20",
-  });
   const [cantidadAleatoria, setCantidadAleatoria] = useState("5");
   const [turno, setTurno] = useState("mañana");
   const [conteoActivoId, setConteoActivoId] = useState<string | null>(null);
@@ -118,25 +112,6 @@ export function InventarioAdmin() {
     return inventario.filter((p) => !q || p.nombre.toLowerCase().includes(q) || p.codigoInterno.toLowerCase().includes(q));
   }, [busquedaAjuste, inventario]);
 
-  function guardarProducto(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault();
-    const datos: NuevoProducto = {
-      nombre: productoNuevo.nombre,
-      categoria: productoNuevo.categoria,
-      unidad: productoNuevo.unidad,
-      precioVenta: Number(productoNuevo.precioVenta),
-      costoActual: Number(productoNuevo.costoActual || 0),
-      stock: Number(productoNuevo.stock),
-      stockMinimo: Number(productoNuevo.stockMinimo || 0),
-    };
-    const producto = crearProducto(datos);
-    if (archivoProducto) void actualizarImagenProducto(producto.id, archivoProducto);
-    setProductoNuevo({ nombre: "", categoria: "Abarrotes", precioVenta: "", costoActual: "", unidad: "unidad", stock: "", stockMinimo: "20" });
-    setArchivoProducto(null);
-    setMostrarProducto(false);
-    mostrarAviso(`Producto ${producto.nombre} creado`, "exito");
-  }
-
   function handleIniciar(tipo: "general" | "aleatorio") {
     if (inventario.length === 0) {
       mostrarAviso("Registra productos antes de iniciar un conteo", "error");
@@ -195,7 +170,7 @@ export function InventarioAdmin() {
         descripcion: "Niveles, alertas y crear productos",
         detalle: `${alertasStock} alerta(s) · ${inventario.length} productos`,
         icono: <IconPackage width={24} height={24} />,
-        tono: "bg-teal-soft text-teal",
+        tono: "teal" as const,
       },
       {
         id: "conteo" as VistaInv,
@@ -203,7 +178,7 @@ export function InventarioAdmin() {
         descripcion: "Contar producto a producto por turno",
         detalle: conteoEnCurso ? `En curso ${indice + 1}/${conteoEnCurso.lineas.length}` : `${conteosEnCurso} en curso`,
         icono: <IconClipboard width={24} height={24} />,
-        tono: "bg-accent-soft text-accent-dark",
+        tono: "acento" as const,
       },
       {
         id: "descuadres" as VistaInv,
@@ -211,7 +186,7 @@ export function InventarioAdmin() {
         descripcion: "Faltantes y sobrantes por aplicar",
         detalle: `${lineasConDiferencia.length} por resolver`,
         icono: <IconChartBar width={24} height={24} />,
-        tono: "bg-danger-soft text-danger",
+        tono: "danger" as const,
       },
       {
         id: "ajustes" as VistaInv,
@@ -219,7 +194,7 @@ export function InventarioAdmin() {
         descripcion: "Corregir stock con motivo auditado",
         detalle: `${ajustes.length} ajuste(s)`,
         icono: <IconPlus width={24} height={24} />,
-        tono: "bg-paper-sunken text-ink",
+        tono: "ink" as const,
       },
     ];
     return (
@@ -240,21 +215,14 @@ export function InventarioAdmin() {
           <ul className="space-y-2.5 max-w-xl">
             {procesos.map((proceso) => (
               <li key={proceso.id}>
-                <button
-                  type="button"
+                <TarjetaAccion
+                  titulo={proceso.titulo}
+                  descripcion={proceso.descripcion}
+                  detalle={proceso.detalle}
+                  icono={proceso.icono}
+                  tono={proceso.tono}
                   onClick={() => setVista(proceso.id)}
-                  className="flex w-full items-center gap-3 rounded-2xl border border-line bg-paper-raised p-4 text-left active:bg-paper-sunken"
-                >
-                  <span className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full ${proceso.tono}`}>
-                    {proceso.icono}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[15px] font-semibold text-ink">{proceso.titulo}</span>
-                    <span className="block truncate text-[12.5px] text-ink-soft">{proceso.descripcion}</span>
-                    <span className="mt-0.5 block text-[11.5px] font-semibold text-ink-faint">{proceso.detalle}</span>
-                  </span>
-                  <IconChevronRight width={20} height={20} className="flex-shrink-0 text-ink-faint" />
-                </button>
+                />
               </li>
             ))}
           </ul>
@@ -298,57 +266,31 @@ export function InventarioAdmin() {
         <div className="flex flex-1 flex-col min-h-0 mt-2.5">
           {mostrarProducto ? (
             <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar py-2">
-              <form onSubmit={guardarProducto} className="rounded-2xl border border-line bg-paper-raised p-4 max-w-lg">
-                <div className="flex items-center justify-between border-b border-line pb-2.5">
-                  <p className="font-display text-[15px] font-semibold text-ink">Nuevo producto</p>
-                  <button type="button" onClick={() => setMostrarProducto(false)} className="text-[12px] font-semibold text-ink-soft">Cancelar</button>
-                </div>
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  <input required value={productoNuevo.nombre} onChange={(evento) => setProductoNuevo((actual) => ({ ...actual, nombre: evento.target.value }))} placeholder="Nombre del producto" className={`${campo} col-span-2`} autoFocus />
-                  <input required type="number" min="0" value={productoNuevo.precioVenta} onChange={(evento) => setProductoNuevo((actual) => ({ ...actual, precioVenta: evento.target.value }))} placeholder="Precio venta ($)" className={campo} />
-                  <input type="number" min="0" value={productoNuevo.costoActual} onChange={(evento) => setProductoNuevo((actual) => ({ ...actual, costoActual: evento.target.value }))} placeholder="Costo compra ($)" className={campo} />
-                  <input required type="number" min="0" value={productoNuevo.stock} onChange={(evento) => setProductoNuevo((actual) => ({ ...actual, stock: evento.target.value }))} placeholder="Stock inicial" className={campo} />
-                  <input type="number" min="0" value={productoNuevo.stockMinimo} onChange={(evento) => setProductoNuevo((actual) => ({ ...actual, stockMinimo: evento.target.value }))} placeholder="Stock mínimo alerta" className={campo} />
-                  <input list="categorias-inventario" value={productoNuevo.categoria} onChange={(evento) => setProductoNuevo((actual) => ({ ...actual, categoria: evento.target.value }))} placeholder="Categoría" className={campo} />
-                  <datalist id="categorias-inventario">
-                    {categorias.map((categoria) => (
-                      <option key={categoria} value={categoria} />
-                    ))}
-                  </datalist>
-                  <input value={productoNuevo.unidad} onChange={(evento) => setProductoNuevo((actual) => ({ ...actual, unidad: evento.target.value }))} placeholder="Unidad (ej. unidad, pack)" className={campo} />
-                </div>
-                <label className="mt-3 flex cursor-pointer items-center justify-between rounded-xl border border-dashed border-line px-3 py-2.5 text-[12px] text-ink-soft bg-paper">
-                  Foto directa / subir imagen
-                  <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={(evento) => setArchivoProducto(evento.target.files?.[0] ?? null)} />
-                  <span className="font-semibold text-ink">{archivoProducto?.name ?? "Seleccionar foto"}</span>
-                </label>
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => setMostrarProducto(false)} className="rounded-xl border border-line bg-paper py-3 text-[13px] font-semibold text-ink">Volver</button>
-                  <Boton type="submit">Guardar producto</Boton>
-                </div>
-              </form>
+              <FormularioProducto
+                alCancelar={() => setMostrarProducto(false)}
+                alGuardar={(datos, archivo) => {
+                  const producto = crearProducto(datos);
+                  if (archivo) void actualizarImagenProducto(producto.id, archivo);
+                  setMostrarProducto(false);
+                  mostrarAviso(`Producto ${producto.nombre} creado`, "exito");
+                }}
+              />
             </div>
           ) : (
             <>
               <div className="flex-shrink-0 space-y-2">
-                <input
-                  value={busquedaGeneral}
-                  onChange={(e) => setBusquedaGeneral(e.target.value)}
-                  placeholder="Buscar por nombre, código o categoría"
-                  className="w-full rounded-xl border border-line bg-paper-raised px-3.5 py-2 text-[13.5px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
-                />
+                <BuscadorInput value={busquedaGeneral} onChange={setBusquedaGeneral} placeholder="Buscar por nombre, código o categoría" />
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex gap-1.5 flex-1">
-                    {(["todos", "alerta", "ok"] as FiltroEstadoInv[]).map((estado) => (
-                      <button
-                        key={estado}
-                        type="button"
-                        onClick={() => setFiltroEstado(estado)}
-                        className={`flex-1 rounded-full border px-3 py-1 text-[11.5px] font-semibold capitalize transition-colors ${filtroEstado === estado ? "border-ink bg-ink text-white" : "border-line bg-paper-raised text-ink-soft"}`}
-                      >
-                        {estado === "todos" ? "Todos" : estado === "alerta" ? "Alertas" : "En stock"}
-                      </button>
-                    ))}
+                    <SegmentoControl
+                      valor={filtroEstado}
+                      onChange={setFiltroEstado}
+                      opciones={[
+                        { valor: "todos", etiqueta: "Todos" },
+                        { valor: "alerta", etiqueta: "Alertas" },
+                        { valor: "ok", etiqueta: "En stock" },
+                      ]}
+                    />
                   </div>
                   <p className="text-[11px] text-ink-faint flex-shrink-0">{inventarioFiltradoGeneral.length} productos</p>
                 </div>
@@ -391,8 +333,8 @@ export function InventarioAdmin() {
                   </article>
                 ))}
                 {inventarioFiltradoGeneral.length === 0 && (
-                  <div className="col-span-2 rounded-xl border border-dashed border-line p-8 text-center text-[13px] text-ink-soft">
-                    No hay productos que coincidan con la búsqueda.
+                  <div className="col-span-2">
+                    <ListaVacia titulo="No hay productos que coincidan con la búsqueda." texto="Ajusta el filtro o crea un producto nuevo." />
                   </div>
                 )}
                     </div>

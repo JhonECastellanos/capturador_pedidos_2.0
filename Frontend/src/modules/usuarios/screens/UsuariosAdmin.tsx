@@ -1,17 +1,19 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Boton } from "../../../components/Boton";
+import { ConfirmarAccion } from "../../../components/ConfirmarAccion";
 import { GuiaAyuda } from "../../../components/GuiaAyuda";
 import { IconArrowLeft, IconUser } from "../../../components/Icons";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
-import { useOperaciones } from "../../../context/OperacionesContext";
+import { useOperaciones } from "../../../context/operaciones";
 import type { NuevoUsuario, UsuarioSistema } from "../../../types";
 
 export function UsuariosAdmin() {
-  const { usuarios, crearUsuario } = useOperaciones();
+  const { usuarios, crearUsuario, cambiarEstadoUsuario } = useOperaciones();
   const [vista, setVista] = useState<"lista" | "crear">("lista");
   const [pasoCrear, setPasoCrear] = useState<1 | 2>(1);
   const [usuarioNuevo, setUsuarioNuevo] = useState<NuevoUsuario>({ nombre: "", email: "", rol: "vendedor", password: "" });
+  const [confirmarEstadoId, setConfirmarEstadoId] = useState<string | null>(null);
   const { aviso, mostrarAviso, cerrarAviso } = useAviso();
 
   const usuariosOrdenados = useMemo(() =>
@@ -202,13 +204,22 @@ export function UsuariosAdmin() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[13.5px] font-semibold text-ink">{item.nombre}</p>
-                <p className="text-[12px] text-ink-soft">{item.email} {item.password ? "· ●●●●" : "· sin contraseña"}</p>
+                <p className="text-[12px] text-ink-soft">{item.email}</p>
               </div>
               <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${item.rol === "administrador" ? "bg-accent-soft text-accent-dark" : "bg-teal-soft text-teal"}`}>
                 {item.rol}
               </span>
             </div>
-            <p className="mt-2 text-[11px] text-ink-faint">{item.permisos.join(" · ")} · {item.activo ? "activo" : "inactivo"}</p>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <p className="text-[11px] text-ink-faint">{item.permisos.join(" · ")} · {item.activo ? "activo" : "inactivo"}</p>
+              <button
+                type="button"
+                onClick={() => setConfirmarEstadoId(item.id)}
+                className="flex-shrink-0 rounded-lg border border-line px-2.5 py-1 text-[11px] font-semibold text-ink active:bg-paper-sunken"
+              >
+                {item.activo ? "Desactivar" : "Activar"}
+              </button>
+            </div>
           </article>
         ))}
             </div>
@@ -217,6 +228,23 @@ export function UsuariosAdmin() {
       </div>
 
       <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
+
+      <ConfirmarAccion
+        abierto={confirmarEstadoId !== null}
+        titulo={usuariosOrdenados.find((u) => u.id === confirmarEstadoId)?.activo ? "Desactivar usuario" : "Activar usuario"}
+        mensaje={`${usuariosOrdenados.find((u) => u.id === confirmarEstadoId)?.nombre ?? "El usuario"} ${usuariosOrdenados.find((u) => u.id === confirmarEstadoId)?.activo ? "no podrá iniciar sesión mientras esté inactivo." : "podrá iniciar sesión de nuevo."}`}
+        textoConfirmar="Sí, continuar"
+        tono="peligro"
+        alCancelar={() => setConfirmarEstadoId(null)}
+        alConfirmar={() => {
+          if (confirmarEstadoId) {
+            const usuario = usuariosOrdenados.find((u) => u.id === confirmarEstadoId);
+            cambiarEstadoUsuario(confirmarEstadoId);
+            mostrarAviso(`${usuario?.nombre ?? "Usuario"} ${usuario?.activo ? "desactivado" : "activado"}`, "exito");
+            setConfirmarEstadoId(null);
+          }
+        }}
+      />
     </div>
   );
 }

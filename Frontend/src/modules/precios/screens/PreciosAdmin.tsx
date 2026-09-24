@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { BarraInferior } from "../../../components/BarraInferior";
 import { BarraSuperior } from "../../../components/BarraSuperior";
 import { Boton } from "../../../components/Boton";
+import { BuscadorInput } from "../../../components/BuscadorInput";
 import { GuiaAyuda } from "../../../components/GuiaAyuda";
+import { ListaVacia } from "../../../components/ListaVacia";
 import { Paginacion } from "../../../components/Paginacion";
+import { PantallaCompletaAdmin } from "../../../components/PantallaCompletaAdmin";
 import { POR_PAGINA, paginar } from "../../../utils/paginacion";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
-import { useOperaciones } from "../../../context/OperacionesContext";
+import { useOperaciones } from "../../../context/operaciones";
 import { calcularMargen } from "../../../dominio/servicios";
 import { formatoMoneda } from "../../../utils/formato";
 
@@ -64,7 +67,7 @@ export function PreciosAdmin() {
     const historial = cambiosPrecio.filter((c) => c.productoId === producto.id).slice(0, 3);
 
     return (
-      <div className="fixed inset-0 z-40 flex flex-col overflow-hidden bg-paper lg:left-60">
+      <PantallaCompletaAdmin>
         <BarraSuperior
           titulo={paso === 1 ? "Nuevo precio" : "Confirmar cambio"}
           subtitulo={`${producto.nombre} · Paso ${paso} de 2`}
@@ -194,7 +197,7 @@ export function PreciosAdmin() {
             </div>
           )}
         </BarraInferior>
-      </div>
+      </PantallaCompletaAdmin>
     );
   }
 
@@ -216,22 +219,16 @@ export function PreciosAdmin() {
       </div>
 
       <div className="flex-shrink-0 pt-2.5">
-        <input
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          placeholder="Buscar por nombre, código o categoría"
-          className="w-full rounded-xl border border-line bg-paper-raised px-3.5 py-2 text-[13.5px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
-        />
+        <BuscadorInput value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre, código o categoría" />
       </div>
 
       {/* Lista con scroll propio */}
       <div className="mt-2.5 flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-2.5 rounded-2xl border border-line bg-paper-sunken/30 p-2 sm:p-3">
         {filtrados.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-line bg-paper-raised px-4 py-10 text-center text-[13px] text-ink-soft">
-            {inventario.length === 0
-              ? "Aún no hay productos. Créalos desde Inventario para poder cambiar sus precios."
-              : "No se encontraron productos para esta búsqueda."}
-          </div>
+          <ListaVacia
+            titulo={inventario.length === 0 ? "Aún no hay productos." : "No se encontraron productos para esta búsqueda."}
+            texto={inventario.length === 0 ? "Créalos desde Inventario para poder cambiar sus precios." : undefined}
+          />
         ) : (
           paginar(filtrados, pagina, POR_PAGINA).items.map((p) => {
             const margen = calcularMargen(p.precioVenta, p.costoActual);

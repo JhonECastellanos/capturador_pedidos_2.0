@@ -11,6 +11,8 @@ interface TarjetaProductoProps {
   onCambiarCantidad: (cantidad: number) => void;
   /** Texto extra bajo el precio (p. ej. stock disponible). */
   detalle?: string;
+  /** Galería completa para el visor de imagen. */
+  productos?: Producto[];
 }
 
 export function TarjetaProducto({
@@ -19,10 +21,11 @@ export function TarjetaProducto({
   onAgregar,
   onCambiarCantidad,
   detalle,
+  productos,
 }: TarjetaProductoProps) {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-line bg-paper-raised p-3.5">
-      <VistaImagenProducto producto={producto} tamano="sm" clickable />
+      <VistaImagenProducto producto={producto} tamano="sm" clickable productos={productos} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[14px] font-medium text-ink">
           {producto.nombre}

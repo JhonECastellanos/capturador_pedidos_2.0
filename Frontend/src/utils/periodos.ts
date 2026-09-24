@@ -3,6 +3,8 @@
  * de tiempo en el eje X (día, semana, mes o año).
  */
 
+import { dentroDePeriodo as dentroDePeriodoCompartido, inicioDelDia, type Periodo } from "./fechas";
+
 export type Granularidad = "dia" | "semana" | "mes" | "anio";
 
 export interface Tramo {
@@ -13,12 +15,6 @@ export interface Tramo {
 
 /** Periodos rápidos para los listados (los tops del tablero). */
 export type PeriodoLista = "dia" | "semana" | "mes" | "anio" | "todo";
-
-function inicioDelDia(fecha: Date): Date {
-  const copia = new Date(fecha);
-  copia.setHours(0, 0, 0, 0);
-  return copia;
-}
 
 function etiquetaCorta(fecha: Date): string {
   return fecha.toLocaleDateString("es-CO", { weekday: "short" }).replace(".", "");
@@ -73,15 +69,6 @@ export function dentroDeTramo(fechaIso: string, tramo: Tramo): boolean {
 
 /** Ventanas móviles de los listados: hoy, últimos 7 / 30 / 365 días o todo. */
 export function dentroDePeriodo(fechaIso: string, periodo: PeriodoLista, hoy: Date): boolean {
-  if (periodo === "todo") return true;
-  const fecha = new Date(fechaIso);
-  if (periodo === "dia") {
-    return (
-      fecha.getFullYear() === hoy.getFullYear() && fecha.getMonth() === hoy.getMonth() && fecha.getDate() === hoy.getDate()
-    );
-  }
-  const dias = periodo === "semana" ? 7 : periodo === "mes" ? 30 : 365;
-  const desde = inicioDelDia(hoy);
-  desde.setDate(desde.getDate() - dias);
-  return fecha >= desde;
+  const equivalente: Periodo = periodo === "dia" ? "hoy" : periodo;
+  return dentroDePeriodoCompartido(fechaIso, equivalente, hoy);
 }

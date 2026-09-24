@@ -130,6 +130,8 @@ export interface LineaPedido {
   cantidad: number;
   precioUnitario: number;
   subtotal: number;
+  /** Costo del producto al momento de la venta (snapshot para la ganancia real). */
+  costoUnitario?: number;
 }
 
 export interface PagoPedido {

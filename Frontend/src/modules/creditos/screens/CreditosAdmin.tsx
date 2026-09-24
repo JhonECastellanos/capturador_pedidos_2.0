@@ -1,50 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { BarraInferior } from "../../../components/BarraInferior";
 import { Boton } from "../../../components/Boton";
+import { BuscadorInput } from "../../../components/BuscadorInput";
 import { ConfirmarAccion } from "../../../components/ConfirmarAccion";
 import { GuiaAyuda } from "../../../components/GuiaAyuda";
 import { IconArrowLeft } from "../../../components/Icons";
+import { ListaVacia } from "../../../components/ListaVacia";
 import { Paginacion } from "../../../components/Paginacion";
+import { SegmentoControl } from "../../../components/SegmentoControl";
+import { TarjetaClicable } from "../../../components/TarjetaClicable";
 import { POR_PAGINA, paginar } from "../../../utils/paginacion";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
-import { useOperaciones } from "../../../context/OperacionesContext";
-import { diasEntre } from "../../../dominio/servicios";
+import { useOperaciones } from "../../../context/operaciones";
+import { diasEntre, gruposCartera } from "../../../dominio/servicios";
 import type { AbonoCredito } from "../../../types";
+import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodo, type Periodo } from "../../../utils/fechas";
 import { formatoMoneda } from "../../../utils/formato";
+import { BadgeMora } from "../../ventas/components/BadgeMora";
+import { FormularioAbono } from "../../ventas/components/FormularioAbono";
 import { PedidoDetalle } from "../../ventas/screens/PedidoDetalle";
 
 type TabCredito = "pendientes" | "historial";
-type Periodo = "hoy" | "ayer" | "semana" | "mes" | "todo";
-
-function esHoy(fechaIso: string, hoy: Date): boolean {
-  const d = new Date(fechaIso);
-  return d.getFullYear() === hoy.getFullYear() && d.getMonth() === hoy.getMonth() && d.getDate() === hoy.getDate();
-}
-
-function dentroDePeriodo(fechaIso: string, periodo: Periodo, hoy: Date): boolean {
-  if (periodo === "todo") return true;
-  if (periodo === "hoy") return esHoy(fechaIso, hoy);
-  const fecha = new Date(fechaIso);
-  const copiaHoy = new Date(hoy);
-  copiaHoy.setHours(0, 0, 0, 0);
-  if (periodo === "ayer") {
-    const ayer = new Date(copiaHoy);
-    ayer.setDate(ayer.getDate() - 1);
-    return fecha.getFullYear() === ayer.getFullYear() && fecha.getMonth() === ayer.getMonth() && fecha.getDate() === ayer.getDate();
-  }
-  if (periodo === "semana") {
-    const hace7 = new Date(copiaHoy);
-    hace7.setDate(hace7.getDate() - 7);
-    return fecha >= hace7;
-  }
-  if (periodo === "mes") {
-    const hace30 = new Date(copiaHoy);
-    hace30.setDate(hace30.getDate() - 30);
-    return fecha >= hace30;
-  }
-  return true;
-}
 
 export function CreditosAdmin() {
   const {
@@ -70,25 +47,7 @@ export function CreditosAdmin() {
 
   useEffect(() => { setPagina(1); }, [tab, busqueda, periodo]);
 
-  const grupos = useMemo(() => {
-    const pendientes = pedidos.filter((p) => p.pago.saldoPendiente > 0 && p.estado !== "cancelado");
-    const porCliente = new Map<string, typeof pendientes>();
-    pendientes.forEach((p) => {
-      const lista = porCliente.get(p.clienteId) ?? [];
-      lista.push(p);
-      porCliente.set(p.clienteId, lista);
-    });
-    return [...porCliente.entries()]
-      .map(([clienteId, lista]) => {
-        const cliente = obtenerCliente(clienteId) ?? clientes.find((c) => c.id === clienteId) ?? null;
-        const ordenados = [...lista].sort((a, b) => new Date(a.creadoEn).getTime() - new Date(b.creadoEn).getTime());
-        const total = ordenados.reduce((s, p) => s + p.pago.saldoPendiente, 0);
-        const masAntiguo = ordenados[0]?.creadoEn ?? new Date().toISOString();
-        const diasMora = diasEntre(masAntiguo, hoy);
-        return { clienteId, cliente, pedidos: ordenados, total, masAntiguo, diasMora };
-      })
-      .sort((a, b) => b.total - a.total);
-  }, [clientes, hoy, obtenerCliente, pedidos]);
+  const grupos = useMemo(() => gruposCartera(pedidos, clientes, hoy, "total"), [clientes, hoy, pedidos]);
 
   const gruposFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -159,7 +118,6 @@ export function CreditosAdmin() {
   if (clienteDetalle) {
     const c = clienteDetalle.cliente;
     const valor = Number(montoAbono) || 0;
-    const saldoTrasAbono = Math.max(0, clienteDetalle.total - valor);
     return (
       <div className="flex h-full flex-col min-h-0">
         {/* Cabecera compacta con volver (fija) */}
@@ -200,49 +158,18 @@ export function CreditosAdmin() {
 
             {/* 2 · Registrar pago / abono */}
             <div className="rounded-2xl border border-line bg-paper-raised p-3">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-faint">Registrar pago / abono</p>
-                <div className="inline-flex rounded-full border border-line bg-paper p-0.5">
-                  {(["efectivo", "nequi"] as AbonoCredito["metodo"][]).map((m) => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setMetodoAbono(m)}
-                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold capitalize transition-colors ${metodoAbono === m ? "bg-ink text-white" : "text-ink-soft"}`}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                </div>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-faint">Registrar pago / abono</p>
+              <div className="mt-2">
+                <FormularioAbono
+                  total={clienteDetalle.total}
+                  monto={montoAbono}
+                  metodo={metodoAbono}
+                  comentario={comentarioAbono}
+                  onMontoChange={setMontoAbono}
+                  onMetodoChange={setMetodoAbono}
+                  onComentarioChange={setComentarioAbono}
+                />
               </div>
-              <input
-                type="number"
-                min={1}
-                inputMode="numeric"
-                value={montoAbono}
-                onChange={(e) => setMontoAbono(e.target.value)}
-                placeholder={`Monto (debe ${formatoMoneda(clienteDetalle.total)})`}
-                className="mt-2 w-full rounded-xl border border-line bg-paper px-3 py-2 font-mono text-[14px] font-semibold text-ink focus:border-ink focus:outline-none"
-              />
-              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                <button type="button" onClick={() => setMontoAbono(String(clienteDetalle.total))} className="rounded-full border border-line bg-paper px-2.5 py-0.5 text-[10.5px] font-semibold text-ink active:bg-paper-sunken">
-                  Liquidar todo
-                </button>
-                <button type="button" onClick={() => setMontoAbono(String(Math.round(clienteDetalle.total / 2)))} className="rounded-full border border-line bg-paper px-2.5 py-0.5 text-[10.5px] font-semibold text-ink active:bg-paper-sunken">
-                  Mitad
-                </button>
-                {valor > 0 && (
-                  <span className={`text-[10.5px] font-semibold ${saldoTrasAbono === 0 ? "text-success" : "text-ink-soft"}`}>
-                    {saldoTrasAbono === 0 ? "✓ Liquida el crédito completo" : `Quedará debiendo ${formatoMoneda(saldoTrasAbono)}`}
-                  </span>
-                )}
-              </div>
-              <input
-                value={comentarioAbono}
-                onChange={(e) => setComentarioAbono(e.target.value)}
-                placeholder="Comentario (opcional)"
-                className="mt-1.5 w-full rounded-xl border border-line bg-paper px-3 py-1.5 text-[12px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
-              />
             </div>
 
             {/* 3 · Pedidos que debe (lista completa dentro del scroll general) */}
@@ -330,13 +257,12 @@ export function CreditosAdmin() {
         </div>
 
         {tab === "historial" && (
-          <div className="no-scrollbar flex gap-1.5 overflow-x-auto pb-0.5">
-            {(["hoy", "ayer", "semana", "mes", "todo"] as Periodo[]).map((p) => (
-              <button key={p} type="button" onClick={() => setPeriodo(p)} className={`flex-shrink-0 rounded-full border px-3 py-1 text-[11.5px] font-medium capitalize transition-colors ${periodo === p ? "border-ink bg-ink text-white" : "border-line bg-paper-raised text-ink-soft"}`}>
-                {p}
-              </button>
-            ))}
-          </div>
+          <SegmentoControl
+            desborda
+            valor={periodo}
+            onChange={setPeriodo}
+            opciones={PERIODOS.map((p) => ({ valor: p, etiqueta: ETIQUETA_PERIODO[p] }))}
+          />
         )}
 
         {tab === "historial" && (
@@ -348,11 +274,10 @@ export function CreditosAdmin() {
           </div>
         )}
 
-        <input
+        <BuscadorInput
           value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
+          onChange={setBusqueda}
           placeholder={tab === "pendientes" ? "Buscar por cliente, teléfono o consecutivo" : "Buscar por cliente o nº de factura"}
-          className="w-full rounded-xl border border-line bg-paper-raised px-3.5 py-2 text-[13.5px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
         />
       </div>
 
@@ -371,12 +296,10 @@ export function CreditosAdmin() {
             <div className="space-y-2.5">
         {tab === "pendientes" ? (
           gruposFiltrados.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-line bg-paper-raised px-4 py-10 text-center">
-              <p className="text-[13px] font-medium text-ink">Sin créditos pendientes. Todo al día ✓</p>
-            </div>
+            <ListaVacia titulo="Sin créditos pendientes. Todo al día ✓" texto="Los clientes con saldo aparecerán aquí." />
           ) : (
             paginar(gruposFiltrados, pagina, POR_PAGINA).items.map((g) => (
-              <article key={g.clienteId} role="button" tabIndex={0} onClick={() => setClienteDetalleId(g.clienteId)} onKeyDown={(e) => e.key === "Enter" && setClienteDetalleId(g.clienteId)} className="cursor-pointer rounded-xl border border-line bg-paper-raised p-3.5 text-left shadow-sm transition-shadow hover:shadow active:bg-paper-sunken">
+              <TarjetaClicable key={g.clienteId} onClick={() => setClienteDetalleId(g.clienteId)} className="p-3.5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-[14px] font-semibold text-ink">{g.cliente?.nombre ?? "Cliente"} {g.cliente?.alias ? `“${g.cliente.alias}”` : ""}</p>
@@ -385,18 +308,14 @@ export function CreditosAdmin() {
                   <span className="flex-shrink-0 font-mono text-[13px] font-semibold text-danger">{formatoMoneda(g.total)}</span>
                 </div>
                 <div className="mt-2 flex items-center gap-2 text-[11.5px]">
-                  <span className={`rounded-full px-2.5 py-1 font-semibold ${g.diasMora >= 8 ? "bg-danger-soft text-danger" : "bg-paper-sunken text-ink-soft"}`}>
-                    {g.diasMora === 0 ? "Al día" : `${g.diasMora} día(s) de mora`}
-                  </span>
-                  <span className="text-teal font-semibold">Cobrar →</span>
+                  <BadgeMora dias={g.diasMora} />
+                  <span className="font-semibold text-teal">Cobrar →</span>
                 </div>
-              </article>
+              </TarjetaClicable>
             ))
           )
         ) : abonosFiltrados.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-line bg-paper-raised px-4 py-10 text-center">
-            <p className="text-[13px] font-medium text-ink">Sin abonos para este filtro.</p>
-          </div>
+          <ListaVacia titulo="Sin abonos para este filtro." texto="Cambia el periodo o la búsqueda." />
         ) : (
           paginar(abonosFiltrados, pagina, POR_PAGINA).items.map((a) => {
             const cliente = obtenerCliente(a.clienteId);

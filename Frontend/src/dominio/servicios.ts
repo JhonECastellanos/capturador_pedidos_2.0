@@ -25,6 +25,7 @@ import type {
   UsuarioSistema,
 } from "../types";
 import { frecuenciaDeTipoCredito } from "../types";
+import { esMismoDia } from "../utils/fechas";
 
 /**
  * Reglas de negocio puras: reciben los datos actuales y devuelven
@@ -161,6 +162,22 @@ export function trasladarPedidoAHoy(pedido: Pedido, nuevaFecha: string): Pedido 
   return { ...pedido, creadoEn: nuevaFecha };
 }
 
+/**
+ * Descuadre del día: lo cobrado en pedidos de contado contra lo que entró
+ * a caja por esos pedidos. Los pedidos a crédito se cobran por Abonos.
+ */
+export function descuadreCajaDe(pedidos: Pedido[], movimientos: MovimientoCaja[], referencia: Date): number {
+  const pedidosDelDia = pedidos.filter((p) => esMismoDia(p.creadoEn, referencia) && p.estado !== "cancelado");
+  const idsPedidos = new Set(pedidosDelDia.map((p) => p.id));
+  const cobrado = pedidosDelDia
+    .filter((p) => p.pago.metodo !== "credito")
+    .reduce((suma, p) => suma + p.pago.montoRecibido, 0);
+  const ingresos = movimientos
+    .filter((m) => m.tipo === "ingreso" && esMismoDia(m.creadoEn, referencia) && m.referenciaId && idsPedidos.has(m.referenciaId))
+    .reduce((suma, m) => suma + m.monto, 0);
+  return cobrado - ingresos;
+}
+
 // ─── Créditos y abonos ────────────────────────────────────────────
 
 /** Reparte un abono entre los pedidos pendientes del cliente (más antiguos primero). */
@@ -245,6 +262,94 @@ export function diasEntre(fechaIso: string, referencia: Date): number {
   fecha.setHours(0, 0, 0, 0);
   copiaRef.setHours(0, 0, 0, 0);
   return Math.floor((copiaRef.getTime() - fecha.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+export interface FilaTopProducto {
+  productoId: string;
+  nombre: string;
+  unidades: number;
+  venta: number;
+  ganancia: number;
+}
+
+export interface FilaTopCliente {
+  clienteId: string;
+  comprado: number;
+  ganancia: number;
+  pedidos: number;
+}
+
+function costoDeLinea(linea: LineaPedido, inventario: Producto[]): number {
+  if (linea.costoUnitario !== undefined) return linea.costoUnitario;
+  const producto = inventario.find((p) => p.id === linea.productoId) ?? inventario.find((p) => p.nombre === linea.nombre);
+  return producto?.costoActual ?? 0;
+}
+
+/** Top de productos por venta, con la ganancia real congelada en cada línea. */
+export function topProductosDe(pedidos: Pedido[], inventario: Producto[], limite = 5): FilaTopProducto[] {
+  const mapa = new Map<string, FilaTopProducto>();
+  pedidos.forEach((pedido) =>
+    pedido.lineas.forEach((linea) => {
+      const fila = mapa.get(linea.productoId) ?? { productoId: linea.productoId, nombre: linea.nombre, unidades: 0, venta: 0, ganancia: 0 };
+      fila.unidades += linea.cantidad;
+      fila.venta += linea.subtotal;
+      fila.ganancia += (linea.precioUnitario - costoDeLinea(linea, inventario)) * linea.cantidad;
+      mapa.set(linea.productoId, fila);
+    }),
+  );
+  return [...mapa.values()].sort((a, b) => b.venta - a.venta).slice(0, limite);
+}
+
+/** Top de clientes por compra, con la ganancia real de sus pedidos. */
+export function topClientesDe(pedidos: Pedido[], inventario: Producto[], limite = 5): FilaTopCliente[] {
+  const mapa = new Map<string, FilaTopCliente>();
+  pedidos.forEach((pedido) => {
+    const fila = mapa.get(pedido.clienteId) ?? { clienteId: pedido.clienteId, comprado: 0, ganancia: 0, pedidos: 0 };
+    fila.comprado += pedido.total;
+    fila.pedidos += 1;
+    fila.ganancia += pedido.lineas.reduce((suma, linea) => suma + (linea.precioUnitario - costoDeLinea(linea, inventario)) * linea.cantidad, 0);
+    mapa.set(pedido.clienteId, fila);
+  });
+  return [...mapa.values()].sort((a, b) => b.comprado - a.comprado).slice(0, limite);
+}
+
+export interface GrupoCartera {
+  clienteId: string;
+  cliente: Cliente | null;
+  pedidos: Pedido[];
+  total: number;
+  masAntiguo: string;
+  diasMora: number;
+}
+
+/** Agrupa la cartera pendiente por cliente; compartido por Abonos y Créditos. */
+export function gruposCartera(
+  pedidos: Pedido[],
+  clientes: Cliente[],
+  hoy: Date,
+  orden: "mora" | "total" = "mora",
+): GrupoCartera[] {
+  const pendientes = pedidos.filter((p) => p.pago.saldoPendiente > 0 && p.estado !== "cancelado");
+  const porCliente = new Map<string, Pedido[]>();
+  pendientes.forEach((pedido) => {
+    const lista = porCliente.get(pedido.clienteId) ?? [];
+    lista.push(pedido);
+    porCliente.set(pedido.clienteId, lista);
+  });
+  return [...porCliente.entries()]
+    .map(([clienteId, lista]) => {
+      const ordenados = [...lista].sort((a, b) => new Date(a.creadoEn).getTime() - new Date(b.creadoEn).getTime());
+      const masAntiguo = ordenados[0]?.creadoEn ?? new Date().toISOString();
+      return {
+        clienteId,
+        cliente: clientes.find((c) => c.id === clienteId) ?? null,
+        pedidos: ordenados,
+        total: ordenados.reduce((suma, p) => suma + p.pago.saldoPendiente, 0),
+        masAntiguo,
+        diasMora: diasEntre(masAntiguo, hoy),
+      };
+    })
+    .sort((a, b) => (orden === "mora" ? b.diasMora - a.diasMora || b.total - a.total : b.total - a.total || b.diasMora - a.diasMora));
 }
 
 // ─── Productos ────────────────────────────────────────────────────

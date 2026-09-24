@@ -1,6 +1,6 @@
 # Capturador de pedidos — AMBIÉ
 
-Aplicación web para registrar clientes, productos, pedidos, pagos, inventario, caja, compras y usuarios. Persistencia en `localStorage` versionada (`ambie:v1:`); los datos sobreviven al refresh.
+Aplicación web para registrar clientes, productos, pedidos, pagos, inventario, caja, compras y usuarios. Persistencia en `localStorage` versionada (`ambie:v2:`); los datos sobreviven al refresh. La versión `v1` se ignora para evitar que datos antiguos de otra sesión reaparezcan durante la validación.
 
 **El negocio arranca vacío**: no hay datos de ejemplo. Solo se crean los dos accesos oficiales (`src/data/semilla.ts`), y a partir de ahí todo —clientes, productos, pedidos, caja, compras, precios, conteos y cierres— se construye desde la interfaz. En Inicio hay un acceso de utilidad para borrar todos los datos y dejar la app como recién instalada.
 
@@ -90,7 +90,7 @@ Usuarios hardcodeados: `admin@ambie.local / admin123` (administrador) y `vendedo
 `CierreDia { id, fecha (YYYY-MM-DD), usuarioId, totalVentas, totalIngresos, totalEgresos, pedidosCount, pendientesTrasladados, pendientesCancelados, conteoEfectivo?, conteoNequi?, diferenciaEfectivo?, diferenciaNequi?, creadoEn }`
 
 ## Repositorios (`src/data/repositorios/`)
-Claves `ambie:v1:<dominio>` con `leer<T>`/`guardar<T>` + `limpiarTodo()` (dev reset en `Resumen`):
+Claves `ambie:v2:<dominio>` con `leer<T>`/`guardar<T>` + `limpiarTodo()` (dev reset en `Resumen`):
 `clientes, productos, pedidos, caja, usuarios, proveedores, recepciones, gastos, conteos, ajustes, cambiosPrecio, abonos, cierres, consecutivo:PED|PROD|REC, sesion-usuario`
 
 Seed `src/data/semilla.ts` si clave es `null`.
@@ -102,9 +102,10 @@ Estado `clientes, pedidos, inventario, movimientosCaja, usuarios, proveedores, r
 Lógica pura en `src/dominio/servicios.ts` (testeable).
 
 ## Componentes clave (`src/components/`)
-`BarraSuperior, BarraInferior, Boton, Icons, VistaImagenProducto (galería swipe ←/→ con ficha completa), SelectorCantidad (h-11 ≥44px), TarjetaProducto, FilaCarrito, TarjetaAccion, BuscadorInput, SegmentoControl, HojaDetalle, SelectorPeriodo, TablaResponsive, GraficaBarras, Paginacion, ConfirmarAccion (módulo flotante centrado), TiraToast + useAviso, GuiaAyuda (bombillo 💡 3-5 pasos)`
-Badges reutilizables en `src/modules/administracion/components/`: `EtiquetaEstado` (color por estado del pedido) y `EtiquetaPago` (efectivo, Nequi, crédito pendiente o pagado).
-Utilidades sin componente: `src/utils/paginacion.ts` (`POR_PAGINA`, `paginar`, `totalPaginasDe`) y `src/utils/periodos.ts` (tramos de tiempo `día/semana/mes/año` y ventanas móviles para los listados) — separadas para no romper Fast Refresh.
+`BarraSuperior (variante hero), BarraInferior, Boton, Icons, VistaImagenProducto (galería swipe ←/→ con ficha completa), SelectorCantidad (h-11 ≥44px), TarjetaProducto, TarjetaAccion, TarjetaClicable, BuscadorInput, SegmentoControl, SelectorOpciones, ListaVacia, PantallaCompletaAdmin, UtilidadDev, Paginacion, ConfirmarAccion (módulo flotante centrado), TiraToast + useAviso, GuiaAyuda (bombillo 💡 3-5 pasos)`
+Badges reutilizables en `src/modules/administracion/components/`: `EtiquetaEstado` (color y etiqueta por estado del pedido), `EtiquetaPago` (efectivo, Nequi, crédito pendiente o pagado) y `MetricaFiltro` (métrica que filtra con `aria-pressed`).
+Formularios y componentes de módulo: `modules/inventario/components/FormularioProducto`, `modules/compras/components/FormularioGasto`, `modules/ventas/components/FormularioAbono` y `BadgeMora`.
+Utilidades sin componente: `src/utils/fechas.ts` (periodos, rangos, fecha local y formato compartido), `src/utils/paginacion.ts` (`POR_PAGINA`, `paginar`, `totalPaginasDe`) y `src/utils/periodos.ts` (tramos de tiempo `día/semana/mes/año` para las gráficas). La lógica de cartera, ganancias y descuadre vive en `src/dominio/servicios.ts`.
 
 ## Flujos corregidos
 - **Módulo compartido de ventas** (`src/modules/ventas/screens/`): `FlujoVenta`, `PedidoCompletado`, `PedidoDetalle` y `Abonos` se reutilizan en vendedor y administrador (rutas en `RutasVentas.tsx`), sin duplicar pantallas.

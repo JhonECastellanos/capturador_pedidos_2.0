@@ -1,50 +1,28 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { BarraInferior } from "../../../components/BarraInferior";
 import { BarraSuperior } from "../../../components/BarraSuperior";
-import { Boton } from "../../../components/Boton";import { ConfirmarAccion } from "../../../components/ConfirmarAccion";import { GuiaAyuda } from "../../../components/GuiaAyuda";
-import { IconChevronRight, IconSearch } from "../../../components/Icons";
+import { Boton } from "../../../components/Boton";
+import { BuscadorInput } from "../../../components/BuscadorInput";
+import { ConfirmarAccion } from "../../../components/ConfirmarAccion";
+import { GuiaAyuda } from "../../../components/GuiaAyuda";
+import { IconChevronRight } from "../../../components/Icons";
+import { ListaVacia } from "../../../components/ListaVacia";
 import { Paginacion } from "../../../components/Paginacion";
+import { PantallaCompletaAdmin } from "../../../components/PantallaCompletaAdmin";
+import { SegmentoControl } from "../../../components/SegmentoControl";
 import { POR_PAGINA, paginar } from "../../../utils/paginacion";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
-import { useOperaciones } from "../../../context/OperacionesContext";
+import { useOperaciones } from "../../../context/operaciones";
 import type { LineaRecepcion, RecepcionCompra } from "../../../types";
 import { construirLineaRecepcion } from "../../../dominio/servicios";
+import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodo, type Periodo } from "../../../utils/fechas";
 import { formatoMoneda } from "../../../utils/formato";
+import { FormularioGasto } from "../components/FormularioGasto";
 
 type TabCompras = "compras" | "gastos";
-type Periodo = "hoy" | "ayer" | "semana" | "mes" | "todo";
 type Vista = "historial" | "recepcion" | "detalle";
 type PasoRecepcion = 1 | 2 | 3;
-
-function esHoy(fechaIso: string, hoy: Date): boolean {
-  const d = new Date(fechaIso);
-  return d.getFullYear() === hoy.getFullYear() && d.getMonth() === hoy.getMonth() && d.getDate() === hoy.getDate();
-}
-
-function dentroDePeriodo(fechaIso: string, periodo: Periodo, hoy: Date): boolean {
-  if (periodo === "todo") return true;
-  if (periodo === "hoy") return esHoy(fechaIso, hoy);
-  const fecha = new Date(fechaIso);
-  const copiaHoy = new Date(hoy);
-  copiaHoy.setHours(0, 0, 0, 0);
-  if (periodo === "ayer") {
-    const ayer = new Date(copiaHoy);
-    ayer.setDate(ayer.getDate() - 1);
-    return fecha.getFullYear() === ayer.getFullYear() && fecha.getMonth() === ayer.getMonth() && fecha.getDate() === ayer.getDate();
-  }
-  if (periodo === "semana") {
-    const hace7 = new Date(copiaHoy);
-    hace7.setDate(hace7.getDate() - 7);
-    return fecha >= hace7;
-  }
-  if (periodo === "mes") {
-    const hace30 = new Date(copiaHoy);
-    hace30.setDate(hace30.getDate() - 30);
-    return fecha >= hace30;
-  }
-  return true;
-}
 
 export function ComprasAdmin() {
   const { inventario, proveedores, recepciones, gastos, crearProveedor, crearProducto, registrarRecepcion, registrarGasto, obtenerProveedor, nombreUsuario } =
@@ -72,9 +50,6 @@ export function ComprasAdmin() {
   const [descontarCaja, setDescontarCaja] = useState(true);
   const [mostrarCrearProd, setMostrarCrearProd] = useState(false);
   const [prodNuevo, setProdNuevo] = useState({ nombre: "", precioVenta: "", costoActual: "" });
-
-  // Gasto
-  const [gastoForm, setGastoForm] = useState({ concepto: "", monto: "" });
 
   // Confirmación de salida del wizard (modal propio, no del navegador)
   const [confirmarSalida, setConfirmarSalida] = useState(false);
@@ -293,63 +268,30 @@ export function ComprasAdmin() {
             </div>
           </div>
 
-          <div className="no-scrollbar mt-2 flex gap-1.5 overflow-x-auto pb-0.5">
-            {(["hoy", "ayer", "semana", "mes", "todo"] as Periodo[]).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setPeriodo(p)}
-                className={`flex-shrink-0 rounded-full border px-3 py-1 text-[11.5px] font-medium capitalize transition-colors ${periodo === p ? "border-ink bg-ink text-white" : "border-line bg-paper-raised text-ink-soft"}`}
-              >
-                {p}
-              </button>
-            ))}
+          <div className="mt-2">
+            <SegmentoControl
+              desborda
+              valor={periodo}
+              onChange={setPeriodo}
+              opciones={PERIODOS.map((p) => ({ valor: p, etiqueta: ETIQUETA_PERIODO[p] }))}
+            />
           </div>
 
-          <div className="mt-2 flex items-center gap-2.5 rounded-xl border border-line bg-paper-raised px-3.5 py-2">
-            <IconSearch width={16} height={16} className="flex-shrink-0 text-ink-faint" />
-            <input
+          <div className="mt-2">
+            <BuscadorInput
               value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
+              onChange={setBusqueda}
               placeholder={tab === "compras" ? "Buscar por consecutivo o proveedor" : "Buscar gasto por concepto"}
-              className="w-full bg-transparent text-[13.5px] text-ink placeholder:text-ink-faint focus:outline-none"
             />
           </div>
 
           {tab === "gastos" && (
-            <form
-              onSubmit={(e: FormEvent<HTMLFormElement>) => {
-                e.preventDefault();
-                if (!gastoForm.concepto || !gastoForm.monto) return;
-                registrarGasto(gastoForm.concepto, Number(gastoForm.monto));
-                mostrarToast(`Gasto "${gastoForm.concepto}" descontado de caja`, "exito");
-                setGastoForm({ concepto: "", monto: "" });
+            <FormularioGasto
+              alGuardar={(concepto, monto) => {
+                registrarGasto(concepto, monto);
+                mostrarToast(`Gasto "${concepto}" descontado de caja`, "exito");
               }}
-              className="mt-2 rounded-xl border border-line bg-paper-raised p-2.5"
-            >
-              <p className="text-[12px] font-semibold text-ink">Registrar gasto</p>
-              <div className="mt-1.5 flex gap-2">
-                <input
-                  required
-                  value={gastoForm.concepto}
-                  onChange={(e) => setGastoForm((a) => ({ ...a, concepto: e.target.value }))}
-                  placeholder="Concepto (ej. Insumos, bolsas)"
-                  className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-3 py-1.5 text-[12.5px] text-ink focus:border-ink focus:outline-none"
-                />
-                <input
-                  required
-                  type="number"
-                  min={1}
-                  value={gastoForm.monto}
-                  onChange={(e) => setGastoForm((a) => ({ ...a, monto: e.target.value }))}
-                  placeholder="$ Monto"
-                  className="w-24 rounded-lg border border-line bg-paper px-3 py-1.5 text-[12.5px] text-ink focus:border-ink focus:outline-none"
-                />
-                <button type="submit" className="flex-shrink-0 rounded-lg bg-ink px-3 py-1.5 text-[12px] font-semibold text-white active:bg-ink/90">
-                  Guardar
-                </button>
-              </div>
-            </form>
+            />
           )}
         </div>
 
@@ -368,10 +310,7 @@ export function ComprasAdmin() {
               <div className="space-y-2.5">
           {tab === "compras" ? (
             recepcionesFiltradas.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-line bg-paper-raised px-4 py-10 text-center">
-                <p className="text-[13px] font-medium text-ink">Sin recepciones para este filtro.</p>
-                <p className="mt-0.5 text-[11.5px] text-ink-soft">Toca &ldquo;+ Nueva recepción&rdquo; para registrar compras.</p>
-              </div>
+              <ListaVacia titulo="Sin recepciones para este filtro." texto="Toca “+ Nueva recepción” para registrar compras." />
             ) : (
               paginar(recepcionesFiltradas, pagina, POR_PAGINA).items.map((r) => {
                 const prov = obtenerProveedor(r.proveedorId);
@@ -402,9 +341,7 @@ export function ComprasAdmin() {
               })
             )
           ) : gastosFiltrados.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-line bg-paper-raised px-4 py-10 text-center">
-              <p className="text-[13px] font-medium text-ink">Sin gastos para este filtro.</p>
-            </div>
+            <ListaVacia titulo="Sin gastos para este filtro." texto="Registra un gasto para verlo aquí." />
           ) : (
             paginar(gastosFiltrados, pagina, POR_PAGINA).items.map((g) => (
               <article key={g.id} className="flex items-center justify-between rounded-xl border border-line bg-paper-raised px-4 py-3 shadow-sm">
@@ -516,7 +453,7 @@ export function ComprasAdmin() {
 
   /* ─── Pantalla: Wizard recepción ─── */
   return (
-    <section className="fixed inset-0 z-40 flex flex-col overflow-hidden bg-paper lg:left-60">
+    <PantallaCompletaAdmin>
       <BarraSuperior
         titulo={paso === 1 ? "Elegir proveedor" : paso === 2 ? "Agregar productos" : "Confirmar recepción"}
         subtitulo={`Paso ${paso} de 3${proveedorActual ? ` · ${proveedorActual.nombre}` : ""}`}
@@ -528,16 +465,7 @@ export function ComprasAdmin() {
         <>
           {/* Fijo: buscador + crear proveedor */}
           <div className="flex-shrink-0 space-y-2.5 px-5 pt-4 md:px-6 lg:px-8">
-            <div className="flex items-center gap-2.5 rounded-xl border border-line bg-paper-raised px-3.5 py-2.5">
-              <IconSearch width={17} height={17} className="flex-shrink-0 text-ink-faint" />
-              <input
-                autoFocus
-                value={busquedaProveedor}
-                onChange={(e) => setBusquedaProveedor(e.target.value)}
-                placeholder="Buscar por nombre o teléfono"
-                className="w-full bg-transparent text-[15px] text-ink placeholder:text-ink-faint focus:outline-none"
-              />
-            </div>
+            <BuscadorInput autoFocus value={busquedaProveedor} onChange={setBusquedaProveedor} placeholder="Buscar por nombre o teléfono" />
             <button
               type="button"
               onClick={() => setMostrarCrearProv((v) => !v)}
@@ -634,15 +562,8 @@ export function ComprasAdmin() {
             </div>
 
             <div className="flex gap-2">
-              <div className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-line bg-paper-raised px-3.5 py-2.5">
-                <IconSearch width={17} height={17} className="flex-shrink-0 text-ink-faint" />
-                <input
-                  autoFocus
-                  value={busquedaProd}
-                  onChange={(e) => setBusquedaProd(e.target.value)}
-                  placeholder="Filtrar por código o nombre"
-                  className="w-full bg-transparent text-[15px] text-ink placeholder:text-ink-faint focus:outline-none"
-                />
+              <div className="min-w-0 flex-1">
+                <BuscadorInput autoFocus value={busquedaProd} onChange={setBusquedaProd} placeholder="Filtrar por código o nombre" />
               </div>
               <button
                 type="button"
@@ -852,7 +773,7 @@ export function ComprasAdmin() {
           />
         </>
       )}
-    </section>
+    </PantallaCompletaAdmin>
   );
 }
 

@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import CrearCliente from "../../../screens/ClientesPedido/CrearCliente";
-import { useOperaciones } from "../../../context/OperacionesContext";
+import { useOperaciones } from "../../../context/operaciones";
 import { Abonos } from "./Abonos";
 import { FlujoVenta } from "./FlujoVenta";
 import { InicioVentas } from "./InicioVentas";
@@ -58,7 +58,7 @@ export function VendedorPedido() {
 }
 
 export function VendedorPedidoCompletado() {
-  return <PedidoCompletado rutaInicio="/vendedor" rutaNuevoPedido="/vendedor/pedido" />;
+  return <PedidoCompletado rutaInicio="/vendedor" />;
 }
 
 export function VendedorAbonos() {
@@ -108,7 +108,7 @@ export function AdminVentasAbonos() {
 }
 
 export function AdminVentasCompletado() {
-  return <PedidoCompletado rutaInicio="/admin/ventas" rutaNuevoPedido="/admin/ventas/pedido" />;
+  return <PedidoCompletado rutaInicio="/admin/ventas" />;
 }
 
 export function AdminVentasClienteNuevo() {

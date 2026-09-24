@@ -4,21 +4,27 @@ import { IconArrowLeft } from "./Icons";
 interface BarraSuperiorProps {
   titulo: string;
   subtitulo?: string;
+  /** Rótulo pequeño sobre el título, usado en la cabecera hero. */
+  etiqueta?: string;
   onVolver?: () => void;
   derecha?: ReactNode;
   paso?: { actual: number; total: number };
+  variante?: "normal" | "hero";
 }
 
 export function BarraSuperior({
   titulo,
   subtitulo,
+  etiqueta,
   onVolver,
   derecha,
   paso,
+  variante = "normal",
 }: BarraSuperiorProps) {
+  const esHero = variante === "hero";
   return (
-    <header className="sticky top-0 z-10 flex-shrink-0 bg-ink px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] text-white md:px-6">
-      <div className="flex items-center gap-3">
+    <header className={`sticky top-0 z-10 flex-shrink-0 bg-ink px-4 pt-[max(1rem,env(safe-area-inset-top))] text-white md:px-6 ${esHero ? "pb-7" : "pb-4"}`}>
+      <div className={`flex gap-3 ${esHero ? "items-start" : "items-center"}`}>
         {onVolver ? (
           <button
             onClick={onVolver}
@@ -31,11 +37,12 @@ export function BarraSuperior({
           <div className="w-1" />
         )}
         <div className="min-w-0 flex-1">
-          <h1 className="truncate font-display text-[19px] font-semibold leading-tight">
+          {etiqueta && <p className="text-[13px] text-accent">{etiqueta}</p>}
+          <h1 className={`truncate font-display font-semibold leading-tight ${esHero ? "mt-1 text-2xl" : "text-[19px]"}`}>
             {titulo}
           </h1>
           {subtitulo && (
-            <p className="truncate text-[13px] text-white/60">{subtitulo}</p>
+            <p className={`truncate text-white/60 ${esHero ? "mt-1 text-[13px]" : "text-[13px]"}`}>{subtitulo}</p>
           )}
         </div>
         {derecha}

@@ -3,14 +3,19 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { BarraInferior } from "../../../components/BarraInferior";
 import { BarraSuperior } from "../../../components/BarraSuperior";
 import { Boton } from "../../../components/Boton";
-import { IconCheck, IconChevronRight, IconMapPin, IconSearch } from "../../../components/Icons";
-import { SelectorCantidad } from "../../../components/SelectorCantidad";
+import { BuscadorInput } from "../../../components/BuscadorInput";
+import { IconChevronRight, IconMapPin } from "../../../components/Icons";
+import { ListaVacia } from "../../../components/ListaVacia";
+import { SegmentoControl } from "../../../components/SegmentoControl";
+import { SelectorOpciones } from "../../../components/SelectorOpciones";
+import { TarjetaClicable } from "../../../components/TarjetaClicable";
+import { TarjetaProducto } from "../../../components/TarjetaProducto";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
-import { VistaImagenProducto } from "../../../components/VistaImagenProducto";
-import { useAuth } from "../../../context/AuthContext";
-import { useOperaciones } from "../../../context/OperacionesContext";
+import { useAuth } from "../../../context/auth";
+import { useOperaciones } from "../../../context/operaciones";
 import { categorias } from "../../../data/semilla";
+import { construirPago } from "../../../dominio/servicios";
 import { SelectorPago } from "../../clientes-pedido/components/SelectorPago";
 import type { EstadoPedido, LineaPedido, MetodoPago, Pedido } from "../../../types";
 import { formatoMoneda } from "../../../utils/formato";
@@ -98,6 +103,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
           cantidad: cantidades[producto.id],
           precioUnitario: producto.precioVenta,
           subtotal: producto.precioVenta * cantidades[producto.id],
+          costoUnitario: producto.costoActual,
         })),
     [cantidades, inventario],
   );
@@ -121,20 +127,13 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
 
   function confirmarPedido() {
     if (!clienteSeleccionado || lineas.length === 0) return;
-    const esCredito = metodo === "credito";
     const pedido = registrarPedido({
       clienteId: clienteSeleccionado.id,
       vendedorId: usuario?.id ?? "usuario-vendedor",
       lineas,
       total,
       estadoInicial: entrega,
-      pago: {
-        metodo,
-        montoRecibido: esCredito ? 0 : total,
-        saldoPendiente: esCredito ? total : 0,
-        estado: esCredito ? "pendiente" : "pagado",
-        recordatorioWhatsApp: esCredito,
-      },
+      pago: construirPago(metodo, total),
     });
     setCantidades({});
     if (alConfirmar) alConfirmar(pedido);
@@ -160,16 +159,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
           paso={{ actual: 1, total: 4 }}
         />
         <div className="flex-shrink-0 px-5 pt-3 md:px-6">
-          <div className="flex items-center gap-2.5 rounded-xl border border-line bg-paper-raised px-3.5 py-2.5">
-            <IconSearch width={18} height={18} className="flex-shrink-0 text-ink-faint" />
-            <input
-              autoFocus
-              value={busquedaCliente}
-              onChange={(e) => setBusquedaCliente(e.target.value)}
-              placeholder="Buscar por nombre, alias o teléfono"
-              className="w-full bg-transparent text-[15px] text-ink placeholder:text-ink-faint focus:outline-none"
-            />
-          </div>
+          <BuscadorInput autoFocus value={busquedaCliente} onChange={setBusquedaCliente} placeholder="Buscar por nombre, alias o teléfono" />
         </div>
         <main className="no-scrollbar flex-1 min-h-0 overflow-y-auto px-5 py-3 md:px-6">
           {clienteReciénCreado && (
@@ -179,21 +169,15 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
           )}
           <p className="mb-2.5 text-[12.5px] text-ink-soft">Elige a quién le vas a vender hoy.</p>
           {clientesFiltrados.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-line bg-paper-raised px-4 py-8 text-center">
-              <p className="text-[13px] font-medium text-ink">
-                {clientes.length === 0 ? "Aún no hay clientes registrados" : "No se encontró el cliente"}
-              </p>
-              <p className="mt-1 text-[12px] text-ink-soft">Créalo sin salir del flujo y quedará seleccionado.</p>
-            </div>
+            <ListaVacia
+              titulo={clientes.length === 0 ? "Aún no hay clientes registrados" : "No se encontró el cliente"}
+              texto="Créalo sin salir del flujo y quedará seleccionado."
+            />
           ) : (
             <ul className="space-y-2">
               {clientesFiltrados.map((cliente) => (
                 <li key={cliente.id}>
-                  <button
-                    type="button"
-                    onClick={() => elegirCliente(cliente.id)}
-                    className="flex w-full items-center gap-3 rounded-xl border border-line bg-paper-raised p-3 text-left active:bg-paper-sunken"
-                  >
+                  <TarjetaClicable onClick={() => elegirCliente(cliente.id)} className="flex items-center gap-3">
                     <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-ink font-display text-[12.5px] font-semibold text-white">
                       {cliente.nombre.slice(0, 2).toUpperCase()}
                     </span>
@@ -211,7 +195,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
                     ) : (
                       <IconChevronRight width={18} height={18} className="flex-shrink-0 text-ink-faint" />
                     )}
-                  </button>
+                  </TarjetaClicable>
                 </li>
               ))}
             </ul>
@@ -246,29 +230,13 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
       {paso === 2 && (
         <>
           <div className="flex-shrink-0 space-y-2 px-5 pt-3 md:px-6">
-            <div className="flex items-center gap-2.5 rounded-xl border border-line bg-paper-raised px-3.5 py-2.5">
-              <IconSearch width={18} height={18} className="flex-shrink-0 text-ink-faint" />
-              <input
-                value={busquedaProducto}
-                onChange={(e) => setBusquedaProducto(e.target.value)}
-                placeholder="Buscar producto o código"
-                className="w-full bg-transparent text-[15px] text-ink placeholder:text-ink-faint focus:outline-none"
-              />
-            </div>
-            <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5">
-              {["Todas", ...categorias].map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setCategoria(cat)}
-                  className={`flex-shrink-0 rounded-full border px-3 py-1 text-[11.5px] font-semibold transition-colors ${
-                    categoria === cat ? "border-ink bg-ink text-white" : "border-line bg-paper-raised text-ink-soft"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
+            <BuscadorInput value={busquedaProducto} onChange={setBusquedaProducto} placeholder="Buscar producto o código" />
+            <SegmentoControl
+              desborda
+              valor={categoria}
+              onChange={setCategoria}
+              opciones={["Todas", ...categorias].map((cat) => ({ valor: cat, etiqueta: cat }))}
+            />
             <div className="flex items-center gap-2 rounded-xl bg-teal-soft px-3 py-2 text-[12px] text-teal">
               <IconMapPin width={14} height={14} className="flex-shrink-0" />
               <span className="min-w-0 flex-1 truncate">
@@ -285,36 +253,39 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
               {productosFiltrados.map((producto) => {
                 const cantidad = cantidades[producto.id] ?? 0;
                 const sinStock = producto.stock <= 0;
+                if (sinStock) {
+                  return (
+                    <li key={producto.id}>
+                      <TarjetaProducto
+                        producto={producto}
+                        cantidad={0}
+                        onAgregar={() => cambiarCantidad(producto.id, 1)}
+                        onCambiarCantidad={() => undefined}
+                        detalle="Sin stock"
+                        productos={productosFiltrados}
+                      />
+                    </li>
+                  );
+                }
                 return (
-                  <li key={producto.id} className="flex items-center gap-3 rounded-xl border border-line bg-paper-raised p-3">
-                    <VistaImagenProducto producto={producto} tamano="sm" clickable productos={productosFiltrados} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13.5px] font-medium text-ink">{producto.nombre}</p>
-                      <p className="mt-0.5 font-mono text-[12px] text-ink-soft">
-                        {formatoMoneda(producto.precioVenta)} · {producto.stock} disp.
-                      </p>
-                    </div>
-                    {sinStock ? (
-                      <span className="flex-shrink-0 rounded-full bg-danger-soft px-2.5 py-1 text-[10.5px] font-semibold text-danger">Sin stock</span>
-                    ) : cantidad === 0 ? (
-                      <button
-                        type="button"
-                        onClick={() => cambiarCantidad(producto.id, 1)}
-                        className="flex-shrink-0 rounded-lg bg-ink px-3 py-2 text-[12px] font-semibold text-white active:bg-ink/90"
-                      >
-                        Agregar
-                      </button>
-                    ) : (
-                      <SelectorCantidad cantidad={cantidad} onCambiar={(c) => cambiarCantidad(producto.id, c - cantidad)} tamano="sm" />
-                    )}
+                  <li key={producto.id}>
+                    <TarjetaProducto
+                      producto={producto}
+                      cantidad={cantidad}
+                      onAgregar={() => cambiarCantidad(producto.id, 1)}
+                      onCambiarCantidad={(c) => cambiarCantidad(producto.id, c - cantidad)}
+                      detalle={`${producto.stock} disp.`}
+                      productos={productosFiltrados}
+                    />
                   </li>
                 );
               })}
               {productosFiltrados.length === 0 && (
-                <li className="rounded-xl border border-dashed border-line bg-paper-raised p-8 text-center text-[13px] text-ink-soft">
-                  {inventario.length === 0
-                    ? "Aún no hay productos registrados. Créalos desde Inventario en el panel del administrador."
-                    : "No hay productos con ese filtro."}
+                <li>
+                  <ListaVacia
+                    titulo={inventario.length === 0 ? "Aún no hay productos registrados." : "No hay productos con ese filtro."}
+                    texto={inventario.length === 0 ? "Créalos desde Inventario en el panel del administrador." : undefined}
+                  />
                 </li>
               )}
             </ul>
@@ -339,42 +310,26 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
             <p className="text-[12.5px] leading-relaxed text-ink-soft">
               Indica si el pedido ya se entregó o si queda por preparar (jugos, sándwiches, etc.). El estado queda visible en Pedidos para su seguimiento.
             </p>
-            <div className="mt-3 space-y-2.5">
-              <button
-                type="button"
-                onClick={() => setEntrega("entregado")}
-                className={`flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-colors ${
-                  entrega === "entregado" ? "border-ink bg-ink text-white" : "border-line bg-paper-raised text-ink active:bg-paper-sunken"
-                }`}
-              >
-                <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full font-mono text-[13px] font-bold ${entrega === "entregado" ? "bg-success text-white" : "bg-success-soft text-success"}`}>
-                  <IconCheck width={17} height={17} />
-                </span>
-                <span className="min-w-0">
-                  <span className="block font-display text-[15px] font-semibold">Entregado ahora</span>
-                  <span className={`mt-0.5 block text-[12px] leading-relaxed ${entrega === "entregado" ? "text-white/70" : "text-ink-soft"}`}>
-                    El cliente ya recibió el pedido. Continúa al cobro.
-                  </span>
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setEntrega("pendiente")}
-                className={`flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-colors ${
-                  entrega === "pendiente" ? "border-ink bg-ink text-white" : "border-line bg-paper-raised text-ink active:bg-paper-sunken"
-                }`}
-              >
-                <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full font-display text-[15px] font-bold ${entrega === "pendiente" ? "bg-accent text-ink" : "bg-accent-soft text-accent-dark"}`}>
-                  ⏳
-                </span>
-                <span className="min-w-0">
-                  <span className="block font-display text-[15px] font-semibold">Pendiente por preparar</span>
-                  <span className={`mt-0.5 block text-[12px] leading-relaxed ${entrega === "pendiente" ? "text-white/70" : "text-ink-soft"}`}>
-                    Queda pendiente. Podrás marcarlo como entregado y cobrar después desde el detalle del pedido o en Abonos.
-                  </span>
-                </span>
-              </button>
+            <div className="mt-3">
+              <SelectorOpciones
+                columnas={1}
+                valor={entrega}
+                onChange={setEntrega}
+                opciones={[
+                  {
+                    valor: "entregado",
+                    titulo: "Entregado ahora",
+                    descripcion: "El cliente ya recibió el pedido. Continúa al cobro.",
+                    etiqueta: "✓",
+                  },
+                  {
+                    valor: "pendiente",
+                    titulo: "Pendiente por preparar",
+                    descripcion: "Queda pendiente. Podrás marcarlo como entregado y cobrar después desde el detalle del pedido o en Abonos.",
+                    etiqueta: "⏳",
+                  },
+                ]}
+              />
             </div>
           </main>
           <BarraInferior>

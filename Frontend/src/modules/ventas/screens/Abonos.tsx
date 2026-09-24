@@ -2,16 +2,20 @@ import { useMemo, useState } from "react";
 import { BarraInferior } from "../../../components/BarraInferior";
 import { BarraSuperior } from "../../../components/BarraSuperior";
 import { Boton } from "../../../components/Boton";
+import { BuscadorInput } from "../../../components/BuscadorInput";
 import { ConfirmarAccion } from "../../../components/ConfirmarAccion";
-import { IconSearch } from "../../../components/Icons";
+import { ListaVacia } from "../../../components/ListaVacia";
 import { Paginacion } from "../../../components/Paginacion";
+import { TarjetaClicable } from "../../../components/TarjetaClicable";
 import { POR_PAGINA, paginar } from "../../../utils/paginacion";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
-import { useOperaciones } from "../../../context/OperacionesContext";
-import { diasEntre } from "../../../dominio/servicios";
+import { useOperaciones } from "../../../context/operaciones";
+import { diasEntre, gruposCartera } from "../../../dominio/servicios";
 import type { AbonoCredito } from "../../../types";
 import { formatoMoneda } from "../../../utils/formato";
+import { BadgeMora } from "../components/BadgeMora";
+import { FormularioAbono } from "../components/FormularioAbono";
 
 interface AbonosProps {
   onVolver: () => void;
@@ -37,28 +41,7 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
 
   const hoy = useMemo(() => new Date(), []);
 
-  const grupos = useMemo(() => {
-    const pendientes = pedidos.filter((p) => p.pago.saldoPendiente > 0 && p.estado !== "cancelado");
-    const porCliente = new Map<string, typeof pendientes>();
-    pendientes.forEach((p) => {
-      const lista = porCliente.get(p.clienteId) ?? [];
-      lista.push(p);
-      porCliente.set(p.clienteId, lista);
-    });
-    return [...porCliente.entries()]
-      .map(([id, lista]) => {
-        const cliente = clientes.find((c) => c.id === id) ?? null;
-        const masAntiguo = lista.reduce((min, p) => (p.creadoEn < min ? p.creadoEn : min), lista[0].creadoEn);
-        return {
-          clienteId: id,
-          cliente,
-          pedidos: [...lista].sort((a, b) => (a.creadoEn < b.creadoEn ? -1 : 1)),
-          total: lista.reduce((suma, p) => suma + p.pago.saldoPendiente, 0),
-          diasMora: diasEntre(masAntiguo, hoy),
-        };
-      })
-      .sort((a, b) => b.diasMora - a.diasMora);
-  }, [clientes, hoy, pedidos]);
+  const grupos = useMemo(() => gruposCartera(pedidos, clientes, hoy, "mora"), [clientes, hoy, pedidos]);
 
   const gruposFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -113,7 +96,6 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
   if (detalle) {
     const cliente = detalle.cliente;
     const valor = Number(monto) || 0;
-    const saldoTrasAbono = Math.max(0, detalle.total - valor);
     return (
       <div className="flex h-full flex-col min-h-0">
         <BarraSuperior
@@ -121,8 +103,11 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
           subtitulo={`${cliente?.telefono || "sin teléfono"} · hace ${detalle.diasMora} día(s)`}
           onVolver={cerrarDetalle}
           derecha={
-            <span className="flex-shrink-0 rounded-full bg-danger px-2.5 py-1 font-mono text-[12px] font-bold text-white">
-              {formatoMoneda(detalle.total)}
+            <span className="flex flex-shrink-0 flex-col items-end gap-1">
+              <span className="rounded-full bg-danger px-2.5 py-1 font-mono text-[12px] font-bold text-white">
+                {formatoMoneda(detalle.total)}
+              </span>
+              <BadgeMora dias={detalle.diasMora} compacta />
             </span>
           }
         />
@@ -149,58 +134,17 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
 
           <div className="rounded-2xl border border-line bg-paper-raised p-3.5">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-faint">Registrar abono</p>
-            <div className="mt-2 inline-flex rounded-full border border-line bg-paper p-1">
-              {(["efectivo", "nequi"] as AbonoCredito["metodo"][]).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setMetodo(m)}
-                  className={`rounded-full px-3.5 py-1 text-[12px] font-semibold capitalize transition-colors ${metodo === m ? "bg-ink text-white" : "text-ink-soft"}`}
-                >
-                  {m}
-                </button>
-              ))}
+            <div className="mt-2">
+              <FormularioAbono
+                total={detalle.total}
+                monto={monto}
+                metodo={metodo}
+                comentario={comentario}
+                onMontoChange={setMonto}
+                onMetodoChange={setMetodo}
+                onComentarioChange={setComentario}
+              />
             </div>
-
-            <input
-              type="number"
-              min={1}
-              inputMode="numeric"
-              value={monto}
-              onChange={(e) => setMonto(e.target.value)}
-              placeholder={`Monto (debe ${formatoMoneda(detalle.total)})`}
-              className="mt-2 w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 font-mono text-[15px] font-semibold text-ink focus:border-ink focus:outline-none"
-            />
-
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                onClick={() => setMonto(String(detalle.total))}
-                className="rounded-full border border-line bg-paper px-2.5 py-1 text-[11px] font-semibold text-ink active:bg-paper-sunken"
-              >
-                Liquidar todo
-              </button>
-              <button
-                type="button"
-                onClick={() => setMonto(String(Math.round(detalle.total / 2)))}
-                className="rounded-full border border-line bg-paper px-2.5 py-1 text-[11px] font-semibold text-ink active:bg-paper-sunken"
-              >
-                Mitad
-              </button>
-            </div>
-
-            <input
-              value={comentario}
-              onChange={(e) => setComentario(e.target.value)}
-              placeholder="Comentario (opcional)"
-              className="mt-2 w-full rounded-xl border border-line bg-paper px-3.5 py-2 text-[12.5px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
-            />
-
-            {valor > 0 && (
-              <p className={`mt-1.5 text-[11.5px] font-semibold ${saldoTrasAbono === 0 ? "text-success" : "text-ink-soft"}`}>
-                {saldoTrasAbono === 0 ? "✓ Liquida el crédito completo (se marca como pagado)" : `Quedará debiendo ${formatoMoneda(saldoTrasAbono)}`}
-              </p>
-            )}
           </div>
         </div>
 
@@ -240,31 +184,19 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
       />
 
       <div className="flex-shrink-0 px-5 pt-3 md:px-6">
-        <div className="flex items-center gap-2.5 rounded-xl border border-line bg-paper-raised px-3.5 py-2.5">
-          <IconSearch width={16} height={16} className="flex-shrink-0 text-ink-faint" />
-          <input
-            value={busqueda}
-            onChange={(e) => { setBusqueda(e.target.value); setPagina(1); }}
-            placeholder="Buscar por cliente, teléfono o consecutivo"
-            className="w-full bg-transparent text-[13.5px] text-ink placeholder:text-ink-faint focus:outline-none"
-          />
-        </div>
+        <BuscadorInput
+          value={busqueda}
+          onChange={(valorBusqueda) => { setBusqueda(valorBusqueda); setPagina(1); }}
+          placeholder="Buscar por cliente, teléfono o consecutivo"
+        />
       </div>
 
       <div className="mx-5 mt-2.5 flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-2 rounded-2xl border border-line bg-paper-sunken/30 p-2 md:mx-6">
         {gruposFiltrados.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-line bg-paper-raised px-4 py-10 text-center">
-            <p className="text-[13px] font-medium text-ink">Sin créditos pendientes</p>
-            <p className="mt-0.5 text-[11.5px] text-ink-soft">Todo al día ✓</p>
-          </div>
+          <ListaVacia titulo="Sin créditos pendientes" texto="Todo al día ✓" />
         ) : (
           paginar(gruposFiltrados, pagina, POR_PAGINA).items.map((grupo) => (
-            <button
-              key={grupo.clienteId}
-              type="button"
-              onClick={() => abrirCliente(grupo.clienteId)}
-              className="flex w-full items-center gap-3 rounded-xl border border-line bg-paper-raised p-3 text-left shadow-sm active:bg-paper-sunken"
-            >
+            <TarjetaClicable key={grupo.clienteId} onClick={() => abrirCliente(grupo.clienteId)} className="flex items-center gap-3">
               <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-danger-soft font-display text-[12.5px] font-bold text-danger">
                 {grupo.diasMora}d
               </span>
@@ -275,7 +207,7 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
                 </span>
               </span>
               <span className="flex-shrink-0 font-mono text-[13px] font-bold text-danger">{formatoMoneda(grupo.total)}</span>
-            </button>
+            </TarjetaClicable>
           ))
         )}
       </div>

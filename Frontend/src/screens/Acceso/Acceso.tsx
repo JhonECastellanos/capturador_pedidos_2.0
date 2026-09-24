@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
+import { APP_VERSION } from "../../config";
 import { IconPackage } from "../../components/Icons";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/auth";
 
 export default function Acceso() {
   const navegar = useNavigate();
@@ -30,6 +31,7 @@ export default function Acceso() {
       <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-ink text-accent"><IconPackage width={28} height={28} /></div>
         <p className="mt-6 text-[13px] font-semibold uppercase tracking-[0.16em] text-ink-soft">Capturador de pedidos</p>
+        <p className="mt-1 font-mono text-[10px] text-ink-faint">{APP_VERSION}</p>
         <h1 className="mt-2 font-display text-3xl font-semibold leading-tight text-ink">Iniciar sesión</h1>
 
         <form onSubmit={handleLogin} className="mt-6 rounded-2xl border border-line bg-paper-raised p-4">

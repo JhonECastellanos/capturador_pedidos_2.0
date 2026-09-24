@@ -11,7 +11,7 @@ import {
   IconTruck,
   IconUser,
 } from "../../components/Icons";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../context/auth";
 import { useEffect, useRef, type ComponentType } from "react";
 
 interface ItemNavegacion {

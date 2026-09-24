@@ -3,89 +3,31 @@ import { ConfirmarAccion } from "../../../components/ConfirmarAccion";
 import { GuiaAyuda } from "../../../components/GuiaAyuda";
 import { IconArrowLeft, IconCheck, IconChevronRight, IconLock } from "../../../components/Icons";
 import { Paginacion } from "../../../components/Paginacion";
+import { SegmentoControl } from "../../../components/SegmentoControl";
 import { POR_PAGINA, paginar } from "../../../utils/paginacion";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
-import { useAuth } from "../../../context/AuthContext";
-import { useOperaciones } from "../../../context/OperacionesContext";
-import { cargarCierres, guardarCierres } from "../../../data/repositorios/cierres";
-import { nuevoId } from "../../../data/repositorios/almacenamiento";
-import type { CierreDia } from "../../../types";
+import { useOperaciones } from "../../../context/operaciones";
+import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodoFecha, dentroDeRangoFechaStr, esAyer, esMismoDia, fechaLocalStr, type Periodo } from "../../../utils/fechas";
 import { formatoMoneda } from "../../../utils/formato";
 
-type PeriodoCierre = "hoy" | "ayer" | "semana" | "mes" | "todo";
 type FiltroPagoCierre = "todos" | "credito" | "efectivo" | "nequi";
 
-function esHoy(iso: string, hoy: Date): boolean {
-  const d = new Date(iso);
-  return d.getFullYear() === hoy.getFullYear() && d.getMonth() === hoy.getMonth() && d.getDate() === hoy.getDate();
-}
-
-function esAyer(iso: string, hoy: Date): boolean {
-  const d = new Date(iso);
-  const ayer = new Date(hoy);
-  ayer.setDate(ayer.getDate() - 1);
-  return d.getFullYear() === ayer.getFullYear() && d.getMonth() === ayer.getMonth() && d.getDate() === ayer.getDate();
-}
-
-function dentroDePeriodo(fechaStr: string, periodo: PeriodoCierre, hoy: Date): boolean {
-  if (periodo === "todo") return true;
-  if (periodo === "hoy") {
-    const [yh, mh, dh] = fechaStr.split("-").map(Number);
-    return yh === hoy.getFullYear() && mh === hoy.getMonth() + 1 && dh === hoy.getDate();
-  }
-  const [y, m, d] = fechaStr.split("-").map(Number);
-  const fecha = new Date(y, m - 1, d);
-  const copiaHoy = new Date(hoy);
-  copiaHoy.setHours(0, 0, 0, 0);
-  if (periodo === "ayer") {
-    const ayer = new Date(copiaHoy);
-    ayer.setDate(ayer.getDate() - 1);
-    return fecha.getFullYear() === ayer.getFullYear() && fecha.getMonth() === ayer.getMonth() && fecha.getDate() === ayer.getDate();
-  }
-  if (periodo === "semana") {
-    const hace7 = new Date(copiaHoy);
-    hace7.setDate(hace7.getDate() - 7);
-    return fecha >= hace7;
-  }
-  if (periodo === "mes") {
-    const hace30 = new Date(copiaHoy);
-    hace30.setDate(hace30.getDate() - 30);
-    return fecha >= hace30;
-  }
-  return true;
-}
-
-function dentroDeRangoFecha(fechaStr: string, desde: string, hasta: string): boolean {
-  if (!desde && !hasta) return true;
-  if (desde && fechaStr < desde) return false;
-  if (hasta && fechaStr > hasta) return false;
-  return true;
-}
-
-/** Fecha local YYYY-MM-DD (sin desfase UTC). */
-function fechaLocalStr(fecha: Date): string {
-  const y = fecha.getFullYear();
-  const m = String(fecha.getMonth() + 1).padStart(2, "0");
-  const d = String(fecha.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
 export function CierreAdmin() {
-  const { movimientosCaja, pedidos, obtenerCliente, actualizarEstadoPedido, trasladarPedidoAHoy, nombreUsuario } = useOperaciones();
-  const { usuario } = useAuth();
-  const [cierres, setCierres] = useState<CierreDia[]>(cargarCierres);
+  const { movimientosCaja, pedidos, cierres, registrarCierre, obtenerCliente, actualizarEstadoPedido, trasladarPedidoAHoy, nombreUsuario } = useOperaciones();
 
   // Vistas y pasos: "historial" (por defecto) o "cierre" (paso 1: conteo, paso 2: resumen)
   const [vista, setVista] = useState<"historial" | "cierre">("historial");
   const [pasoCierre, setPasoCierre] = useState<1 | 2>(1);
+  const [pendientesTrasladados, setPendientesTrasladados] = useState(0);
+  const [pendientesCancelados, setPendientesCancelados] = useState(0);
 
   // Inputs del conteo
   const [conteoEfectivo, setConteoEfectivo] = useState("");
   const [conteoNequi, setConteoNequi] = useState("");
 
   // Histórico: filtros y paginación
-  const [periodo, setPeriodo] = useState<PeriodoCierre>("hoy");
+  const [periodo, setPeriodo] = useState<Periodo>("hoy");
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
   const [mostrarFiltroFecha, setMostrarFiltroFecha] = useState(false);
@@ -102,14 +44,14 @@ export function CierreAdmin() {
   const fechaHoyStr = fechaLocalStr(hoy);
 
   // Cálculos de la jornada de hoy
-  const movsHoy = useMemo(() => movimientosCaja.filter((m) => esHoy(m.creadoEn, hoy)), [hoy, movimientosCaja]);
+  const movsHoy = useMemo(() => movimientosCaja.filter((m) => esMismoDia(m.creadoEn, hoy)), [hoy, movimientosCaja]);
   const ingresosHoy = movsHoy.filter((m) => m.tipo === "ingreso").reduce((s, m) => s + m.monto, 0);
   const egresosHoy = movsHoy.filter((m) => m.tipo === "egreso").reduce((s, m) => s + m.monto, 0);
   const efectivoEsperado = movsHoy.filter((m) => m.tipo === "ingreso" && m.metodo === "efectivo").reduce((s, m) => s + m.monto, 0);
   const nequiEsperado = movsHoy.filter((m) => m.tipo === "ingreso" && m.metodo === "nequi").reduce((s, m) => s + m.monto, 0);
   const balanceHoy = ingresosHoy - egresosHoy;
 
-  const pedidosHoy = useMemo(() => pedidos.filter((p) => esHoy(p.creadoEn, hoy) && p.estado !== "cancelado"), [hoy, pedidos]);
+  const pedidosHoy = useMemo(() => pedidos.filter((p) => esMismoDia(p.creadoEn, hoy) && p.estado !== "cancelado"), [hoy, pedidos]);
   const ventasHoy = pedidosHoy.reduce((s, p) => s + p.total, 0);
 
   // Ventas discriminadas por forma de pago
@@ -124,7 +66,7 @@ export function CierreAdmin() {
 
   // Pendientes de hoy y ayer
   const pendientesHoy = useMemo(
-    () => pedidos.filter((p) => (esHoy(p.creadoEn, hoy) || esAyer(p.creadoEn, hoy)) && (p.estado === "pendiente" || p.estado === "en-preparacion")),
+    () => pedidos.filter((p) => (esMismoDia(p.creadoEn, hoy) || esAyer(p.creadoEn, hoy)) && (p.estado === "pendiente" || p.estado === "en-preparacion")),
     [hoy, pedidos],
   );
   const pendientesAyer = useMemo(() => pendientesHoy.filter((p) => esAyer(p.creadoEn, hoy)), [hoy, pendientesHoy]);
@@ -140,9 +82,9 @@ export function CierreAdmin() {
     () =>
       cierres
         .filter((c) => {
-          if (periodo === "hoy" && !(c.fecha === fechaHoyStr || esHoy(c.creadoEn, hoy))) return false;
-          if (periodo !== "hoy" && !dentroDePeriodo(c.fecha, periodo, hoy)) return false;
-          if (!dentroDeRangoFecha(c.fecha, fechaDesde, fechaHasta)) return false;
+          if (periodo === "hoy" && !(c.fecha === fechaHoyStr || esMismoDia(c.creadoEn, hoy))) return false;
+          if (periodo !== "hoy" && !dentroDePeriodoFecha(c.fecha, periodo, hoy)) return false;
+          if (!dentroDeRangoFechaStr(c.fecha, fechaDesde, fechaHasta)) return false;
           return true;
         })
         .sort((a, b) => (b.fecha < a.fecha ? -1 : b.fecha > a.fecha ? 1 : b.creadoEn < a.creadoEn ? -1 : 1)),
@@ -173,30 +115,26 @@ export function CierreAdmin() {
   }
 
   function confirmarCierreFinal() {
-    const cierre: CierreDia = {
-      id: nuevoId(),
+    registrarCierre({
       fecha: fechaHoyStr,
-      usuarioId: usuario?.id ?? "sistema",
       totalVentas: ventasHoy,
       totalIngresos: ingresosHoy,
       totalEgresos: egresosHoy,
       pedidosCount: pedidosHoy.length,
-      pendientesTrasladados: 0,
-      pendientesCancelados: 0,
+      pendientesTrasladados,
+      pendientesCancelados,
       conteoEfectivo: conteoEfNum ?? undefined,
       conteoNequi: conteoNeqNum ?? undefined,
       diferenciaEfectivo: difEfectivo ?? undefined,
       diferenciaNequi: difNequi ?? undefined,
-      creadoEn: new Date().toISOString(),
-    };
-    const siguientes = [cierre, ...cierres];
-    guardarCierres(siguientes);
-    setCierres(siguientes);
+    });
 
     // Al confirmar, vuelve automáticamente al historial
     setVista("historial");
     setPasoCierre(1);
     setPeriodo("hoy");
+    setPendientesTrasladados(0);
+    setPendientesCancelados(0);
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -388,6 +326,7 @@ export function CierreAdmin() {
                                   type="button"
                                   onClick={() => {
                                     trasladarPedidoAHoy(pedido.id);
+                                    setPendientesTrasladados((actual) => actual + 1);
                                     mostrarAviso(`${pedido.numero} pasa a mañana`, "exito");
                                   }}
                                   className="rounded bg-ink px-2 py-0.5 text-[10.5px] font-medium text-white"
@@ -399,7 +338,7 @@ export function CierreAdmin() {
                                   onClick={() => setConfirmarEliminarId(pedido.id)}
                                   className="rounded bg-danger-soft px-2 py-0.5 text-[10.5px] font-medium text-danger"
                                 >
-                                  Eliminar
+                                  Cancelar pedido
                                 </button>
                               </div>
                             </div>
@@ -551,17 +490,18 @@ export function CierreAdmin() {
 
         <ConfirmarAccion
           abierto={confirmarEliminarId !== null}
-          titulo="Eliminar pendiente"
-          mensaje={`Se eliminará ${pendientesHoy.find((p) => p.id === confirmarEliminarId)?.numero ?? "el pedido"} del cierre. Esta acción queda auditada.`}
-          textoConfirmar="Sí, eliminar"
+          titulo="Cancelar pedido pendiente"
+          mensaje={`Se cancelará ${pendientesHoy.find((p) => p.id === confirmarEliminarId)?.numero ?? "el pedido"}. La cancelación revierte stock, cartera y caja; queda auditada.`}
+          textoConfirmar="Sí, cancelar pedido"
           tono="peligro"
           alCancelar={() => setConfirmarEliminarId(null)}
           alConfirmar={() => {
             if (confirmarEliminarId) {
               const numero = pendientesHoy.find((p) => p.id === confirmarEliminarId)?.numero ?? "";
               actualizarEstadoPedido(confirmarEliminarId, "cancelado");
+              setPendientesCancelados((actual) => actual + 1);
               setConfirmarEliminarId(null);
-              mostrarAviso(`${numero} eliminado del cierre`, "exito");
+              mostrarAviso(`${numero} cancelado y revertido de stock, caja y cartera`, "exito");
             }
           }}
         />
@@ -601,20 +541,12 @@ export function CierreAdmin() {
 
       {/* ─── Filtros de periodo y rango de fecha (fijos) ─── */}
       <div className="flex-shrink-0 mt-3 flex items-center justify-between gap-2">
-        <div className="no-scrollbar flex gap-1.5 overflow-x-auto pb-0.5">
-          {(["hoy", "ayer", "semana", "mes", "todo"] as PeriodoCierre[]).map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPeriodo(p)}
-              className={`flex-shrink-0 rounded-full border px-3 py-1 text-[12px] font-medium capitalize transition-colors ${
-                periodo === p ? "border-ink bg-ink text-white" : "border-line bg-paper-raised text-ink-soft active:bg-paper-sunken"
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
+        <SegmentoControl
+          desborda
+          valor={periodo}
+          onChange={setPeriodo}
+          opciones={PERIODOS.map((p) => ({ valor: p, etiqueta: ETIQUETA_PERIODO[p] }))}
+        />
 
         <button
           type="button"

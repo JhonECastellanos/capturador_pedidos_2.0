@@ -1,8 +1,9 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import type {
   AbonoCredito,
   AjusteInventario,
   CambioPrecio,
+  CierreDia,
   Cliente,
   ConteoInventario,
   EstadoPedido,
@@ -65,7 +66,9 @@ import { cargarConteos, guardarConteos } from "../data/repositorios/conteos";
 import { cargarAjustes, guardarAjustes } from "../data/repositorios/ajustes";
 import { cargarCambiosPrecio, guardarCambiosPrecio } from "../data/repositorios/cambiosPrecio";
 import { cargarAbonos, guardarAbonos } from "../data/repositorios/abonos";
-import { useAuth } from "./AuthContext";
+import { cargarCierres, guardarCierres } from "../data/repositorios/cierres";
+import { useAuth } from "./auth";
+import { OperacionesContext, type OperacionesContextValue } from "./operaciones-context";
 import { archivoAImagenDataUrl } from "../utils/imagen";
 
 const coloresEtiqueta = ["#e88f2a", "#3c6b3a", "#7d5a38", "#d97b96", "#304d25", "#b5442e"];
@@ -79,56 +82,6 @@ function archivoADataUrl(archivo: File): Promise<string> {
     lector.readAsDataURL(archivo);
   });
 }
-
-interface OperacionesContextValue {
-  clientes: Cliente[];
-  pedidos: Pedido[];
-  inventario: Producto[];
-  movimientosCaja: MovimientoCaja[];
-  usuarios: UsuarioSistema[];
-  proveedores: Proveedor[];
-  recepciones: RecepcionCompra[];
-  gastos: Gasto[];
-  conteos: ConteoInventario[];
-  ajustes: AjusteInventario[];
-  cambiosPrecio: CambioPrecio[];
-  abonos: AbonoCredito[];
-  clienteActivo: Cliente | null;
-  /** Nombre legible del usuario que hizo una acción (auditoría). */
-  nombreUsuario: (usuarioId?: string) => string;
-  crearCliente: (datos: NuevoCliente) => Cliente;
-  seleccionarClienteActivo: (clienteId: string) => void;
-  obtenerCliente: (clienteId: string) => Cliente | null;
-  registrarPedido: (datos: NuevoPedido) => Pedido;
-  obtenerPedido: (pedidoId: string) => Pedido | null;
-  actualizarEstadoPedido: (pedidoId: string, estado: EstadoPedido) => void;
-  adjuntarComprobante: (pedidoId: string, archivo: File) => Promise<void>;
-  actualizarImagenProducto: (productoId: string, archivo: File) => Promise<void>;
-  crearProducto: (datos: NuevoProducto) => Producto;
-  registrarEgresoCaja: (concepto: string, monto: number) => void;
-  crearUsuario: (datos: NuevoUsuario) => void;
-  // Fase 3
-  crearProveedor: (nombre: string, telefono?: string) => Proveedor;
-  obtenerProveedor: (id: string) => Proveedor | null;
-  registrarRecepcion: (proveedorId: string, lineas: LineaRecepcion[], descontarCaja: boolean) => RecepcionCompra;
-  registrarGasto: (concepto: string, monto: number) => Gasto;
-  // Fase 2
-  iniciarConteo: (tipo: ConteoInventario["tipo"], cantidadAleatoria: number | null, turno: string) => ConteoInventario;
-  actualizarConteoLinea: (conteoId: string, productoId: string, stockFisico: number) => void;
-  finalizarConteoActivo: (conteoId: string) => void;
-  cancelarConteoActivo: (conteoId: string) => void;
-  aplicarAjusteDeConteo: (conteoId: string) => void;
-  registrarAjusteManual: (productoId: string, stockFisico: number, motivo: string, comentario?: string) => void;
-  // Fase 4
-  actualizarPrecioProducto: (productoId: string, nuevoPrecio: number) => void;
-  // Cierre del día
-  trasladarPedidoAHoy: (pedidoId: string) => void;
-  // Créditos
-  registrarAbono: (clienteId: string, monto: number, metodo: AbonoCredito["metodo"], comentario?: string) => AbonoCredito | null;
-  registrarPagoPedido: (pedidoId: string, metodo: AbonoCredito["metodo"], comentario?: string) => AbonoCredito | null;
-}
-
-const OperacionesContext = createContext<OperacionesContextValue | undefined>(undefined);
 
 export function OperacionesProvider({ children }: { children: ReactNode }) {
   const { usuario } = useAuth();
@@ -145,6 +98,7 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
   const [ajustes, setAjustes] = useState<AjusteInventario[]>(cargarAjustes);
   const [cambiosPrecio, setCambiosPrecio] = useState<CambioPrecio[]>(cargarCambiosPrecio);
   const [abonos, setAbonos] = useState<AbonoCredito[]>(cargarAbonos);
+  const [cierres, setCierres] = useState<CierreDia[]>(cargarCierres);
 
   const crearCliente = useCallback((datos: NuevoCliente) => {
     const nuevoCliente = construirCliente(datos, nuevoId(), new Date().toISOString());
@@ -157,7 +111,7 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
     return nuevoCliente;
   }, []);
 
-  const seleccionarClienteActivo = useCallback((clienteId: string) => setClienteActivoId(clienteId), []);
+  const seleccionarClienteActivo = useCallback((clienteId: string | null) => setClienteActivoId(clienteId), []);
   const obtenerCliente = useCallback((clienteId: string) => clientes.find((cliente) => cliente.id === clienteId) ?? null, [clientes]);
   const obtenerProveedor = useCallback((id: string) => proveedores.find((p) => p.id === id) ?? null, [proveedores]);
   const nombreUsuario = useCallback(
@@ -327,6 +281,14 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const cambiarEstadoUsuario = useCallback((usuarioId: string) => {
+    setUsuarios((actuales) => {
+      const siguientes = actuales.map((u) => (u.id === usuarioId ? { ...u, activo: !u.activo } : u));
+      guardarUsuarios(siguientes);
+      return siguientes;
+    });
+  }, []);
+
   const crearProveedor = useCallback((nombre: string, telefono?: string) => {
     const proveedor = construirProveedor(nombre, telefono, nuevoId(), new Date().toISOString());
     setProveedores((actuales) => {
@@ -489,6 +451,16 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const registrarCierre = useCallback((datos: Omit<CierreDia, "id" | "usuarioId" | "creadoEn">) => {
+    const cierre: CierreDia = { ...datos, id: nuevoId(), usuarioId: usuario?.id ?? "sistema", creadoEn: new Date().toISOString() };
+    setCierres((actuales) => {
+      const siguientes = [cierre, ...actuales];
+      guardarCierres(siguientes);
+      return siguientes;
+    });
+    return cierre;
+  }, [usuario]);
+
   const registrarAbono = useCallback((clienteId: string, monto: number, metodo: AbonoCredito["metodo"], comentario?: string) => {
     if (monto <= 0) return null;
     const pendientes = pedidos.filter((p) => p.clienteId === clienteId && p.pago.saldoPendiente > 0);
@@ -590,6 +562,7 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
     ajustes,
     cambiosPrecio,
     abonos,
+    cierres,
     clienteActivo,
     nombreUsuario,
     crearCliente,
@@ -603,6 +576,7 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
     crearProducto,
     registrarEgresoCaja,
     crearUsuario,
+    cambiarEstadoUsuario,
     crearProveedor,
     obtenerProveedor,
     registrarRecepcion,
@@ -615,14 +589,9 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
     registrarAjusteManual,
     actualizarPrecioProducto,
     trasladarPedidoAHoy,
+    registrarCierre,
     registrarAbono,
     registrarPagoPedido,
   };
   return <OperacionesContext.Provider value={value}>{children}</OperacionesContext.Provider>;
-}
-
-export function useOperaciones() {
-  const context = useContext(OperacionesContext);
-  if (!context) throw new Error("useOperaciones debe usarse dentro de <OperacionesProvider>");
-  return context;
 }

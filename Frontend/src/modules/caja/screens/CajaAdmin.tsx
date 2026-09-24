@@ -1,71 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { GuiaAyuda } from "../../../components/GuiaAyuda";
 import { Paginacion } from "../../../components/Paginacion";
+import { SegmentoControl } from "../../../components/SegmentoControl";
 import { POR_PAGINA, paginar } from "../../../utils/paginacion";
-import { useOperaciones } from "../../../context/OperacionesContext";
+import { useOperaciones } from "../../../context/operaciones";
 import { formatoMoneda } from "../../../utils/formato";
+import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodo, type Periodo } from "../../../utils/fechas";
+import { MetricaFiltro } from "../../administracion/components/MetricaFiltro";
 import { TarjetaMetrica } from "../../administracion/components/TarjetaMetrica";
-
-type PeriodoCaja = "hoy" | "ayer" | "semana" | "mes" | "año" | "todo";
-
-function esHoy(fechaIso: string, hoy: Date): boolean {
-  const d = new Date(fechaIso);
-  return d.getFullYear() === hoy.getFullYear() && d.getMonth() === hoy.getMonth() && d.getDate() === hoy.getDate();
-}
-
-function dentroDePeriodo(fechaIso: string, periodo: PeriodoCaja, hoy: Date): boolean {
-  if (periodo === "todo") return true;
-  if (periodo === "hoy") return esHoy(fechaIso, hoy);
-  const fecha = new Date(fechaIso);
-  const copiaHoy = new Date(hoy);
-  copiaHoy.setHours(0, 0, 0, 0);
-  if (periodo === "ayer") {
-    const ayer = new Date(copiaHoy);
-    ayer.setDate(ayer.getDate() - 1);
-    return fecha.getFullYear() === ayer.getFullYear() && fecha.getMonth() === ayer.getMonth() && fecha.getDate() === ayer.getDate();
-  }
-  if (periodo === "semana") {
-    const hace7 = new Date(copiaHoy);
-    hace7.setDate(hace7.getDate() - 7);
-    return fecha >= hace7;
-  }
-  if (periodo === "mes") {
-    const hace30 = new Date(copiaHoy);
-    hace30.setDate(hace30.getDate() - 30);
-    return fecha >= hace30;
-  }
-  if (periodo === "año") {
-    const hace365 = new Date(copiaHoy);
-    hace365.setDate(hace365.getDate() - 365);
-    return fecha >= hace365;
-  }
-  return true;
-}
 
 type FiltroMedio = "ingresos" | "egresos" | "efectivo" | "nequi" | "credito" | null;
 type VistaCaja = "movimientos" | "ganancias";
 
-const ETIQUETA_PERIODO: Record<PeriodoCaja, string> = {
-  hoy: "Hoy",
-  ayer: "Ayer",
-  semana: "Semanal",
-  mes: "Mensual",
-  "año": "Año",
-  todo: "Todo",
-};
-
-const PERIODOS: PeriodoCaja[] = ["hoy", "ayer", "semana", "mes", "año", "todo"];
-
 export function CajaAdmin() {
   const { movimientosCaja, pedidos, abonos, obtenerCliente, nombreUsuario } = useOperaciones();
-  const [periodo, setPeriodo] = useState<PeriodoCaja>("hoy");
+  const [periodo, setPeriodo] = useState<Periodo>("hoy");
   const [vistaCaja, setVistaCaja] = useState<VistaCaja>("movimientos");
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
   const [filtroMedio, setFiltroMedio] = useState<FiltroMedio>(null);
   const hoy = useMemo(() => new Date(), []);
 
-  useEffect(() => { setPagina(1); }, [periodo, busqueda, filtroMedio]);
+  useEffect(() => { setPagina(1); }, [periodo, busqueda, filtroMedio, vistaCaja]);
 
   // Base del periodo (las tarjetas no cambian al filtrar por medio)
   const movimientosPeriodo = useMemo(() => {
@@ -175,31 +131,19 @@ export function CajaAdmin() {
           ))}
         </div>
 
-        <div className="no-scrollbar flex gap-1.5 overflow-x-auto pb-0.5">
-          {PERIODOS.map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPeriodo(p)}
-              className={`flex-shrink-0 rounded-full border px-3 py-1 text-[11.5px] font-semibold capitalize transition-colors ${
-                periodo === p ? "border-ink bg-ink text-white" : "border-line bg-paper-raised text-ink-soft hover:text-ink"
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
+        <SegmentoControl
+          desborda
+          valor={periodo}
+          onChange={setPeriodo}
+          opciones={PERIODOS.map((p) => ({ valor: p, etiqueta: ETIQUETA_PERIODO[p] }))}
+        />
 
         {vistaCaja === "movimientos" && (
           <>
         {/* Tarjetas compactas: Ingresos, Egresos y Balance también filtran el historial */}
         <div className="grid grid-cols-3 gap-1.5">
-          <button type="button" onClick={() => alternarFiltro("ingresos")} aria-pressed={filtroMedio === "ingresos"} className={`rounded-xl text-left transition-all ${filtroMedio === "ingresos" ? "ring-2 ring-teal" : ""}`}>
-            <TarjetaMetrica tamano="sm" etiqueta="Ingresos" valor={formatoMoneda(ingresos)} tono="teal" />
-          </button>
-          <button type="button" onClick={() => alternarFiltro("egresos")} aria-pressed={filtroMedio === "egresos"} className={`rounded-xl text-left transition-all ${filtroMedio === "egresos" ? "ring-2 ring-danger" : ""}`}>
-            <TarjetaMetrica tamano="sm" etiqueta="Egresos" valor={formatoMoneda(egresos)} tono="danger" />
-          </button>
+          <MetricaFiltro etiqueta="Ingresos" valor={formatoMoneda(ingresos)} tono="teal" tamano="sm" activo={filtroMedio === "ingresos"} onClick={() => alternarFiltro("ingresos")} />
+          <MetricaFiltro etiqueta="Egresos" valor={formatoMoneda(egresos)} tono="danger" tamano="sm" activo={filtroMedio === "egresos"} onClick={() => alternarFiltro("egresos")} />
           <TarjetaMetrica
             tamano="sm"
             etiqueta="Balance"
@@ -209,15 +153,9 @@ export function CajaAdmin() {
         </div>
 
         <div className="grid grid-cols-3 gap-1.5">
-          <button type="button" onClick={() => alternarFiltro("efectivo")} aria-pressed={filtroMedio === "efectivo"} className={`rounded-xl text-left transition-all ${filtroMedio === "efectivo" ? "ring-2 ring-success" : ""}`}>
-            <TarjetaMetrica tamano="sm" etiqueta="Efectivo" valor={formatoMoneda(efectivo)} tono="success" />
-          </button>
-          <button type="button" onClick={() => alternarFiltro("nequi")} aria-pressed={filtroMedio === "nequi"} className={`rounded-xl text-left transition-all ${filtroMedio === "nequi" ? "ring-2 ring-teal" : ""}`}>
-            <TarjetaMetrica tamano="sm" etiqueta="Nequi" valor={formatoMoneda(nequi)} tono="teal" />
-          </button>
-          <button type="button" onClick={() => alternarFiltro("credito")} aria-pressed={filtroMedio === "credito"} className={`rounded-xl text-left transition-all ${filtroMedio === "credito" ? "ring-2 ring-danger" : ""}`}>
-            <TarjetaMetrica tamano="sm" etiqueta="Crédito" valor={formatoMoneda(creditoPendiente)} tono="accent" />
-          </button>
+          <MetricaFiltro etiqueta="Efectivo" valor={formatoMoneda(efectivo)} tono="success" tamano="sm" activo={filtroMedio === "efectivo"} onClick={() => alternarFiltro("efectivo")} />
+          <MetricaFiltro etiqueta="Nequi" valor={formatoMoneda(nequi)} tono="teal" tamano="sm" activo={filtroMedio === "nequi"} onClick={() => alternarFiltro("nequi")} />
+          <MetricaFiltro etiqueta="Crédito" valor={formatoMoneda(creditoPendiente)} tono="accent" tamano="sm" activo={filtroMedio === "credito"} onClick={() => alternarFiltro("credito")} />
         </div>
 
         <p className="text-[10.5px] text-ink-faint">

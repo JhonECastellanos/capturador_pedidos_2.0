@@ -5,8 +5,10 @@ import { ConfirmarAccion } from "../../../components/ConfirmarAccion";
 import { IconArrowLeft, IconCheckCircle } from "../../../components/Icons";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
-import { useOperaciones } from "../../../context/OperacionesContext";
+import { useOperaciones } from "../../../context/operaciones";
 import type { EstadoPedido, Pedido } from "../../../types";
+import { CLASES_ESTADO, ETIQUETAS_ESTADO } from "../../../utils/estados";
+import { formatoFechaHora } from "../../../utils/fechas";
 import { formatoMoneda } from "../../../utils/formato";
 
 interface PedidoDetalleProps {
@@ -23,16 +25,11 @@ interface PedidoDetalleProps {
   soloLectura?: boolean;
 }
 
-const estados: Array<{ valor: EstadoPedido; etiqueta: string; clase: string }> = [
-  { valor: "pendiente", etiqueta: "Pendiente", clase: "bg-paper text-ink" },
-  { valor: "en-preparacion", etiqueta: "En preparación", clase: "bg-accent-soft text-accent-dark" },
-  { valor: "entregado", etiqueta: "Entregado", clase: "bg-success-soft text-success" },
-  { valor: "cancelado", etiqueta: "Cancelado", clase: "bg-danger-soft text-danger" },
-];
-
-function formatoFechaHora(iso: string): string {
-  return new Date(iso).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
-}
+const estados: Array<{ valor: EstadoPedido; etiqueta: string; clase: string }> = (["pendiente", "en-preparacion", "entregado", "cancelado"] as EstadoPedido[]).map((valor) => ({
+  valor,
+  etiqueta: ETIQUETAS_ESTADO[valor],
+  clase: CLASES_ESTADO[valor],
+}));
 
 /**
  * Detalle de pedido compacto: solo la lista central hace scroll,

@@ -1,19 +1,11 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import type { RolUsuario, UsuarioSistema } from "../types";
 import { PERMISOS_POR_ROL } from "../dominio/servicios";
 import { cargarUsuarios } from "../data/repositorios/usuarios";
 import { guardar, leer } from "../data/repositorios/almacenamiento";
-
-interface AuthContextValue {
-  usuario: UsuarioSistema | null;
-  iniciarSesion: (rol: RolUsuario) => void;
-  iniciarSesionConCredenciales: (identificador: string, password: string) => { ok: boolean; error?: string; usuario?: UsuarioSistema };
-  cerrarSesion: () => void;
-}
+import { AuthContext } from "./auth-context";
 
 const CLAVE_SESION = "sesion-usuario";
-
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function usuarioDesdeRol(rol: RolUsuario): UsuarioSistema {
   const registrado = cargarUsuarios().find((usuario) => usuario.rol === rol && usuario.activo);
@@ -100,10 +92,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(() => ({ usuario, iniciarSesion, iniciarSesionConCredenciales, cerrarSesion }), [usuario]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth debe usarse dentro de <AuthProvider>");
-  return context;
 }

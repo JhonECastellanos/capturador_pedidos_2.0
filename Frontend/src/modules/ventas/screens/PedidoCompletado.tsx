@@ -4,19 +4,18 @@ import { BarraInferior } from "../../../components/BarraInferior";
 import { BarraSuperior } from "../../../components/BarraSuperior";
 import { Boton } from "../../../components/Boton";
 import { IconCheckCircle } from "../../../components/Icons";
-import { useOperaciones } from "../../../context/OperacionesContext";
+import { useOperaciones } from "../../../context/operaciones";
 import { formatoMoneda } from "../../../utils/formato";
 
 interface PedidoCompletadoProps {
   rutaInicio: string;
-  rutaNuevoPedido: string;
 }
 
 /** Pantalla de éxito compartida tras confirmar un pedido. */
-export function PedidoCompletado({ rutaInicio, rutaNuevoPedido }: PedidoCompletadoProps) {
+export function PedidoCompletado({ rutaInicio }: PedidoCompletadoProps) {
   const navegar = useNavigate();
   const ubicacion = useLocation();
-  const { obtenerCliente, obtenerPedido } = useOperaciones();
+  const { obtenerCliente, obtenerPedido, seleccionarClienteActivo } = useOperaciones();
   const pedidoId = (ubicacion.state as { pedidoId?: string } | null)?.pedidoId;
   const pedido = pedidoId ? obtenerPedido(pedidoId) : null;
   const cliente = pedido ? obtenerCliente(pedido.clienteId) : null;
@@ -89,8 +88,23 @@ export function PedidoCompletado({ rutaInicio, rutaNuevoPedido }: PedidoCompleta
 
       <BarraInferior>
         <div className="space-y-2">
-          <Boton onClick={() => navegar(rutaNuevoPedido, { state: { clienteId: cliente.id } })}>Capturar otro pedido</Boton>
-          <Boton variante="fantasma" onClick={() => navegar(rutaInicio)}>Volver al inicio</Boton>
+          <Boton
+            onClick={() => {
+              seleccionarClienteActivo(null);
+              navegar(rutaInicio, { replace: true });
+            }}
+          >
+            Capturar otro pedido
+          </Boton>
+          <Boton
+            variante="fantasma"
+            onClick={() => {
+              seleccionarClienteActivo(null);
+              navegar(rutaInicio, { replace: true });
+            }}
+          >
+            Volver al inicio
+          </Boton>
         </div>
       </BarraInferior>
     </div>

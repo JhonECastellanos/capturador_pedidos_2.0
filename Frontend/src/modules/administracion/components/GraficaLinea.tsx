@@ -23,15 +23,34 @@ export function GraficaLinea({ datos, formato }: GraficaLineaProps) {
   const puntos = datos.map((punto, indice) => ({ x: xDe(indice), y: yDe(punto.valor) }));
   const yCero = yDe(0);
 
+  /** Catmull-Rom → Bezier para trazar una curva suave sin esquinas. */
+  function rutaSuave(): string {
+    if (puntos.length < 2) return "";
+    let ruta = `M ${puntos[0].x.toFixed(2)},${puntos[0].y.toFixed(2)}`;
+    for (let indice = 0; indice < puntos.length - 1; indice += 1) {
+      const anterior = puntos[Math.max(0, indice - 1)];
+      const actual = puntos[indice];
+      const siguiente = puntos[indice + 1];
+      const dosDespues = puntos[Math.min(puntos.length - 1, indice + 2)];
+      const cp1x = actual.x + (siguiente.x - anterior.x) / 6;
+      const cp1y = actual.y + (siguiente.y - anterior.y) / 6;
+      const cp2x = siguiente.x - (dosDespues.x - actual.x) / 6;
+      const cp2y = siguiente.y - (dosDespues.y - actual.y) / 6;
+      ruta += ` C ${cp1x.toFixed(2)},${cp1y.toFixed(2)} ${cp2x.toFixed(2)},${cp2y.toFixed(2)} ${siguiente.x.toFixed(2)},${siguiente.y.toFixed(2)}`;
+    }
+    return ruta;
+  }
+
   return (
     <div className="relative mt-5 h-32 w-full">
       <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
         <line x1="0" y1={yCero} x2="100" y2={yCero} stroke="var(--color-line)" strokeWidth="1" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
-        <polyline
-          points={puntos.map((punto) => `${punto.x},${punto.y}`).join(" ")}
+        <path
+          d={rutaSuave()}
           fill="none"
           stroke="var(--color-ink)"
           strokeWidth="2"
+          strokeLinecap="round"
           strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"
         />

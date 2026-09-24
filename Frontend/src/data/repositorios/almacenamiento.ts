@@ -1,9 +1,13 @@
 /**
  * Acceso al almacenamiento local con claves versionadas.
- * Cambiar la versión aquí permite migraciones de datos futuras.
+ *
+ * v2 aísla los datos de la versión v1 que todavía podían quedar en el
+ * navegador de otra sesión. Así una instalación validada siempre comienza
+ * limpia sin mostrar datos antiguos en el panel.
  */
 
-const PREFIJO = "ambie:v1:";
+const PREFIJO = "ambie:v2:";
+const PREFIJOS_LEGADOS = ["ambie:v1:"];
 
 export function leer<T>(clave: string, porDefecto: T): T {
   try {
@@ -23,12 +27,12 @@ export function guardar<T>(clave: string, valor: T): void {
   }
 }
 
-/** Elimina todos los datos del negocio (reset de demostración). */
+/** Elimina los datos de negocio de la versión actual y de la legacy. */
 export function limpiarTodo(): void {
   const claves: string[] = [];
   for (let i = 0; i < localStorage.length; i += 1) {
     const clave = localStorage.key(i);
-    if (clave?.startsWith(PREFIJO)) claves.push(clave);
+    if (clave && [PREFIJO, ...PREFIJOS_LEGADOS].some((prefijo) => clave.startsWith(prefijo))) claves.push(clave);
   }
   claves.forEach((clave) => localStorage.removeItem(clave));
 }

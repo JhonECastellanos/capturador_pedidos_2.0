@@ -1,68 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
+import { BuscadorInput } from "../../../components/BuscadorInput";
 import { GuiaAyuda } from "../../../components/GuiaAyuda";
+import { ListaVacia } from "../../../components/ListaVacia";
 import { Paginacion } from "../../../components/Paginacion";
+import { SegmentoControl } from "../../../components/SegmentoControl";
+import { TarjetaClicable } from "../../../components/TarjetaClicable";
 import { POR_PAGINA, paginar } from "../../../utils/paginacion";
-import { useOperaciones } from "../../../context/OperacionesContext";
+import { useOperaciones } from "../../../context/operaciones";
 import type { EstadoPedido } from "../../../types";
 import { formatoMoneda } from "../../../utils/formato";
 import { exportarPedidosCSV } from "../../../utils/exportar";
+import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodo, dentroDeRangoFecha, esMismoDia, formatoFechaHora, type Periodo } from "../../../utils/fechas";
 import { EtiquetaEstado } from "../../administracion/components/EtiquetaEstado";
 import { EtiquetaPago } from "../../administracion/components/EtiquetaPago";
 import { PedidoDetalle } from "../../ventas/screens/PedidoDetalle";
 
 type Segmento = "hoy" | "historial";
-type Periodo = "hoy" | "ayer" | "semana" | "mes" | "todo";
 type FiltroEstado = "todos" | EstadoPedido;
-
-function esMismoDia(fechaIso: string, referencia: Date): boolean {
-  const d = new Date(fechaIso);
-  return d.getFullYear() === referencia.getFullYear() && d.getMonth() === referencia.getMonth() && d.getDate() === referencia.getDate();
-}
-
-function dentroDePeriodo(fechaIso: string, periodo: Periodo, hoy: Date): boolean {
-  if (periodo === "todo") return true;
-  if (periodo === "hoy") return esMismoDia(fechaIso, hoy);
-  const fecha = new Date(fechaIso);
-  const copiaHoy = new Date(hoy);
-  copiaHoy.setHours(0, 0, 0, 0);
-  if (periodo === "ayer") {
-    const ayer = new Date(copiaHoy);
-    ayer.setDate(ayer.getDate() - 1);
-    return esMismoDia(fechaIso, ayer);
-  }
-  if (periodo === "semana") {
-    const hace7 = new Date(copiaHoy);
-    hace7.setDate(hace7.getDate() - 7);
-    return fecha >= hace7;
-  }
-  if (periodo === "mes") {
-    const hace30 = new Date(copiaHoy);
-    hace30.setDate(hace30.getDate() - 30);
-    return fecha >= hace30;
-  }
-  return true;
-}
-
-function dentroDeRangoFecha(fechaIso: string, desde: string, hasta: string): boolean {
-  if (!desde && !hasta) return true;
-  const fecha = new Date(fechaIso);
-  fecha.setHours(0, 0, 0, 0);
-  if (desde) {
-    const dDesde = new Date(desde);
-    dDesde.setHours(0, 0, 0, 0);
-    if (fecha < dDesde) return false;
-  }
-  if (hasta) {
-    const dHasta = new Date(hasta);
-    dHasta.setHours(23, 59, 59, 999);
-    if (fecha > dHasta) return false;
-  }
-  return true;
-}
-
-function formatoFechaHora(iso: string): string {
-  return new Date(iso).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
-}
 
 export function PedidosAdmin() {
   const { pedidos, obtenerCliente, nombreUsuario } = useOperaciones();
@@ -138,22 +92,14 @@ export function PedidosAdmin() {
       {/* Segmento HOY | HISTORIAL y Filtros fijos */}
       <div className="flex-shrink-0 space-y-2 pt-2.5">
         <div className="flex items-center justify-between gap-2">
-          <div className="inline-flex rounded-full border border-line bg-paper-raised p-1">
-            <button
-              type="button"
-              onClick={() => setSegmento("hoy")}
-              className={`rounded-full px-3.5 py-1 text-[12px] font-semibold transition-colors ${segmento === "hoy" ? "bg-ink text-white" : "text-ink-soft hover:text-ink"}`}
-            >
-              HOY ({conteoHoy})
-            </button>
-            <button
-              type="button"
-              onClick={() => setSegmento("historial")}
-              className={`rounded-full px-3.5 py-1 text-[12px] font-semibold transition-colors ${segmento === "historial" ? "bg-ink text-white" : "text-ink-soft hover:text-ink"}`}
-            >
-              HISTORIAL ({pedidos.length})
-            </button>
-          </div>
+          <SegmentoControl
+            valor={segmento}
+            onChange={setSegmento}
+            opciones={[
+              { valor: "hoy", etiqueta: `HOY (${conteoHoy})` },
+              { valor: "historial", etiqueta: `HISTORIAL (${pedidos.length})` },
+            ]}
+          />
 
           <button
             type="button"
@@ -167,41 +113,27 @@ export function PedidosAdmin() {
 
         {/* Periodo solo en historial */}
         {segmento === "historial" && (
-          <div className="no-scrollbar flex gap-1.5 overflow-x-auto pb-0.5">
-            {(["hoy", "ayer", "semana", "mes", "todo"] as Periodo[]).map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => setPeriodo(p)}
-                className={`flex-shrink-0 rounded-full border px-3 py-1 text-[11.5px] font-medium capitalize transition-colors ${periodo === p ? "border-ink bg-ink text-white" : "border-line bg-paper-raised text-ink-soft"}`}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
+          <SegmentoControl
+            valor={periodo}
+            onChange={setPeriodo}
+            opciones={PERIODOS.map((p) => ({ valor: p, etiqueta: ETIQUETA_PERIODO[p] }))}
+          />
         )}
 
         {/* Chips estado */}
-        <div className="no-scrollbar flex gap-1.5 overflow-x-auto pb-0.5">
-          {(["todos", "pendiente", "en-preparacion", "entregado", "cancelado"] as FiltroEstado[]).map((estado) => (
-            <button
-              key={estado}
-              type="button"
-              onClick={() => setFiltroEstado(estado)}
-              className={`flex-shrink-0 rounded-full border px-2.5 py-1 text-[11.5px] font-medium capitalize transition-colors ${filtroEstado === estado ? "border-ink bg-ink text-white" : "border-line bg-paper-raised text-ink-soft"}`}
-            >
-              {estado === "todos" ? "Todos" : estado.replace("-", " ")}
-            </button>
-          ))}
-        </div>
-
-        {/* Buscador principal */}
-        <input
-          value={busqueda}
-          onChange={(evento) => setBusqueda(evento.target.value)}
-          placeholder="Buscar por cliente o consecutivo"
-          className="w-full rounded-xl border border-line bg-paper-raised px-3.5 py-2 text-[13.5px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
+        <SegmentoControl
+          valor={filtroEstado}
+          onChange={setFiltroEstado}
+          opciones={[
+            { valor: "todos", etiqueta: "Todos" },
+            { valor: "pendiente", etiqueta: "Pendiente" },
+            { valor: "en-preparacion", etiqueta: "En preparación" },
+            { valor: "entregado", etiqueta: "Entregado" },
+            { valor: "cancelado", etiqueta: "Cancelado" },
+          ]}
         />
+
+        <BuscadorInput value={busqueda} onChange={setBusqueda} placeholder="Buscar por cliente o consecutivo" />
 
         {/* Filtro fecha separado */}
         {mostrarFiltroFecha && (
@@ -237,21 +169,12 @@ export function PedidosAdmin() {
           <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
             <div className="space-y-2.5">
         {pedidosFiltrados.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-line bg-paper-raised px-4 py-10 text-center">
-            <p className="text-[13px] font-medium text-ink">No hay pedidos que coincidan con la búsqueda.</p>
-          </div>
+          <ListaVacia titulo="No hay pedidos que coincidan con la búsqueda." texto="Ajusta el segmento, el estado o el rango de fechas." />
         ) : (
           paginar(pedidosFiltrados, pagina, POR_PAGINA).items.map((pedido) => {
             const cliente = obtenerCliente(pedido.clienteId);
             return (
-              <article
-                key={pedido.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => setDetalleId(pedido.id)}
-                onKeyDown={(e) => e.key === "Enter" && setDetalleId(pedido.id)}
-                className="cursor-pointer rounded-xl border border-line bg-paper-raised p-3.5 text-left shadow-sm transition-shadow hover:shadow active:bg-paper-sunken"
-              >
+              <TarjetaClicable key={pedido.id} onClick={() => setDetalleId(pedido.id)} className="p-3.5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-mono text-[12px] font-semibold text-ink-faint">{pedido.numero} · {formatoFechaHora(pedido.creadoEn)}</p>
@@ -265,7 +188,7 @@ export function PedidosAdmin() {
                   </div>
                 </div>
                 <p className="mt-2 text-[11.5px] font-semibold text-teal">Ver detalle informativo →</p>
-              </article>
+              </TarjetaClicable>
             );
           })
         )}
