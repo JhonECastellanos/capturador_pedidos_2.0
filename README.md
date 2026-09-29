@@ -1,166 +1,270 @@
-# Capturador de pedidos — AMBIÉ
+# AMBIÉ · Capturador de pedidos
 
-Aplicación web para registrar clientes, productos, pedidos, pagos, inventario, caja, compras y usuarios. Persistencia en `localStorage` versionada (`ambie:v2:`); los datos sobreviven al refresh. La versión `v1` se ignora para evitar que datos antiguos de otra sesión reaparezcan durante la validación.
+Aplicación para llevar el día a día de un negocio de ventas: clientes, productos, pedidos, cobros, inventario, compras, precios y caja.
 
-**El negocio arranca vacío**: no hay datos de ejemplo. Solo se crean los dos accesos oficiales (`src/data/semilla.ts`), y a partir de ahí todo —clientes, productos, pedidos, caja, compras, precios, conteos y cierres— se construye desde la interfaz. En Inicio hay un acceso de utilidad para borrar todos los datos y dejar la app como recién instalada.
+La interfaz está pensada como una app móvil dentro del navegador: pasos claros, botones grandes, scroll interno y acciones siempre accesibles.
 
-## Tecnologías
-- React 19 + TypeScript
-- Vite + Tailwind CSS 4 + React Router 7
-- Almacenamiento local versionado sin backend
+## Cómo está organizado
 
-## Desarrollo local
-```bash
-cd Frontend
-npm install
-npm run dev
-npm run build # tsc -b + vite build
-npm run lint  # oxlint
+El proyecto es un monorepo con tres piezas que comparten un mismo contrato.
+
+```text
+Frontend/     La aplicación. React, TypeScript y Vite.
+Backend/      La API. NestJS, Prisma y PostgreSQL.
+Compartido/   El contrato. Los tipos, enums y esquemas que usan los tres.
 ```
 
-## Rutas
-- `/` Acceso (login solo credenciales + ojito)
-- `/vendedor` Inicio de ventas (métricas: pedidos hoy, ventas hoy, por cobrar, descuadre de caja) → accesos rápidos y **pedidos de hoy en contenedor con scroll**, tappables al detalle de gestión
-  - `/vendedor/pedido` Flujo guiado 4 pasos: Cliente → Productos → **Entrega** (Entregado ahora / Pendiente por preparar) → Pago → `/vendedor/pedido/completado` (`replace`, badge de estado)
-  - `/vendedor/pedido/:pedidoId` Detalle del pedido **a pantalla completa y compacto** con botones de estado y `Cobrar al entregar`
-  - `/vendedor/abonos` Pantalla independiente de abonos (icono de volver), liquida el crédito solo
-  - `/vendedor/clientes/nuevo` Alta rápida de **5 campos** (nombre, teléfono, sitio/dirección, fecha de nacimiento, tipo de crédito) → vuelve al inicio con aviso
-- `/admin` (protegido administrador) `AdminLayout` con header compacto sticky (pills con centrado animado, orden: inicio, ventas, pedidos, créditos, inventarios, compras, precios, caja, cierre, usuarios):
-  - `/admin` Resumen del negocio: KPIs del día (ventas, gastos, compras, ticket promedio, crédito pendiente y alertas de stock), hoy vs ayer, **dos gráficas con filtro día/semana/mes/año** (ventas contra compras y gastos en barras, rentabilidad en línea) y **top 5 de productos y clientes con lo vendido y la ganancia real**, filtrable por día/semana/mes/año/todo
-  - `/admin/ventas` **Módulo de Ventas del administrador**: el administrador también vende. Inicio con resumen de la jornada, accesos a Crear Pedido (`/admin/ventas/pedido`), Recibir Abono (`/admin/ventas/abonos`) y Crear Cliente (`/admin/ventas/clientes/nuevo`), y los **pedidos de hoy en un contenedor con scroll propio** donde se toca para gestionar (`/admin/ventas/pedido/:pedidoId` → estado y cobro). Al confirmar: `/admin/ventas/completado`
-  - `/admin/pedidos` HOY (n) | HISTORIAL (n), estado, periodo hoy→todo, filtro fecha separado, export Excel, paginación 20; detalle **solo lectura** (líneas, pagos recibidos y auditoría). Los estados y cobros se gestionan en Ventas
-  - `/admin/creditos` PENDIENTES (n) | HISTORIAL (n), periodo hoy→todo, cobro por cliente (saldo en rojo → registrar pago → pedidos que debe, tappables al detalle) con scroll general y pie fijo; el HISTORIAL muestra cada abono con las **facturas a crédito abonadas** (tappables) y el total abonado del periodo; paginación 20
-  - `/admin/inventario` General/Conteo/Descuadres/Ajustes, galería swipe, paginación 20; el **conteo guiado** registra solo las líneas digitadas, lista el historial completo de conteos y al tocar uno abre su detalle (contados, sobrantes, faltantes y productos contados) ocupando el espacio disponible
-  - `/admin/compras` COMPRAS (n) | GASTOS (n), periodo hoy→todo, recepción inline (paso 2 con contenedor propio de scroll y pie fijo "Revisar y confirmar"), paginación 20
-  - `/admin/precios` proceso paso a paso: elegir producto → nuevo precio (margen en vivo) → confirmar (antes/después), paginación 20
-  - `/admin/caja` pestañas **Movimientos | Ganancias**: en Movimientos las tarjetas compactas **también filtran** (Ingresos, Egresos, Efectivo, Nequi, Crédito; el Balance solo muestra resultado y se colorea verde/rojo según el signo), periodo hoy→todo, buscador pedido/cliente, colores por medio, paginación 20. En **Ganancias** hay tarjeta de ganancia neta (cobrado − compras y gastos) e historial por periodo hoy, ayer, semanal, mensual, año y todo
-  - `/admin/cierre` por pasos Cierre | Historial: solo-dinero (efectivo/Nequi esperado vs contado), pendientes con buscador + filtro pago (colores) y `Pasar para mañana`, confirmar cierre + histórico hoy→todo con fecha (fecha local, sin desfase UTC)
-  - `/admin/usuarios` crear usuarios con rol y password
+`Compartido/` es la pieza que evita que las capas se separen. Un enum de `Compartido/src/enums.ts` lo importan el frontend, la API y el script de verificación. Si alguien agrega un valor en la base de datos y olvida el contrato, la verificación falla en vez de romperse en producción.
 
-Usuarios hardcodeados: `admin@ambie.local / admin123` (administrador) y `vendedor@ambie.local / vendedor123` (vendedor). Login por nombre/email + contraseña, redirige por `usuario.rol`.
+```bash
+npm run verificar   # Revisa contrato, API y frontend de una sola vez
+```
 
-## Variables — modelo de dominio (`src/types/index.ts`)
+`EQUIVALENCIA_VARIABLES.txt` documenta, campo por campo, cómo se llama la misma variable en el frontend, en la API y en la base de datos. Se lee de izquierda a derecha.
 
-### Enumeraciones
-- `MetodoPago = "efectivo" | "nequi" | "credito"`
-- `EstadoPedido = "pendiente" | "en-preparacion" | "entregado" | "cancelado"`
-- `RolUsuario = "administrador" | "vendedor"`
-- `EstadoCuenta = "al-dia" | "pendiente"`
+## Empezar
 
-### Cliente
-`id, nombre, alias, identificacion, telefono, ciudad, direccion, estadoCuenta, saldoPendiente, creadoEn, fechaNacimiento?, tipoCredito?, frecuenciaCreditoDias?, ultimoRecordatorioCreditoEn?, ultimoAbonoCreditoEn?`
-`TipoCredito = "diario" | "semanal" | "quincenal" | "mensual"` · `FRECUENCIA_POR_TIPO_CREDITO` (1/7/15/30 días) · `ETIQUETA_TIPO_CREDITO` · `frecuenciaDeTipoCredito()`
-`NuevoCliente { nombre, telefono, direccion, fechaNacimiento?, tipoCredito?, alias?, identificacion?, ciudad? }` — alta de 5 campos; alias/identificación/ciudad se derivan del nombre y la frecuencia nace del tipo de crédito · helper `inicialesDe(nombre)`
+### Requisitos
 
-### Producto
-`id, codigoInterno (PROD-001), nombre, categoria, unidad, precioVenta, costoActual, stock, stockMinimo, colorEtiqueta, imagenUrl?, activo` · `NuevoProducto = Omit<Producto,"id"|"codigoInterno"|"colorEtiqueta"|"activo"|"imagenUrl">`
+- Docker Desktop (o Docker Engine con Compose v2).
+- Node.js 24 o superior, solo si vas a trabajar con el código sin contenedores.
 
-### Pedido
-`LineaPedido { productoId, nombre, cantidad, precioUnitario, subtotal }`
-`PagoPedido { metodo, montoRecibido, saldoPendiente, estado, recordatorioWhatsApp }`
-`HistorialEstadoPedido { estado, usuarioId, fecha }`
-`Pedido { id, numero (PED-0001), clienteId, vendedorId, lineas, subtotal, total, pago, estado, comprobantePagoUrl?, comprobantePagoNombre?, creadoEn, historialEstados }`
-`NuevoPedido { clienteId, vendedorId, lineas, total, pago }`
+### 1. Variables de entorno
 
-### Caja
-`MovimientoCaja { id, tipo:"ingreso"|"egreso", concepto, monto, metodo?, usuarioId?, referenciaId?, creadoEn }`
+Desde la raíz del proyecto:
 
-### Usuario
-`UsuarioSistema { id, nombre, email, password?, rol, permisos[], activo }` · `NuevoUsuario = Pick<UsuarioSistema,"nombre"|"email"|"rol"> & { password? }` · `PERMISOS_POR_ROL`
+```bash
+cp .env.example .env
+```
 
-### Proveedores y compras
-`Proveedor { id, nombre, telefono?, creadoEn }`
-`LineaRecepcion { productoId, nombre, codigoInterno, cantidad, costoUnitario, subtotal }`
-`RecepcionCompra { id, numero (REC-), proveedorId, usuarioId, lineas, total, descontarCaja, creadoEn }`
-`Gasto { id, concepto, monto, usuarioId, creadoEn }`
+Completa en `.env` las contraseñas y los secretos: `POSTGRES_PASSWORD`, `DATABASE_URL`, `SESSION_SECRET`, `JWT_SECRET`, `MINIO_ROOT_PASSWORD`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY` y `BOOTSTRAP_*` (el usuario y la clave del primer administrador).
 
-### Inventarios y ajustes
-`LineaConteo { productoId, nombre, stockTeorico, stockFisico, diferencia }`
-`ConteoInventario { id, tipo:"general"|"aleatorio", usuarioId, turno, iniciadoEn, finalizadoEn?, lineas, lineasContadas?, estado:"en-curso"|"confirmado"|"cancelado" }` — `lineasContadas` guarda los productos ya digitados; lo que no se cuenta nunca ajusta el stock
-`AjusteInventario { id, conteoId ("manual" para ajuste manual), usuarioId, lineas, motivo?, comentario?, creadoEn }` — motivos: pérdida, robo, corrección, reversión compra, vencimiento, donación, error captura, otro
+Para generar un secreto nuevo:
 
-### Precios
-`CambioPrecio { id, productoId, valorAnterior, valorNuevo, usuarioId, fecha }`
+```bash
+node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+```
 
-### Créditos y abonos
-`AbonoCreditoParcial { pedidoId, numero, montoAplicado }`
-`AbonoCredito { id, clienteId, monto, metodo:"efectivo"|"nequi", usuarioId, pedidosAfectados, comentario?, creadoEn }` — en abonos generales se reparte al pedido más antiguo primero (FIFO); el cobro al entregar usa `registrarPagoPedido` y aplica el dinero al pedido exacto. En ambos casos descuenta `saldoPendiente` de cliente/pedidos y crea ingreso en caja
+`.env` está ignorado por git, así que esos valores no salen del equipo.
 
-### Cierres
-`CierreDia { id, fecha (YYYY-MM-DD), usuarioId, totalVentas, totalIngresos, totalEgresos, pedidosCount, pendientesTrasladados, pendientesCancelados, conteoEfectivo?, conteoNequi?, diferenciaEfectivo?, diferenciaNequi?, creadoEn }`
+### 2. Los cuatro contenedores, con un solo comando
 
-## Repositorios (`src/data/repositorios/`)
-Claves `ambie:v2:<dominio>` con `leer<T>`/`guardar<T>` + `limpiarTodo()` (dev reset en `Resumen`):
-`clientes, productos, pedidos, caja, usuarios, proveedores, recepciones, gastos, conteos, ajustes, cambiosPrecio, abonos, cierres, consecutivo:PED|PROD|REC, sesion-usuario`
+```bash
+docker compose up -d --build
+```
 
-Seed `src/data/semilla.ts` si clave es `null`.
+Ese único comando construye las imágenes y deja el sistema completo en marcha:
 
-## Fachada (`src/context/OperacionesContext.tsx`)
-Estado `clientes, pedidos, inventario, movimientosCaja, usuarios, proveedores, recepciones, gastos, conteos, ajustes, cambiosPrecio, abonos, clienteActivo` y operaciones:
-`crearCliente, seleccionarClienteActivo, obtenerCliente, registrarPedido, obtenerPedido, actualizarEstadoPedido, adjuntarComprobante, actualizarImagenProducto, crearProducto, registrarEgresoCaja, crearUsuario, crearProveedor, obtenerProveedor, registrarRecepcion, registrarGasto, iniciarConteo, actualizarConteoLinea, finalizarConteoActivo, cancelarConteoActivo, aplicarAjusteDeConteo, registrarAjusteManual, actualizarPrecioProducto, trasladarPedidoAHoy, registrarAbono, registrarPagoPedido`
+| Servicio | Qué hace | Dónde queda |
+|---|---|---|
+| `postgres` | Base de datos | Red interna, puerto 5432 |
+| `migrate` | Aplica las migraciones y los datos base, y termina | — |
+| `api` | API NestJS, con prefijo `/api/v1` | `http://localhost:3000` |
+| `minio` | Almacenamiento S3 para imágenes y comprobantes | Red interna, puerto 9000 |
 
-Lógica pura en `src/dominio/servicios.ts` (testeable).
+`migrate` aparece como `Exited (0)`: eso es correcto, es un paso que se ejecuta una vez y termina.
 
-## Componentes clave (`src/components/`)
-`BarraSuperior (variante hero), BarraInferior, Boton, Icons, VistaImagenProducto (galería swipe ←/→ con ficha completa), SelectorCantidad (h-11 ≥44px), TarjetaProducto, TarjetaAccion, TarjetaClicable, BuscadorInput, SegmentoControl, SelectorOpciones, ListaVacia, PantallaCompletaAdmin, UtilidadDev, Paginacion, ConfirmarAccion (módulo flotante centrado), TiraToast + useAviso, GuiaAyuda (bombillo 💡 3-5 pasos)`
-Badges reutilizables en `src/modules/administracion/components/`: `EtiquetaEstado` (color y etiqueta por estado del pedido), `EtiquetaPago` (efectivo, Nequi, crédito pendiente o pagado) y `MetricaFiltro` (métrica que filtra con `aria-pressed`).
-Formularios y componentes de módulo: `modules/inventario/components/FormularioProducto`, `modules/compras/components/FormularioGasto`, `modules/ventas/components/FormularioAbono` y `BadgeMora`.
-Utilidades sin componente: `src/utils/fechas.ts` (periodos, rangos, fecha local y formato compartido), `src/utils/paginacion.ts` (`POR_PAGINA`, `paginar`, `totalPaginasDe`) y `src/utils/periodos.ts` (tramos de tiempo `día/semana/mes/año` para las gráficas). La lógica de cartera, ganancias y descuadre vive en `src/dominio/servicios.ts`.
+### 3. Comprobar que quedó arriba
 
-## Flujos corregidos
-- **Módulo compartido de ventas** (`src/modules/ventas/screens/`): `FlujoVenta`, `PedidoCompletado`, `PedidoDetalle` y `Abonos` se reutilizan en vendedor y administrador (rutas en `RutasVentas.tsx`), sin duplicar pantallas.
-- **Inicio de ventas compartido** (`InicioVentas`): la misma pantalla para vendedor y administrador; cambia el rótulo y las rutas. Resumen de la jornada, accesos a Crear Pedido / Recibir Abono / Crear Cliente y los pedidos de hoy dentro de un contenedor con scroll propio (la pantalla no scrollea).
-- **Pedidos informativo**: el módulo de Pedidos ya no cambia estados ni cobra; muestra badge de estado con color, etiqueta de pago (efectivo, Nequi, crédito pendiente o pagado), quién generó el pedido, los pagos recibidos y el historial de estados con nombres. La gestión vive en Ventas.
-- **Tablero del administrador**: KPIs del día (ventas, gastos, compras, ticket promedio, crédito pendiente y alertas), comparativo hoy vs ayer, dos gráficas con el eje X siempre en el tiempo (`GraficaBarrasDobles` ventas vs compras + gastos y `GraficaLinea` de rentabilidad, ambas con filtro día/semana/mes/año) y top 5 de productos y clientes con lo vendido y la ganancia (costo conocido del producto) más su porcentaje de margen, filtrable por día/semana/mes/año/todo.
-- **Auditoría con nombres**: cada registro muestra quién lo hizo en lenguaje natural (no el id): generó el pedido, cambió el estado, recibió el abono, registró el movimiento de caja, contó, ajustó, cambió precio, registró la compra o el gasto y cerró el día. Se resuelve con `nombreUsuario(usuarioId)` del contexto.
-- **Venta guiada (4 pasos)**: cliente → productos (categorías + tope stock) → **entrega** (Entregado ahora / Pendiente por preparar) → pago. El estado de entrega sincroniza con el panel de Pedidos del administrador.
-- **Cobrar al entregar**: desde el detalle del pedido el cobro se aplica **solo a ese pedido** (no se reparte en otras deudas del cliente), queda como abono en el historial de créditos y el pie cambia a “Pedido cobrado · $monto” en vez de seguir ofreciendo el botón.
-- **Persistencia de estados**: el cambio de estado se guarda en `localStorage` al instante y se refleja en el panel del vendedor (pedidos de hoy), en el módulo de Pedidos del administrador y en los demás módulos que leen pedidos; cancelar reversa stock/caja/cartera y **revivir un pedido cancelado vuelve a aplicar esos efectos**, sin datos inconsistentes.
-- **Abonos (pantalla independiente)**: lista de clientes con saldo, atajos "Liquidar todo"/"Mitad", confirmación, aviso y actualización automática del pedido/cartera al liquidar; icono de volver.
-- **Alta de cliente (5 campos)**: nombre, teléfono, sitio/dirección, fecha de nacimiento y tipo de crédito; al guardar vuelve al inicio del rol y avisa que ya se puede crear el pedido.
-- **Créditos**: el tipo de crédito pactado al crear el cliente define la frecuencia de recordatorio (`frecuenciaCreditoDias`); los abonos parciales no alteran la periodicidad. El recordatorio manual por WhatsApp se retiró de la interfaz.
-- **Detalle compacto en todos los módulos**: una sola pantalla sin scroll general; solo la lista interna hace scroll, botones de estado pequeños con scroll horizontal.
-- **Avisos (toast)**: `TiraToast` se muestra flotando al centro de la pantalla (no mueve el contenido) y desaparece en ~2 s (`useAviso`); el botón Deshacer sigue disponible cuando aplica.
-- **Confirmaciones con diseño propio**: `ConfirmarAccion` es un módulo flotante centrado (nunca diálogos del navegador) y se usa en todas las operaciones críticas: cambio/cancelación de estado, abonos, ajustes de stock, cambios de precio, salir de una recepción de compra y reiniciar datos.
-- **Caja**: las tarjetas Ingresos y Egresos también filtran el historial (además de Efectivo, Nequi y Crédito); el Balance se colorea verde si es positivo y rojo si es negativo, y las tarjetas son compactas para dar más espacio al historial.
-- **Ganancias**: pestaña propia en Caja con la ganancia neta del periodo (lo cobrado menos compras y gastos) y un historial por periodo (hoy, ayer, semanal, mensual, año y todo) donde cada fila muestra lo que entró, lo que salió y el neto con color.
-- **Cambios de estado con confirmación**: en el detalle del pedido, cambiar estado pide confirmar (incluido cancelar, que reversa stock/caja/cartera) y luego avisa con el toast.
-- **Detalle del vendedor**: cabecera verde (`BarraSuperior`) en detalle de pedido, abonos y pedido completado; tarjetas con padding lateral y pie fijo de acciones.
-- **Login**: solo credenciales en `Acceso` con ojito, redirige por `usuario.rol` (admin→`/admin`, vendedor→`/vendedor`).
-- **Admin header**: compacto (`Administrador · Centro de control` en 1 línea) + pills con centrado suave al seleccionar (`scrollIntoView center`), sidebar desktop conserva colores/icons.
-- **Guías**: bombillo 💡 al lado de cada título (8 paneles), overlay oscuro, 3-4 pasos, Atrás/Adelante, X roja; subtítulos movidos a la guía para dar espacio.
-- **Conteos**: normalizados en paréntesis `HOY (n)`, `COMPRAS (n)`, `General (n alertas)`, etc.
-- **Inventario Ajustes**: proceso de 2 pasos a pantalla completa (elegir producto → físico + motivo + comentario) con diferencia en vivo, pie fijo y confirmación; auditado.
-- **Inventario Conteo guiado**: solo lo digitado queda contado (`lineasContadas`), el botón Finalizar se habilita cuando no falta ningún producto, el historial lista todos los conteos (general/aleatorio, en curso, confirmados y cancelados) con contados/faltantes/sobrantes y al tocar uno se abre el detalle con los productos contados y la acción de aplicar el ajuste al stock.
-- **Inventario General**: buscador nombre/código/categoría + filtro estado (Todos/Alerta/En stock).
-- **Caja**: las tarjetas filtran el historial (ingresos/egresos/efectivo/nequi/crédito) y la pestaña Ganancias resume el neto por periodo; egresos centralizados en `Compras`.
-- **Secuenciado móvil**: Compras (lista ↔ recepción 3 pasos con Volver) y Cierre (Cierre ↔ Historial) muestran una cosa a la vez como el pedido del vendedor; el resto ya usa pestañas/detalle para no hacer scroll.
-- **Pedidos**: filtro fecha separado (Desde/Hasta) colapsable + export CSV (Excel) con número, fecha, cliente, estado, pago, total, líneas, vendedor.
-- **Cierre**: solo-dinero (sin inventario): efectivo/Nequi esperado vs contado con diferencia, pendientes con `Pasar para mañana` / `Eliminar del día`, confirmar cierre + histórico con periodo y rango fecha estilo pedidos.
-- **Créditos**: pendientes agrupados por cliente (total, días de mora), detalle compacto con scroll general (saldo en rojo → registrar pago con atajos Liquidar todo/Mitad, FIFO + caja → pedidos que debe) y pie fijo con el botón de cobro; historial con facturas abonadas tappables + total del periodo + buscador; dashboard enlaza a `/admin/creditos`.
-- **Filtros**: opción `hoy` en todos los paneles con temporalidad y `todo` al final a la derecha (pedidos, compras, caja, cierre, créditos).
-- **Paginación**: componente `Paginacion` (20 por página) en pedidos, caja, compras, créditos, cierre, inventario y precios para no saturar el frontend.
-- **Barrido**: consecutivos inicializados desde semilla (sin colisiones PED/PROD), cancelar pedido revierte stock + cartera + caja (egreso `Reverso`) y reactivarlo lo vuelve a aplicar, tope de cantidad por stock en pedido, métricas vendedora solo hoy.
+```bash
+docker compose ps
+curl http://localhost:3000/api/v1/salud
+```
 
-## Verificación tras cada fase
-`npm run build && npm run lint` + checklist 390×844 y 1440px: pedido sobrevive refresh, estado auditado, descuadre con responsable, recepción stock+, precio auditado KPIs.
+La sonda responde con `{"data":{"estado":"ok", ...}}` cuando la API y la base están sanas.
 
-## Cuota imágenes
-`src/utils/imagen.ts` comprime a dataURL JPEG 720px 0.8 para localStorage (~5MB).
+### 4. Primer administrador
 
+La API arranca sin usuarios. El primero se crea una sola vez, tomando `BOOTSTRAP_EMAIL` y `BOOTSTRAP_PASSWORD` del `.env`:
 
-##paso paso por modulos con diseño movil 
+```bash
+docker compose --profile bootstrap run --rm bootstrap
+```
 
-Mapa por módulo
-Módulo	Proceso	Cambio aplicado
-Vender	Inicio→Cliente→Productos→Entrega→Pago	✓ inicio compartido con resumen, accesos y pedidos de hoy en contenedor con scroll; el detalle del pedido gestiona estado y cobro
-Pedidos	Consulta informativa	✓ solo lectura: estado con color, pago, quién generó, pagos recibidos y auditoría con nombres; sin cambios de estado ni cobro
-Créditos	Pendientes→Cliente→Abono	✓ saldo en rojo → registrar pago → pedidos que debe (scroll general, pie fijo); historial con facturas abonadas y total del periodo; confirmar abono + aviso
-Inventario	Menú 4 procesos	✓ Stock / Conteo guiado (historial completo + detalle por conteo) / Descuadres / Ajuste manual en pantallas separadas con volver; confirmar cancelar conteo, aplicar ajuste y ajuste manual + avisos
-Compras	Proveedor→Productos→Confirmar→Detalle	✓ unificado a componentes compartidos
-Precios	Elegir producto→Nuevo precio→Confirmar	✓ Proceso de 2 pasos a pantalla completa: margen en vivo y resumen antes→después; guardar audita
-Caja	Movimientos + Ganancias	✓ tarjetas compactas que filtran (ingresos/egresos/efectivo/nequi/crédito), balance con color según signo y ganancia neta con historial hoy→todo
-Cierre	Conteo→Resumen→Historial	✓ confirmar Eliminar pendiente + avisos (trasladar/eliminar)
-Usuarios	Lista→Datos→Confirmar	✓ paso 2 de resumen de acceso + aviso
-Dashboard/Resumen	KPIs + gráficas + tops	✓ KPIs del día, hoy vs ayer, barras ventas vs compras+gastos y línea de rentabilidad con filtro de tiempo, top 5 de productos y clientes con ganancia real
+Si vuelves a ejecutarlo, responde que ya existe un administrador y no cambia nada. Los demás usuarios se crean desde la aplicación, en **Usuarios**.
 
+### 5. Aplicación
+
+```bash
+npm install
+npm run front:dev
+```
+
+Queda en `http://localhost:5173`, que es el origen que espera `CORS_ALLOWED_ORIGIN`. Mientras termina la migración a la API, la SPA sigue guardando en `localStorage`.
+
+### Comandos útiles
+
+| Comando | Para qué |
+|---|---|
+| `docker compose logs -f api` | Ver la API en vivo |
+| `docker compose run --rm cli ayuda` | Usar el CLI con IA sin dejarlo encendido |
+| `docker compose down` | Detener sin perder datos |
+| `docker compose down -v` | Detener y borrar los volúmenes |
+| `npm run docker:arriba` / `docker:abajo` / `docker:limpiar` | Lo mismo, desde npm |
+
+Los datos viven en los volúmenes `postgres_data` y `minio_data`, así que sobreviven a `docker compose down`.
+
+### Dos detalles que conviene saber
+
+- **MinIO**: la imagen oficial dejó de publicarse, así que el compose usa la última imagen archivada de Bitnami (`bitnamilegacy/minio`). Si tu equipo tiene un registro propio, cambia solo esa línea. Para abrir la consola desde el navegador, descomenta el mapeo de puertos del servicio y entra a `http://localhost:9001`.
+- **CLI con IA**: no está siempre encendido, para no consumir recursos ni una clave cuando nadie lo usa. Se levanta solo cuando se invoca, con el perfil `cli`.
+
+### Desarrollo local, sin contenedores para API y SPA
+
+```bash
+docker compose up -d postgres           # solo la base de datos
+docker compose run --rm migrate         # aplica migraciones y datos base
+npm install
+npm run api:dev                         # http://localhost:3000
+npm run front:dev                       # http://localhost:5173
+```
+
+Dos cosas que conviene tener presentes:
+
+- La API no aplica migraciones al arrancar: se aplican con el paso `migrate` de arriba (o `npm run prisma:deploy --workspace ambie-backend`).
+- Al correr la API fuera de Docker necesita sus propias variables: crea `Backend/.env` con `DATABASE_URL` apuntando a `localhost` (`postgresql://ambie:<clave>@localhost:5432/ambie?schema=public`), no al nombre del servicio del compose, y con el resto de secretos del `.env` de la raíz.
+
+## Autenticación
+
+El acceso usa dos tokens:
+
+| Token | Vida | Dónde vive |
+|---|---|---|
+| Acceso | 15 minutos | Cookie `ambie_access` (navegador) o `Authorization: Bearer` (CLI) |
+| Refresco | 7 días | Cookie `ambie_refresh`, o en el archivo del CLI |
+
+El token de acceso es un JWT firmado, así que validarlo no toca la base de datos. El de refresco es opaco y se guarda hasheado: si alguien lee la base, no puede reconstruirlo. Y como se rota en cada uso, un token robado sirve una sola vez.
+
+Las rutas de administración exigen rol de administrador: usuarios, cierre del día, egresos, ajustes de inventario, cambio de precios, compras y gastos.
+
+## Probar la API
+
+```bash
+npm run prueba:humo
+```
+
+Recorre el camino completo: entrar, crear cliente, crear producto, registrar pedido, cobrar, contar inventario y previsualizar el cierre. Cada paso dice si pasó y por qué falló si no pasó.
+
+```bash
+npm run prueba:humo -- --url http://localhost:3000 --email admin@ambie.local --password tu-clave
+```
+
+## CLI con IA
+
+El CLI habla con la API en lenguaje natural. El modelo consulta y registra datos mediante herramientas, y tú confirmas antes de que se escriba algo.
+
+```bash
+npm run api:cli -- preguntar "¿cuánto debe María?"
+npm run api:cli -- rutas
+npm run api:cli -- proveedores
+```
+
+Funciona con cualquier proveedor. Los gratuitos ya vienen configurados:
+
+| Proveedor | Clave | Dónde se consigue |
+|---|---|---|
+| `ollama` | No hace falta | Corre en tu equipo, no sale nada a internet |
+| `gemini` | Sí | console.ai.google.dev |
+| `groq` | Sí | console.groq.com/keys |
+| `openai` | Sí, de pago | platform.openai.com |
+| `personalizado` | Según el caso | Cualquier API compatible con OpenAI |
+
+Para usar uno:
+
+```bash
+npm run api:cli -- config proveedor=gemini
+npm run api:cli -- preguntar "muéstrame los pedidos de hoy"
+```
+
+La clave se guarda en `~/.ambie/cli.json`, con permisos solo tuyos. También puedes pasarla por el entorno (`GEMINI_API_KEY`) o de paso (`--clave`), si prefieres no dejarla en el disco.
+
+Si tienes tu propia conexión, se conecta por URL:
+
+```bash
+npm run api:cli -- config api="https://tu-servidor/v1" modelo="tu-modelo" clave_personalizado="tu-clave"
+```
+
+El CLI también genera pruebas:
+
+```bash
+npm run api:cli -- probar --proveedor gemini
+```
+
+Le da al modelo los endpoints reales de la API, este propone casos —casos felices, límites, reglas de negocio y permisos— y los ejecuta de verdad. Lo que no se puede comprobar queda marcado como fallido, sin adornos.
+
+Más detalle en [docs/CLI.md](docs/CLI.md).
+
+## Accesos
+
+El negocio arranca vacío. Los primeros usuarios se crean a mano desde **Usuarios** en la aplicación, o con el bootstrap. No hay datos de demostración precargados.
+
+## Qué se puede hacer
+
+### Vendedor
+
+- Crear clientes con los datos esenciales.
+- Tomar un pedido en cuatro pasos: cliente, productos, entrega y pago.
+- Consultar los pedidos del día.
+- Cambiar el estado de un pedido y cobrarlo al entregarlo.
+- Recibir abonos y ver los pedidos que debe cada cliente.
+
+### Administración
+
+- Ver ventas, compras, gastos, utilidad, crédito pendiente y alertas de stock, con filtro por fechas, cliente y vendedor.
+- Consultar la serie diaria y los productos y clientes con más movimiento.
+- Administrar pedidos, créditos, inventario, compras, precios, caja, cierre y usuarios.
+
+## Cómo está organizada la aplicación
+
+```text
+Frontend/src/
+├── components/   Componentes visuales reutilizables
+├── context/      Estado compartido y operaciones del negocio
+├── data/         Repositorios y almacenamiento local
+├── dominio/      Reglas de negocio puras
+├── modules/      Pantallas organizadas por módulo
+├── screens/      Pantallas generales y acceso
+├── types/        Tipos compartidos del dominio
+└── utils/        Fechas, formato, paginación y otras utilidades
+```
+
+La separación es:
+
+```text
+pantalla → contexto/fachada → dominio → repositorios
+```
+
+Las pantallas no llevan reglas de negocio. Si una regla afecta pedidos, stock, caja o créditos, pasa por el dominio.
+
+Mientras la migración a la API no termine, el frontend sigue leyendo y escribiendo en `localStorage` con el prefijo `ambie:v2:`. Los datos son locales a cada navegador: no se comparten entre equipos.
+
+## Reglas importantes
+
+- Cancelar un pedido revierte stock, cartera y caja. Reactivarlo vuelve a aplicar esos efectos; la reactivación se hace desde el detalle del pedido y lo devuelve al estado que tenía antes de cancelarse.
+- Los pedidos cancelados quedan fuera de la cartera: no aparecen en Créditos ni en Abonos, y no admiten cobros.
+- Los abonos generales se distribuyen al pedido más antiguo primero (FIFO). El cobro al entregar se aplica únicamente al pedido seleccionado.
+- En un conteo parcial solo se ajustan los productos que se digitaron.
+- El tablero excluye los pedidos cancelados de las ventas, para que la suma cuadre con la caja, que sí los revierte.
+- Las fechas viajan como texto ISO. Los filtros de día usan `aaaa-mm-dd` y la fecha local es `America/Bogota`.
+- Los saldos son derivados: se calculan con los abonos aplicados, no se guardan duplicados.
+- Los consecutivos son globales, sin reinicio anual y sin huecos. Si una transacción falla, el número no se consume.
+- Las imágenes y comprobantes ocupan espacio en `localStorage`; su capacidad es limitada.
+- No se deben borrar ni reiniciar datos durante una prueba sin autorización explícita.
+
+## Antes de hacer cambios
+
+Consulta `AGENTS.md` para las convenciones del proyecto. En resumen:
+
+- Reutiliza los componentes y utilidades existentes.
+- Mantén las reglas de negocio fuera de los componentes visuales.
+- Respeta el diseño mobile-first y el scroll interno.
+- No cambies un enum sin actualizar `Compartido/` y correr `npm run contrato:verificar`.
+- Ejecuta `npm run verificar` desde la raíz.
+- Revisa también el resultado a 390×844 y 1440 px cuando cambies la interfaz.
+
+## Documentos relacionados
+
+- [Equivalencia de variables](EQUIVALENCIA_VARIABLES.txt)
+- [CLI con IA](docs/CLI.md)
+- [Imágenes de productos](Frontend/public/assets/productos/README.md)
+- [Comprobantes](Frontend/public/assets/comprobantes/README.md)

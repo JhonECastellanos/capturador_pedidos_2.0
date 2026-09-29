@@ -138,7 +138,7 @@ export function CreditosAdmin() {
             pantalla="Cobrar crédito"
             pasos={[
               { titulo: "1 · Saldo pendiente", texto: "Arriba, en rojo, ves cuánto debe el cliente y hace cuántos días." },
-              { titulo: "2 · Registrar pago", texto: "Escribe lo que te pagó y elige efectivo o Nequi. Se reparte al pedido más antiguo y crea el ingreso en caja." },
+              { titulo: "2 · Registrar pago", texto: "Escribe lo que te pagó y elige efectivo o billetera. Se reparte al pedido más antiguo y crea el ingreso en caja." },
               { titulo: "3 · Pedidos que debe", texto: "Toca cualquier pedido para ver su detalle completo y, si quieres, cobrarlo ahí mismo." },
             ]}
           />
@@ -175,7 +175,7 @@ export function CreditosAdmin() {
             {/* 3 · Pedidos que debe (lista completa dentro del scroll general) */}
             <div className="rounded-2xl border border-line bg-paper-sunken/30 p-2">
               <p className="px-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
-                Pedidos que debe ({clienteDetalle.pedidos.length})
+                Pedidos que debe
               </p>
               <ul className="space-y-1.5">
                 {clienteDetalle.pedidos.map((p) => (
@@ -249,10 +249,10 @@ export function CreditosAdmin() {
       <div className="flex-shrink-0 space-y-2 pt-2.5">
         <div className="inline-flex rounded-full border border-line bg-paper-raised p-1">
           <button type="button" onClick={() => setTab("pendientes")} className={`rounded-full px-3.5 py-1 text-[12px] font-semibold transition-colors ${tab === "pendientes" ? "bg-ink text-white" : "text-ink-soft hover:text-ink"}`}>
-            Pendientes ({grupos.length})
+            Pendientes
           </button>
           <button type="button" onClick={() => setTab("historial")} className={`rounded-full px-3.5 py-1 text-[12px] font-semibold transition-colors ${tab === "historial" ? "bg-ink text-white" : "text-ink-soft hover:text-ink"}`}>
-            Historial ({abonos.length})
+            Historial
           </button>
         </div>
 
@@ -286,7 +286,7 @@ export function CreditosAdmin() {
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
           <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
             <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">
-              {tab === "pendientes" ? `Pendientes (${gruposFiltrados.length})` : `Abonos a crédito (${abonosFiltrados.length})`}
+              {tab === "pendientes" ? "Pendientes" : "Abonos a crédito"}
             </p>
             <span className="text-[11px] text-ink-soft">
               {tab === "pendientes" ? "Toca para cobrar" : "Cada abono muestra sus facturas"}
@@ -319,7 +319,6 @@ export function CreditosAdmin() {
         ) : (
           paginar(abonosFiltrados, pagina, POR_PAGINA).items.map((a) => {
             const cliente = obtenerCliente(a.clienteId);
-            const facturas = a.pedidosAfectados.length;
             return (
               <article key={a.id} className="rounded-xl border border-line bg-paper-raised p-3.5 shadow-sm">
                 <div className="flex items-start justify-between gap-2">
@@ -333,7 +332,7 @@ export function CreditosAdmin() {
                 </div>
 
                 <p className="mt-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
-                  Facturas a crédito abonadas ({facturas})
+                  Facturas a crédito abonadas
                 </p>
                 <ul className="mt-1 space-y-1">
                   {a.pedidosAfectados.map((p) => (

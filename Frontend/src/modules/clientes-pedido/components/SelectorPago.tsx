@@ -5,7 +5,7 @@ interface SelectorPagoProps { metodo: MetodoPago; onChange: (metodo: MetodoPago)
 
 const opciones: Array<{ valor: MetodoPago; titulo: string; descripcion: string; etiqueta: string }> = [
   { valor: "efectivo", titulo: "Efectivo", descripcion: "Pago recibido ahora", etiqueta: "$" },
-  { valor: "nequi", titulo: "Nequi", descripcion: "Transferencia inmediata", etiqueta: "N" },
+  { valor: "billetera", titulo: "Billetera", descripcion: "Transferencia inmediata", etiqueta: "B" },
   { valor: "credito", titulo: "Crédito", descripcion: "Registrar saldo pendiente", etiqueta: "C" },
 ];
 

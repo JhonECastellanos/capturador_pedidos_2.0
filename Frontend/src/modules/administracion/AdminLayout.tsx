@@ -92,8 +92,10 @@ export function AdminLayout() {
       </aside>
 
       {/* ─── Header móvil compacto + navegación arriba ─── */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex-shrink-0 bg-ink px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-white lg:hidden">
+      {/* `admin-cuerpo` permite que la barra se pegue al viewport cuando la
+          página hace scroll (≤ 824px) en lugar de quedarse dentro del marco. */}
+      <div className="admin-cuerpo flex flex-1 flex-col overflow-hidden">
+        <header className="sticky top-0 z-30 flex-shrink-0 bg-ink px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-white lg:hidden">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] leading-none text-accent">Administrador · Centro de control</p>

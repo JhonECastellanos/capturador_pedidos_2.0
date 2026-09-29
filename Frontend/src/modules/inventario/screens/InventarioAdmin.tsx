@@ -301,7 +301,7 @@ export function InventarioAdmin() {
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
                   <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
                     <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">
-                      Productos ({inventarioFiltradoGeneral.length})
+                      Productos
                     </p>
                     <span className="text-[11px] text-ink-soft">Alertas primero</span>
                   </div>
@@ -404,7 +404,7 @@ export function InventarioAdmin() {
 
               <div className="rounded-2xl border border-line bg-paper-sunken/30 p-2">
                 <p className="px-1 pb-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-ink-faint">
-                  Productos contados ({lineasDetalle.length})
+                  Productos contados
                 </p>
                 {lineasDetalle.length === 0 ? (
                   <p className="rounded-xl border border-dashed border-line bg-paper-raised px-3 py-6 text-center text-[12.5px] text-ink-soft">
@@ -532,8 +532,8 @@ export function InventarioAdmin() {
               <input type="number" min={1} max={inventario.length} value={cantidadAleatoria} onChange={(e) => setCantidadAleatoria(e.target.value)} placeholder="N aleatorio" className={campo} />
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <button type="button" disabled={inventario.length === 0} onClick={() => handleIniciar("general")} className="rounded-xl bg-ink py-3 text-[13px] font-semibold text-white active:bg-ink/90 disabled:opacity-40">General ({inventario.length})</button>
-              <button type="button" disabled={inventario.length === 0} onClick={() => handleIniciar("aleatorio")} className="rounded-xl border border-line bg-paper py-3 text-[13px] font-semibold text-ink active:bg-paper-sunken disabled:opacity-40">Aleatorio ({cantidadAleatoria})</button>
+              <button type="button" disabled={inventario.length === 0} onClick={() => handleIniciar("general")} className="rounded-xl bg-ink py-3 text-[13px] font-semibold text-white active:bg-ink/90 disabled:opacity-40">General</button>
+              <button type="button" disabled={inventario.length === 0} onClick={() => handleIniciar("aleatorio")} className="rounded-xl border border-line bg-paper py-3 text-[13px] font-semibold text-ink active:bg-paper-sunken disabled:opacity-40">Aleatorio</button>
             </div>
             {inventario.length === 0 && (
               <p className="mt-2 text-[11.5px] text-ink-faint">Primero registra productos en Stock general para poder contarlos.</p>
@@ -542,7 +542,7 @@ export function InventarioAdmin() {
 
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
             <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
-              <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Historial de conteos ({conteos.length})</p>
+              <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Historial de conteos</p>
               <span className="text-[11px] text-ink-soft">Toca para ver el detalle</span>
             </div>
             <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
@@ -596,7 +596,7 @@ export function InventarioAdmin() {
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
             <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
               <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">
-                Descuadres ({lineasConDiferencia.length})
+                Descuadres
               </p>
               <span className="text-[11px] text-ink-soft">Falta / sobra</span>
             </div>

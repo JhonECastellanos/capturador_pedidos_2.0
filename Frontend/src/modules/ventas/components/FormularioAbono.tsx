@@ -32,7 +32,7 @@ export function FormularioAbono({
         onChange={onMetodoChange}
         opciones={[
           { valor: "efectivo", etiqueta: "Efectivo" },
-          { valor: "nequi", etiqueta: "Nequi" },
+          { valor: "billetera", etiqueta: "Billetera" },
         ]}
       />
 

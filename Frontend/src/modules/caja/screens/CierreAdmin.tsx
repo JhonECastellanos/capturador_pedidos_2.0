@@ -11,7 +11,7 @@ import { useOperaciones } from "../../../context/operaciones";
 import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodoFecha, dentroDeRangoFechaStr, esAyer, esMismoDia, fechaLocalStr, type Periodo } from "../../../utils/fechas";
 import { formatoMoneda } from "../../../utils/formato";
 
-type FiltroPagoCierre = "todos" | "credito" | "efectivo" | "nequi";
+type FiltroPagoCierre = "todos" | "credito" | "efectivo" | "billetera";
 
 export function CierreAdmin() {
   const { movimientosCaja, pedidos, cierres, registrarCierre, obtenerCliente, actualizarEstadoPedido, trasladarPedidoAHoy, nombreUsuario } = useOperaciones();
@@ -24,7 +24,7 @@ export function CierreAdmin() {
 
   // Inputs del conteo
   const [conteoEfectivo, setConteoEfectivo] = useState("");
-  const [conteoNequi, setConteoNequi] = useState("");
+  const [conteoBilletera, setConteoBilletera] = useState("");
 
   // Histórico: filtros y paginación
   const [periodo, setPeriodo] = useState<Periodo>("hoy");
@@ -47,8 +47,13 @@ export function CierreAdmin() {
   const movsHoy = useMemo(() => movimientosCaja.filter((m) => esMismoDia(m.creadoEn, hoy)), [hoy, movimientosCaja]);
   const ingresosHoy = movsHoy.filter((m) => m.tipo === "ingreso").reduce((s, m) => s + m.monto, 0);
   const egresosHoy = movsHoy.filter((m) => m.tipo === "egreso").reduce((s, m) => s + m.monto, 0);
-  const efectivoEsperado = movsHoy.filter((m) => m.tipo === "ingreso" && m.metodo === "efectivo").reduce((s, m) => s + m.monto, 0);
-  const nequiEsperado = movsHoy.filter((m) => m.tipo === "ingreso" && m.metodo === "nequi").reduce((s, m) => s + m.monto, 0);
+  // Esperado por método: lo ingresado menos lo reversado en ese mismo método.
+  const efectivoEsperado = movsHoy
+    .filter((m) => m.metodo === "efectivo")
+    .reduce((s, m) => s + (m.tipo === "ingreso" ? m.monto : -m.monto), 0);
+  const billeteraEsperado = movsHoy
+    .filter((m) => m.metodo === "billetera")
+    .reduce((s, m) => s + (m.tipo === "ingreso" ? m.monto : -m.monto), 0);
   const balanceHoy = ingresosHoy - egresosHoy;
 
   const pedidosHoy = useMemo(() => pedidos.filter((p) => esMismoDia(p.creadoEn, hoy) && p.estado !== "cancelado"), [hoy, pedidos]);
@@ -58,8 +63,8 @@ export function CierreAdmin() {
   const pedidosEfectivoHoy = useMemo(() => pedidosHoy.filter((p) => p.pago.metodo === "efectivo" && p.pago.saldoPendiente === 0), [pedidosHoy]);
   const ventasEfectivoHoy = pedidosEfectivoHoy.reduce((s, p) => s + p.total, 0);
 
-  const pedidosNequiHoy = useMemo(() => pedidosHoy.filter((p) => p.pago.metodo === "nequi" && p.pago.saldoPendiente === 0), [pedidosHoy]);
-  const ventasNequiHoy = pedidosNequiHoy.reduce((s, p) => s + p.total, 0);
+  const pedidosBilleteraHoy = useMemo(() => pedidosHoy.filter((p) => p.pago.metodo === "billetera" && p.pago.saldoPendiente === 0), [pedidosHoy]);
+  const ventasBilleteraHoy = pedidosBilleteraHoy.reduce((s, p) => s + p.total, 0);
 
   const pedidosCreditoHoy = useMemo(() => pedidosHoy.filter((p) => p.pago.saldoPendiente > 0), [pedidosHoy]);
   const ventasCreditoHoy = pedidosCreditoHoy.reduce((s, p) => s + p.pago.saldoPendiente, 0);
@@ -72,9 +77,9 @@ export function CierreAdmin() {
   const pendientesAyer = useMemo(() => pendientesHoy.filter((p) => esAyer(p.creadoEn, hoy)), [hoy, pendientesHoy]);
 
   const conteoEfNum = conteoEfectivo === "" ? null : Number(conteoEfectivo);
-  const conteoNeqNum = conteoNequi === "" ? null : Number(conteoNequi);
+  const conteoBilleteraNum = conteoBilletera === "" ? null : Number(conteoBilletera);
   const difEfectivo = conteoEfNum === null ? null : conteoEfNum - efectivoEsperado;
-  const difNequi = conteoNeqNum === null ? null : conteoNeqNum - nequiEsperado;
+  const difBilletera = conteoBilleteraNum === null ? null : conteoBilleteraNum - billeteraEsperado;
 
   const yaCerradoHoy = cierres.some((c) => c.fecha === fechaHoyStr);
 
@@ -98,7 +103,7 @@ export function CierreAdmin() {
     return pendientesHoy.filter((pedido) => {
       if (filtroPago === "credito" && !(pedido.pago.saldoPendiente > 0)) return false;
       if (filtroPago === "efectivo" && !(pedido.pago.metodo === "efectivo" && pedido.pago.saldoPendiente === 0)) return false;
-      if (filtroPago === "nequi" && !(pedido.pago.metodo === "nequi" && pedido.pago.saldoPendiente === 0)) return false;
+      if (filtroPago === "billetera" && !(pedido.pago.metodo === "billetera" && pedido.pago.saldoPendiente === 0)) return false;
       if (!q) return true;
       const cliente = obtenerCliente(pedido.clienteId);
       return (
@@ -124,9 +129,9 @@ export function CierreAdmin() {
       pendientesTrasladados,
       pendientesCancelados,
       conteoEfectivo: conteoEfNum ?? undefined,
-      conteoNequi: conteoNeqNum ?? undefined,
+      conteoBilletera: conteoBilleteraNum ?? undefined,
       diferenciaEfectivo: difEfectivo ?? undefined,
-      diferenciaNequi: difNequi ?? undefined,
+      diferenciaBilletera: difBilletera ?? undefined,
     });
 
     // Al confirmar, vuelve automáticamente al historial
@@ -171,7 +176,7 @@ export function CierreAdmin() {
           </span>
         </div>
 
-        {/* ─── PASO 1: CONTEO FÍSICO DE EFECTIVO Y NEQUI ─── */}
+        {/* ─── PASO 1: CONTEO FÍSICO DE EFECTIVO Y BILLETERA ─── */}
         {pasoCierre === 1 && (
           <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar py-3 space-y-3.5 max-w-xl">
             {/* Banner de expectativas del sistema */}
@@ -189,8 +194,8 @@ export function CierreAdmin() {
                   <p className="mt-0.5 font-mono text-[15px] font-semibold text-white">{formatoMoneda(efectivoEsperado)}</p>
                 </div>
                 <div className="rounded-xl bg-white/10 p-2.5">
-                  <p className="text-[10.5px] text-white/60">Nequi esperado</p>
-                  <p className="mt-0.5 font-mono text-[15px] font-semibold text-white">{formatoMoneda(nequiEsperado)}</p>
+                  <p className="text-[10.5px] text-white/60">Billetera esperado</p>
+                  <p className="mt-0.5 font-mono text-[15px] font-semibold text-white">{formatoMoneda(billeteraEsperado)}</p>
                 </div>
               </div>
             </div>
@@ -198,7 +203,7 @@ export function CierreAdmin() {
             {/* Formulario de conteo */}
             <div className="rounded-2xl border border-line bg-paper-raised p-4">
               <p className="font-display text-[14.5px] font-semibold text-ink">Ingreso de dinero contado</p>
-              <p className="mt-0.5 text-[12px] text-ink-soft">Digita el dinero físico y el saldo Nequi recibido hoy.</p>
+              <p className="mt-0.5 text-[12px] text-ink-soft">Digita el dinero físico y el saldo en billetera recibido hoy.</p>
 
               <div className="mt-3.5 space-y-3">
                 <div>
@@ -229,23 +234,23 @@ export function CierreAdmin() {
                 <div className="border-t border-line/60 pt-3">
                   <div className="flex items-center justify-between">
                     <label className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">
-                      Nequi confirmado ($)
+                      Billetera confirmada ($)
                     </label>
-                    <span className="text-[11.5px] text-ink-soft">Esperado: {formatoMoneda(nequiEsperado)}</span>
+                    <span className="text-[11.5px] text-ink-soft">Esperado: {formatoMoneda(billeteraEsperado)}</span>
                   </div>
                   <input
                     type="number"
                     min={0}
                     inputMode="numeric"
-                    value={conteoNequi}
-                    onChange={(e) => setConteoNequi(e.target.value)}
+                    value={conteoBilletera}
+                    onChange={(e) => setConteoBilletera(e.target.value)}
                     placeholder="0"
                     className="mt-1 w-full rounded-xl border border-line bg-paper px-3.5 py-3 font-mono text-[16px] font-semibold text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
                   />
                   <div className="mt-1.5 flex items-center justify-between text-[11.5px] font-semibold">
-                    <span className="text-ink-faint">Diferencia Nequi:</span>
-                    <span className={difNequi === null ? "text-ink-faint" : difNequi === 0 ? "text-success" : "text-danger"}>
-                      {difNequi === null ? "Sin ingresar" : difNequi === 0 ? "✓ Cuadra exacto" : `Diferencia ${difNequi > 0 ? "+" : ""}${formatoMoneda(difNequi)}`}
+                    <span className="text-ink-faint">Diferencia billetera:</span>
+                    <span className={difBilletera === null ? "text-ink-faint" : difBilletera === 0 ? "text-success" : "text-danger"}>
+                      {difBilletera === null ? "Sin ingresar" : difBilletera === 0 ? "✓ Cuadra exacto" : `Diferencia ${difBilletera > 0 ? "+" : ""}${formatoMoneda(difBilletera)}`}
                     </span>
                   </div>
                 </div>
@@ -262,7 +267,7 @@ export function CierreAdmin() {
                 >
                   <div>
                     <p className="text-[13px] font-semibold text-ink">
-                      Pendientes por resolver ({pendientesHoy.length})
+                      Pendientes por resolver
                     </p>
                     <p className="text-[11px] text-ink-soft">
                       {pendientesAyer.length > 0 ? `${pendientesAyer.length} de ayer pendientes de traslado` : "Todos son de hoy"}
@@ -282,7 +287,7 @@ export function CierreAdmin() {
                       className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-[12.5px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
                     />
                     <div className="flex gap-1.5 overflow-x-auto pb-1">
-                      {(["todos", "credito", "efectivo", "nequi"] as FiltroPagoCierre[]).map((f) => (
+                      {(["todos", "credito", "efectivo", "billetera"] as FiltroPagoCierre[]).map((f) => (
                         <button
                           key={f}
                           type="button"
@@ -299,7 +304,7 @@ export function CierreAdmin() {
                     <div className="overflow-hidden rounded-xl border border-line bg-paper-sunken/40">
                       <div className="flex items-center justify-between border-b border-line bg-paper-raised px-3 py-1.5">
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
-                          Pendientes ({pendientesFiltrados.length})
+                          Pendientes
                         </p>
                         <span className="text-[10.5px] text-ink-soft">Traslada o elimina</span>
                       </div>
@@ -327,11 +332,11 @@ export function CierreAdmin() {
                                   onClick={() => {
                                     trasladarPedidoAHoy(pedido.id);
                                     setPendientesTrasladados((actual) => actual + 1);
-                                    mostrarAviso(`${pedido.numero} pasa a mañana`, "exito");
+                                    mostrarAviso(`${pedido.numero} ${deAyer ? "pasa a hoy" : "se reprogramó para mañana"}`, "exito");
                                   }}
                                   className="rounded bg-ink px-2 py-0.5 text-[10.5px] font-medium text-white"
                                 >
-                                  Pasar para mañana
+                                  {deAyer ? "Pasar para hoy" : "Reprogramar para mañana"}
                                 </button>
                                 <button
                                   type="button"
@@ -379,7 +384,7 @@ export function CierreAdmin() {
               </h3>
               <p className="text-[12px] text-ink-soft">{pedidosHoy.length} pedidos registrados hoy</p>
 
-              {/* Desglose: efectivo, nequi, crédito */}
+              {/* Desglose: efectivo, billetera, crédito */}
               <div className="mt-3.5 grid gap-2.5">
                 <div className="flex items-center justify-between rounded-xl border border-success/30 bg-success-soft/40 p-3">
                   <div className="flex items-center gap-2.5">
@@ -399,15 +404,15 @@ export function CierreAdmin() {
                 <div className="flex items-center justify-between rounded-xl border border-teal/30 bg-teal-soft/40 p-3">
                   <div className="flex items-center gap-2.5">
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-teal text-white font-mono text-[13px] font-bold">
-                      N
+                      B
                     </span>
                     <div>
-                      <p className="text-[13px] font-semibold text-ink">Ventas en Nequi</p>
-                      <p className="text-[11px] text-ink-soft">{pedidosNequiHoy.length} transferencias</p>
+                      <p className="text-[13px] font-semibold text-ink">Ventas en Billetera</p>
+                      <p className="text-[11px] text-ink-soft">{pedidosBilleteraHoy.length} transferencias</p>
                     </div>
                   </div>
                   <span className="font-mono text-[16px] font-bold text-teal">
-                    {formatoMoneda(ventasNequiHoy)}
+                    {formatoMoneda(ventasBilleteraHoy)}
                   </span>
                 </div>
 
@@ -450,11 +455,11 @@ export function CierreAdmin() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between rounded-lg bg-paper p-2.5">
-                  <span className="text-ink-soft">Nequi verificado:</span>
+                  <span className="text-ink-soft">Billetera verificada:</span>
                   <span className="font-mono font-semibold text-ink">
-                    {conteoNeqNum !== null ? formatoMoneda(conteoNeqNum) : "Sin ingresar"} ·{" "}
-                    <span className={difNequi === 0 ? "text-success" : "text-danger"}>
-                      {difNequi === 0 ? "Cuadra ✓" : `Dif: ${difNequi ? (difNequi > 0 ? "+" : "") + formatoMoneda(difNequi) : "—"}`}
+                    {conteoBilleteraNum !== null ? formatoMoneda(conteoBilleteraNum) : "Sin ingresar"} ·{" "}
+                    <span className={difBilletera === 0 ? "text-success" : "text-danger"}>
+                      {difBilletera === 0 ? "Cuadra ✓" : `Dif: ${difBilletera ? (difBilletera > 0 ? "+" : "") + formatoMoneda(difBilletera) : "—"}`}
                     </span>
                   </span>
                 </div>
@@ -462,7 +467,7 @@ export function CierreAdmin() {
 
               {yaCerradoHoy && (
                 <p className="mt-3 rounded-xl bg-accent-soft p-2.5 text-center text-[12px] font-medium text-accent-dark">
-                  Nota: Ya existe un cierre registrado para hoy. Si confirmas, se asentará este nuevo registro actualizado.
+                  Nota: Ya existe un cierre registrado para hoy. Si confirmas, se guardará un nuevo registro y el anterior se conservará en el historial.
                 </p>
               )}
             </div>
@@ -523,7 +528,7 @@ export function CierreAdmin() {
             pantalla="Validación y Cierre"
             pasos={[
               { titulo: "1 · Historial general", texto: "Revisa aquí todos los cierres diarios con ventas, ingresos, egresos y cuadre." },
-              { titulo: "2 · Hacer Cierre", texto: "Toca el botón 'Hacer Cierre' para iniciar el flujo guiado en 2 pasos: primero digitas efectivo y Nequi, luego revisas el resumen de hoy y confirmas." },
+              { titulo: "2 · Hacer Cierre", texto: "Toca el botón 'Hacer Cierre' para iniciar el flujo guiado en 2 pasos: primero digitas efectivo y billetera, luego revisas el resumen de hoy y confirmas." },
               { titulo: "3 · Filtros", texto: "Usa los botones de periodo (hoy, ayer, semana, mes, todo) y el filtro de fecha para auditar días específicos." },
             ]}
           />
@@ -602,7 +607,7 @@ export function CierreAdmin() {
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
           <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
             <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">
-              Cierres ({cierresFiltrados.length})
+              Cierres
             </p>
             <span className="text-[11px] text-ink-soft">Recientes primero</span>
           </div>
@@ -652,17 +657,17 @@ export function CierreAdmin() {
                 </div>
               </div>
 
-              {(c.conteoEfectivo !== undefined || c.conteoNequi !== undefined) && (
+              {(c.conteoEfectivo !== undefined || c.conteoBilletera !== undefined) && (
                 <div className="mt-2.5 rounded-lg bg-paper-sunken/60 p-2 text-[11.5px] text-ink-soft">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span>
-                      Contado: Efectivo {c.conteoEfectivo !== undefined ? formatoMoneda(c.conteoEfectivo) : "—"} · Nequi{" "}
-                      {c.conteoNequi !== undefined ? formatoMoneda(c.conteoNequi) : "—"}
+                      Contado: Efectivo {c.conteoEfectivo !== undefined ? formatoMoneda(c.conteoEfectivo) : "—"} · Billetera{" "}
+                      {c.conteoBilletera !== undefined ? formatoMoneda(c.conteoBilletera) : "—"}
                     </span>
-                    {(c.diferenciaEfectivo !== undefined || c.diferenciaNequi !== undefined) && (
+                    {(c.diferenciaEfectivo !== undefined || c.diferenciaBilletera !== undefined) && (
                       <span className="font-semibold">
                         Dif: Ef {c.diferenciaEfectivo !== undefined ? (c.diferenciaEfectivo === 0 ? "✓ 0" : (c.diferenciaEfectivo > 0 ? "+" : "") + formatoMoneda(c.diferenciaEfectivo)) : "—"}{" "}
-                        / Nq {c.diferenciaNequi !== undefined ? (c.diferenciaNequi === 0 ? "✓ 0" : (c.diferenciaNequi > 0 ? "+" : "") + formatoMoneda(c.diferenciaNequi)) : "—"}
+                        / Bl {c.diferenciaBilletera !== undefined ? (c.diferenciaBilletera === 0 ? "✓ 0" : (c.diferenciaBilletera > 0 ? "+" : "") + formatoMoneda(c.diferenciaBilletera)) : "—"}
                       </span>
                     )}
                   </div>

@@ -7,7 +7,7 @@ interface EtiquetaPagoProps {
 export function EtiquetaPago({ metodo, pendiente, compacta = false }: EtiquetaPagoProps) {
   const estilo = pendiente
     ? "bg-danger-soft text-danger"
-    : metodo === "nequi"
+    : metodo === "billetera"
       ? "bg-teal-soft text-teal"
       : "bg-success-soft text-success";
   const texto = pendiente ? "Por cobrar" : metodo === "credito" ? "Crédito pagado" : `Pagado · ${metodo}`;

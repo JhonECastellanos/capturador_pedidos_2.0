@@ -1,0 +1,752 @@
+// Esquema de datos de AMBIÉ (PostgreSQL).
+// Convención: nombres de campo en camelCase para que frontend, backend y base
+// compartan la misma nomenclatura. Los nombres de tabla son plurales camelCase.
+// Dinero: Decimal(18,2) · Cantidades: Int · Timestamps: timestamptz · Fechas: date.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enumeraciones ────────────────────────────────────────────────
+
+enum RolUsuario {
+  ADMINISTRADOR @map("administrador")
+  VENDEDOR     @map("vendedor")
+}
+
+enum MetodoPago {
+  EFECTIVO  @map("efectivo")
+  BILLETERA @map("billetera")
+  CREDITO   @map("credito")
+}
+
+enum MomentoCobro {
+  INMEDIATO          @map("inmediato")
+  AL_ENTREGAR        @map("al-entregar")
+  SEGUN_PERIODICIDAD @map("segun-periodicidad")
+}
+
+enum EstadoPedido {
+  PENDIENTE      @map("pendiente")
+  EN_PREPARACION @map("en-preparacion")
+  ENTREGADO      @map("entregado")
+  CANCELADO      @map("cancelado")
+}
+
+enum EstadoCuenta {
+  AL_DIA    @map("al-dia")
+  PENDIENTE @map("pendiente")
+}
+
+enum TipoPago {
+  PAGO_INICIAL @map("pago-inicial")
+  ABONO        @map("abono")
+  REEMBOLSO    @map("reembolso")
+}
+
+enum EstadoPago {
+  ACTIVO    @map("activo")
+  REVERTIDO @map("revertido")
+}
+
+enum TipoMovimientoCaja {
+  INGRESO @map("ingreso")
+  EGRESO  @map("egreso")
+}
+
+enum TipoConteo {
+  GENERAL   @map("general")
+  ALEATORIO @map("aleatorio")
+}
+
+enum EstadoConteo {
+  EN_CURSO   @map("en-curso")
+  CONFIRMADO @map("confirmado")
+  CANCELADO  @map("cancelado")
+}
+
+enum TipoMovimientoInventario {
+  INICIALIZACION      @map("inicializacion")
+  RESERVA             @map("reserva")
+  CONSUMO_PEDIDO      @map("consumo-pedido")
+  LIBERACION_RESERVA  @map("liberacion-reserva")
+  RECEPCION_COMPRA    @map("recepcion-compra")
+  AJUSTE_CONTEO       @map("ajuste-conteo")
+  AJUSTE_MANUAL       @map("ajuste-manual")
+  REVERSION           @map("reversion")
+}
+
+enum EstadoReserva {
+  RESERVADA @map("reservada")
+  CONSUMIDA @map("consumida")
+  LIBERADA  @map("liberada")
+}
+
+enum EstadoFactura {
+  EMITIDA @map("emitida")
+  ANULADA @map("anulada")
+}
+
+enum EstadoCierre {
+  CERRADO   @map("cerrado")
+  REABIERTO @map("reabierto")
+}
+
+// ─── Identidad, permisos y sesiones ───────────────────────────────
+
+model Usuario {
+  id            String     @id @default(uuid())
+  codigo        String     @unique
+  nombre        String
+  email         String     @unique
+  passwordHash  String
+  rol           RolUsuario
+  activo        Boolean    @default(true)
+  creadoEn      DateTime   @default(now())
+  actualizadoEn DateTime   @updatedAt
+  ultimoAccesoEn DateTime?
+
+  sesiones       Sesion[]
+  pedidos        Pedido[]
+  pedidoEstados  PedidoEstadoHistorial[]
+  pagos          Pago[]
+  conteos        ConteoInventario[]
+  ajustes        AjusteInventario[]
+  cambiosPrecio  CambioPrecio[]
+  recepciones    RecepcionCompra[]
+  gastos         Gasto[]
+  movimientosCaja MovimientoCaja[]
+  cierres        CierreDia[]
+
+  @@map("usuarios")
+}
+
+model Rol {
+  id          String  @id @default(uuid())
+  codigo      String  @unique
+  nombre      String
+  descripcion String?
+  activo      Boolean @default(true)
+  rolPermisos RolPermiso[]
+
+  @@map("roles")
+}
+
+model Permiso {
+  id          String  @id @default(uuid())
+  codigo      String  @unique
+  nombre      String
+  descripcion String?
+  rolPermisos RolPermiso[]
+
+  @@map("permisos")
+}
+
+model RolPermiso {
+  rolId     String
+  permisoId String
+  rol       Rol    @relation(fields: [rolId], references: [id], onDelete: Cascade)
+  permiso   Permiso @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+
+  @@id([rolId, permisoId])
+  @@map("rolPermisos")
+}
+
+model Sesion {
+  id         String    @id @default(uuid())
+  usuarioId  String
+  tokenHash  String    @unique
+  creadoEn   DateTime  @default(now())
+  expiraEn   DateTime
+  revocadoEn DateTime?
+  ip         String?
+  userAgent  String?
+  usuario    Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@map("sesiones")
+}
+
+// ─── Numeración, auditoría y catálogos ────────────────────────────
+
+model Consecutivo {
+  tipo          String
+  periodo       String   @default("global")
+  prefijo       String
+  ancho         Int      @default(4)
+  ultimoValor   Int      @default(0)
+  actualizadoEn DateTime @updatedAt
+
+  @@id([tipo, periodo])
+  @@map("consecutivos")
+}
+
+model AuditoriaEvento {
+  id          String   @id @default(uuid())
+  entidadTipo String
+  entidadId   String
+  accion      String
+  datosAntes  Json?
+  datosDespues Json?
+  usuarioId   String?
+  requestId   String?
+  creadoEn    DateTime @default(now())
+
+  @@index([entidadTipo, entidadId])
+  @@map("auditoriaEventos")
+}
+
+model Categoria {
+  id     String  @id @default(uuid())
+  codigo String  @unique
+  nombre String  @unique
+  activo Boolean @default(true)
+  orden  Int     @default(0)
+  productos Producto[]
+
+  @@map("categorias")
+}
+
+model TipoCredito {
+  id                   String  @id @default(uuid())
+  codigo               String  @unique
+  nombre               String  @unique
+  frecuenciaCreditoDias Int
+  orden                Int     @default(0)
+  activo               Boolean @default(true)
+  clientes             Cliente[]
+
+  @@map("tiposCredito")
+}
+
+// ─── Clientes, productos, proveedores y archivos ──────────────────
+
+model Cliente {
+  id            String      @id @default(uuid())
+  codigo        String      @unique
+  nombre        String
+  alias         String
+  identificacion String?    @unique
+  telefono      String
+  ciudad        String
+  direccion     String
+  fechaNacimiento DateTime? @db.Date
+  tipoCreditoId String?
+  activo        Boolean     @default(true)
+  creadoEn      DateTime    @default(now())
+  actualizadoEn DateTime    @updatedAt
+
+  tipoCredito  TipoCredito?  @relation(fields: [tipoCreditoId], references: [id])
+  pedidos      Pedido[]
+  pagos        Pago[]
+  facturas     Factura[]
+  recordatorios RecordatorioCredito[]
+
+  @@index([nombre])
+  @@map("clientes")
+}
+
+model RecordatorioCredito {
+  id        String    @id @default(uuid())
+  clienteId String
+  pedidoId  String?
+  usuarioId String?
+  canal     String    @default("whatsapp")
+  creadoEn  DateTime  @default(now())
+  estado    String    @default("enviado")
+  cliente   Cliente   @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@index([clienteId])
+  @@map("recordatoriosCredito")
+}
+
+model Producto {
+  id             String   @id @default(uuid())
+  codigoInterno  String   @unique
+  nombre         String
+  categoriaId    String?
+  unidad         String   @default("unidad")
+  precioVenta    Decimal  @db.Decimal(18, 2)
+  costoActual    Decimal  @db.Decimal(18, 2) @default(0)
+  stockFisico    Int      @default(0)
+  stockReservado Int      @default(0)
+  stockMinimo    Int      @default(0)
+  colorEtiqueta  String
+  activo         Boolean  @default(true)
+  version        Int      @default(1)
+  creadoEn       DateTime @default(now())
+  actualizadoEn  DateTime @updatedAt
+
+  categoria           Categoria?           @relation(fields: [categoriaId], references: [id])
+  pedidoLineas        PedidoLinea[]
+  recepcionLineas     RecepcionLinea[]
+  conteoLineas        ConteoLinea[]
+  ajusteLineas        AjusteLinea[]
+  cambiosPrecio       CambioPrecio[]
+  movimientosInventario MovimientoInventario[]
+  reservasStock       ReservaStock[]
+
+  @@index([nombre])
+  @@map("productos")
+}
+
+model Proveedor {
+  id            String   @id @default(uuid())
+  codigo        String   @unique
+  nombre        String
+  telefono      String?
+  activo        Boolean  @default(true)
+  creadoEn      DateTime @default(now())
+  actualizadoEn DateTime @updatedAt
+  recepciones   RecepcionCompra[]
+
+  @@index([nombre])
+  @@map("proveedores")
+}
+
+model ArchivoAdjunto {
+  id          String    @id @default(uuid())
+  productoId  String?
+  pedidoId    String?
+  pagoId      String?
+  nombre      String
+  mimeType    String
+  storageKey  String
+  tamano      Int
+  sha256      String?
+  usuarioId   String?
+  creadoEn    DateTime  @default(now())
+  eliminadoEn DateTime?
+
+  @@map("archivosAdjuntos")
+}
+
+// ─── Pedidos, líneas, estados y facturas ──────────────────────────
+
+model Pedido {
+  id             String       @id @default(uuid())
+  numero         String       @unique
+  clienteId      String
+  vendedorId     String
+  metodo         MetodoPago
+  momentoCobro   MomentoCobro @default(AL_ENTREGAR)
+  estado         EstadoPedido @default(PENDIENTE)
+  subtotal       Decimal      @db.Decimal(18, 2)
+  total          Decimal      @db.Decimal(18, 2)
+  fechaOperacion DateTime     @db.Date
+  creadoEn       DateTime     @default(now())
+  actualizadoEn  DateTime     @updatedAt
+  version        Int          @default(1)
+  comprobantePagoAdjuntoId String?
+
+  cliente        Cliente        @relation(fields: [clienteId], references: [id])
+  vendedor       Usuario        @relation(fields: [vendedorId], references: [id])
+  lineas         PedidoLinea[]
+  historial      PedidoEstadoHistorial[]
+  factura        Factura?
+  aplicaciones   PagoAplicacion[]
+  reservas       ReservaStock[]
+
+  @@index([clienteId])
+  @@index([fechaOperacion])
+  @@map("pedidos")
+}
+
+model PedidoLinea {
+  id            String  @id @default(uuid())
+  pedidoId      String
+  productoId    String
+  codigoInterno String
+  nombre        String
+  unidad        String
+  cantidad      Int
+  precioUnitario Decimal @db.Decimal(18, 2)
+  costoUnitario Decimal  @db.Decimal(18, 2) @default(0)
+  subtotal      Decimal  @db.Decimal(18, 2)
+  orden         Int     @default(0)
+
+  pedido   Pedido   @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id])
+  reservas ReservaStock[]
+
+  @@unique([pedidoId, productoId])
+  @@index([pedidoId])
+  @@map("pedidoLineas")
+}
+
+model PedidoEstadoHistorial {
+  id        String       @id @default(uuid())
+  pedidoId  String
+  estado    EstadoPedido
+  usuarioId String
+  fecha     DateTime     @default(now())
+  comentario String?
+
+  pedido  Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([pedidoId])
+  @@map("pedidoEstadoHistorial")
+}
+
+model Factura {
+  id             String        @id @default(uuid())
+  numero         String        @unique
+  pedidoId       String        @unique
+  clienteId      String
+  clienteNombre  String
+  clienteIdentificacion String?
+  clienteDireccion String?
+  fechaEmision   DateTime      @default(now())
+  fechaOperacion DateTime      @db.Date
+  subtotal       Decimal       @db.Decimal(18, 2)
+  total          Decimal       @db.Decimal(18, 2)
+  estado         EstadoFactura @default(EMITIDA)
+  creadoEn       DateTime      @default(now())
+  anuladoEn      DateTime?
+  motivoAnulacion String?
+
+  pedido  Pedido  @relation(fields: [pedidoId], references: [id])
+  cliente Cliente @relation(fields: [clienteId], references: [id])
+
+  @@index([clienteId])
+  @@map("facturas")
+}
+
+// ─── Pagos, aplicaciones y cartera ────────────────────────────────
+
+model Pago {
+  id             String          @id @default(uuid())
+  clienteId      String
+  tipo           TipoPago
+  metodo         MetodoPago
+  monto          Decimal         @db.Decimal(18, 2)
+  usuarioId      String
+  comentario     String?
+  fechaOperacion DateTime        @db.Date
+  creadoEn       DateTime        @default(now())
+  estado         EstadoPago      @default(ACTIVO)
+  reversionDePagoId String?
+  idempotencyKey String?         @unique
+
+  cliente      Cliente          @relation(fields: [clienteId], references: [id])
+  usuario      Usuario          @relation(fields: [usuarioId], references: [id])
+  aplicaciones PagoAplicacion[]
+  movimientosCaja MovimientoCaja[]
+
+  @@index([clienteId])
+  @@map("pagos")
+}
+
+model PagoAplicacion {
+  id          String    @id @default(uuid())
+  pagoId      String
+  pedidoId    String
+  montoAplicado Decimal @db.Decimal(18, 2)
+  orden       Int       @default(0)
+  creadoEn    DateTime  @default(now())
+  revertidoEn DateTime?
+  reversionDeAplicacionId String?
+
+  pago   Pago   @relation(fields: [pagoId], references: [id], onDelete: Cascade)
+  pedido Pedido @relation(fields: [pedidoId], references: [id])
+
+  @@index([pagoId])
+  @@index([pedidoId])
+  @@map("pagoAplicaciones")
+}
+
+// ─── Inventario: reservas, ledger, conteos y ajustes ──────────────
+
+model ReservaStock {
+  id                String        @id @default(uuid())
+  pedidoId          String
+  pedidoLineaId     String
+  productoId        String
+  cantidadReservada Int
+  cantidadConsumida Int           @default(0)
+  cantidadLiberada  Int           @default(0)
+  estado            EstadoReserva @default(RESERVADA)
+  reservadoEn       DateTime      @default(now())
+  consumidoEn       DateTime?
+  liberadoEn        DateTime?
+  usuarioId         String?
+
+  pedido   Pedido      @relation(fields: [pedidoId], references: [id])
+  pedidoLinea PedidoLinea @relation(fields: [pedidoLineaId], references: [id])
+  producto Producto    @relation(fields: [productoId], references: [id])
+
+  @@index([productoId])
+  @@map("reservasStock")
+}
+
+model MovimientoInventario {
+  id                  String                   @id @default(uuid())
+  productoId          String
+  tipo                TipoMovimientoInventario
+  cantidad            Int
+  deltaStockFisico    Int                      @default(0)
+  deltaStockReservado Int                      @default(0)
+  stockFisicoAntes    Int
+  stockFisicoDespues  Int
+  stockReservadoAntes Int                      @default(0)
+  stockReservadoDespues Int                    @default(0)
+  // Origen (IDs por trazabilidad; la integridad la garantiza la transacción).
+  pedidoId            String?
+  pedidoLineaId       String?
+  reservaStockId      String?
+  recepcionCompraId   String?
+  conteoId            String?
+  ajusteInventarioId  String?
+  reversionDeMovimientoId String?
+  motivo              String?
+  comentario          String?
+  usuarioId           String?
+  creadoEn            DateTime                 @default(now())
+
+  producto Producto @relation(fields: [productoId], references: [id])
+
+  @@index([productoId, creadoEn])
+  @@map("movimientosInventario")
+}
+
+model ConteoInventario {
+  id           String        @id @default(uuid())
+  tipo         TipoConteo
+  usuarioId    String
+  turno        String
+  iniciadoEn   DateTime      @default(now())
+  finalizadoEn DateTime?
+  estado       EstadoConteo  @default(EN_CURSO)
+  lineas       ConteoLinea[]
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([estado])
+  @@map("conteosInventario")
+}
+
+model ConteoLinea {
+  id           String     @id @default(uuid())
+  conteoId     String
+  productoId   String
+  stockTeorico Int
+  stockFisico  Int?
+  diferencia   Int?
+  contadoEn    DateTime?
+
+  conteo   ConteoInventario @relation(fields: [conteoId], references: [id], onDelete: Cascade)
+  producto Producto         @relation(fields: [productoId], references: [id])
+
+  @@unique([conteoId, productoId])
+  @@map("conteoLineas")
+}
+
+model AjusteInventario {
+  id          String   @id @default(uuid())
+  conteoId    String?
+  usuarioId   String
+  motivo      String?
+  comentario  String?
+  estado      String   @default("aplicado")
+  creadoEn    DateTime @default(now())
+  lineas      AjusteLinea[]
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@map("ajustesInventario")
+}
+
+model AjusteLinea {
+  id                  String  @id @default(uuid())
+  ajusteInventarioId  String
+  conteoLineaId       String?
+  productoId          String
+  stockTeorico        Int
+  stockFisico         Int
+  diferencia          Int
+
+  ajuste   AjusteInventario @relation(fields: [ajusteInventarioId], references: [id], onDelete: Cascade)
+  producto Producto         @relation(fields: [productoId], references: [id])
+
+  @@map("ajusteLineas")
+}
+
+model CambioPrecio {
+  id           String   @id @default(uuid())
+  productoId   String
+  valorAnterior Decimal @db.Decimal(18, 2)
+  valorNuevo   Decimal  @db.Decimal(18, 2)
+  usuarioId    String
+  fecha        DateTime @default(now())
+  creadoEn     DateTime @default(now())
+
+  producto Producto @relation(fields: [productoId], references: [id])
+  usuario  Usuario  @relation(fields: [usuarioId], references: [id])
+
+  @@index([productoId])
+  @@map("cambiosPrecio")
+}
+
+// ─── Compras, gastos y caja ───────────────────────────────────────
+
+model RecepcionCompra {
+  id            String   @id @default(uuid())
+  numero        String   @unique
+  proveedorId   String
+  usuarioId     String
+  total         Decimal  @db.Decimal(18, 2)
+  descontarCaja Boolean  @default(false)
+  estado        String   @default("recibida")
+  fechaOperacion DateTime @db.Date
+  creadoEn      DateTime @default(now())
+
+  proveedor Proveedor      @relation(fields: [proveedorId], references: [id])
+  usuario   Usuario        @relation(fields: [usuarioId], references: [id])
+  lineas    RecepcionLinea[]
+
+  @@index([fechaOperacion])
+  @@map("recepcionesCompra")
+}
+
+model RecepcionLinea {
+  id                String  @id @default(uuid())
+  recepcionCompraId String
+  productoId        String
+  codigoInterno     String
+  nombre            String
+  cantidad          Int
+  costoUnitario     Decimal @db.Decimal(18, 2)
+  subtotal          Decimal @db.Decimal(18, 2)
+
+  recepcion RecepcionCompra @relation(fields: [recepcionCompraId], references: [id], onDelete: Cascade)
+  producto  Producto        @relation(fields: [productoId], references: [id])
+
+  @@map("recepcionLineas")
+}
+
+model Gasto {
+  id            String   @id @default(uuid())
+  concepto      String
+  monto         Decimal  @db.Decimal(18, 2)
+  metodo        MetodoPago?
+  usuarioId     String
+  comentario    String?
+  estado        String   @default("registrado")
+  fechaOperacion DateTime @db.Date
+  creadoEn      DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([fechaOperacion])
+  @@map("gastos")
+}
+
+model MovimientoCaja {
+  id                    String             @id @default(uuid())
+  tipo                  TipoMovimientoCaja
+  concepto              String
+  monto                 Decimal            @db.Decimal(18, 2)
+  metodo                MetodoPago?
+  usuarioId             String
+  pagoId                String?
+  recepcionCompraId     String?
+  gastoId               String?
+  reversionDeMovimientoId String?
+  fechaContable         DateTime           @db.Date
+  creadoEn              DateTime           @default(now())
+  esManual              Boolean            @default(false)
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  pago    Pago?   @relation(fields: [pagoId], references: [id])
+
+  @@index([fechaContable])
+  @@map("movimientosCaja")
+}
+
+// ─── Cierre diario ────────────────────────────────────────────────
+
+model CierreDia {
+  id                     String       @id @default(uuid())
+  fecha                  DateTime     @db.Date
+  usuarioId              String
+  totalVentas            Decimal      @db.Decimal(18, 2) @default(0)
+  totalIngresos          Decimal      @db.Decimal(18, 2) @default(0)
+  totalEgresos           Decimal      @db.Decimal(18, 2) @default(0)
+  pedidosCount           Int          @default(0)
+  pendientesTrasladados  Int          @default(0)
+  pendientesCancelados   Int          @default(0)
+  estado                 EstadoCierre @default(CERRADO)
+  version                Int          @default(1)
+  creadoEn               DateTime     @default(now())
+  cerradoEn              DateTime?
+
+  usuario    Usuario          @relation(fields: [usuarioId], references: [id])
+  medios     CierreMedio[]
+  pedidos    CierrePedido[]
+  movimientos CierreMovimiento[]
+  acciones   CierreAccion[]
+
+  @@unique([fecha])
+  @@map("cierresDia")
+}
+
+model CierreMedio {
+  id        String  @id @default(uuid())
+  cierreId  String
+  medio     String
+  esperado  Decimal @db.Decimal(18, 2) @default(0)
+  contado   Decimal @db.Decimal(18, 2) @default(0)
+  diferencia Decimal @db.Decimal(18, 2) @default(0)
+
+  cierre CierreDia @relation(fields: [cierreId], references: [id], onDelete: Cascade)
+
+  @@map("cierreMedios")
+}
+
+model CierrePedido {
+  id             String       @id @default(uuid())
+  cierreId       String
+  pedidoId       String
+  numero         String
+  fechaOperacion DateTime     @db.Date
+  estado         EstadoPedido
+  total          Decimal      @db.Decimal(18, 2)
+
+  cierre CierreDia @relation(fields: [cierreId], references: [id], onDelete: Cascade)
+
+  @@map("cierrePedidos")
+}
+
+model CierreMovimiento {
+  id                String             @id @default(uuid())
+  cierreId          String
+  movimientoCajaId  String
+  tipo              TipoMovimientoCaja
+  metodo            MetodoPago?
+  monto             Decimal            @db.Decimal(18, 2)
+
+  cierre CierreDia @relation(fields: [cierreId], references: [id], onDelete: Cascade)
+
+  @@map("cierreMovimientos")
+}
+
+model CierreAccion {
+  id                    String   @id @default(uuid())
+  cierreId              String
+  pedidoId              String
+  accion                String
+  fechaOperacionAnterior DateTime @db.Date
+  fechaOperacionNueva   DateTime? @db.Date
+  usuarioId             String
+  creadoEn              DateTime @default(now())
+
+  cierre CierreDia @relation(fields: [cierreId], references: [id], onDelete: Cascade)
+
+  @@map("cierreAcciones")
+}

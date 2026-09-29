@@ -1,0 +1,30 @@
+{
+  "name": "@ambie/contrato",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Contrato compartido de AMBIÉ: enums, tipos y esquemas usados por el frontend, la API y la base de datos",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "watch": "tsc -p tsconfig.json --watch"
+  },
+  "dependencies": {
+    "zod": "^3.25.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

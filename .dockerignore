@@ -1,0 +1,20 @@
+# El contexto de build es la raíz del monorepo (Backend/Dockerfile necesita
+# Compartido y los package.json de los tres workspaces). Sin este archivo el
+# contexto incluye node_modules, .git y .env: cientos de MB y secretos que
+# viajan al daemon en cada build.
+
+**/node_modules
+**/dist
+**/.vite
+**/coverage
+
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+*.log
+
+docs
+scripts
+Frontend/public

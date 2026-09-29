@@ -1,0 +1,32 @@
+{
+  "name": "ambie",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AMBIÉ · Capturador de pedidos — monorepo con frontend, API y contrato compartido",
+  "workspaces": [
+    "Compartido",
+    "Backend",
+    "Frontend"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "contrato:build": "npm run build --workspace @ambie/contrato",
+    "contrato:watch": "npm run watch --workspace @ambie/contrato",
+    "contrato:verificar": "node scripts/verificar-contrato.mjs",
+    "api:build": "npm run build --workspace ambie-backend",
+    "api:verificar": "npm run verificar --workspace ambie-backend",
+    "api:dev": "npm run start:dev --workspace ambie-backend",
+    "api:cli": "npm run cli --workspace ambie-backend",
+    "front:dev": "npm run dev --workspace capturador-pedido",
+    "front:build": "npm run build --workspace capturador-pedido",
+    "front:lint": "npm run lint --workspace capturador-pedido",
+    "prueba:humo": "npm run prueba:humo --workspace ambie-backend",
+    "prueba": "npm run prueba --workspace ambie-backend",
+    "verificar": "npm run contrato:verificar && npm run api:verificar && npm run front:build && npm run front:lint",
+    "docker:arriba": "docker compose up -d --build",
+    "docker:abajo": "docker compose down",
+    "docker:limpiar": "docker compose down -v"
+  }
+}

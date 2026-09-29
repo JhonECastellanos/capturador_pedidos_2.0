@@ -1,0 +1,14 @@
+{
+  // El CLI y los scripts corren con tsx, fuera de la compilación de Nest,
+  // así que se verifican aparte. Sin esto, un error de tipos en el CLI solo
+  // aparecería al ejecutarlo.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "incremental": false,
+    "types": ["node"],
+    "lib": ["ES2023"]
+  },
+  "include": ["cli/**/*", "scripts/**/*", "src/**/*"]
+}

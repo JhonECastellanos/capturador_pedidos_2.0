@@ -19,7 +19,7 @@ type Segmento = "hoy" | "historial";
 type FiltroEstado = "todos" | EstadoPedido;
 
 export function PedidosAdmin() {
-  const { pedidos, obtenerCliente, nombreUsuario } = useOperaciones();
+  const { pedidos, obtenerCliente, nombreUsuario, actualizarEstadoPedido } = useOperaciones();
   const [segmento, setSegmento] = useState<Segmento>("hoy");
   const [periodo, setPeriodo] = useState<Periodo>("todo");
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>("todos");
@@ -56,11 +56,31 @@ export function PedidosAdmin() {
       .sort((a, b) => (b.creadoEn < a.creadoEn ? -1 : b.creadoEn > a.creadoEn ? 1 : 0));
   }, [busqueda, fechaDesde, fechaHasta, filtroEstado, hoy, obtenerCliente, pedidos, periodo, segmento]);
 
-  const conteoHoy = pedidos.filter((p) => esMismoDia(p.creadoEn, hoy)).length;
-
   // El detalle es informativo: los estados y cobros se gestionan en Ventas.
+  // La única acción administrativa es reactivar un pedido cancelado.
+  const estadoAnteriorDelDetalle = useMemo(() => {
+    if (!pedidoDetalle) return "pendiente" as EstadoPedido;
+    const historial = pedidoDetalle.historialEstados;
+    for (let i = historial.length - 1; i >= 0; i -= 1) {
+      if (historial[i].estado !== "cancelado") return historial[i].estado;
+    }
+    return "pendiente" as EstadoPedido;
+  }, [pedidoDetalle]);
+
   if (pedidoDetalle) {
-    return <PedidoDetalle pedido={pedidoDetalle} onVolver={() => setDetalleId(null)} varianteHeader="compacto" soloLectura />;
+    return (
+      <PedidoDetalle
+        pedido={pedidoDetalle}
+        onVolver={() => setDetalleId(null)}
+        varianteHeader="compacto"
+        soloLectura
+        alReactivar={
+          pedidoDetalle.estado === "cancelado"
+            ? () => actualizarEstadoPedido(pedidoDetalle.id, estadoAnteriorDelDetalle)
+            : undefined
+        }
+      />
+    );
   }
 
   return (
@@ -73,7 +93,7 @@ export function PedidosAdmin() {
             pasos={[
               { titulo: "1 · Segmento HOY / HISTORIAL", texto: "HOY muestra solo lo de hoy. HISTORIAL con periodo hoy / ayer / semana / mes y todo al final." },
               { titulo: "2 · Buscador y filtros", texto: "Busca por cliente o consecutivo. Filtra por estado y por rango de fecha (Desde / Hasta) sin afectar el buscador." },
-              { titulo: "3 · Consulta auditada", texto: "Toca un pedido para ver líneas, pagos recibidos y el historial de estados con nombres. Este panel es informativo: los estados y cobros se gestionan en Ventas." },
+              { titulo: "3 · Consulta auditada", texto: "Toca un pedido para ver líneas, pagos recibidos y el historial de estados con nombres. Los estados y cobros se gestionan en Ventas; un pedido cancelado se puede reactivar aquí mismo." },
               { titulo: "4 · Comprobante y Excel", texto: "Adjunta foto o PDF del pago en el detalle. Usa Exportar Excel para descargar la tabla filtrada." },
             ]}
           />
@@ -96,8 +116,8 @@ export function PedidosAdmin() {
             valor={segmento}
             onChange={setSegmento}
             opciones={[
-              { valor: "hoy", etiqueta: `HOY (${conteoHoy})` },
-              { valor: "historial", etiqueta: `HISTORIAL (${pedidos.length})` },
+              { valor: "hoy", etiqueta: "HOY" },
+              { valor: "historial", etiqueta: "HISTORIAL" },
             ]}
           />
 
@@ -162,7 +182,7 @@ export function PedidosAdmin() {
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
           <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
             <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">
-              Pedidos ({pedidosFiltrados.length})
+              Pedidos
             </p>
             <span className="text-[11px] text-ink-soft">Toca para ver el detalle</span>
           </div>

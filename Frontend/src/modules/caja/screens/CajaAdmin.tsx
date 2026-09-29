@@ -9,7 +9,7 @@ import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodo, type Periodo } from "../..
 import { MetricaFiltro } from "../../administracion/components/MetricaFiltro";
 import { TarjetaMetrica } from "../../administracion/components/TarjetaMetrica";
 
-type FiltroMedio = "ingresos" | "egresos" | "efectivo" | "nequi" | "credito" | null;
+type FiltroMedio = "ingresos" | "egresos" | "efectivo" | "billetera" | "credito" | null;
 type VistaCaja = "movimientos" | "ganancias";
 
 export function CajaAdmin() {
@@ -50,7 +50,7 @@ export function CajaAdmin() {
   const ingresos = movimientosPeriodo.filter((m) => m.tipo === "ingreso").reduce((s, m) => s + m.monto, 0);
   const egresos = movimientosPeriodo.filter((m) => m.tipo === "egreso").reduce((s, m) => s + m.monto, 0);
   const efectivo = movimientosPeriodo.filter((m) => m.tipo === "ingreso" && m.metodo === "efectivo").reduce((s, m) => s + m.monto, 0);
-  const nequi = movimientosPeriodo.filter((m) => m.tipo === "ingreso" && m.metodo === "nequi").reduce((s, m) => s + m.monto, 0);
+  const billetera = movimientosPeriodo.filter((m) => m.tipo === "ingreso" && m.metodo === "billetera").reduce((s, m) => s + m.monto, 0);
   const pedidosCreditoPeriodo = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
     return pedidos.filter((p) => {
@@ -71,7 +71,7 @@ export function CajaAdmin() {
     if (filtroMedio === "ingresos") return movimientosPeriodo.filter((m) => m.tipo === "ingreso");
     if (filtroMedio === "egresos") return movimientosPeriodo.filter((m) => m.tipo === "egreso");
     if (filtroMedio === "efectivo") return movimientosPeriodo.filter((m) => m.tipo === "ingreso" && m.metodo === "efectivo");
-    if (filtroMedio === "nequi") return movimientosPeriodo.filter((m) => m.tipo === "ingreso" && m.metodo === "nequi");
+    if (filtroMedio === "billetera") return movimientosPeriodo.filter((m) => m.tipo === "ingreso" && m.metodo === "billetera");
     return movimientosPeriodo;
   }, [filtroMedio, movimientosPeriodo]);
 
@@ -105,10 +105,10 @@ export function CajaAdmin() {
           <GuiaAyuda
             pantalla="Cuadre de caja"
             pasos={[
-              { titulo: "1 · Tarjetas que filtran", texto: "Toca Ingresos, Egresos, Efectivo, Nequi o Crédito para filtrar el historial; tócalas de nuevo para quitar el filtro. El Balance solo muestra el resultado del periodo." },
+              { titulo: "1 · Tarjetas que filtran", texto: "Toca Ingresos, Egresos, Efectivo, Billetera o Crédito para filtrar el historial; tócalas de nuevo para quitar el filtro. El Balance solo muestra el resultado del periodo." },
               { titulo: "2 · Ganancias por periodo", texto: "La pestaña Ganancias muestra cuánto quedó después de compras y gastos, con el historial de hoy, ayer, semanal, mensual, año y todo." },
               { titulo: "3 · Filtros hoy → todo", texto: "Hoy solo hoy, ayer solo ayer, semana/mes/año los últimos días. Todo al final muestra todo sin duplicar registros." },
-              { titulo: "4 · Buscador y colores", texto: "Busca por concepto, pedido o cliente. Verde = ingreso en efectivo, teal = Nequi, rojo = egreso o crédito." },
+              { titulo: "4 · Buscador y colores", texto: "Busca por concepto, pedido o cliente. Verde = ingreso en efectivo, teal = billetera digital, rojo = egreso o crédito." },
               { titulo: "5 · Dónde registrar", texto: "Los egresos se crean en Compras (gastos o recepciones). Los abonos de crédito crean aquí el ingreso." },
             ]}
           />
@@ -154,7 +154,7 @@ export function CajaAdmin() {
 
         <div className="grid grid-cols-3 gap-1.5">
           <MetricaFiltro etiqueta="Efectivo" valor={formatoMoneda(efectivo)} tono="success" tamano="sm" activo={filtroMedio === "efectivo"} onClick={() => alternarFiltro("efectivo")} />
-          <MetricaFiltro etiqueta="Nequi" valor={formatoMoneda(nequi)} tono="teal" tamano="sm" activo={filtroMedio === "nequi"} onClick={() => alternarFiltro("nequi")} />
+          <MetricaFiltro etiqueta="Billetera" valor={formatoMoneda(billetera)} tono="teal" tamano="sm" activo={filtroMedio === "billetera"} onClick={() => alternarFiltro("billetera")} />
           <MetricaFiltro etiqueta="Crédito" valor={formatoMoneda(creditoPendiente)} tono="accent" tamano="sm" activo={filtroMedio === "credito"} onClick={() => alternarFiltro("credito")} />
         </div>
 
@@ -240,7 +240,7 @@ export function CajaAdmin() {
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
           <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
             <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">
-              {esVistaCredito ? `Créditos (${pedidosCreditoPeriodo.length})` : `Movimientos (${movimientosVista.length})`}
+              {esVistaCredito ? "Créditos" : "Movimientos"}
             </p>
             <span className="text-[11px] text-ink-soft">Recientes primero</span>
           </div>
@@ -282,7 +282,7 @@ export function CajaAdmin() {
             const abono = abonos.find((a) => a.id === movimiento.referenciaId);
             const cliente = pedido ? obtenerCliente(pedido.clienteId) : abono ? obtenerCliente(abono.clienteId) : null;
             const esEfectivo = movimiento.tipo === "ingreso" && movimiento.metodo === "efectivo";
-            const esNequi = movimiento.tipo === "ingreso" && movimiento.metodo === "nequi";
+            const esBilletera = movimiento.tipo === "ingreso" && movimiento.metodo === "billetera";
             return (
               <article key={movimiento.id} className="flex items-center justify-between gap-3 rounded-xl border border-line bg-paper-raised p-3 shadow-sm">
                 <div className="min-w-0">
@@ -292,14 +292,14 @@ export function CajaAdmin() {
                     {cliente ? ` · ${cliente.nombre}` : ""}{pedido ? ` · ${pedido.numero}` : ""}
                   </p>
                   <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                    movimiento.tipo === "egreso" ? "bg-danger-soft text-danger" : esNequi ? "bg-teal-soft text-teal" : esEfectivo ? "bg-success-soft text-success" : "bg-paper-sunken text-ink-soft"
+                    movimiento.tipo === "egreso" ? "bg-danger-soft text-danger" : esBilletera ? "bg-teal-soft text-teal" : esEfectivo ? "bg-success-soft text-success" : "bg-paper-sunken text-ink-soft"
                   }`}>
-                    {movimiento.tipo === "egreso" ? "Egreso" : esNequi ? "Nequi" : esEfectivo ? "Efectivo" : movimiento.metodo ?? movimiento.tipo}
+                    {movimiento.tipo === "egreso" ? "Egreso" : esBilletera ? "Billetera" : esEfectivo ? "Efectivo" : movimiento.metodo ?? movimiento.tipo}
                   </span>
                   <p className="mt-0.5 text-[10.5px] text-ink-faint">Registró {nombreUsuario(movimiento.usuarioId)}</p>
                 </div>
                 <p className={`flex-shrink-0 font-mono text-[13.5px] font-bold ${
-                  movimiento.tipo === "ingreso" ? (esNequi ? "text-teal" : "text-success") : "text-danger"
+                  movimiento.tipo === "ingreso" ? (esBilletera ? "text-teal" : "text-success") : "text-danger"
                 }`}>
                   {movimiento.tipo === "ingreso" ? "+" : "−"}{formatoMoneda(movimiento.monto)}
                 </p>

@@ -193,7 +193,7 @@ export function UsuariosAdmin() {
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30 max-w-xl">
           <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
             <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">
-              Usuarios ({usuariosOrdenados.length})
+              Usuarios
             </p>
             <span className="text-[11px] text-ink-soft">Admin primero</span>
           </div>

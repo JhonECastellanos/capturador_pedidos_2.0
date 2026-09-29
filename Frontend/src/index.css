@@ -52,7 +52,8 @@ body {
   color: var(--color-ink);
   background: var(--color-paper-sunken);
   overscroll-behavior-y: none;
-  /* La página no hace scroll; cada pantalla gestiona su propio scroll interno. */
+  /* La página no hace scroll; cada pantalla gestiona su propio scroll interno.
+     Excepción: con ≤ 824px de alto o ancho, el scroll pasa al navegador. */
   overflow: hidden;
 }
 
@@ -90,6 +91,63 @@ body {
   /* El panel administrativo usa todo el ancho disponible en desktop. */
   .app-viewport--amplio {
     max-width: 1440px;
+  }
+}
+
+/*
+ * Vista vertical/móvil o ventanas bajas (alto o ancho ≤ 824px): la app deja de
+ * encogerse. Los módulos conservan sus dimensiones completas y el scroll
+ * vertical pasa al navegador para poder llegar hasta el final de cada pantalla
+ * e interactuar con todos sus elementos.
+ */
+@media (max-width: 824px), (max-height: 824px) {
+  html,
+  body,
+  #root {
+    height: auto;
+  }
+
+  body {
+    overflow-y: auto;
+  }
+
+  /* Scrollbar delgada y visible para el scroll general de la página. */
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    width: 9px;
+  }
+  html::-webkit-scrollbar-thumb,
+  body::-webkit-scrollbar-thumb {
+    background: var(--color-line);
+    border-radius: 999px;
+  }
+  html::-webkit-scrollbar-track,
+  body::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* El contenedor crece con su contenido en lugar de encogerse. */
+  .app-viewport {
+    height: auto;
+    overflow: visible;
+    overflow: clip;
+  }
+
+  /* La pantalla activa completa al menos el viewport y crece si hace falta. */
+  .app-viewport > * {
+    flex: 1 0 auto;
+  }
+
+  /* En admin la barra de pestañas se pega arriba: sus contenedores dejan de
+     recortar para que `sticky` pueda seguir al scroll de la página. */
+  .app-viewport--amplio .admin-cuerpo,
+  .app-viewport--amplio .admin-cuerpo > main {
+    overflow: visible;
+  }
+
+  /* El título de la pantalla no se pega (quedaría bajo la barra fija). */
+  .app-viewport--amplio main header.sticky {
+    position: static;
   }
 }
 

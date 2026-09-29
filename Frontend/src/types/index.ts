@@ -5,7 +5,7 @@
 
 // ─── Enumeraciones ────────────────────────────────────────────────
 
-export type MetodoPago = "efectivo" | "nequi" | "credito";
+export type MetodoPago = "efectivo" | "billetera" | "credito";
 export type EstadoPedido = "pendiente" | "en-preparacion" | "entregado" | "cancelado";
 export type RolUsuario = "administrador" | "vendedor";
 export type EstadoCuenta = "al-dia" | "pendiente";
@@ -84,7 +84,7 @@ export interface AbonoCredito {
   id: string;
   clienteId: string;
   monto: number;
-  metodo: "efectivo" | "nequi";
+  metodo: "efectivo" | "billetera";
   usuarioId: string;
   pedidosAfectados: AbonoCreditoParcial[];
   comentario?: string;
@@ -299,11 +299,11 @@ export interface CierreDia {
   pedidosCount: number;
   pendientesTrasladados: number;
   pendientesCancelados: number;
-  /** Conteo físico de efectivo y Nequi al cerrar */
+  /** Conteo físico de efectivo y billetera al cerrar */
   conteoEfectivo?: number;
-  conteoNequi?: number;
+  conteoBilletera?: number;
   diferenciaEfectivo?: number;
-  diferenciaNequi?: number;
+  diferenciaBilletera?: number;
   creadoEn: string;
 }
 

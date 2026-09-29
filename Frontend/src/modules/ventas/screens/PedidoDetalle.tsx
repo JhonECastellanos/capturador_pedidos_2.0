@@ -23,6 +23,8 @@ interface PedidoDetalleProps {
   varianteHeader?: "verde" | "compacto";
   /** Sin acciones: solo consulta de datos, estado y auditoría. */
   soloLectura?: boolean;
+  /** Permite reactivar un pedido cancelado (reaplica stock, caja y cartera). */
+  alReactivar?: () => void;
 }
 
 const estados: Array<{ valor: EstadoPedido; etiqueta: string; clase: string }> = (["pendiente", "en-preparacion", "entregado", "cancelado"] as EstadoPedido[]).map((valor) => ({
@@ -35,11 +37,12 @@ const estados: Array<{ valor: EstadoPedido; etiqueta: string; clase: string }> =
  * Detalle de pedido compacto: solo la lista central hace scroll,
  * la cabecera y el pie quedan siempre visibles.
  */
-export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, varianteHeader = "verde", soloLectura = false }: PedidoDetalleProps) {
+export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, varianteHeader = "verde", soloLectura = false, alReactivar }: PedidoDetalleProps) {
   const { obtenerCliente, actualizarEstadoPedido, adjuntarComprobante, registrarPagoPedido, nombreUsuario, abonos } = useOperaciones();
   const { aviso, mostrarAviso, cerrarAviso } = useAviso();
   const [estadoPendiente, setEstadoPendiente] = useState<EstadoPedido | null>(null);
   const [confirmarCobro, setConfirmarCobro] = useState(false);
+  const [confirmarReactivar, setConfirmarReactivar] = useState(false);
 
   const cliente = useMemo(() => obtenerCliente(pedido.clienteId), [obtenerCliente, pedido.clienteId]);
   const pagosDelPedido = useMemo(
@@ -127,7 +130,9 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
           <div className="mt-3 rounded-xl border border-line bg-paper-sunken/60 px-3 py-2">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-faint">Solo lectura</p>
             <p className="mt-0.5 text-[11.5px] leading-relaxed text-ink-soft">
-              Los cambios de estado y el cobro se hacen desde <span className="font-semibold text-ink">Ventas</span>.
+              {pedido.estado === "cancelado" && alReactivar
+                ? "Pedido cancelado. Puedes reactivarlo abajo: se vuelven a aplicar stock, caja y cartera."
+                : <>Los cambios de estado y el cobro se hacen desde <span className="font-semibold text-ink">Ventas</span>.</>}
             </p>
           </div>
         ) : (
@@ -187,7 +192,7 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
 
           {pagosDelPedido.length > 0 && (
             <div className="mt-2 rounded-xl border border-success/25 bg-success-soft/60 px-3 py-2">
-              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-success">Pagos recibidos ({pagosDelPedido.length})</p>
+              <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-success">Pagos recibidos</p>
               <ul className="space-y-1">
                 {pagosDelPedido.map((abono) => {
                   const aplicado = abono.pedidosAfectados.find((p) => p.pedidoId === pedido.id)?.montoAplicado ?? 0;
@@ -209,11 +214,21 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
       <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
 
       {/* ─── Pie fijo ─── */}
-      {(!soloLectura || pedido.comprobantePagoUrl) && (
+      {(!soloLectura || pedido.comprobantePagoUrl || (pedido.estado === "cancelado" && alReactivar)) && (
         <BarraInferior>
           <div className="space-y-2">
+            {pedido.estado === "cancelado" && alReactivar && (
+              <button
+                type="button"
+                onClick={() => setConfirmarReactivar(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-success/40 bg-success-soft py-3 text-[13.5px] font-semibold text-success active:opacity-90"
+              >
+                Reactivar pedido
+              </button>
+            )}
             {!soloLectura &&
               permitirCobro &&
+              pedido.estado !== "cancelado" &&
               (pendiente > 0 ? (
                 <button
                   type="button"
@@ -274,6 +289,19 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
         tono={estadoPendiente === "cancelado" ? "peligro" : "ink"}
         alCancelar={() => setEstadoPendiente(null)}
         alConfirmar={confirmarCambioEstado}
+      />
+
+      <ConfirmarAccion
+        abierto={confirmarReactivar}
+        titulo="Reactivar pedido"
+        mensaje={`¿Reactivar ${pedido.numero}? Se vuelven a aplicar stock, caja y cartera, y queda registrado con usuario y fecha.`}
+        textoConfirmar="Sí, reactivar"
+        tono="exito"
+        alCancelar={() => setConfirmarReactivar(false)}
+        alConfirmar={() => {
+          setConfirmarReactivar(false);
+          alReactivar?.();
+        }}
       />
 
       <ConfirmarAccion

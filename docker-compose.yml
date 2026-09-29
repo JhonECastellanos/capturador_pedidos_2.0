@@ -1,0 +1,127 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ambie}
+      POSTGRES_USER: ${POSTGRES_USER:-ambie}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ambie} -d ${POSTGRES_DB:-ambie}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    # Contexto en la raíz: la API es un workspace que depende de @ambie/contrato.
+    build:
+      context: .
+      dockerfile: Backend/Dockerfile
+    command: sh -c "npx prisma migrate deploy --schema prisma/schema.prisma && npx prisma db seed --schema prisma/schema.prisma"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: .
+      dockerfile: Backend/Dockerfile
+    command: sh -c "node dist/main.js"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      SESSION_SECRET: ${SESSION_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ACCESS_TTL_SEGUNDOS: ${JWT_ACCESS_TTL_SEGUNDOS:-900}
+      JWT_REFRESH_TTL_DIAS: ${JWT_REFRESH_TTL_DIAS:-7}
+      JWT_ISSUER: ${JWT_ISSUER:-ambie-api}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-ambie}
+      CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:-http://localhost:5173}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      APP_TIMEZONE: ${APP_TIMEZONE:-America/Bogota}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
+      RATE_LIMIT_VENTANA: ${RATE_LIMIT_VENTANA:-1 minute}
+      PORT: 3000
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio}
+      MINIO_PORT: ${MINIO_PORT:-9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      MINIO_BUCKET: ${MINIO_BUCKET:-ambie-archivos}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${PORT:-3000}:3000"
+    restart: unless-stopped
+
+  # Crea el primer administrador. Es puntual y opcional: no arranca con el
+  # resto de servicios (perfil `bootstrap`) y solo se ejecuta una vez, cuando
+  # todavía no existe ningún administrador.
+  #
+  #   docker compose --profile bootstrap run --rm bootstrap
+  bootstrap:
+    build:
+      context: .
+      dockerfile: Backend/Dockerfile
+    profiles: ["bootstrap"]
+    entrypoint: ["npx", "tsx", "prisma/bootstrap.ts"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      BOOTSTRAP_EMAIL: ${BOOTSTRAP_EMAIL}
+      BOOTSTRAP_PASSWORD: ${BOOTSTRAP_PASSWORD}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # Herramienta de línea de comandos con IA. No está siempre encendida: se usa
+  # con `docker compose run --rm cli preguntar "..."`, así no consume recursos
+  # ni una clave de IA cuando nadie la está usando.
+  cli:
+    build:
+      context: .
+      dockerfile: Backend/Dockerfile
+    profiles: ["cli"]
+    entrypoint: ["npx", "tsx", "cli/index.ts"]
+    command: ["ayuda"]
+    environment:
+      API_URL: http://api:3000
+      IA_PROVEEDOR: ${IA_PROVEEDOR:-gemini}
+      IA_API_KEY: ${IA_API_KEY:-}
+      IA_URL_BASE: ${IA_URL_BASE:-}
+      IA_MODELO: ${IA_MODELO:-}
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # Almacenamiento de imágenes y comprobantes (S3). La API todavía no lo usa:
+  # hoy las imágenes viven en el navegador y este servicio queda listo para la
+  # migración.
+  #
+  # MinIO dejó de publicar imágenes accesibles en Docker Hub y en quay.io, así
+  # que se usa la última imagen archivada de Bitnami (`bitnamilegacy`). Si tu
+  # equipo tiene acceso a un registro propio, cambia solo la línea `image`.
+  minio:
+    image: bitnamilegacy/minio:2025.7.23-debian-12-r5
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-ambie}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - minio_data:/bitnami/minio/data
+    # Para abrir la consola desde el navegador, descomenta y entra a
+    # http://localhost:9001
+    # ports:
+    #   - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  minio_data:

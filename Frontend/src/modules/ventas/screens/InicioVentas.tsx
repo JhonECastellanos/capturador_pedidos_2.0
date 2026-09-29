@@ -162,7 +162,7 @@ export function InicioVentas({ rutaPedido, rutaAbonos, rutaNuevoCliente, rutaDet
         <section className="mt-3.5 flex min-h-0 flex-1 flex-col pb-4">
           <div className="flex flex-shrink-0 items-center justify-between gap-2">
             <h2 className="font-display text-[13px] font-semibold uppercase tracking-wide text-ink-soft">
-              Pedidos de hoy ({pedidosHoy.length})
+              Pedidos de hoy
             </h2>
             <span className="text-[11.5px] text-ink-faint">Toca para gestionar</span>
           </div>

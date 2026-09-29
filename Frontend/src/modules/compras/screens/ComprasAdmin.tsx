@@ -256,14 +256,14 @@ export function ComprasAdmin() {
                 onClick={() => setTab("compras")}
                 className={`rounded-full px-3.5 py-1 text-[12px] font-semibold transition-colors ${tab === "compras" ? "bg-ink text-white" : "text-ink-soft hover:text-ink"}`}
               >
-                COMPRAS ({recepciones.length})
+                COMPRAS
               </button>
               <button
                 type="button"
                 onClick={() => setTab("gastos")}
                 className={`rounded-full px-3.5 py-1 text-[12px] font-semibold transition-colors ${tab === "gastos" ? "bg-ink text-white" : "text-ink-soft hover:text-ink"}`}
               >
-                GASTOS ({gastos.length})
+                GASTOS
               </button>
             </div>
           </div>
@@ -300,7 +300,7 @@ export function ComprasAdmin() {
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
             <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
               <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">
-                {tab === "compras" ? `Recepciones (${recepcionesFiltradas.length})` : `Gastos (${gastosFiltrados.length})`}
+                {tab === "compras" ? "Recepciones" : "Gastos"}
               </p>
               <span className="text-[11px] text-ink-soft">
                 {tab === "compras" ? "Toca para ver el detalle" : "Se descuentan de caja"}
@@ -502,7 +502,7 @@ export function ComprasAdmin() {
             <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
               <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
                 <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">
-                  Proveedores ({proveedoresFiltrados.length})
+                  Proveedores
                 </p>
                 <span className="text-[11px] text-ink-soft">Toca para elegir</span>
               </div>
@@ -611,7 +611,7 @@ export function ComprasAdmin() {
             <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
               <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
                 <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">
-                  Catálogo ({productosFiltrados.length})
+                  Catálogo
                 </p>
                 <span className="text-[11px] text-ink-soft">Cant · $ · +</span>
               </div>

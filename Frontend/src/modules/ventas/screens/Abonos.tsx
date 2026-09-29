@@ -115,7 +115,7 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
         <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-5 py-3 space-y-2.5 md:px-6">
           <div className="rounded-2xl border border-line bg-paper-raised p-3.5">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
-              Pedidos pendientes ({detalle.pedidos.length})
+              Pedidos pendientes
             </p>
             <ul className="mt-1.5 divide-y divide-line/60">
               {detalle.pedidos.map((p) => (

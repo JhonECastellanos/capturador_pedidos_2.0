@@ -201,6 +201,7 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
                 tipo: "egreso",
                 concepto: `Reverso ${pedidoActual.numero}`,
                 monto: pedidoActual.pago.montoRecibido,
+                metodo: pedidoActual.pago.metodo,
                 usuarioId,
                 referenciaId: pedidoActual.id,
                 creadoEn: fecha,
@@ -443,8 +444,17 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
   }, [inventario, usuario]);
 
   const trasladarPedidoAHoy = useCallback((pedidoId: string) => {
-    const nuevaFecha = new Date().toISOString();
     setPedidos((actuales) => {
+      const ahora = new Date();
+      const pedido = actuales.find((p) => p.id === pedidoId);
+      if (!pedido) return actuales;
+      const fechaPedido = new Date(pedido.creadoEn);
+      const esDeHoy = fechaPedido.getFullYear() === ahora.getFullYear()
+        && fechaPedido.getMonth() === ahora.getMonth()
+        && fechaPedido.getDate() === ahora.getDate();
+      const fechaDestino = new Date(ahora);
+      if (esDeHoy) fechaDestino.setDate(fechaDestino.getDate() + 1);
+      const nuevaFecha = fechaDestino.toISOString();
       const siguientes = actuales.map((p) => (p.id === pedidoId ? trasladarPedidoAHoySrv(p, nuevaFecha) : p));
       guardarPedidos(siguientes);
       return siguientes;
@@ -463,7 +473,9 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
 
   const registrarAbono = useCallback((clienteId: string, monto: number, metodo: AbonoCredito["metodo"], comentario?: string) => {
     if (monto <= 0) return null;
-    const pendientes = pedidos.filter((p) => p.clienteId === clienteId && p.pago.saldoPendiente > 0);
+    const pendientes = pedidos.filter(
+      (p) => p.clienteId === clienteId && p.estado !== "cancelado" && p.pago.saldoPendiente > 0,
+    );
     if (pendientes.length === 0) return null;
     const { actualizados, parciales } = distribuirAbonoEnPedidos(pendientes, monto);
     if (parciales.length === 0) return null;
@@ -504,7 +516,7 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
   const registrarPagoPedido = useCallback(
     (pedidoId: string, metodo: AbonoCredito["metodo"], comentario?: string) => {
       const pedido = pedidos.find((p) => p.id === pedidoId);
-      if (!pedido || pedido.pago.saldoPendiente <= 0) return null;
+      if (!pedido || pedido.estado === "cancelado" || pedido.pago.saldoPendiente <= 0) return null;
       const montoAplicado = pedido.pago.saldoPendiente;
       const creadoEn = new Date().toISOString();
       const usuarioId = usuario?.id ?? "sistema";

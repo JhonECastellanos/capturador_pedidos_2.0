@@ -1,0 +1,697 @@
+================================================================================
+EQUIVALENCIA DE VARIABLES · FRONTEND / API / BASE DE DATOS
+Proyecto AMBIÉ · Capturador de pedidos
+================================================================================
+
+Este archivo muestra, campo por campo, cómo se llama la misma variable en las
+tres capas. Se lee de izquierda a derecha:
+
+    FRONTEND   ->  API (JSON)  ->  BASE DE DATOS
+
+Reglas generales de normalización
+--------------------------------------------------------------------------------
+1. FECHAS        Viajan como texto ISO 8601 (string). Los filtros de día usan
+                 "YYYY-MM-DD". Se guardan en UTC y se muestran en hora local
+                 de America/Bogota.
+2. OPCIONALES    Si no hay valor, viaja como null. Nunca undefined, para que el
+                 JSON sea igual en los tres lados.
+3. MONTOS        Números en COP con dos decimales. En la base: numeric(18,2).
+4. CANTIDADES    Números enteros. En la base: integer.
+5. SALDOS       Son DERIVADOS. Se calculan con los abonos aplicados; no se
+                 guardan duplicados en la base de datos.
+6. MONEDA/ZONA   COP y America/Bogota en toda la aplicación.
+7. CONSECUTIVOS  Globales, sin reinicio anual y sin huecos. Si una transacción
+                 falla, el número no se consume.
+
+Formato de las tablas
+--------------------------------------------------------------------------------
+IGUAL     Mismo nombre y mismo significado en las tres capas.
+RENOMBRADO El valor cambió de nombre; se documenta el anterior.
+DERIVADO  No existe como columna: la API lo calcula.
+NUEVO     Solo existe en la base de datos o la API, no en el frontend.
+DIFERENTE Mismo dato, forma distinta (normalización deliberada).
+
+================================================================================
+1. ENUMERACIONES  (verificadas con `npm run contrato:verificar`)
+================================================================================
+
+ENUM                 FRONTEND            API (JSON)         BASE DE DATOS         ESTADO
+-------------------  ------------------  -----------------  --------------------  ----------
+RolUsuario           RolUsuario          rol                Usuario.rol           IGUAL
+                      administrador       "administrador"   enum RolUsuario
+                      vendedor            "vendedor"        (administrador,
+                                                          vendedor)
+MetodoPago           MetodoPago          metodo             Pedido.metodo         RENOMBRADO
+                      efectivo            "efectivo"        enum MetodoPago       (antes "nequi")
+                      billetera           "billetera"         efectivo
+                      credito             "credito"           billetera
+                                                          credito
+MomentoCobro         MomentoCobro       momentoCobro       Pedido.momentoCobro   NUEVO
+                      inmediato           "inmediato"        enum MomentoCobro
+                      al-entregar         "al-entregar"
+                      segun-periodicidad  "segun-periodicidad"
+EstadoPedido         EstadoPedido       estado             Pedido.estado         IGUAL
+                      pendiente           "pendiente"        enum EstadoPedido
+                      en-preparacion      "en-preparacion"
+                      entregado           "entregado"
+                      cancelado           "cancelado"
+EstadoCuenta         EstadoCuenta       estadoCuenta       (no existe)           DERIVADO
+                      al-dia              "al-dia"           Se deriva de que el
+                      pendiente           "pendiente"       cliente tenga saldo
+                                                          pendiente.
+TipoPago             (no existe)         tipo               Pago.tipo             NUEVO
+                                        "pago-inicial"     enum TipoPago
+                                        "abono"
+                                        "reembolso"
+EstadoPago           (no existe)         estado             Pago.estado           NUEVO
+                                        "activo"           enum EstadoPago
+                                        "revertido"
+TipoMovimientoCaja   (no existe)         tipo               MovimientoCaja.tipo   NUEVO
+                                                            enum
+                                                            TipoMovimientoCaja
+TipoConteo           ConteoInventario    tipo               ConteoInventario.tipo IGUAL
+                      .tipo                               enum TipoConteo
+                      general|aleatorio
+EstadoConteo         ConteoInventario    estado             ConteoInventario      IGUAL
+                      .estado              .estado            .estado
+                      en-curso            "en-curso"         enum EstadoConteo
+                      confirmado          "confirmado"
+                      cancelado           "cancelado"
+EstadoFactura        (no existe)         estado             Factura.estado        NUEVO
+                                        "emitida"          enum EstadoFactura
+                                        "anulada"
+EstadoCierre         (no existe)         estado             CierreDia.estado      NUEVO
+                                        "cerrado"          enum EstadoCierre
+                                        "reabierto"
+TipoMovimiento       (no existe)         tipo               MovimientoInventario  NUEVO
+Inventario                              .tipo              .tipo
+                                        inicializacion     enum
+                                        reserva            TipoMovimiento
+                                        consumo-pedido     Inventario
+                                        liberacion-reserva
+                                        recepcion-compra
+                                        ajuste-conteo
+                                        ajuste-manual
+                                        reversion
+EstadoReserva        (no existe)         estado             ReservaStock.estado   NUEVO
+                                        reservada          enum EstadoReserva
+                                        consumida
+                                        liberada
+TipoCredito          TipoCredito         tipoCredito        TipoCredito.nombre    IGUAL
+                      diario              "diario"
+                      semanal             "semanal"
+                      quincenal           "quincenal"
+                      mensual             "mensual"
+
+Frecuencia por tipo de crédito
+--------------------------------------------------------------------------------
+FRONTEND                 API (JSON)         BASE DE DATOS
+FRECUENCIA_POR_TIPO_     frecuencia        TipoCredito.
+CREDITO                  CreditoDias        frecuenciaCreditoDias
+  diario    -> 1         (number|null)     diario    -> 1
+  semanal   -> 7                          semanal   -> 7
+  quincenal -> 15                         quincenal -> 15
+  mensual   -> 30                         mensual   -> 30
+
+================================================================================
+2. IDENTIDAD, PERMISOS Y SESIONES
+================================================================================
+
+CAMPO           FRONTEND            API (JSON)              BASE DE DATOS         ESTADO
+-------------   ------------------  ----------------------  -------------------  ----------
+id              id                  id                      Usuario.id (UUID)     IGUAL
+codigo          (no existe)         codigo                  Usuario.codigo        NUEVO
+                                                           USR-0001
+nombre          nombre              nombre                  Usuario.nombre        IGUAL
+email           email               email                   Usuario.email         IGUAL
+                                                           (único, minúscula)
+password        password            (nunca se devuelve)     Usuario.passwordHash   RENOMBRADO
+                                   -> passwordHash          Argon2id
+permisos        permisos: string[]  permisos: string[]      RolPermiso (rolId,    IGUAL
+                                   usuario.permisos        permisoId) -> Permiso
+rol             rol                 rol                     Usuario.rol           IGUAL
+                                                           enum RolUsuario
+activo          activo              activo                  Usuario.activo        IGUAL
+creadoEn        creadoEn            creadoEn                Usuario.creadoEn      IGUAL
+actualizadoEn   (no existe)         actualizadoEn          Usuario.actualizadoEn NUEVO
+ultimoAccesoEn  (no existe)         ultimoAccesoEn         Usuario.ultimoAccesoEn NUEVO
+                                                           (nulo o datetime)
+sesion          (no existe)         (JWT + cookie)          Sesion               RENOMBRADO
+accessToken                       Authorization: Bearer
+refreshToken                      cookie ambie_access
+                                   cookie ambie_refresh
+
+Nota: el frontend antes guardaba la contrasena en texto plano en localStorage.
+Ahora solo existe el hash en la base de datos y nunca sale por la API.
+
+Permisos por rol
+--------------------------------------------------------------------------------
+administrador : pedidos, inventario, caja, usuarios, cierre-diario
+vendedor      : clientes, pedidos, cobros
+
+================================================================================
+3. CLIENTES
+================================================================================
+
+Tabla: clientes (clientes)
+
+CAMPO                FRONTEND            API (JSON)              BASE DE DATOS            ESTADO
+------------------   ------------------  ----------------------  ------------------------  ----------
+id                   id                  id                      Cliente.id               IGUAL
+codigo               (no existe)         codigo                  Cliente.codigo           NUEVO
+                                                                 CLI-0001 (unico)
+nombre               nombre              nombre                  Cliente.nombre           IGUAL
+alias                alias               alias                   Cliente.alias            IGUAL
+identificacion       identificacion:     identificacion:         Cliente.identificacion   IGUAL
+                      string              string | null          (unico, opcional)
+telefono             telefono            telefono                Cliente.telefono         IGUAL
+ciudad               ciudad              ciudad                  Cliente.ciudad           IGUAL
+direccion            direccion           direccion               Cliente.direccion        IGUAL
+fechaNacimiento      fechaNacimiento?    fechaNacimiento:        Cliente.fechaNacimiento  IGUAL
+                                         string | null          (date, opcional)
+tipoCredito          tipoCredito?        tipoCredito:            TipoCredito.nombre       DIFERENTE
+                      TipoCredito         TipoCredito | null     (FK por tipoCreditoId)  (la API
+                                         (texto, no id)                                   devuelve el
+                                                                                          nombre)
+tipoCreditoId        (no existe)         (no expuesto)           Cliente.tipoCreditoId    INTERNO
+frecuenciaCredito    frecuencia          frecuencia              TipoCredito.             DERIVADO
+Dias?                CreditoDias?       CreditoDias:            frecuenciaCreditoDias
+                                         number | null
+estadoCuenta         estadoCuenta        estadoCuenta            (no existe)             DERIVADO
+                                         "al-dia"|"pendiente"   Se deriva del saldo.
+saldoPendiente       saldoPendiente      saldoPendiente          (no existe)             DERIVADO
+                                         (number)               total - abonos aplicados
+ultimoRecordatorio   ultimo              ultimo                  (no existe)             NUEVO
+CreditoEn?           Recordatorio        Recordatorio
+                      CreditoEn?         CreditoEn: string|null  Derivado de la tabla
+                                                                 RecordatorioCredito
+ultimoAbono          ultimo              ultimo                  (no existe)             NUEVO
+CreditoEn?           AbonoCreditoEn?     AbonoCreditoEn:
+                                         string | null          Derivado de Pago
+activo               (no existe)         activo                  Cliente.activo           NUEVO
+creadoEn             creadoEn            creadoEn                Cliente.creadoEn         IGUAL
+actualizadoEn        (no existe)         actualizadoEn          Cliente.actualizadoEn  NUEVO
+
+================================================================================
+4. PRODUCTOS
+================================================================================
+
+Tabla: productos (productos)
+
+CAMPO            FRONTEND          API (JSON)             BASE DE DATOS            ESTADO
+-------------    ---------------   --------------------  ------------------------  ----------
+id               id                id                     Producto.id              IGUAL
+codigoInterno    codigoInterno     codigoInterno          Producto.codigoInterno   IGUAL
+                                                           PROD-0001 (unico)
+nombre           nombre            nombre                 Producto.nombre          IGUAL
+categoria        categoria:        categoria:             Categoria.nombre         DIFERENTE
+                  string            string                 (FK por categoriaId)     (la API
+                                                                                   devuelve el
+                                                                                   nombre, no el id)
+unidad           unidad            unidad                 Producto.unidad          IGUAL
+precioVenta      precioVenta       precioVenta            Producto.precioVenta     IGUAL
+                                                           numeric(18,2)
+costoActual      costoActual       costoActual            Producto.costoActual     IGUAL
+                                                           numeric(18,2)
+stock            stock: number     stock: number          (derivado)              DIFERENTE
+                                                           NO es una columna
+                 (disponible)      DISPONIBLE =            Se calcula como
+                                   stockFisico -          stockFisico -
+                                   stockReservado         stockReservado
+                 stockFisico        stockFisico            Producto.stockFisico     NUEVO
+                 stockReservado     stockReservado         Producto.stockReservado  NUEVO
+                 stockDisponible    stockDisponible        (derivado, mismo valor
+                                                            que stock)
+stockMinimo      stockMinimo       stockMinimo            Producto.stockMinimo     IGUAL
+colorEtiqueta     colorEtiqueta     colorEtiqueta          Producto.colorEtiqueta   IGUAL
+imagenUrl        imagenUrl?        imagenUrl:             (en ArchivoAdjunto)      DIFERENTE
+                                   string | null         El producto guarda la
+                                                            referencia al adjunto
+activo            activo            activo                 Producto.activo          IGUAL
+creadoEn          (no existe)       creadoEn               Producto.creadoEn        NUEVO
+actualizadoEn     (no existe)       actualizadoEn          Producto.actualizadoEn  NUEVO
+version           (no existe)       (interno)              Producto.version         INTERNO
+
+Nota sobre stock: el frontend antes tenia un solo numero. La base de datos
+separa fisico de reservado para poder bloquear la sobreventa. El campo stock
+de la API sigue siendo el disponible, para no cambiar las pantallas de venta.
+
+Cambio de precio
+--------------------------------------------------------------------------------
+CAMPO          FRONTEND          API (JSON)          BASE DE DATOS           ESTADO
+-------------  ---------------   -----------------  ---------------------  ----------
+id             id                id                  CambioPrecio.id        IGUAL
+productoId     productoId        productoId          CambioPrecio.productoId IGUAL
+valorAnterior  valorAnterior     valorAnterior       CambioPrecio.           IGUAL
+                                  (number)            valorAnterior
+valorNuevo     valorNuevo        valorNuevo          CambioPrecio.valorNuevo IGUAL
+usuarioId      usuarioId         usuarioId           CambioPrecio.usuarioId  IGUAL
+usuario        (no existe)       usuario             (FK)                    NUEVO
+fecha          fecha             fecha               CambioPrecio.fecha      IGUAL
+
+================================================================================
+5. PEDIDOS  (la venta principal)
+================================================================================
+
+Tabla: pedidos (pedidos)
+
+CAMPO            FRONTEND            API (JSON)          BASE DE DATOS            ESTADO
+-------------    ------------------  -----------------  ------------------------  ----------
+id               id                  id                  Pedido.id                IGUAL
+numero           numero              numero              Pedido.numero            IGUAL
+                                                           PED-0001 (unico)
+clienteId        clienteId           clienteId           Pedido.clienteId         IGUAL
+clienteNombre    (no existe)         clienteNombre       (FK)                     NUEVO
+vendedorId       vendedorId          vendedorId          Pedido.vendedorId        IGUAL
+vendedor         (no existe)         vendedor            (FK)                     NUEVO
+metodo           pago.metodo         metodo              Pedido.metodo            RENOMBRADO
+                                                           (antes en pago.metodo)
+momentoCobro     (no existe)         momentoCobro        Pedido.momentoCobro     NUEVO
+                                                           enum MomentoCobro
+lineas           lineas[]            lineas[]            PedidoLinea[]            IGUAL
+                                                           (pedidoLineas)
+subtotal         subtotal            subtotal            Pedido.subtotal          IGUAL
+                                                           numeric(18,2)
+total            total               total               Pedido.total             IGUAL
+                                                           numeric(18,2)
+saldoPendiente   pago                saldoPendiente      (derivado)               DERIVADO
+                 .saldoPendiente     (number)            total - abonos aplicados
+montoRecibido    pago                montoRecibido       (derivado)               DERIVADO
+                 .montoRecibido      (number)            Suma de pagos aplicados
+estado           estado              estado              Pedido.estado            IGUAL
+                                                           enum EstadoPedido
+facturaNumero    (no existe)         facturaNumero       Factura.numero           NUEVO
+                                                           FAC-0001 (unico)
+fechaOperacion   creadoEn            fechaOperacion      Pedido.fechaOperacion    DIFERENTE
+                 (string)            (YYYY-MM-DD)        (date)
+creadoEn         creadoEn            creadoEn            Pedido.creadoEn          IGUAL
+actualizadoEn    (no existe)         actualizadoEn       Pedido.actualizadoEn    NUEVO
+version          (no existe)         (interno)           Pedido.version           INTERNO
+
+Nota fechaOperacion: el frontend guardaba todo en creadoEn. La base separa la
+fecha en que ocurrio la operacion (para reportes y cierres) del momento
+tecnico de creacion del registro.
+
+Lineas del pedido
+Tabla: PedidoLinea (pedidoLineas)
+
+CAMPO           FRONTEND           API (JSON)          BASE DE DATOS             ESTADO
+-------------   ----------------  -----------------  ------------------------  ----------
+id              (no existe)        id                  PedidoLinea.id           NUEVO
+pedidoId        (no existe)        (interno)           PedidoLinea.pedidoId     INTERNO
+productoId      productoId         productoId          PedidoLinea.productoId   IGUAL
+codigoInterno   (no existe)        codigoInterno       PedidoLinea.             NUEVO
+                                                      codigoInterno
+nombre           nombre             nombre              PedidoLinea.nombre       IGUAL
+unidad           (no existe)        unidad              PedidoLinea.unidad       NUEVO
+cantidad         cantidad           cantidad            PedidoLinea.cantidad    IGUAL
+                                                           (integer)
+precioUnitario  precioUnitario     precioUnitario      PedidoLinea.             IGUAL
+                                  (number)            precioUnitario
+costoUnitario   costoUnitario?     costoUnitario       PedidoLinea.             NUEVO
+                 (opcional)         (number)            costoUnitario
+                                                      Snapshot del costo al
+                                                      vender: permite calcular
+                                                      la ganancia real.
+subtotal         subtotal           subtotal            PedidoLinea.subtotal     IGUAL
+orden            (no existe)        orden               PedidoLinea.orden        NUEVO
+
+Historial de estados
+Tabla: PedidoEstadoHistorial (pedidoEstadoHistorial)
+
+FRONTEND                  API (JSON)              BASE DE DATOS             ESTADO
+historialEstados[]        historialEstados[]      PedidoEstadoHistorial[]  IGUAL
+  .estado                  .estado                 .estado
+  .usuarioId                .usuarioId              .usuarioId
+  .fecha                    .fecha                  .fecha
+  (no existe)              .usuario (nombre)       (FK)
+  (no existe)              .comentario             .comentario             NUEVO
+
+================================================================================
+6. PAGOS, ABONOS Y CARTERA
+================================================================================
+
+Tabla: pagos (pagos)
+
+CAMPO            FRONTEND              API (JSON)          BASE DE DATOS        ESTADO
+-------------    --------------------  -----------------  ------------------  ----------
+id               id                    id                 Pago.id              IGUAL
+clienteId        clienteId             clienteId          Pago.clienteId       IGUAL
+tipo             (no existe)           tipo               Pago.tipo            NUEVO
+                                     "pago-inicial"|     enum TipoPago
+                                     "abono"|
+                                     "reembolso"
+metodo           metodo                metodo              Pago.metodo           IGUAL
+                                     "efectivo"|         enum MetodoPago
+                                     "billetera"
+monto            monto                 monto               Pago.monto            IGUAL
+                                                           numeric(18,2)
+usuarioId        usuarioId             usuarioId          Pago.usuarioId        IGUAL
+usuario          (no existe)           usuario             (FK)                  NUEVO
+comentario       comentario?           comentario:         Pago.comentario       IGUAL
+                                     string | null
+fechaOperacion   creadoEn              fechaOperacion      Pago.fechaOperacion   DIFERENTE
+creadoEn         creadoEn              creadoEn            Pago.creadoEn         IGUAL
+estado           (no existe)           estado              Pago.estado           NUEVO
+reversionDePagoId(no existe)           (no expuesto)       Pago.reversionDePagoId INTERNO
+idempotencyKey   (no existe)           (interno)           Pago.idempotencyKey   INTERNO
+
+Aplicacion del abono a un pedido
+Tabla: PagoAplicacion (pagoAplicaciones)
+
+FRONTEND                    API (JSON)              BASE DE DATOS              ESTADO
+AbonoCredito                PagoAplicacion          PagoAplicacion            IGUAL
+  .pedidosAfectados[]        pago.pedidosAfectados[]
+    .pedidoId                  .pedidoId               .pedidoId
+    .numero                    .numero                 .numero (copia)
+    .montoAplicado             .montoAplicado          .montoAplicado
+  (no existe)                 .orden                  .orden                    NUEVO
+  (no existe)                 .revertidoEn            .revertidoEn              NUEVO
+
+Regla de reparto: en abonos generales el dinero se aplica al pedido mas
+antiguo primero (FIFO). En el cobro al entregar se aplica solo al pedido
+elegido (registrarPagoPedido).
+
+================================================================================
+7. FACTURAS
+================================================================================
+
+Tabla: facturas (facturas)
+
+FRONTEND                API (JSON)          BASE DE DATOS         ESTADO
+(nombre de factura)     (nuevo)            Factura               NUEVO
+  (no existe)           numero             Factura.numero
+                                            FAC-0001 (unico)
+  (no existe)           pedidoId           Factura.pedidoId (unico)
+  (no existe)           clienteId          Factura.clienteId
+  (no existe)           clienteNombre      Factura.clienteNombre
+  (no existe)           clienteIdentificacion Factura.
+                                            clienteIdentificacion
+  (no existe)           clienteDireccion   Factura.clienteDireccion
+  (no existe)           fechaEmision       Factura.fechaEmision
+  (no existe)           fechaOperacion     Factura.fechaOperacion
+  (no existe)           subtotal           Factura.subtotal
+  (no existe)           total              Factura.total
+  (no existe)           estado             Factura.estado
+                                            enum EstadoFactura
+  (no existe)           anuladoEn          Factura.anuladoEn
+  (no existe)           motivoAnulacion    Factura.motivoAnulacion
+
+Nota: es una factura INTERNA. No es DIAN, no tiene CUFE, XML ni firma digital.
+El frontend ya mostraba el numero al usuario como "factura"; ahora ese numero
+vive en su propia tabla y se expone como facturaNumero en el pedido.
+
+================================================================================
+8. INVENTARIO
+================================================================================
+
+Reservas de stock
+Tabla: ReservaStock (reservasStock)
+
+FRONTEND         (no existe)   API (JSON)          BASE DE DATOS         ESTADO
+  (no existe)    (no expuesto)   id              ReservaStock.id       NUEVO
+  (no existe)    (no expuesto)   pedidoId        ReservaStock.pedidoId
+  (no existe)    (no expuesto)   productoId      ReservaStock.productoId
+  (no existe)    (no expuesto)   cantidadReservada ReservaStock.
+                                             cantidadReservada
+  (no existe)    (no expuesto)   cantidadConsumida ReservaStock.
+                                             cantidadConsumida
+  (no existe)    (no expuesto)   cantidadLiberada ReservaStock.
+                                             cantidadLiberada
+  (no existe)    (no expuesto)   estado          ReservaStock.estado
+                                             enum EstadoReserva
+
+Regla de negocio del stock (segun el plan de base de datos):
+- Al crear el pedido se RESERVA el stock (stockReservado aumenta).
+- Al ENTREGAR el pedido el stock se CONSUME (stockFisico baja).
+- Al CANCELAR antes de entregar, la reserva se LIBERA.
+- La sobreventa esta bloqueada.
+
+Movimientos del ledger
+Tabla: MovimientoInventario (movimientosInventario)
+
+FRONTEND         (no existe)   API (JSON)          BASE DE DATOS            ESTADO
+  (no existe)    (no expuesto)   tipo              MovimientoInventario.tipo
+  (no existe)    (no expuesto)   cantidad          .cantidad
+  (no existe)    (no expuesto)   deltaStockFisico  .deltaStockFisico
+  (no existe)    (no expuesto)   deltaStockReservado .deltaStockReservado
+  (no existe)    (no expuesto)   stockFisicoAntes  .stockFisicoAntes
+  (no existe)    (no expuesto)   stockFisicoDespues .stockFisicoDespues
+  (no existe)    (no expuesto)   stockReservadoAntes .stockReservadoAntes
+  (no existe)    (no expuesto)   stockReservadoDespues .stockReservadoDespues
+  (no existe)    (no expuesto)   pedidoId         .pedidoId
+  (no existe)    (no expuesto)   motivo           .motivo
+  (no existe)    (no expuesto)   usuarioId        .usuarioId
+  (no existe)    (no expuesto)   creadoEn         .creadoEn
+
+Conteos
+Tablas: ConteoInventario (conteosInventario) y ConteoLinea (conteoLineas)
+
+FRONTEND                API (JSON)            BASE DE DATOS             ESTADO
+ConteoInventario       ConteoInventarioDTO   ConteoInventario         IGUAL
+  id                     id                   .id
+  tipo                   tipo                 .tipo
+  usuarioId              usuarioId            .usuarioId
+  usuario                (nuevo) usuario     (FK)
+  turno                  turno                .turno
+  iniciadoEn             iniciadoEn           .iniciadoEn
+  finalizadoEn           finalizadoEn        .finalizadoEn (opcional)
+  estado                 estado               .estado
+  lineas                 lineas[]             ConteoLinea[]
+  lineasContadas         (no expuesto)        (derivado de             DERIVADO
+  (lineasContadas[])     (derivado)           ConteoLinea.contadoEn)
+  (no existe)            resumen              (calculado)
+
+ConteoLinea
+  productoId             productoId           .productoId
+  nombre                 nombre               (FK)
+  stockTeorico           stockTeorico         .stockTeorico
+  stockFisico            stockFisico:         .stockFisico            IGUAL
+                          number | null       (null = no contado)
+  diferencia             diferencia:          .diferencia (null si
+                          number | null       no contado)
+  (no existe)            contadoEn            .contadoEn             NUEVO
+
+Ajustes
+Tablas: AjusteInventario (ajustesInventario) y AjusteLinea (ajusteLineas)
+
+FRONTEND                API (JSON)            BASE DE DATOS             ESTADO
+AjusteInventario        AjusteInventarioDTO   AjusteInventario         DIFERENTE
+  id                      id                   .id
+  conteoId                conteoId             .conteoId                (el frontend
+                          (string)             (NULL = ajuste manual)   usaba el texto
+  usuarioId               usuarioId            .usuarioId                  "manual";
+                          (string)                                      ahora es null)
+  motivo                  motivo?              .motivo
+                          (string)             (motivos: perdida, robo,
+                                                 correccion, reversion-compra,
+                                                 vencimiento, donacion,
+                                                 error-captura, otro)
+  comentario              comentario?          .comentario
+  creadoEn                creadoEn             .creadoEn
+  lineas                  lineas[]             AjusteLinea[]
+  (no existe)             estado               .estado                  NUEVO
+
+================================================================================
+9. COMPRAS, PROVEEDORES Y GASTOS
+================================================================================
+
+Proveedor  (proveedores)
+--------------------------------------------------------------------------------
+FRONTEND                API (JSON)          BASE DE DATOS            ESTADO
+id                       id                  Proveedor.id             IGUAL
+  (no existe)            codigo              Proveedor.codigo         NUEVO
+nombre                   nombre              Proveedor.nombre         IGUAL
+telefono                 telefono?           Proveedor.telefono       IGUAL
+  (no existe)            activo              Proveedor.activo         NUEVO
+creadoEn                 creadoEn            Proveedor.creadoEn       IGUAL
+
+Recepcion de compra  (recepcionesCompra)
+--------------------------------------------------------------------------------
+FRONTEND                API (JSON)          BASE DE DATOS            ESTADO
+id                       id                  RecepcionCompra.id       IGUAL
+numero                   numero              RecepcionCompra.numero   IGUAL
+                                                    REC-0001 (unico)
+proveedorId              proveedorId         RecepcionCompra.        IGUAL
+                                                    proveedorId
+usuarioId                usuarioId           RecepcionCompra.usuarioId IGUAL
+lineas                   lineas[]            RecepcionLinea[]        IGUAL
+total                    total               RecepcionCompra.total    IGUAL
+descontarCaja            descontarCaja       RecepcionCompra.        IGUAL
+                                                    descontarCaja
+  (no existe)            estado              RecepcionCompra.estado   NUEVO
+creadoEn                 creadoEn            RecepcionCompra.creadoEn IGUAL
+  (no existe)            fechaOperacion      RecepcionCompra.        NUEVO
+                                                    fechaOperacion (date)
+
+Gasto  (gastos)
+--------------------------------------------------------------------------------
+FRONTEND                API (JSON)          BASE DE DATOS            ESTADO
+id                       id                  Gasto.id                 IGUAL
+concepto                 concepto            Gasto.concepto           IGUAL
+monto                    monto               Gasto.monto              IGUAL
+                                                   numeric(18,2)
+  (no existe)            metodo              Gasto.metodo (opcional)  NUEVO
+usuarioId                usuarioId           Gasto.usuarioId          IGUAL
+  (no existe)            comentario          Gasto.comentario         NUEVO
+  (no existe)            estado              Gasto.estado             NUEVO
+creadoEn                 creadoEn            Gasto.creadoEn           IGUAL
+  (no existe)            fechaOperacion      Gasto.fechaOperacion     NUEVO
+                                                   (date)
+
+================================================================================
+10. CAJA
+================================================================================
+
+Tabla: MovimientoCaja (movimientosCaja)
+
+FRONTEND                API (JSON)          BASE DE DATOS              ESTADO
+id                       id                  MovimientoCaja.id         IGUAL
+tipo                     tipo                MovimientoCaja.tipo       IGUAL
+                                                  enum TipoMovimientoCaja
+concepto                 concepto            MovimientoCaja.concepto   IGUAL
+monto                    monto               MovimientoCaja.monto      IGUAL
+                                                  numeric(18,2)
+metodo                   metodo?             MovimientoCaja.metodo     IGUAL
+                         (MetodoPago)        (opcional)               (mismo valor que
+                                                  MetodoPago              efectivo|billetera)
+usuarioId                usuarioId?          MovimientoCaja.usuarioId  IGUAL
+usuario                  (no existe)         usuario                  NUEVO
+                                                  (FK)
+referenciaId             referenciaId?       (derivado)               DERIVADO
+  (la movia)             (derivado)          referenciaId =
+                                                  pagoId ?? recepcionCompraId
+                                                  ?? gastoId
+  (no existe)            origenTipo          (derivado)               NUEVO
+                                                  "pago"|"recepcion-compra"
+                                                  |"gasto"|"cierre"
+creadoEn                 creadoEn            MovimientoCaja.creadoEn   IGUAL
+  (no existe)            fechaContable       MovimientoCaja.            NUEVO
+                                                  fechaContable (date)
+  (no existe)            esManual            MovimientoCaja.esManual   NUEVO
+                                                  (reingreso por cierre)
+
+Nota metodo: antes el frontend usaba "nequi"; ahora tanto el API como la
+base de datos usan "billetera". La etiqueta visible la decide el frontend.
+
+================================================================================
+11. CIERRE DEL DIA
+================================================================================
+
+Tabla: CierreDia (cierresDia)
+
+FRONTEND                API (JSON)          BASE DE DATOS            ESTADO
+id                       id                  CierreDia.id             IGUAL
+fecha                    fecha (YYYY-MM-DD)  fecha (date, unico)     IGUAL
+usuarioId                usuarioId           usuarioId                IGUAL
+usuario                  (no existe)         usuario                  NUEVO
+totalVentas              totalVentas         totalVentas              IGUAL
+                                                  numeric(18,2)
+totalIngresos            totalIngresos       totalIngresos            IGUAL
+totalEgresos             totalEgresos        totalEgresos             IGUAL
+pedidosCount             pedidosCount        pedidosCount             IGUAL
+pendientesTrasladados    pendientes         pendientesTrasladados    IGUAL
+                         Trasladados
+pendientesCancelados     pendientes         pendientesCancelados     IGUAL
+                         Cancelados
+  (no existe)            estado              estado (enum)            NUEVO
+  (no existe)            medios[]            CierreMedio[]            DIFERENTE
+                                                  (cierreMedios)          (antes campos
+                                                  medio, esperado,         sueltos
+                                                  contado, diferencia)
+  (no existe)            (nuevo) pedidos[]   CierrePedido[]           NUEVO
+  (no existe)            (nuevo)             CierreMovimiento[]       NUEVO
+                                                  (cierreMovimientos)
+creadoEn                 creadoEn            creadoEn                 IGUAL
+  (no existe)            cerradoEn           cerradoEn (opcional)     NUEVO
+
+Conteo por medio  (CierreMedio)
+  (antes en el frontend)   (ahora en la API)   BASE DE DATOS
+  conteoEfectivo            medios[medio=       CierreMedio.medio
+                              "efectivo"]        ("efectivo"|"billetera")
+                              .contado
+  conteoNequi               medios[medio=       CierreMedio.medio
+                              "billetera"]       ("efectivo"|"billetera")
+                              .contado           .contado
+  diferenciaEfectivo        medios[efectivo]   CierreMedio.diferencia
+                              .diferencia
+  diferenciaNequi          medios[billetera]  CierreMedio.diferencia
+                              .diferencia
+
+Los pedidos, movimientos y acciones del cierre quedan como COPIA (snapshot)
+en CierrePedido, CierreMovimiento y CierreAccion. Aunque el pedido cambie
+despues, el cierre conserva lo que se conto ese dia.
+
+================================================================================
+12. CONSECUTIVOS  (globales, sin reinicio, sin huecos)
+================================================================================
+
+ENTIDAD      PREFIJO   FORMATO         TABLA (consecutivos)
+----------   --------   -------------   ------------------------
+Cliente      CLI       CLI-0001        tipo = "CLI",  periodo="global"
+Usuario      USR       USR-0001        tipo = "USR",  periodo="global"
+Producto     PROD      PROD-0001       tipo = "PROD", periodo="global"
+TipoCredito  TC        TC-0001         tipo = "TC",  periodo="global"
+Pedido       PED       PED-0001        tipo = "PED",  periodo="global"
+Recepcion    REC       REC-0001        tipo = "REC",  periodo="global"
+Factura      FAC       FAC-0001        tipo = "FAC",  periodo="global"
+
+La asignacion bloquea la fila del consecutivo dentro de la MISMA transaccion
+que inserta la entidad. Si la transaccion falla, el numero no se consume.
+
+================================================================================
+13. CATALOGOS
+================================================================================
+
+Categoria  (categorias)   ->    TipoCredito  (tiposCredito)
+  id, codigo, nombre,          id, codigo, nombre (TipoCredito),
+  activo, orden                 frecuenciaCreditoDias, orden, activo
+
+  El frontend no tiene un tipo separado; ahora
+  ProductoDTO.categoria (string) y ClienteDTO.tipoCredito
+  (texto del tipo) viajan por la API.
+
+================================================================================
+14. AUDITORIA Y ARCHIVOS
+================================================================================
+
+AuditoriaEvento  (auditoriaEventos)  - NUEVO, todavia sin endpoint
+  id, entidadTipo, entidadId, accion, datosAntes, datosDespues,
+  usuarioId, requestId, creadoEn
+
+ArchivoAdjunto  (archivosAdjuntos)  - NUEVO, todavia sin endpoint
+  id, productoId, pedidoId, pagoId, nombre, mimeType, storageKey,
+  tamano, sha256, usuarioId, creadoEn, eliminadoEn
+
+  (En el frontend: producto.imagenUrl y pedido.comprobantePagoUrl.)
+
+================================================================================
+15. RESUMEN DE CAMBIOS DE NOMBRE (para buscar en el codigo viejo)
+================================================================================
+
+  VIEJO (localStorage)        NUEVO (API / base de datos)
+  -------------------------   ---------------------------------
+  MetodoPago.nequi            MetodoPago.billetera
+  pago.metodo                 metodo (en Pedido)
+  pago.saldoPendiente         saldoPendiente (en Pedido, derivado)
+  pago.montoRecibido          montoRecibido (en Pedido, derivado)
+  pago.estado                 (derivado: pagado|pendiente)
+  pago.recordatorioWhatsApp   recordatorioWhatsApp (en Pedido)
+  Producto.stock              Producto.stock (= stockFisico - stockReservado)
+  (nuevo)                     Producto.stockFisico
+  (nuevo)                     Producto.stockReservado
+  Pedido.creadoEn              Pedido.fechaOperacion (fecha del negocio)
+  (nuevo)                     Pedido.momentoCobro
+  (nuevo)                     Pedido.facturaNumero (FAC-0001)
+  (nuevo)                     Cliente.codigo (CLI-0001)
+  Usuario.password            Usuario.passwordHash (nunca sale por la API)
+  Usuario.id                   Usuario.codigo (USR-0001, unico)
+  Conteo.lineasContadas        (derivado: ConteoLinea.contadoEn != null)
+  Cierre.conteoNequi           Cierre.medios[billetera].contado
+  Cierre.diferenciaNequi       Cierre.medios[billetera].diferencia
+  Ajuste.conteoId = "manual"   Ajuste.conteoId = null (ajuste manual)
+
+================================================================================
+Fin del archivo.
+Para regenerar la lista de enums verificados: npm run contrato:verificar
+================================================================================
