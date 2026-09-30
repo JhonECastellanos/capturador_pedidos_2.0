@@ -6,12 +6,15 @@ import { SegmentoControl } from "../../../components/SegmentoControl";
 import { UtilidadDev } from "../../../components/UtilidadDev";
 import { useOperaciones } from "../../../context/operaciones";
 import { topClientesDe, topProductosDe } from "../../../dominio/servicios";
-import { esAyer, esMismoDia } from "../../../utils/fechas";
+import { esAyer, esMismoDia, fechaOperativa } from "../../../utils/fechas";
 import { formatoMoneda, formatoMonedaCorta } from "../../../utils/formato";
 import { dentroDePeriodo, dentroDeTramo, tramosDe, type Granularidad, type PeriodoLista, type Tramo } from "../../../utils/periodos";
 import { GraficaBarrasDobles } from "../components/GraficaBarrasDobles";
 import { GraficaLinea } from "../components/GraficaLinea";
 import { TarjetaMetrica } from "../components/TarjetaMetrica";
+import { usaApi } from "../../../data/api";
+import { useResumenApi } from "../../../data/useResumenApi";
+import { diaTablero, rangoTramos, serieTablero } from "../../../utils/tablero";
 
 const GRANULARIDADES: Array<{ valor: Granularidad; etiqueta: string }> = [
   { valor: "dia", etiqueta: "Día" },
@@ -35,53 +38,73 @@ export function Resumen() {
   const [granLinea, setGranLinea] = useState<Granularidad>("dia");
   const [periodoTops, setPeriodoTops] = useState<PeriodoLista>("todo");
   const hoy = useMemo(() => new Date(), []);
+  const ayer = new Date(hoy); ayer.setDate(ayer.getDate() - 1);
+  const tramosBarras = tramosDe(granBarras, hoy), tramosLinea = tramosDe(granLinea, hoy);
+  const rangoBarras = rangoTramos(tramosBarras), rangoLinea = rangoTramos(tramosLinea);
+  const inicioTops = new Date(hoy);
+  inicioTops.setDate(inicioTops.getDate() - (periodoTops === "dia" ? 0 : periodoTops === "semana" ? 7 : periodoTops === "mes" ? 30 : 365));
+  const remotoHoy = useResumenApi(diaTablero(hoy), diaTablero(hoy));
+  const remotoAyer = useResumenApi(diaTablero(ayer), diaTablero(ayer));
+  const remotoBarras = useResumenApi(...rangoBarras);
+  const remotoLinea = useResumenApi(...rangoLinea);
+  const remotoTops = useResumenApi(periodoTops === "todo" ? "1900-01-01" : diaTablero(inicioTops), diaTablero(hoy), true);
 
   const pedidosValidos = pedidos.filter((p) => p.estado !== "cancelado");
-  const pedidosHoy = pedidosValidos.filter((p) => esMismoDia(p.creadoEn, hoy));
-  const pedidosAyer = pedidosValidos.filter((p) => esAyer(p.creadoEn, hoy));
-  const ventasHoy = pedidosHoy.reduce((s, p) => s + p.total, 0);
-  const ventasAyer = pedidosAyer.reduce((s, p) => s + p.total, 0);
-  const gastosHoy = gastos.filter((g) => esMismoDia(g.creadoEn, hoy)).reduce((s, g) => s + g.monto, 0);
-  const comprasHoy = recepciones.filter((r) => esMismoDia(r.creadoEn, hoy)).reduce((s, r) => s + r.total, 0);
-  const ticketPromedio = pedidosHoy.length ? ventasHoy / pedidosHoy.length : 0;
-  const alertasStock = inventario.filter((p) => p.stock <= p.stockMinimo).length;
-  const pendientes = pedidosValidos.filter((p) => p.pago.saldoPendiente > 0).reduce((s, p) => s + p.pago.saldoPendiente, 0);
+  const pedidosHoy = pedidosValidos.filter((p) => esMismoDia(fechaOperativa(p), hoy));
+  const pedidosAyer = pedidosValidos.filter((p) => esAyer(fechaOperativa(p), hoy));
+  const cantidadHoy = usaApi ? remotoHoy.data?.pedidos ?? 0 : pedidosHoy.length;
+  const cantidadAyer = usaApi ? remotoAyer.data?.pedidos ?? 0 : pedidosAyer.length;
+  const ventasHoy = usaApi ? remotoHoy.data?.ventas ?? 0 : pedidosHoy.reduce((s, p) => s + p.total, 0);
+  const ventasAyer = usaApi ? remotoAyer.data?.ventas ?? 0 : pedidosAyer.reduce((s, p) => s + p.total, 0);
+  const gastosHoy = usaApi ? remotoHoy.data?.gastos ?? 0 : gastos.filter((g) => esMismoDia(g.creadoEn, hoy)).reduce((s, g) => s + g.monto, 0);
+  const comprasHoy = usaApi ? remotoHoy.data?.compras ?? 0 : recepciones.filter((r) => esMismoDia(r.creadoEn, hoy)).reduce((s, r) => s + r.total, 0);
+  const ticketPromedio = usaApi ? remotoHoy.data?.ticketPromedio ?? 0 : pedidosHoy.length ? ventasHoy / pedidosHoy.length : 0;
+  const alertasStock = usaApi ? remotoHoy.data?.alertasStock ?? 0 : inventario.filter((p) => p.stock <= p.stockMinimo).length;
+  const pendientes = usaApi ? remotoHoy.data?.creditoPendienteGlobal ?? 0 : pedidosValidos.filter((p) => p.pago.saldoPendiente > 0).reduce((s, p) => s + p.pago.saldoPendiente, 0);
   const variacion = ventasAyer > 0 ? ((ventasHoy - ventasAyer) / ventasAyer) * 100 : ventasHoy > 0 ? 100 : 0;
 
   /** Serie de tiempo: ventas contra compras + gastos, y la rentabilidad que queda. */
   function serieDe(tramos: Tramo[]) {
     return tramos.map((tramo) => {
-      const ventas = pedidosValidos.filter((p) => dentroDeTramo(p.creadoEn, tramo)).reduce((s, p) => s + p.total, 0);
+      const ventas = pedidosValidos.filter((p) => dentroDeTramo(fechaOperativa(p), tramo)).reduce((s, p) => s + p.total, 0);
       const compras = recepciones.filter((r) => dentroDeTramo(r.creadoEn, tramo)).reduce((s, r) => s + r.total, 0);
       const gastosTramo = gastos.filter((g) => dentroDeTramo(g.creadoEn, tramo)).reduce((s, g) => s + g.monto, 0);
+      const costoVendido = pedidosValidos.filter((p) => dentroDeTramo(fechaOperativa(p), tramo)).reduce((s, p) => s + p.lineas.reduce((c, l) => c + (l.costoUnitario ?? 0) * l.cantidad, 0), 0);
       return {
         etiqueta: tramo.etiqueta,
         ventas,
         egresos: compras + gastosTramo,
-        rentabilidad: ventas - compras - gastosTramo,
+        rentabilidad: ventas - costoVendido - gastosTramo,
       };
     });
   }
 
-  const serieBarras = serieDe(tramosDe(granBarras, hoy));
-  const serieLinea = serieDe(tramosDe(granLinea, hoy));
+  const serieBarras = usaApi ? serieTablero(remotoBarras.data, tramosBarras) : serieDe(tramosBarras);
+  const serieLinea = usaApi ? serieTablero(remotoLinea.data, tramosLinea) : serieDe(tramosLinea);
   const puntosRentabilidad = serieLinea.map((punto) => ({ etiqueta: punto.etiqueta, valor: punto.rentabilidad }));
   const totalVentasBarras = serieBarras.reduce((s, punto) => s + punto.ventas, 0);
   const totalEgresosBarras = serieBarras.reduce((s, punto) => s + punto.egresos, 0);
   const rentabilidadPeriodo = serieLinea.reduce((s, punto) => s + punto.rentabilidad, 0);
 
   // En cero no mostramos tarjetas ni gráficas con $0: el negocio se ve "recién instalado".
-  const tieneKpis = ventasHoy > 0 || gastosHoy > 0 || comprasHoy > 0 || pedidosHoy.length > 0 || pendientes > 0 || alertasStock > 0;
-  const tieneHoyAyer = ventasHoy > 0 || ventasAyer > 0 || pedidosHoy.length > 0 || pedidosAyer.length > 0;
+  const tieneKpis = ventasHoy > 0 || gastosHoy > 0 || comprasHoy > 0 || cantidadHoy > 0 || pendientes > 0 || alertasStock > 0;
+  const tieneHoyAyer = ventasHoy > 0 || ventasAyer > 0 || cantidadHoy > 0 || cantidadAyer > 0;
   const tieneGraficaBarras = totalVentasBarras > 0 || totalEgresosBarras > 0;
   const tieneGraficaLinea = puntosRentabilidad.some((punto) => punto.valor !== 0);
 
-  const pedidosPeriodo = pedidosValidos.filter((p) => dentroDePeriodo(p.creadoEn, periodoTops, hoy));
-  const topProductos = topProductosDe(pedidosPeriodo, inventario);
-  const topClientes = topClientesDe(pedidosPeriodo, inventario).map((fila) => ({ ...fila, cliente: obtenerCliente(fila.clienteId) }));
+  const pedidosPeriodo = pedidosValidos.filter((p) => dentroDePeriodo(fechaOperativa(p), periodoTops, hoy));
+  const topProductos = usaApi ? remotoTops.data?.topProductos ?? [] : topProductosDe(pedidosPeriodo, inventario);
+  const topClientes = usaApi ? (remotoTops.data?.topClientes ?? []).map((fila) => ({ ...fila, cliente: { nombre: fila.nombre } })) : topClientesDe(pedidosPeriodo, inventario).map((fila) => ({ ...fila, cliente: obtenerCliente(fila.clienteId) }));
+
+  if (usaApi) {
+    const consultas = [remotoHoy, remotoAyer, remotoBarras, remotoLinea, remotoTops];
+    const error = consultas.find((c) => c.error)?.error;
+    if (consultas.some((c) => !c.data)) return <div className="p-4"><p role={error ? "alert" : "status"}>{error?.message ?? "Cargando tablero…"}</p>{error && <button className="mt-3 min-h-11 rounded-xl border border-line px-4" onClick={() => { consultas.forEach((c) => { void c.refetch(); }); }}>Reintentar</button>}</div>;
+  }
 
   return (
     <div className="flex h-full flex-col min-h-0">
+      {usaApi && [remotoHoy, remotoAyer, remotoBarras, remotoLinea, remotoTops].some((c) => c.error) && <p role="alert" className="shrink-0 rounded-xl bg-danger-soft p-3 text-sm text-danger">No se pudo actualizar el tablero. Se muestra la última lectura; pulsa Actualizar para reintentar.</p>}
       <div className="flex-shrink-0 flex items-center justify-between border-b border-line pb-2.5">
         <div className="flex items-center gap-2">
           <h2 className="font-display text-[18px] font-semibold text-ink">Inicio</h2>
@@ -123,7 +146,7 @@ export function Resumen() {
               {variacion.toFixed(1)}%
             </span>
           </p>
-          <p className="text-[11px] text-ink-soft">Ayer {formatoMoneda(ventasAyer)} · {pedidosHoy.length} pedidos hoy</p>
+          <p className="text-[11px] text-ink-soft">Ayer {formatoMoneda(ventasAyer)} · {cantidadHoy} pedidos hoy</p>
         </div>
       )}
 
@@ -136,7 +159,7 @@ export function Resumen() {
           </div>
           <GraficaBarrasDobles datos={serieBarras} formato={formatoMonedaCorta} />
           <p className="mt-2 text-[11px] text-ink-faint">
-            Barras en CSS puro, sin dependencias · ventas {formatoMoneda(totalVentasBarras)} · compras y gastos {formatoMoneda(totalEgresosBarras)}
+            Ventas {formatoMoneda(totalVentasBarras)} · compras y gastos {formatoMoneda(totalEgresosBarras)}
           </p>
         </div>
       )}
@@ -147,7 +170,7 @@ export function Resumen() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="font-display text-[14px] font-semibold text-ink">Rentabilidad</p>
-              <p className="text-[11px] text-ink-soft">Ganancia después de compras y gastos</p>
+              <p className="text-[11px] text-ink-soft">Ventas menos costo de lo vendido y gastos</p>
             </div>
             <SegmentoControl opciones={GRANULARIDADES} valor={granLinea} onChange={setGranLinea} />
           </div>

@@ -16,6 +16,8 @@ import type { AbonoCredito } from "../../../types";
 import { formatoMoneda } from "../../../utils/formato";
 import { BadgeMora } from "../components/BadgeMora";
 import { FormularioAbono } from "../components/FormularioAbono";
+import { usePantallaVoz } from "../../asistente/pantalla-voz";
+import { resolverReferencia } from "../../asistente/intencion";
 
 interface AbonosProps {
   onVolver: () => void;
@@ -72,15 +74,15 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
     setComentario("");
   }
 
-  function confirmarAbono() {
-    if (!detalle) return;
+  async function confirmarAbono() {
+    if (!detalle) return false;
     const valor = Number(monto);
-    if (!valor || valor <= 0) return;
-    const resultado = registrarAbono(detalle.clienteId, valor, metodo, comentario || undefined);
+    if (!valor || valor <= 0 || valor > detalle.total) return false;
+    const resultado = await registrarAbono(detalle.clienteId, valor, metodo, comentario || undefined);
     setConfirmarCobro(false);
     if (!resultado) {
       mostrarAviso("No se pudo registrar el abono", "error");
-      return;
+      return false;
     }
     const saldoRestante = Math.max(0, detalle.total - resultado.monto);
     if (saldoRestante === 0) {
@@ -90,7 +92,16 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
       mostrarAviso(`Abono ${formatoMoneda(resultado.monto)} · quedan ${formatoMoneda(saldoRestante)}`, "exito");
       setMonto(String(saldoRestante));
     }
+    return true;
   }
+  usePantallaVoz(["recibir_abono"], {
+    aplicar: (p) => {
+      if (p.clienteId) { const id = resolverReferencia(p.clienteId, clientes); if (id) setClienteId(id); else setBusqueda(String(p.clienteId)); }
+      if (typeof p.monto === "number") setMonto(String(p.monto));
+      if (p.metodo === "efectivo" || p.metodo === "billetera") setMetodo(p.metodo);
+      if (typeof p.comentario === "string") setComentario(p.comentario);
+    }, leer: () => ({ clienteId, monto: Number(monto), metodo, comentario }), confirmar: confirmarAbono, cancelar: cerrarDetalle,
+  });
 
   // ─── Detalle de cliente ───
   if (detalle) {

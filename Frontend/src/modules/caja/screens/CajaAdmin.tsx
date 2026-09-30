@@ -8,12 +8,34 @@ import { formatoMoneda } from "../../../utils/formato";
 import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodo, type Periodo } from "../../../utils/fechas";
 import { MetricaFiltro } from "../../administracion/components/MetricaFiltro";
 import { TarjetaMetrica } from "../../administracion/components/TarjetaMetrica";
+import { usePantallaVoz } from "../../asistente/pantalla-voz";
+import { TiraToast } from "../../../components/TiraToast";
+import { useAviso } from "../../../components/useAviso";
 
 type FiltroMedio = "ingresos" | "egresos" | "efectivo" | "billetera" | "credito" | null;
 type VistaCaja = "movimientos" | "ganancias";
 
 export function CajaAdmin() {
-  const { movimientosCaja, pedidos, abonos, obtenerCliente, nombreUsuario } = useOperaciones();
+  const { movimientosCaja, pedidos, abonos, obtenerCliente, nombreUsuario, registrarEgresoCaja } = useOperaciones();
+  const [nuevoEgreso, setNuevoEgreso] = useState(false);
+  const [conceptoEgreso, setConceptoEgreso] = useState("");
+  const [montoEgreso, setMontoEgreso] = useState("");
+  const [metodoEgreso, setMetodoEgreso] = useState<"efectivo" | "billetera">("efectivo");
+  const [guardandoEgreso, setGuardandoEgreso] = useState(false);
+  const { aviso, mostrarAviso, cerrarAviso } = useAviso();
+  async function guardarEgreso() {
+    const monto = Number(montoEgreso);
+    if (guardandoEgreso || conceptoEgreso.trim().length < 2 || !Number.isFinite(monto) || monto <= 0) return false;
+    setGuardandoEgreso(true);
+    try {
+      if (await registrarEgresoCaja(conceptoEgreso.trim(), monto, metodoEgreso) === false) return false;
+      setNuevoEgreso(false); setConceptoEgreso(""); setMontoEgreso(""); mostrarAviso("Egreso registrado", "exito"); return true;
+    } finally { setGuardandoEgreso(false); }
+  }
+  usePantallaVoz(["registrar_egreso"], {
+    aplicar: p => { setNuevoEgreso(true); if (typeof p.concepto === "string") setConceptoEgreso(p.concepto); if (typeof p.monto === "number") setMontoEgreso(String(p.monto)); if (p.metodo === "efectivo" || p.metodo === "billetera") setMetodoEgreso(p.metodo); },
+    leer: () => ({ concepto: conceptoEgreso, monto: Number(montoEgreso), metodo: metodoEgreso }), confirmar: guardarEgreso, cancelar: () => { setNuevoEgreso(false); setConceptoEgreso(""); setMontoEgreso(""); },
+  });
   const [periodo, setPeriodo] = useState<Periodo>("hoy");
   const [vistaCaja, setVistaCaja] = useState<VistaCaja>("movimientos");
   const [busqueda, setBusqueda] = useState("");
@@ -109,11 +131,23 @@ export function CajaAdmin() {
               { titulo: "2 · Ganancias por periodo", texto: "La pestaña Ganancias muestra cuánto quedó después de compras y gastos, con el historial de hoy, ayer, semanal, mensual, año y todo." },
               { titulo: "3 · Filtros hoy → todo", texto: "Hoy solo hoy, ayer solo ayer, semana/mes/año los últimos días. Todo al final muestra todo sin duplicar registros." },
               { titulo: "4 · Buscador y colores", texto: "Busca por concepto, pedido o cliente. Verde = ingreso en efectivo, teal = billetera digital, rojo = egreso o crédito." },
-              { titulo: "5 · Dónde registrar", texto: "Los egresos se crean en Compras (gastos o recepciones). Los abonos de crédito crean aquí el ingreso." },
+              { titulo: "5 · Dónde registrar", texto: "Registra retiros con Nuevo egreso. Las compras y los gastos se registran en Compras para no duplicar salidas. Los abonos crean aquí el ingreso." },
             ]}
           />
         </div>
+        <button type="button" onClick={() => setNuevoEgreso(true)} className="min-h-11 rounded-xl border border-line px-3 text-xs font-semibold text-ink">Nuevo egreso</button>
       </div>
+
+      {nuevoEgreso && <form onSubmit={e => { e.preventDefault(); void guardarEgreso(); }} className="my-2 flex-shrink-0 space-y-2 rounded-xl border border-line bg-paper-raised p-3">
+        <p className="text-sm font-semibold text-ink">Egreso de caja</p>
+        <label className="block text-xs text-ink-soft">Concepto<input required minLength={2} value={conceptoEgreso} onChange={e => setConceptoEgreso(e.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-line bg-paper px-3" /></label>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="text-xs text-ink-soft">Monto<input required type="number" min="0.01" step="0.01" value={montoEgreso} onChange={e => setMontoEgreso(e.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-line bg-paper px-3" /></label>
+          <label className="text-xs text-ink-soft">Medio<select value={metodoEgreso} onChange={e => setMetodoEgreso(e.target.value as typeof metodoEgreso)} className="mt-1 min-h-11 w-full rounded-lg border border-line bg-paper px-3"><option value="efectivo">Efectivo</option><option value="billetera">Billetera</option></select></label>
+        </div>
+        <div className="flex gap-2"><button type="button" onClick={() => setNuevoEgreso(false)} className="min-h-11 flex-1 rounded-lg border border-line text-xs">Cancelar</button><button disabled={guardandoEgreso} className="min-h-11 flex-1 rounded-lg bg-ink text-xs font-semibold text-white disabled:opacity-50">Guardar egreso</button></div>
+      </form>}
+      <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
 
       <div className="flex-shrink-0 space-y-2 pt-2">
         <div className="inline-flex w-full rounded-full border border-line bg-paper-raised p-1">

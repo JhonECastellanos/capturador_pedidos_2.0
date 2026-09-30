@@ -70,6 +70,8 @@ import { cargarCierres, guardarCierres } from "../data/repositorios/cierres";
 import { useAuth } from "./auth";
 import { OperacionesContext, type OperacionesContextValue } from "./operaciones-context";
 import { archivoAImagenDataUrl } from "../utils/imagen";
+import { usaApi } from "../data/api";
+import { OperacionesApiProvider } from "./OperacionesApiContext";
 
 const coloresEtiqueta = ["#e88f2a", "#3c6b3a", "#7d5a38", "#d97b96", "#304d25", "#b5442e"];
 
@@ -84,6 +86,10 @@ function archivoADataUrl(archivo: File): Promise<string> {
 }
 
 export function OperacionesProvider({ children }: { children: ReactNode }) {
+  return usaApi ? <OperacionesApiProvider>{children}</OperacionesApiProvider> : <OperacionesLocalProvider>{children}</OperacionesLocalProvider>;
+}
+
+function OperacionesLocalProvider({ children }: { children: ReactNode }) {
   const { usuario } = useAuth();
   const [clientes, setClientes] = useState<Cliente[]>(cargarClientes);
   const [pedidos, setPedidos] = useState<Pedido[]>(cargarPedidos);
@@ -112,7 +118,7 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const seleccionarClienteActivo = useCallback((clienteId: string | null) => setClienteActivoId(clienteId), []);
-  const obtenerCliente = useCallback((clienteId: string) => clientes.find((cliente) => cliente.id === clienteId) ?? null, [clientes]);
+  const obtenerCliente = useCallback((clienteId: string | null) => clientes.find((cliente) => cliente.id === clienteId) ?? null, [clientes]);
   const obtenerProveedor = useCallback((id: string) => proveedores.find((p) => p.id === id) ?? null, [proveedores]);
   const nombreUsuario = useCallback(
     (usuarioId?: string) => {
@@ -255,12 +261,13 @@ export function OperacionesProvider({ children }: { children: ReactNode }) {
   }, [inventario.length]);
 
   const registrarEgresoCaja = useCallback(
-    (concepto: string, monto: number) => {
+    (concepto: string, monto: number, metodo: "efectivo" | "billetera" = "efectivo") => {
       const movimiento: MovimientoCaja = {
         id: nuevoId(),
         tipo: "egreso",
         concepto,
         monto,
+        metodo,
         usuarioId: usuario?.id,
         creadoEn: new Date().toISOString(),
       };

@@ -7,6 +7,9 @@
     "noEmit": true,
     "declaration": false,
     "incremental": false,
+    // El CLI y los scripts viven fuera de src/: sin reencuadrar el rootDir heredado
+    // (./src), tsc marcaría TS6059 por archivos fuera de la raíz del programa.
+    "rootDir": ".",
     "types": ["node"],
     "lib": ["ES2023"]
   },

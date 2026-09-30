@@ -24,9 +24,11 @@ export async function siguienteCodigo(tx: Tx, prefijo: string): Promise<string> 
 
   const siguiente = ultimo + 1;
 
+  // `actualizadoEn` se escribe explícitamente: el SQL crudo no ejecuta el
+  // @updatedAt de Prisma y la columna es NOT NULL en la base.
   await tx.$executeRaw`
-    INSERT INTO "consecutivos" ("tipo", "periodo", "prefijo", "ancho", "ultimoValor")
-    VALUES (${prefijo}, 'global', ${prefijo}, ${ancho}, ${siguiente})
+    INSERT INTO "consecutivos" ("tipo", "periodo", "prefijo", "ancho", "ultimoValor", "actualizadoEn")
+    VALUES (${prefijo}, 'global', ${prefijo}, ${ancho}, ${siguiente}, now())
     ON CONFLICT ("tipo", "periodo")
     DO UPDATE SET "ultimoValor" = EXCLUDED."ultimoValor", "actualizadoEn" = now()
   `;

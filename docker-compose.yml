@@ -1,6 +1,68 @@
+name: capturador_pedidos_20
+
 services:
+  redis:
+    image: redis:7-alpine
+    user: redis
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
+    restart: unless-stopped
+    mem_limit: ${REDIS_MEMORY:-128m}
+    memswap_limit: ${REDIS_MEMORY:-128m}
+    cpus: ${REDIS_CPUS:-0.5}
+    read_only: true
+    tmpfs: ["/data:size=16m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 2s
+      retries: 10
+  frontend:
+    image: capturador_pedidos_20-frontend:local
+    build:
+      context: .
+      dockerfile: Frontend/Dockerfile
+    ports: ["${FRONTEND_BIND:-0.0.0.0}:${FRONTEND_PORT:-8080}:8080"]
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [default, tunel]
+    restart: unless-stopped
+    mem_limit: ${FRONTEND_MEMORY:-128m}
+    memswap_limit: ${FRONTEND_MEMORY:-128m}
+    cpus: ${FRONTEND_CPUS:-0.5}
+    read_only: true
+    tmpfs: ["/tmp:size=32m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+
+  # Optativo: no se inicia ni publica nada sin token y perfil explícitos.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles: ["cloudflare"]
+    command: ["tunnel", "--no-autoupdate", "run", "--token-file", "/run/secrets/cloudflare_token"]
+    secrets: [cloudflare_token]
+    networks:
+      tunel:
+        ipv4_address: 172.31.254.2
+    depends_on:
+      frontend:
+        condition: service_healthy
+    restart: unless-stopped
+    mem_limit: 128m
+    memswap_limit: 128m
+    cpus: 0.5
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
   postgres:
     image: postgres:17-alpine
+    mem_limit: ${POSTGRES_MEMORY:-512m}
+    memswap_limit: ${POSTGRES_MEMORY:-512m}
+    cpus: ${POSTGRES_CPUS:-1.0}
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-ambie}
@@ -15,6 +77,10 @@ services:
       retries: 10
 
   migrate:
+    image: capturador_pedidos_20-api:local
+    mem_limit: 768m
+    memswap_limit: 768m
+    cpus: 1.0
     # Contexto en la raíz: la API es un workspace que depende de @ambie/contrato.
     build:
       context: .
@@ -22,12 +88,19 @@ services:
     command: sh -c "npx prisma migrate deploy --schema prisma/schema.prisma && npx prisma db seed --schema prisma/schema.prisma"
     environment:
       DATABASE_URL: ${DATABASE_URL}
+      SYSTEM_EMAIL: ${SYSTEM_EMAIL:-system@ambie.local}
+      SYSTEM_PASSWORD: ${SYSTEM_PASSWORD:-}
+      BOOTSTRAP_PASSWORD: ${BOOTSTRAP_PASSWORD:-}
     depends_on:
       postgres:
         condition: service_healthy
     restart: "no"
 
   api:
+    image: capturador_pedidos_20-api:local
+    mem_limit: ${API_MEMORY:-512m}
+    memswap_limit: ${API_MEMORY:-512m}
+    cpus: ${API_CPUS:-1.0}
     build:
       context: .
       dockerfile: Backend/Dockerfile
@@ -35,17 +108,22 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       SESSION_SECRET: ${SESSION_SECRET}
+      CACHE_REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET}
       JWT_ACCESS_TTL_SEGUNDOS: ${JWT_ACCESS_TTL_SEGUNDOS:-900}
       JWT_REFRESH_TTL_DIAS: ${JWT_REFRESH_TTL_DIAS:-7}
       JWT_ISSUER: ${JWT_ISSUER:-ambie-api}
       JWT_AUDIENCE: ${JWT_AUDIENCE:-ambie}
-      CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:-http://localhost:5173}
+      CORS_ALLOWED_ORIGIN: ${CORS_ALLOWED_ORIGIN:-http://localhost:5173},${APP_ORIGIN:-http://localhost:8080}
+      TRUST_PROXY_HOPS: 1
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
       APP_TIMEZONE: ${APP_TIMEZONE:-America/Bogota}
       RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-300}
       RATE_LIMIT_VENTANA: ${RATE_LIMIT_VENTANA:-1 minute}
       PORT: 3000
+      VOZ_STT_URL: ws://voz:2700
+      ASISTENTE_CONFIG_DIR: /home/ambie/.ambie/config
+      ASISTENTE_CONFIG_SECRET: ${ASISTENTE_CONFIG_SECRET:-}
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-minio}
       MINIO_PORT: ${MINIO_PORT:-9000}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
@@ -54,9 +132,33 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      redis:
+        condition: service_started
     ports:
-      - "${PORT:-3000}:3000"
+      - "127.0.0.1:${PORT:-3000}:3000"
     restart: unless-stopped
+    networks: [default, agentes]
+    volumes: ["asistente_config:/home/ambie/.ambie/config"]
+
+  voz:
+    profiles: ["voz"]
+    build:
+      context: infra/voz
+    restart: unless-stopped
+    mem_limit: ${VOZ_MEMORY:-512m}
+    memswap_limit: ${VOZ_MEMORY:-512m}
+    cpus: ${VOZ_CPUS:-1.0}
+    pids_limit: 64
+    read_only: true
+    tmpfs: ["/tmp:size=32m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; assert urllib.request.urlopen('http://127.0.0.1:2700/salud',timeout=2).status == 200"]
+      interval: 15s
+      timeout: 3s
+      start_period: 30s
+      retries: 3
 
   # Crea el primer administrador. Es puntual y opcional: no arranca con el
   # resto de servicios (perfil `bootstrap`) y solo se ejecuta una vez, cuando
@@ -64,6 +166,10 @@ services:
   #
   #   docker compose --profile bootstrap run --rm bootstrap
   bootstrap:
+    image: capturador_pedidos_20-api:local
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 0.5
     build:
       context: .
       dockerfile: Backend/Dockerfile
@@ -84,28 +190,47 @@ services:
     build:
       context: .
       dockerfile: Backend/Dockerfile
+      target: agente
     profiles: ["cli"]
-    entrypoint: ["npx", "tsx", "cli/index.ts"]
-    command: ["ayuda"]
+    command: ["--help"]
     environment:
       API_URL: http://api:3000
       IA_PROVEEDOR: ${IA_PROVEEDOR:-gemini}
       IA_API_KEY: ${IA_API_KEY:-}
       IA_URL_BASE: ${IA_URL_BASE:-}
       IA_MODELO: ${IA_MODELO:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OLLAMA_URL: ${OLLAMA_URL:-http://host.docker.internal:11434}
     depends_on:
       api:
         condition: service_healthy
+    networks: [agentes]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes: ["cli_data:/home/ambie/.ambie"]
+    stdin_open: true
+    tty: true
+    init: true
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 0.5
+    pids_limit: 128
 
-  # Almacenamiento de imágenes y comprobantes (S3). La API todavía no lo usa:
-  # hoy las imágenes viven en el navegador y este servicio queda listo para la
-  # migración.
+  # Almacenamiento privado de imágenes y comprobantes; acceso mediante la API.
   #
   # MinIO dejó de publicar imágenes accesibles en Docker Hub y en quay.io, así
   # que se usa la última imagen archivada de Bitnami (`bitnamilegacy`). Si tu
   # equipo tiene acceso a un registro propio, cambia solo la línea `image`.
   minio:
     image: bitnamilegacy/minio:2025.7.23-debian-12-r5
+    mem_limit: ${MINIO_MEMORY:-384m}
+    memswap_limit: ${MINIO_MEMORY:-384m}
+    cpus: ${MINIO_CPUS:-0.5}
     restart: unless-stopped
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-ambie}
@@ -125,3 +250,15 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  cli_data:
+  asistente_config:
+
+networks:
+  agentes:
+  tunel:
+    ipam:
+      config: [{ subnet: 172.31.254.0/29 }]
+
+secrets:
+  cloudflare_token:
+    file: ${CLOUDFLARE_TOKEN_FILE:-.local/cloudflare-token}

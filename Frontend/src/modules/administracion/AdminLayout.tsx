@@ -32,6 +32,8 @@ const navegacionPrincipal: ItemNavegacion[] = [
   { to: "/admin/caja", etiqueta: "Caja", icono: IconCash },
   { to: "/admin/cierre", etiqueta: "Cierre", icono: IconLock },
   { to: "/admin/usuarios", etiqueta: "Usuarios", icono: IconUser },
+  { to: "/admin/auditoria", etiqueta: "Auditoría", icono: IconClipboard },
+  { to: "/admin/configuracion", etiqueta: "Configuración", icono: IconTag },
 ];
 
 const navegacionSecundaria: ItemNavegacion[] = [];
@@ -51,8 +53,8 @@ export function AdminLayout() {
   const contenedorNav = useRef<HTMLElement | null>(null);
   const refsItems = useRef<Record<string, HTMLAnchorElement | null>>({});
 
-  function salir() {
-    cerrarSesion();
+  async function salir() {
+    if (!await cerrarSesion()) return;
     navegar("/");
   }
 

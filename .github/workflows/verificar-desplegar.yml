@@ -1,0 +1,70 @@
+name: Verificar y desplegar
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate --schema Backend/prisma/schema.prisma
+      - run: npm run seguridad:repositorio
+      - run: npm run verificar
+      - run: npm run prueba:cache
+      - run: npm run prueba:asistente
+  desplegar:
+    needs: verificar
+    if: >-
+      vars.DEPLOY_ENABLED == 'true' &&
+      github.event_name != 'pull_request' &&
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: [self-hosted, ambie-produccion]
+    environment: produccion
+    timeout-minutes: 30
+    concurrency:
+      group: despliegue-produccion
+      cancel-in-progress: false
+    env:
+      AMBIE_DEPLOY_PATH: ${{ vars.AMBIE_DEPLOY_PATH }}
+      DEPLOY_BRANCH: ${{ github.event.repository.default_branch }}
+      DEPLOY_SHA: ${{ github.sha }}
+    steps:
+      - name: Linux
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -eu
+          test -n "$AMBIE_DEPLOY_PATH"
+          cd "$AMBIE_DEPLOY_PATH"
+          test -z "$(git status --porcelain)"
+          test "$(git branch --show-current)" = "$DEPLOY_BRANCH"
+          git fetch origin "$DEPLOY_BRANCH"
+          test "$(git rev-parse FETCH_HEAD)" = "$DEPLOY_SHA" || { echo 'Existe una revisión posterior; se omite este despliegue.'; exit 0; }
+          git merge --ff-only "$DEPLOY_SHA"
+          sh infra/desplegar.sh
+      - name: Windows
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (!$env:AMBIE_DEPLOY_PATH) { throw 'Falta AMBIE_DEPLOY_PATH' }
+          Set-Location -LiteralPath $env:AMBIE_DEPLOY_PATH
+          if ((git status --porcelain) -or $LASTEXITCODE) { throw 'Repositorio no disponible o con cambios locales' }
+          if ((git branch --show-current) -ne $env:DEPLOY_BRANCH) { throw 'Rama incorrecta' }
+          git fetch origin $env:DEPLOY_BRANCH
+          if ($LASTEXITCODE) { throw 'Falló fetch' }
+          if ((git rev-parse FETCH_HEAD) -ne $env:DEPLOY_SHA) { Write-Host 'Existe una revisión posterior; se omite este despliegue.'; exit 0 }
+          git merge --ff-only $env:DEPLOY_SHA
+          if ($LASTEXITCODE) { throw 'Falló actualización' }
+          & ./infra/desplegar.ps1

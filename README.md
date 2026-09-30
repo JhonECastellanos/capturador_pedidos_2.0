@@ -29,12 +29,15 @@ npm run verificar   # Revisa contrato, API y frontend de una sola vez
 - Docker Desktop (o Docker Engine con Compose v2).
 - Node.js 24 o superior, solo si vas a trabajar con el código sin contenedores.
 
+Para este equipo Windows, consulta [almacenamiento en D: y límites de Docker](infra/windows/README.md).
+El Compose declara límites de RAM y CPU por servicio; no elimina los volúmenes de datos.
+
 ### 1. Variables de entorno
 
 Desde la raíz del proyecto:
 
 ```bash
-cp .env.example .env
+test -f .env || cp .env.example .env
 ```
 
 Completa en `.env` las contraseñas y los secretos: `POSTGRES_PASSWORD`, `DATABASE_URL`, `SESSION_SECRET`, `JWT_SECRET`, `MINIO_ROOT_PASSWORD`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY` y `BOOTSTRAP_*` (el usuario y la clave del primer administrador).
@@ -47,7 +50,9 @@ node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
 
 `.env` está ignorado por git, así que esos valores no salen del equipo.
 
-### 2. Los cuatro contenedores, con un solo comando
+Si ya existe `.env`, úsalo: no lo sobrescribas. En este equipo ya está configurado.
+
+### 2. Servicios organizados, con un solo comando
 
 ```bash
 docker compose up -d --build
@@ -57,12 +62,16 @@ Ese único comando construye las imágenes y deja el sistema completo en marcha:
 
 | Servicio | Qué hace | Dónde queda |
 |---|---|---|
+| `frontend` | SPA compilada y Nginx con proxy a API/voz | `http://localhost:8080` |
 | `postgres` | Base de datos | Red interna, puerto 5432 |
+| `redis` | Caché efímera del tablero | Red interna, puerto 6379, sin publicar |
 | `migrate` | Aplica las migraciones y los datos base, y termina | — |
 | `api` | API NestJS, con prefijo `/api/v1` | `http://localhost:3000` |
 | `minio` | Almacenamiento S3 para imágenes y comprobantes | Red interna, puerto 9000 |
 
 `migrate` aparece como `Exited (0)`: eso es correcto, es un paso que se ejecuta una vez y termina.
+
+El orden de arranque está declarado en `docker-compose.yml` con `depends_on`: primero `postgres` debe quedar sano; `migrate` aplica las migraciones y la semilla sobre esa base; la API sube cuando `migrate` termina con éxito (`service_completed_successfully`) y `redis` está iniciado; y `frontend` espera a que la API responda sano (`service_healthy`). El comando de arriba resuelve ese orden solo; no hay que levantar servicios a mano.
 
 ### 3. Comprobar que quedó arriba
 
@@ -75,32 +84,41 @@ La sonda responde con `{"data":{"estado":"ok", ...}}` cuando la API y la base es
 
 ### 4. Primer administrador
 
-La API arranca sin usuarios. El primero se crea una sola vez, tomando `BOOTSTRAP_EMAIL` y `BOOTSTRAP_PASSWORD` del `.env`:
+La semilla crea automáticamente **system**, un administrador de instalación para el desarrollador. Entra con usuario `system` y la contraseña privada `SYSTEM_PASSWORD`; si está vacía, la primera instalación reutiliza `BOOTSTRAP_PASSWORD` del `.env`. No hay contraseña universal. Usa una clave exclusiva y larga antes de exponer la instalación a Internet.
 
 ```bash
-docker compose --profile bootstrap run --rm bootstrap
+docker compose up -d --build
 ```
 
-Si vuelves a ejecutarlo, responde que ya existe un administrador y no cambia nada. Los demás usuarios se crean desde la aplicación, en **Usuarios**.
+Desde **Usuarios**, system crea el primer administrador del negocio. Tiene todos los permisos y autenticación normal; API y BD impiden desactivarlo, degradarlo o eliminarlo. Repetir la semilla no cambia su contraseña ni reemplaza cuentas existentes. `SYSTEM_EMAIL` debe ser exclusivo. El bootstrap antiguo se conserva por compatibilidad, pero ya no es necesario. No compartas system para la operación cotidiana.
 
 ### 5. Aplicación
+
+Abre [http://localhost:8080](http://localhost:8080). El frontend ya está dentro de su contenedor; no necesita Node/Vite en el equipo para funcionar.
+
+Solo para desarrollar la interfaz fuera de Docker:
 
 ```bash
 npm install
 npm run front:dev
 ```
 
-Queda en `http://localhost:5173`, que es el origen que espera `CORS_ALLOWED_ORIGIN`. Mientras termina la migración a la API, la SPA sigue guardando en `localStorage`.
+Vite queda en `http://localhost:5173`. La SPA usa la API existente por defecto; lee el `.env` raíz y aproxima `/api` al servidor mediante proxy. La versión desplegable usa Nginx en 8080, no Vite.
 
 ### Comandos útiles
 
 | Comando | Para qué |
 |---|---|
-| `docker compose logs -f api` | Ver la API en vivo |
-| `docker compose run --rm cli ayuda` | Usar el CLI con IA sin dejarlo encendido |
-| `docker compose down` | Detener sin perder datos |
-| `docker compose down -v` | Detener y borrar los volúmenes |
-| `npm run docker:arriba` / `docker:abajo` / `docker:limpiar` | Lo mismo, desde npm |
+| `npm run docker:arriba` | Levantar y reconstruir todo el stack |
+| `docker compose ps` / `npm run docker:estado` | Ver el estado de los servicios |
+| `docker compose logs -f api` | Seguir los logs de la API en vivo |
+| `docker compose logs -f api frontend` | Seguir API y frontend a la vez |
+| `docker compose logs --tail 200 migrate` | Últimas 200 líneas de un servicio concreto |
+| `npm run docker:logs` | Seguir los logs de todo el stack |
+| `docker compose restart api` | Reiniciar solo la API (conserva los datos) |
+| `docker compose run --rm cli --help` | Comprobar el CLI sin llamar a IA |
+| `npm run docker:abajo` / `docker compose down` | Detener sin perder datos |
+| `npm run docker:limpiar` / `docker compose down -v` | Detener y borrar los volúmenes |
 
 Los datos viven en los volúmenes `postgres_data` y `minio_data`, así que sobreviven a `docker compose down`.
 
@@ -126,6 +144,22 @@ Dos cosas que conviene tener presentes:
 
 ## Autenticación
 
+### Caché y consistencia
+
+React Query guarda lecturas en RAM durante cinco minutos, con frescura de 30 segundos y actualización en segundo plano. Cada página/filtro tiene su clave; las escrituras invalidan lecturas y cerrar/expirar una sesión cancela y vacía la caché. No se guardan estas respuestas en localStorage.
+
+El tablero consume agregados SQL, no todo el historial de pedidos. Redis es interno, sin puerto publicado, con límite de 128 MB/0,5 CPU y hasta 64 MB de datos efímeros. `REDIS_MEMORY/CPUS` permiten ampliar recursos. No es una copia de respaldo ni almacena pedidos originales.
+
+Los resultados duran cinco minutos. Las transacciones de pedidos, líneas, pagos, clientes, productos, compras y gastos actualizan `versionesCache` al confirmar; un rollback no cambia la versión. La clave incorpora esa revisión: los resultados antiguos dejan de ser utilizables y caducan solos, sin `FLUSHALL`. El cálculo usa una instantánea RepeatableRead; no puede guardar un resultado anterior bajo una revisión nueva. Si Redis no responde, se consulta PostgreSQL. Las rutas conservan autenticación y rol administrativo antes de acceder a caché.
+
+`GET /api/v1/dashboard/totales` y `/dashboard/resumen` comparten el servicio. `data.cache.estado` indica `hit`/`miss`; `version` permite comprobar la invalidación. `soloTops=true` evita series enormes al consultar todo el histórico. Las series normales aceptan hasta 2000 días. Sin `CACHE_REDIS_URL` fuera de Docker se usa caché en memoria, no Redis.
+
+Pruebas: `npm run prueba:cache`, `npm run prueba:integracion` y `npm run prueba:carga` contra QA. Las pestañas visibles consultan `/sincronizacion/revision` cada dos segundos e invalidan lecturas al cambiar una revisión confirmada en PostgreSQL. Las ocultas reanudan al volver. Es actualización casi en tiempo real (intervalo más latencia), no entrega instantánea garantizada. Un indicador avisa de desconexión; se mantiene el refresco periódico y **Actualizar**. Las pantallas heredadas aún necesitan optimizar snapshots; estas pruebas no equivalen a validar 100.000 pedidos.
+
+### Diagnósticos de TypeScript en VS Code
+
+El backend declara `rootDir: ./src`, usa `module/moduleResolution: Node16` y no necesita `baseUrl`. El CLI redefine `rootDir: .` porque también incluye scripts fuera de `src`. TypeScript 6 cambió la inferencia de la raíz y dejó en desuso `baseUrl` y resolución `node10`; se migraron las opciones, sin ocultar avisos con `ignoreDeprecations`. Si VS Code sigue mostrando la configuración antigua, guarda el archivo y ejecuta **TypeScript: Restart TS Server**; si persiste, **Developer: Reload Window**. Comprueba que abriste esta carpeta y no otra copia del proyecto.
+
 El acceso usa dos tokens:
 
 | Token | Vida | Dónde vive |
@@ -133,7 +167,7 @@ El acceso usa dos tokens:
 | Acceso | 15 minutos | Cookie `ambie_access` (navegador) o `Authorization: Bearer` (CLI) |
 | Refresco | 7 días | Cookie `ambie_refresh`, o en el archivo del CLI |
 
-El token de acceso es un JWT firmado, así que validarlo no toca la base de datos. El de refresco es opaco y se guarda hasheado: si alguien lee la base, no puede reconstruirlo. Y como se rota en cada uso, un token robado sirve una sola vez.
+La firma del JWT se verifica localmente; además, cada solicitud consulta sesión y usuario para aplicar revocaciones, actividad y rol actual. El token de refresco es opaco, se almacena hasheado y se rota en cada uso.
 
 Las rutas de administración exigen rol de administrador: usuarios, cierre del día, egresos, ajustes de inventario, cambio de precios, compras y gastos.
 
@@ -196,7 +230,7 @@ Más detalle en [docs/CLI.md](docs/CLI.md).
 
 ## Accesos
 
-El negocio arranca vacío. Los primeros usuarios se crean a mano desde **Usuarios** en la aplicación, o con el bootstrap. No hay datos de demostración precargados.
+El negocio arranca vacío, con el acceso técnico system y los catálogos base. Los usuarios del negocio se crean desde **Usuarios**. No hay pedidos, productos ni clientes de demostración precargados.
 
 ## Qué se puede hacer
 
@@ -214,7 +248,70 @@ El negocio arranca vacío. Los primeros usuarios se crean a mano desde **Usuario
 - Consultar la serie diaria y los productos y clientes con más movimiento.
 - Administrar pedidos, créditos, inventario, compras, precios, caja, cierre y usuarios.
 
-## Cómo está organizada la aplicación
+## Instalación local y traslado al VPS
+
+Cada instalación sirve a **una sola empresa** y a sus usuarios internos. Se usa la misma arquitectura en PC, servidor local o VPS; no hay tenants ni administración multiempresa. Para más usuarios se amplían recursos del servidor, manteniendo consultas acotadas y respaldos.
+
+Desde la raíz, con Docker Desktop iniciado y el `.env` existente:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File infra/desplegar.ps1
+```
+
+El script construye las imágenes, respalda PostgreSQL si ya está funcionando, aplica las migraciones existentes y espera la salud de los servicios. No elimina volúmenes ni llama proveedores de IA. Todos quedan en el proyecto `capturador_pedidos_20`: frontend/Nginx, API, PostgreSQL, Redis, MinIO y una sola voz local. CLI y Cloudflare son optativos.
+
+Enlaces para validar:
+
+- [Aplicación / acceso Administrador y Vendedor](http://localhost:8080/)
+- [Administrador](http://localhost:8080/admin)
+- [Vendedor](http://localhost:8080/vendedor)
+- [Salud del frontend](http://localhost:8080/salud)
+- [Salud de API y PostgreSQL a través de Nginx](http://localhost:8080/api/v1/salud)
+- [Diagnóstico directo de API, solo en este servidor](http://localhost:3000/api/v1/salud)
+
+Usa tus accesos existentes; no se publican contraseñas en esta guía. Los puertos cambian si defines `FRONTEND_PORT` o `PORT`. No hace falta ejecutar Vite para usar esta versión. `npm run front:dev` es solo desarrollo ([localhost:5173](http://localhost:5173/)).
+
+Desde el celular en la **misma red**, abre `http://IP_DEL_PC:8080`. Puedes consultar la IPv4 con `ipconfig`. Si Windows bloquea la conexión, permite TCP 8080 únicamente en la red privada; no desactives el firewall ni publiques PostgreSQL/MinIO. No se abre el firewall automáticamente. Los pedidos funcionan por HTTP local; el micrófono del navegador en el celular necesita HTTPS, salvo excepciones de desarrollo del dispositivo.
+
+En el VPS instala Docker Engine y Compose v2 compatible con `!override` (2.24.4 o posterior), clona el repositorio y crea un `.env` propio desde `.env.example`, con secretos nuevos y direcciones internas Docker. No subas `.env` ni `.local` al repositorio. Ejecuta:
+
+```bash
+sh infra/desplegar.sh
+# Después de publicar correcciones en tu repositorio:
+sh infra/desplegar.sh --actualizar
+```
+
+`--actualizar` exige un árbol limpio y usa `git pull --ff-only`; nunca descarta cambios locales. En Windows el equivalente es `infra/desplegar.ps1 -Actualizar`. Revisa `docker compose ps` y la sonda `/api/v1/salud` después de cada actualización. Los respaldos quedan en `.local/backups/`; copia también fuera del servidor los volúmenes de MinIO/configuración y conserva los secretos de cifrado. Un respaldo creado no sustituye ensayar su restauración. Antes de revertir una versión, revisa la compatibilidad de sus migraciones; nunca restaures automáticamente una BD con pedidos nuevos.
+
+### Cloudflare opcional, sin modificar el entorno local
+
+El servicio `cloudflared` está preparado pero no se inicia por defecto. Cuando dispongas de dominio administrado en Cloudflare y un túnel:
+
+1. Guarda **solo el token del túnel** en `.local/cloudflare-token`, sin compartirlo ni subirlo a Git. En Linux restringe `.local` a tu usuario (`chmod 700 .local`) y permite lectura del archivo montado al usuario no privilegiado de cloudflared; no pongas el token como argumento visible en la consola.
+2. Publica el hostname elegido con servicio interno `http://frontend:8080`, no `localhost` dentro del contenedor.
+3. En `.env` configura `APP_ORIGIN=https://pedidos.tudominio.com`, `CORS_ALLOWED_ORIGIN=https://pedidos.tudominio.com`, `COOKIE_SECURE=true` y `FRONTEND_BIND=127.0.0.1`. En este modo el acceso es HTTPS por el dominio, no HTTP local con cookies seguras.
+4. Ejecuta `docker compose --profile voz --profile cloudflare up -d --wait`. No abras 3000, 5432 ni 9000 hacia Internet. Verifica sesión, archivos y WebSocket `/api/v1/asistente/voz` por el dominio.
+
+El registro del dominio y la creación del túnel requieren tu cuenta y configuración; no se compró ni publicó nada. Cloudflare ofrece registro para dominios admitidos; comprueba disponibilidad y precio antes de adquirirlo. Referencias: [crear el túnel](https://developers.cloudflare.com/tunnel/get-started/), [parámetros de ejecución](https://developers.cloudflare.com/tunnel/reference/run-parameters/) y [Cloudflare Registrar](https://developers.cloudflare.com/registrar/).
+
+### Recursos y pruebas
+
+Redis añade un límite de 128 MB y 0,5 CPU (`REDIS_MEMORY/CPUS`); permite hasta 64 MB de caché con expulsión LRU. PostgreSQL sigue siendo la fuente de verdad.
+
+Frontend: 128 MB/0,5 CPU; API, PostgreSQL y voz: 512 MB/1 CPU por servicio; MinIO: 384 MB/0,5 CPU. Los límites son por contenedor, no reservas de memoria. En un VPS con más capacidad ajústalos en `.env`: `FRONTEND_MEMORY/CPUS`, `API_MEMORY/CPUS`, `POSTGRES_MEMORY/CPUS`, `MINIO_MEMORY/CPUS`, `VOZ_MEMORY/CPUS`; aplica con `docker compose --profile voz up -d`. No hace falta editar el código ni Compose para ampliar recursos. Conserva RAM disponible para el sistema operativo. Los volúmenes utilizan el almacenamiento de Docker: en este PC está trasladado a D:, en Linux configura el disco de Docker antes de importar datos.
+
+```bash
+npm run verificar
+npm run prueba:cache
+docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml up -d --wait
+npm run prueba:integracion
+```
+
+La instancia QA usa otro proyecto/volúmenes y puerto [8180](http://localhost:8180/) para el frontend, 3100 para API. Termina con `docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml down` **sin `-v`**. No ejecutes pruebas que escriben contra la base del negocio. La configuración portátil queda lista para el VPS, pero una prueba local no acredita conectividad, firewall, DNS ni HTTPS del servidor remoto.
+
+En Windows, con QA arriba, `node --env-file=.env Backend/scripts/probar-cache-caida.cjs` detiene únicamente Redis de `ambie-integracion`, escribe un gasto QA, verifica los totales y restaura Redis en `finally`. No ejecutes esa prueba contra producción. Al actualizar el frontend, recarga las pestañas abiertas para usar la nueva compilación.
+
+## Organización del código
 
 ```text
 Frontend/src/
@@ -236,11 +333,11 @@ pantalla → contexto/fachada → dominio → repositorios
 
 Las pantallas no llevan reglas de negocio. Si una regla afecta pedidos, stock, caja o créditos, pasa por el dominio.
 
-Mientras la migración a la API no termine, el frontend sigue leyendo y escribiendo en `localStorage` con el prefijo `ambie:v2:`. Los datos son locales a cada navegador: no se comparten entre equipos.
+El modo predeterminado usa la API: sesión con cookies, datos compartidos entre dispositivos y escrituras confirmadas antes de cerrar formularios. `VITE_API_BASE_URL=/api` se normaliza a `/api/v1`; `API_PROXY_TARGET` apunta por defecto a `http://localhost:3000`. Para conservar el modo local explícito usa `VITE_DATOS_ORIGEN=local`. Las claves existentes `ambie:v2:` no se borran ni se importan automáticamente a PostgreSQL.
 
 ## Reglas importantes
 
-- Cancelar un pedido revierte stock, cartera y caja. Reactivarlo vuelve a aplicar esos efectos; la reactivación se hace desde el detalle del pedido y lo devuelve al estado que tenía antes de cancelarse.
+- Cancelar un pedido abierto revierte reservas, aplicaciones de pagos y caja en una transacción. La API no permite cancelar entregados ni reactivar cancelados; la interfaz respeta sus transiciones. La reactivación histórica solo sigue disponible en el modo local.
 - Los pedidos cancelados quedan fuera de la cartera: no aparecen en Créditos ni en Abonos, y no admiten cobros.
 - Los abonos generales se distribuyen al pedido más antiguo primero (FIFO). El cobro al entregar se aplica únicamente al pedido seleccionado.
 - En un conteo parcial solo se ajustan los productos que se digitaron.
@@ -248,10 +345,16 @@ Mientras la migración a la API no termine, el frontend sigue leyendo y escribie
 - Las fechas viajan como texto ISO. Los filtros de día usan `aaaa-mm-dd` y la fecha local es `America/Bogota`.
 - Los saldos son derivados: se calculan con los abonos aplicados, no se guardan duplicados.
 - Los consecutivos son globales, sin reinicio anual y sin huecos. Si una transacción falla, el número no se consume.
-- Las imágenes y comprobantes ocupan espacio en `localStorage`; su capacidad es limitada.
+- En modo API, imágenes y comprobantes viven en MinIO privado y se descargan con autenticación. Se validan firma, formato y máximo de 5 MB. En modo local todavía ocupan espacio limitado en `localStorage`.
 - No se deben borrar ni reiniciar datos durante una prueba sin autorización explícita.
 
 ## Antes de hacer cambios
+
+Resultados y límites de concurrencia: [pruebas de carga y sincronización](docs/PRUEBAS_CARGA.md). QA eleva su límite antiabuso para medir persistencia; producción conserva el configurado en `.env`.
+
+Para publicar desde la rama principal hacia un servidor local o VPS, consulta [despliegue continuo](docs/DESPLIEGUE_CONTINUO.md). Queda desactivado hasta configurar el runner y `DEPLOY_ENABLED` en GitHub.
+
+Si una corrección cambia fórmulas o la estructura de los agregados, incrementa el prefijo de formato `v1` de las claves en `DashboardService` junto con el contrato. Así no se reutilizan resultados de la implementación anterior durante sus cinco minutos de vida.
 
 Consulta `AGENTS.md` para las convenciones del proyecto. En resumen:
 
@@ -264,7 +367,32 @@ Consulta `AGENTS.md` para las convenciones del proyecto. En resumen:
 
 ## Documentos relacionados
 
+### Venta abierta y voz local
+
+La venta abierta registra un pedido y una factura sin crear un cliente. Solo admite efectivo o billetera; el crédito se bloquea también en la API y PostgreSQL.
+
+Para activar el reconocimiento de voz en Docker:
+
+```bash
+docker compose --profile voz up -d --build
+```
+
+Todos estos servicios quedan agrupados bajo `capturador_pedidos_20` (nombre fijo en Compose). Solo se necesita una instancia de `voz`; no crear contenedores de reconocimiento independientes con `docker run`. API, BD y archivos permanecen separados dentro del mismo proyecto. Ver [organización y pruebas aisladas](infra/README.md).
+
+El administrador configura el asistente desde **Configuración**. El modo básico funciona sin clave ni consumo externo; también puede elegir proveedor, modelo y su propia clave. Vosk transcribe español localmente, con un límite de 512 MB y un núcleo. El audio no se guarda. La voz de respuesta utiliza una voz española local instalada en el dispositivo; si no existe, se muestra el texto.
+
+Tocar el micrófono activa la escucha; tocarlo de nuevo la detiene. Se mueve arrastrándolo o con las flechas del teclado. La conversación pregunta los datos por pasos y completa los controles de las pantallas existentes, sin formularios ni modal propios del asistente. Se puede quitar y volver a agregar productos. **Confirmar operación** utiliza el mismo guardado de la pantalla después de revisar los datos; **cancelar operación** descarta el borrador. Los sonidos diferencian procesamiento, revisión lista y guardado exitoso. Los cambios de estado usan las mismas reglas de Pedidos: no se borra una factura emitida ni se anula una venta entregada fuera de esas reglas.
+
+En VPS se necesita HTTPS y un proxy que permita WebSocket para `/api/v1/asistente/voz`. El contenedor de voz no publica un puerto. En desarrollo sin Docker para la API, `VOZ_STT_URL` debe apuntar al servicio local de voz. La configuración cifrada se conserva en el volumen `asistente_config`; respalda ese volumen y conserva `ASISTENTE_CONFIG_SECRET` (o `JWT_SECRET` si no se configuró otro secreto). El CLI sigue independiente.
+
+```bash
+npm run prueba:asistente
+npm run verificar
+```
+
 - [Equivalencia de variables](EQUIVALENCIA_VARIABLES.txt)
 - [CLI con IA](docs/CLI.md)
+- [Auditoría y resultados de validación](docs/AUDITORIA_PROFESIONAL.md)
+- [Pruebas aisladas y contenedor CLI/VPS](infra/README.md)
 - [Imágenes de productos](Frontend/public/assets/productos/README.md)
 - [Comprobantes](Frontend/public/assets/comprobantes/README.md)

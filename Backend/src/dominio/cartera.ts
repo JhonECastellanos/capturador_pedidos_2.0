@@ -4,12 +4,13 @@ import { Tx, numero } from "../common/consecutivos";
 export async function aplicadoPorPedido(tx: Tx, pedidoIds: string[]): Promise<Map<string, number>> {
   const mapa = new Map<string, number>();
   if (pedidoIds.length === 0) return mapa;
-  const aplicaciones = await tx.pagoAplicacion.findMany({
-    where: { pedidoId: { in: pedidoIds }, revertidoEn: null },
-    select: { pedidoId: true, montoAplicado: true },
+  const aplicaciones = await tx.pagoAplicacion.groupBy({
+    by: ["pedidoId"],
+    where: { pedidoId: { in: pedidoIds }, revertidoEn: null, pago: { estado: "ACTIVO" } },
+    _sum: { montoAplicado: true },
   });
   for (const a of aplicaciones) {
-    mapa.set(a.pedidoId, (mapa.get(a.pedidoId) ?? 0) + numero(a.montoAplicado));
+    mapa.set(a.pedidoId, numero(a._sum.montoAplicado ?? 0));
   }
   return mapa;
 }

@@ -1,5 +1,6 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from "@nestjs/common";
 import { FastifyReply } from "fastify";
+import { ZodError } from "zod";
 
 /** Error de dominio con un código estable para el cliente. */
 export class ErrorDominio extends HttpException {
@@ -17,6 +18,11 @@ export class FiltroErrores implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<FastifyReply>();
+
+    if (exception instanceof ZodError) {
+      void response.status(HttpStatus.BAD_REQUEST).send({ code: "VALIDACION", message: exception.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") });
+      return;
+    }
 
     if (exception instanceof ErrorDominio) {
       void response.status(exception.getStatus()).send({

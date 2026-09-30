@@ -9,7 +9,7 @@ function escaparCSV(valor: string): string {
 export function exportarPedidosCSV(pedidos: Pedido[], nombreCliente: (clienteId: string) => string): void {
   const encabezados = ["Número", "Fecha", "Cliente", "Estado", "Método pago", "Total", "Saldo pendiente", "Líneas", "Vendedor"];
   const filas = pedidos.map((pedido) => {
-    const cliente = nombreCliente(pedido.clienteId);
+    const cliente = pedido.clienteId ? nombreCliente(pedido.clienteId) : "Venta ocasional";
     const lineas = pedido.lineas.map((l) => `${l.cantidad}x ${l.nombre}`).join(" | ");
     return [
       pedido.numero,

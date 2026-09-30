@@ -1,20 +1,13 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { lazy, Suspense } from "react";
 import { AuthProvider } from "./context/AuthContext";
 import { OperacionesProvider } from "./context/OperacionesContext";
 import { RutaProtegida } from "./components/RutaProtegida";
+import { AsistenteVoz } from "./modules/asistente/BotonMicrofono";
 import Acceso from "./screens/Acceso/Acceso";
 import NoEncontrado from "./screens/NoEncontrado/NoEncontrado";
 import CrearCliente from "./screens/ClientesPedido/CrearCliente";
 import { AdminLayout } from "./modules/administracion/AdminLayout";
-import { Resumen } from "./modules/administracion/screens/Resumen";
-import { PedidosAdmin } from "./modules/pedidos/screens/PedidosAdmin";
-import { CreditosAdmin } from "./modules/creditos/screens/CreditosAdmin";
-import { InventarioAdmin } from "./modules/inventario/screens/InventarioAdmin";
-import { CajaAdmin } from "./modules/caja/screens/CajaAdmin";
-import { CierreAdmin } from "./modules/caja/screens/CierreAdmin";
-import { UsuariosAdmin } from "./modules/usuarios/screens/UsuariosAdmin";
-import { ComprasAdmin } from "./modules/compras/screens/ComprasAdmin";
-import { PreciosAdmin } from "./modules/precios/screens/PreciosAdmin";
 import {
   AdminVentas,
   AdminVentasAbonos,
@@ -29,6 +22,18 @@ import {
   VendedorPedidoDetalle,
 } from "./modules/ventas/screens/RutasVentas";
 
+const InventarioAdmin = lazy(() => import("./modules/inventario/screens/InventarioAdmin").then((m) => ({ default: m.InventarioAdmin })));
+const PedidosAdmin = lazy(() => import("./modules/pedidos/screens/PedidosAdmin").then((m) => ({ default: m.PedidosAdmin })));
+const CreditosAdmin = lazy(() => import("./modules/creditos/screens/CreditosAdmin").then((m) => ({ default: m.CreditosAdmin })));
+const CajaAdmin = lazy(() => import("./modules/caja/screens/CajaAdmin").then((m) => ({ default: m.CajaAdmin })));
+const CierreAdmin = lazy(() => import("./modules/caja/screens/CierreAdmin").then((m) => ({ default: m.CierreAdmin })));
+const UsuariosAdmin = lazy(() => import("./modules/usuarios/screens/UsuariosAdmin").then((m) => ({ default: m.UsuariosAdmin })));
+const ComprasAdmin = lazy(() => import("./modules/compras/screens/ComprasAdmin").then((m) => ({ default: m.ComprasAdmin })));
+const PreciosAdmin = lazy(() => import("./modules/precios/screens/PreciosAdmin").then((m) => ({ default: m.PreciosAdmin })));
+const Auditoria = lazy(() => import("./modules/administracion/screens/Auditoria").then((m) => ({ default: m.Auditoria })));
+const Resumen = lazy(() => import("./modules/administracion/screens/Resumen").then((m) => ({ default: m.Resumen })));
+const ConfiguracionAsistente = lazy(() => import("./modules/asistente/ConfiguracionAsistente").then((m) => ({ default: m.ConfiguracionAsistente })));
+
 /** Aplicación: decide si la vista usa el marco móvil o el marco amplio del admin. */
 function Contenido() {
   const location = useLocation();
@@ -36,7 +41,7 @@ function Contenido() {
   return (
     <div className="app-viewport-outer">
       <div className={`app-viewport ${esAdmin ? "app-viewport--amplio" : ""}`}>
-        <Routes>
+        <Suspense fallback={<p role="status" className="p-6 text-ink-soft">Cargando pantalla…</p>}><Routes>
           <Route path="/" element={<Acceso />} />
 
           {/* ─── Flujo del vendedor (app móvil) ─── */}
@@ -64,6 +69,8 @@ function Contenido() {
             <Route path="caja" element={<CajaAdmin />} />
             <Route path="cierre" element={<CierreAdmin />} />
             <Route path="usuarios" element={<UsuariosAdmin />} />
+            <Route path="auditoria" element={<Auditoria />} />
+            <Route path="configuracion" element={<ConfiguracionAsistente />} />
           </Route>
 
           {/* ─── Redirecciones de rutas antiguas ─── */}
@@ -74,7 +81,8 @@ function Contenido() {
           <Route path="/modulos/pedido-completado" element={<Navigate to="/vendedor/pedido/completado" replace />} />
 
           <Route path="*" element={<NoEncontrado />} />
-        </Routes>
+        </Routes></Suspense>
+        <AsistenteVoz />
       </div>
     </div>
   );

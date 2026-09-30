@@ -3,6 +3,7 @@ import { Usuario } from "@prisma/client";
 import { ClientesService, NuevoClienteSchema } from "./clientes.service";
 import { UsuarioActual } from "../common/guards";
 import { ErrorDominio } from "../common/errores";
+import { paginacion } from "../common/paginacion";
 
 @Controller("clientes")
 export class ClientesController {
@@ -10,7 +11,8 @@ export class ClientesController {
 
   @Get()
   async listar(@Query("q") q?: string, @Query("page") page?: string, @Query("pageSize") pageSize?: string) {
-    return this.clientes.listar(q, Number(page ?? 1), Number(pageSize ?? 20));
+    const p = paginacion(page, pageSize);
+    return this.clientes.listar(q, p.pagina, p.porPagina);
   }
 
   @Get(":clienteId")

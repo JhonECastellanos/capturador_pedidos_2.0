@@ -6,6 +6,17 @@
  */
 
 import { z } from "zod";
+
+const diaTablero = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((dia) => {
+  const fecha = new Date(`${dia}T00:00:00Z`);
+  return !Number.isNaN(fecha.getTime()) && fecha.toISOString().slice(0, 10) === dia;
+}, "Fecha inválida");
+export const FiltrosTableroEsquema = z.object({
+  desde: diaTablero.optional(), hasta: diaTablero.optional(),
+  dias: z.coerce.number().int().min(1).max(365).optional(),
+  clienteId: z.string().uuid().optional(), vendedorId: z.string().uuid().optional(),
+  soloTops: z.enum(["true", "false"]).optional().transform((valor) => valor === "true"),
+}).refine((f) => !f.desde || !f.hasta || (f.desde <= f.hasta && (f.soloTops || (Date.parse(f.hasta) - Date.parse(f.desde)) / 86400000 <= 2000)), "Rango inválido o mayor de 2000 días");
 import {
   ESTADO_PEDIDO,
   METODO_PAGO,
@@ -20,6 +31,11 @@ const texto = z.string().trim();
 const textoOpcional = texto.optional().transform((v) => (v ? v : undefined));
 const monto = z.number().finite();
 const cantidad = z.number().int();
+
+export const PaginacionEsquema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(200).default(20),
+});
 
 /** Fechas: solo `YYYY-MM-DD` para filtros y cierres. */
 export const fechaISO = z
@@ -47,7 +63,17 @@ export const CrearUsuarioEsquema = z.object({
   nombre: texto.min(2, "El nombre es muy corto"),
   email: z.string().email(),
   rol: z.enum(ROL_USUARIO),
-  password: z.string().min(6, "Mínimo 6 caracteres"),
+  password: passwordEsquema,
+});
+
+export const CambiarRolUsuarioEsquema = z.object({ rol: z.enum(ROL_USUARIO) });
+
+export const AdjuntoEsquema = z.object({ nombre: texto.min(1).max(200), dataUrl: z.string().max(7 * 1024 * 1024) });
+
+export const FiltroAuditoriaEsquema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(200).default(50),
+  entidad: texto.optional(),
 });
 
 // ─── Clientes ─────────────────────────────────────────────────────
@@ -101,12 +127,18 @@ export const LineaPedidoEsquema = z.object({
 });
 
 export const NuevoPedidoEsquema = z.object({
-  clienteId: z.string().min(1),
+  clienteId: z.string().min(1).nullable().optional(),
   vendedorId: z.string().optional(),
-  lineas: z.array(LineaPedidoEsquema).min(1, "Agrega al menos un producto"),
+  lineas: z.array(LineaPedidoEsquema).min(1, "Agrega al menos un producto").refine(
+    (lineas) => new Set(lineas.map((linea) => linea.productoId)).size === lineas.length,
+    "Agrupa las cantidades: un producto no puede repetirse en el pedido",
+  ),
   metodo: z.enum(METODO_PAGO),
   estadoInicial: z.enum(["pendiente", "entregado"]).optional(),
   momentoCobro: z.enum(MOMENTO_COBRO).optional(),
+}).superRefine((pedido, ctx) => {
+  if (!pedido.clienteId && pedido.metodo === "credito") ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["metodo"], message: "La venta ocasional no admite crédito" });
+  if (!pedido.clienteId && pedido.momentoCobro === "segun-periodicidad") ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["momentoCobro"], message: "La venta ocasional no tiene periodicidad de crédito" });
 });
 
 export const CambiarEstadoPedidoEsquema = z.object({

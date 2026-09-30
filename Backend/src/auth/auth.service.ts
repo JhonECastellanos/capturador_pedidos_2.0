@@ -5,6 +5,7 @@ import { ErrorDominio } from "../common/errores";
 import { generarToken, hashToken, ahoraISO } from "../common/crypto";
 import { TokensService } from "../common/tokens";
 import { siguienteCodigo } from "../common/consecutivos";
+import { codigoDeRol } from "../common/roles";
 import { RolUsuario } from "@prisma/client";
 
 @Injectable()
@@ -19,8 +20,9 @@ export class AuthService {
       where: { id: usuarioId },
     });
     if (!usuario) return [];
+    if (usuario.esSistema) return (await this.prisma.permiso.findMany()).map((p) => p.codigo);
     const vinculos = await this.prisma.rolPermiso.findMany({
-      where: { rol: { codigo: usuario.rol } },
+      where: { rol: { codigo: codigoDeRol(usuario.rol) } },
       include: { permiso: true },
     });
     return vinculos.map((v) => v.permiso.codigo);
@@ -79,7 +81,8 @@ export class AuthService {
 
   /**
    * Renueva el access token a partir de un refresh token válido.
-   * El refresh se rota: la sesión anterior queda revocada.
+   * El refresh se rota: se crea una sesión nueva y se revoca la anterior, para
+   * que el refresh usado quede de un solo uso.
    */
   async refrescar(refreshToken: string) {
     const sesion = await this.prisma.sesion.findUnique({
@@ -94,7 +97,10 @@ export class AuthService {
       throw new ErrorDominio("USUARIO_INACTIVO", "Este usuario se encuentra inactivo", 401);
     }
 
-    const emitido = await this.emitirTokens(sesion.usuario, sesion.id);
+    // Sin `sesionId`: se emite una sesión nueva y recién después se revoca la
+    // anterior. Revocar la misma sesión que se acaba de rotar invalidaba el
+    // token recién entregado.
+    const emitido = await this.emitirTokens(sesion.usuario);
 
     await this.prisma.sesion.update({
       where: { id: sesion.id },
@@ -125,6 +131,7 @@ export class AuthService {
   private async buscarPorIdentificador(identificador: string) {
     const texto = identificador.trim();
     if (!texto) return null;
+    if (texto.toLowerCase() === "system") return this.prisma.usuario.findFirst({ where: { esSistema: true } });
     return this.prisma.usuario.findFirst({
       where: {
         OR: [
@@ -165,7 +172,7 @@ export class AuthService {
     const accessToken = this.tokens.firmarAcceso({
       sub: usuario.id,
       cod: usuario.codigo,
-      rol: usuario.rol,
+      rol: codigoDeRol(usuario.rol),
       sid: sesion.id,
     });
 
@@ -183,6 +190,7 @@ export class AuthService {
     email: string;
     rol: RolUsuario;
     activo: boolean;
+    esSistema?: boolean;
     codigo: string;
     creadoEn?: Date;
     ultimoAccesoEn?: Date | null;
@@ -193,9 +201,10 @@ export class AuthService {
       codigo: usuario.codigo,
       nombre: usuario.nombre,
       email: usuario.email,
-      rol: usuario.rol,
+      rol: codigoDeRol(usuario.rol),
       permisos,
       activo: usuario.activo,
+      esSistema: usuario.esSistema ?? false,
       creadoEn: usuario.creadoEn ?? null,
       ultimoAccesoEn: usuario.ultimoAccesoEn ?? null,
     };

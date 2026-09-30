@@ -4,7 +4,7 @@ import { PrismaService } from "../common/prisma.module";
 import { ErrorDominio } from "../common/errores";
 import { siguienteCodigo, numero } from "../common/consecutivos";
 import { hoyLocal } from "../common/crypto";
-import { MetodoPago, TipoMovimientoCaja, TipoMovimientoInventario } from "@prisma/client";
+import { MetodoPago, TipoMovimientoCaja, TipoMovimientoInventario, Prisma } from "@prisma/client";
 
 const RecepcionSchema = z.object({
   proveedorId: z.string().min(1),
@@ -112,6 +112,7 @@ export class ComprasService {
     const ids = [...new Set(datos.lineas.map((l) => l.productoId))].sort();
 
     const recepcion = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw(Prisma.sql`SELECT id FROM productos WHERE id IN (${Prisma.join(ids)}) ORDER BY id FOR UPDATE`);
       const productos = await tx.producto.findMany({ where: { id: { in: ids } }, orderBy: { id: "asc" } });
       if (productos.length !== ids.length) throw new ErrorDominio("PRODUCTO_INVALIDO", "Hay productos inexistentes");
 
@@ -172,6 +173,7 @@ export class ComprasService {
             tipo: TipoMovimientoCaja.EGRESO,
             concepto: `Compra ${numeroRecepcion}`,
             monto: total,
+            metodo: MetodoPago.EFECTIVO,
             usuarioId,
             recepcionCompraId: recepcion.id,
             fechaContable: hoyLocal(),

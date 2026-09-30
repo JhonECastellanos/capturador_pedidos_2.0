@@ -14,4 +14,17 @@
 *.crt
 *.cer
 coverage/
+.ambie-config/
+**/.ambie-config/
 *.local
+.local/
+*.tsbuildinfo
+*.dump
+*.backup
+*.sql.gz
+*.sqlite
+*.db
+.agents/
+.codex/
+.aws/
+**/.ambie/

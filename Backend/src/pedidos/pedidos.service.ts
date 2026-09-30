@@ -5,6 +5,7 @@ import { ErrorDominio } from "../common/errores";
 import { siguienteCodigo, numero, Tx } from "../common/consecutivos";
 import { hoyLocal } from "../common/crypto";
 import { aplicadoPorPedido } from "../dominio/cartera";
+import { NuevoPedidoEsquema, LineaPedidoEsquema } from "@ambie/contrato";
 import {
   EstadoPedido,
   EstadoReserva,
@@ -12,21 +13,11 @@ import {
   MomentoCobro,
   TipoMovimientoCaja,
   TipoMovimientoInventario,
+  Prisma,
 } from "@prisma/client";
 
-export const LineaPedidoSchema = z.object({
-  productoId: z.string().min(1),
-  cantidad: z.number().int().min(1),
-});
-
-export const NuevoPedidoSchema = z.object({
-  clienteId: z.string().min(1),
-  vendedorId: z.string().optional(),
-  lineas: z.array(LineaPedidoSchema).min(1),
-  metodo: z.enum(["efectivo", "billetera", "credito"]),
-  estadoInicial: z.enum(["pendiente", "entregado"]).optional(),
-  momentoCobro: z.enum(["inmediato", "al-entregar", "segun-periodicidad"]).optional(),
-});
+export const LineaPedidoSchema = LineaPedidoEsquema;
+export const NuevoPedidoSchema = NuevoPedidoEsquema;
 
 const MAP_METODO: Record<string, MetodoPago> = {
   efectivo: MetodoPago.EFECTIVO,
@@ -60,7 +51,7 @@ export class PedidosService {
     pagina?: number;
     porPagina?: number;
   }) {
-    const where: Record<string, unknown>[] = [];
+    const where: Prisma.PedidoWhereInput[] = [];
 
     if (filtros.estado && filtros.estado !== "todos") {
       const estadoMapeado = ESTADOS_VALIDOS[filtros.estado];
@@ -69,39 +60,45 @@ export class PedidosService {
     }
     if (filtros.segmento === "hoy") where.push({ fechaOperacion: this.hoy() });
     if (filtros.desde || filtros.hasta) {
-      const rango: Record<string, unknown> = {};
-      if (filtros.desde) rango.gte = new Date(`${filtros.desde}T00:00:00`);
-      if (filtros.hasta) rango.lte = new Date(`${filtros.hasta}T23:59:59.999`);
+      const rango: Prisma.DateTimeFilter = {};
+      // fechaOperacion es DATE, no un instante en la zona horaria del proceso.
+      if (filtros.desde) rango.gte = new Date(`${filtros.desde}T00:00:00.000Z`);
+      if (filtros.hasta) rango.lte = new Date(`${filtros.hasta}T00:00:00.000Z`);
       where.push({ fechaOperacion: rango });
     }
 
-    const pedidos = await this.prisma.pedido.findMany({
-      where: { AND: where.length > 0 ? where : undefined },
-      orderBy: { creadoEn: "desc" },
-      include: { lineas: true, historial: true, cliente: true, factura: true },
-    });
+    const q = filtros.q?.trim();
+    if (q) {
+      const alternativas: Prisma.PedidoWhereInput[] = [
+        { numero: { contains: q, mode: "insensitive" } },
+        { cliente: { nombre: { contains: q, mode: "insensitive" } } },
+        { cliente: { alias: { contains: q, mode: "insensitive" } } },
+      ];
+      if ("venta ocasional".includes(q.toLowerCase())) alternativas.push({ clienteId: null });
+      where.push({ OR: alternativas });
+    }
+    const pagina = filtros.pagina ?? 1;
+    const porPagina = filtros.porPagina ?? 20;
+    const condicion: Prisma.PedidoWhereInput = { AND: where };
+    const [total, pedidos] = await this.prisma.$transaction([
+      this.prisma.pedido.count({ where: condicion }),
+      this.prisma.pedido.findMany({
+        where: condicion,
+        orderBy: [{ creadoEn: "desc" }, { id: "desc" }],
+        skip: (pagina - 1) * porPagina,
+        take: porPagina,
+        include: { lineas: true, historial: true, cliente: true, factura: true },
+      }),
+    ], { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
 
     const aplicados = await aplicadoPorPedido(
       this.prisma,
       pedidos.map((p) => p.id),
     );
 
-    const filtrados = pedidos.filter((p) => {
-      if (filtros.q) {
-        const q = filtros.q.toLowerCase();
-        const coincide = p.numero.toLowerCase().includes(q) || p.cliente.nombre.toLowerCase().includes(q);
-        if (!coincide) return false;
-      }
-      return true;
-    });
-
-    const total = filtrados.length;
-    const inicio = ((filtros.pagina ?? 1) - 1) * (filtros.porPagina ?? 20);
-    const paginaDatos = filtrados.slice(inicio, inicio + (filtros.porPagina ?? 20));
-
     return {
-      data: paginaDatos.map((p) => this.dto(p, aplicados)),
-      meta: { pagina: filtros.pagina ?? 1, porPagina: filtros.porPagina ?? 20, total },
+      data: pedidos.map((p) => this.dto(p, aplicados)),
+      meta: { pagina, porPagina, total },
     };
   }
 
@@ -116,6 +113,7 @@ export class PedidosService {
   }
 
   async crear(datos: z.infer<typeof NuevoPedidoSchema>, vendedorId: string) {
+    if (!datos.clienteId && datos.metodo === "credito") throw new ErrorDominio("VALIDACION", "La venta ocasional no admite crédito");
     const metodo = MAP_METODO[datos.metodo];
     const estadoInicial = datos.estadoInicial === "entregado" ? EstadoPedido.ENTREGADO : EstadoPedido.PENDIENTE;
 
@@ -128,12 +126,14 @@ export class PedidosService {
           ? MomentoCobro.INMEDIATO
           : MomentoCobro.AL_ENTREGAR);
 
-    const cliente = await this.prisma.cliente.findUnique({ where: { id: datos.clienteId } });
-    if (!cliente) throw new ErrorDominio("NO_ENCONTRADO", "Cliente no encontrado", 404);
+    const cliente = datos.clienteId ? await this.prisma.cliente.findUnique({ where: { id: datos.clienteId } }) : null;
+    if (datos.clienteId && !cliente) throw new ErrorDominio("NO_ENCONTRADO", "Cliente no encontrado", 404);
 
     const ids = [...new Set(datos.lineas.map((l) => l.productoId))].sort();
 
     const pedidoId = await this.prisma.$transaction(async (tx) => {
+      if (datos.clienteId) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${datos.clienteId}))`;
+      await tx.$queryRaw(Prisma.sql`SELECT id FROM productos WHERE id IN (${Prisma.join(ids)}) ORDER BY id FOR UPDATE`);
       // Bloquear productos en orden estable para evitar deadlocks.
       const productos = await tx.producto.findMany({
         where: { id: { in: ids }, activo: true },
@@ -269,10 +269,10 @@ export class PedidosService {
           data: { estado: EstadoReserva.CONSUMIDA, consumidoEn: new Date() },
         });
 
-        // Cobro inmediato (efectivo/billetera al entregar).
-        if (metodo !== MetodoPago.CREDITO) {
+      }
+        if (metodo !== MetodoPago.CREDITO && (estadoInicial === EstadoPedido.ENTREGADO || momentoCobro === MomentoCobro.INMEDIATO)) {
           await this.registrarPagoEnTx(tx, {
-            clienteId: cliente.id,
+            clienteId: cliente?.id ?? null,
             tipo: "PAGO_INICIAL",
             metodo,
             monto: subtotal,
@@ -281,17 +281,16 @@ export class PedidosService {
             comentario: `Pago ${numeroPedido}`,
           });
         }
-      }
 
       // Factura interna.
       await tx.factura.create({
         data: {
           numero: numeroFactura,
           pedidoId: pedido.id,
-          clienteId: cliente.id,
-          clienteNombre: cliente.nombre,
-          clienteIdentificacion: cliente.identificacion,
-          clienteDireccion: cliente.direccion,
+          clienteId: cliente?.id ?? null,
+          clienteNombre: cliente?.nombre ?? "Venta ocasional",
+          clienteIdentificacion: cliente?.identificacion,
+          clienteDireccion: cliente?.direccion,
           fechaOperacion: this.hoy(),
           subtotal,
           total: subtotal,
@@ -305,16 +304,21 @@ export class PedidosService {
   }
 
   async cambiarEstado(pedidoId: string, estado: EstadoPedido, usuarioId: string, comentario?: string) {
-    const pedido = await this.prisma.pedido.findUnique({
-      where: { id: pedidoId },
-      include: { lineas: true },
-    });
-    if (!pedido) throw new ErrorDominio("NO_ENCONTRADO", "Pedido no encontrado", 404);
-    if (pedido.estado === estado) return this.obtener(pedidoId);
+    await this.prisma.$transaction((tx) => this.cambiarEstadoEnTx(tx, pedidoId, estado, usuarioId, comentario));
+    return this.obtener(pedidoId);
+  }
 
-    this.validarTransicion(pedido.estado, estado);
-
-    await this.prisma.$transaction(async (tx) => {
+  /** La misma transición atómica sirve al detalle y al cierre del día. */
+  async cambiarEstadoEnTx(tx: Tx, pedidoId: string, estado: EstadoPedido, usuarioId: string, comentario?: string) {
+      const referencia = await tx.pedido.findUnique({ where: { id: pedidoId }, select: { clienteId: true } });
+      if (!referencia) throw new ErrorDominio("NO_ENCONTRADO", "Pedido no encontrado", 404);
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${referencia.clienteId ?? pedidoId}))`;
+      await tx.$queryRaw`SELECT id FROM pedidos WHERE id = ${pedidoId} FOR UPDATE`;
+      const pedido = await tx.pedido.findUniqueOrThrow({ where: { id: pedidoId }, include: { lineas: true } });
+      if (pedido.estado === estado) return;
+      this.validarTransicion(pedido.estado, estado);
+      const ids = pedido.lineas.map((l) => l.productoId).sort();
+      await tx.$queryRaw(Prisma.sql`SELECT id FROM productos WHERE id IN (${Prisma.join(ids)}) ORDER BY id FOR UPDATE`);
       if (estado === EstadoPedido.ENTREGADO) {
         // Consumir reservas.
         const lineas = pedido.lineas;
@@ -350,6 +354,13 @@ export class PedidosService {
       }
 
       if (estado === EstadoPedido.CANCELADO) {
+        const aplicaciones = await tx.pagoAplicacion.findMany({ where: { pedidoId, revertidoEn: null }, include: { pago: true } });
+        for (const aplicacion of aplicaciones) {
+          await tx.pagoAplicacion.update({ where: { id: aplicacion.id }, data: { revertidoEn: new Date() } });
+          const reembolso = await tx.pago.create({ data: { clienteId: pedido.clienteId, tipo: "REEMBOLSO", metodo: aplicacion.pago.metodo, monto: aplicacion.montoAplicado, usuarioId, fechaOperacion: this.hoy(), reversionDePagoId: aplicacion.pagoId, comentario: `Cancelación ${pedido.numero}` } });
+          await tx.movimientoCaja.create({ data: { tipo: TipoMovimientoCaja.EGRESO, concepto: `Reverso ${pedido.numero}`, monto: aplicacion.montoAplicado, metodo: aplicacion.pago.metodo, usuarioId, pagoId: reembolso.id, fechaContable: this.hoy() } });
+        }
+        await tx.factura.updateMany({ where: { pedidoId }, data: { estado: "ANULADA", anuladoEn: new Date(), motivoAnulacion: comentario ?? "Cancelación de pedido" } });
         // Liberar reservas.
         const lineas = pedido.lineas;
         for (const linea of lineas) {
@@ -387,9 +398,6 @@ export class PedidosService {
       await tx.pedidoEstadoHistorial.create({
         data: { pedidoId, estado, usuarioId, comentario },
       });
-    });
-
-    return this.obtener(pedidoId);
   }
 
   private validarTransicion(actual: EstadoPedido, siguiente: EstadoPedido) {
@@ -404,11 +412,25 @@ export class PedidosService {
     }
   }
 
+  async trasladar(pedidoId: string, usuarioId: string) {
+    const pedido = await this.prisma.pedido.findUnique({ where: { id: pedidoId } });
+    if (!pedido) throw new ErrorDominio("NO_ENCONTRADO", "Pedido no encontrado", 404);
+    if (pedido.estado !== EstadoPedido.PENDIENTE && pedido.estado !== EstadoPedido.EN_PREPARACION) throw new ErrorDominio("TRANSICION_INVALIDA", "Solo se reprograman pedidos por entregar");
+    const hoy = this.hoy();
+    const destino = pedido.fechaOperacion.getTime() < hoy.getTime() ? hoy : new Date(hoy.getTime() + 86400000);
+    await this.prisma.$transaction([
+      this.prisma.pedido.update({ where: { id: pedidoId }, data: { fechaOperacion: destino, version: { increment: 1 } } }),
+      this.prisma.auditoriaEvento.create({ data: { entidadTipo: "pedido", entidadId: pedidoId, accion: "reprogramar", usuarioId,
+        datosAntes: { fechaOperacion: pedido.fechaOperacion.toISOString() }, datosDespues: { fechaOperacion: destino.toISOString() } } }),
+    ]);
+    return this.obtener(pedidoId);
+  }
+
   /** Registra un pago y su caja dentro de una transacción dada. */
   private async registrarPagoEnTx(
     tx: Parameters<Parameters<PrismaService["$transaction"]>[0]>[0],
     datos: {
-      clienteId: string;
+      clienteId: string | null;
       tipo: "PAGO_INICIAL" | "ABONO" | "REEMBOLSO";
       metodo: MetodoPago;
       monto: number;
@@ -458,13 +480,14 @@ export class PedidosService {
     p: {
       id: string;
       numero: string;
-      clienteId: string;
+      clienteId: string | null;
       vendedorId: string;
       metodo: MetodoPago;
       estado: EstadoPedido;
       subtotal: import("@prisma/client").Prisma.Decimal;
       total: import("@prisma/client").Prisma.Decimal;
       creadoEn: Date;
+      fechaOperacion: Date;
       lineas: Array<{
         productoId: string;
         nombre: string;
@@ -475,16 +498,20 @@ export class PedidosService {
       }>;
       historial: Array<{ estado: EstadoPedido; usuarioId: string; fecha: Date }>;
       factura: { numero: string } | null;
+      cliente?: { nombre: string } | null;
+      comprobantePagoAdjuntoId?: string | null;
     },
     aplicados: Map<string, number>,
   ) {
     const total = numero(p.total);
     const aplicado = aplicados.get(p.id) ?? 0;
-    const saldo = Math.max(0, total - aplicado);
+    const saldo = p.estado === EstadoPedido.CANCELADO ? 0 : Math.max(0, total - aplicado);
     return {
       id: p.id,
       numero: p.numero,
       clienteId: p.clienteId,
+      clienteNombre: p.cliente?.nombre ?? "Venta ocasional",
+      comprobantePagoAdjuntoId: p.comprobantePagoAdjuntoId ?? null,
       vendedorId: p.vendedorId,
       lineas: p.lineas.map((l) => ({
         productoId: l.productoId,
@@ -503,11 +530,12 @@ export class PedidosService {
         estado: saldo > 0 ? "pendiente" : "pagado",
         recordatorioWhatsApp: p.metodo === MetodoPago.CREDITO && saldo > 0,
       },
-      estado: p.estado,
+      estado: p.estado.toLowerCase().replaceAll("_", "-"),
       facturaNumero: p.factura?.numero ?? null,
       creadoEn: p.creadoEn,
+      fechaOperacion: p.fechaOperacion,
       historialEstados: p.historial.map((h) => ({
-        estado: h.estado,
+        estado: h.estado.toLowerCase().replaceAll("_", "-"),
         usuarioId: h.usuarioId,
         fecha: h.fecha,
       })),

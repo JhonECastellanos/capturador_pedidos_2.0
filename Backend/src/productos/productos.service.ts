@@ -68,6 +68,14 @@ export class ProductosService {
     return this.dto(producto);
   }
 
+  async listarCambios(pagina: number, porPagina: number) {
+    const [total, cambios] = await this.prisma.$transaction([
+      this.prisma.cambioPrecio.count(),
+      this.prisma.cambioPrecio.findMany({ orderBy: { fecha: "desc" }, skip: (pagina - 1) * porPagina, take: porPagina }),
+    ]);
+    return { data: cambios.map((c) => ({ ...c, valorAnterior: numero(c.valorAnterior), valorNuevo: numero(c.valorNuevo) })), meta: { pagina, porPagina, total } };
+  }
+
   async crear(datos: z.infer<typeof NuevoProductoSchema>) {
     const categoria = datos.categoria
       ? await this.prisma.categoria.upsert({
@@ -184,7 +192,7 @@ export class ProductosService {
       unidad: p.unidad,
       precioVenta: numero(p.precioVenta),
       costoActual: numero(p.costoActual),
-      stock: p.stockFisico,
+      stock: p.stockFisico - p.stockReservado,
       stockFisico: p.stockFisico,
       stockReservado: p.stockReservado,
       stockDisponible: p.stockFisico - p.stockReservado,

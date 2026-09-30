@@ -1,0 +1,24 @@
+# Se usa con -p ambie-integracion: los volúmenes y la red quedan aislados
+# de los datos del negocio. Reutiliza las credenciales del .env raíz.
+services:
+  frontend:
+    ports: !override ["127.0.0.1:8180:8080"]
+    networks: !override [default]
+  cloudflared:
+    profiles: !override ["no-usar-en-pruebas"]
+  postgres:
+    environment:
+      POSTGRES_DB: ambie_test
+  migrate:
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ambie}:${POSTGRES_PASSWORD}@postgres:5432/ambie_test?schema=public
+  api:
+    ports: !override ["127.0.0.1:3100:3000"]
+    environment:
+      # Medir capacidad de escritura sin confundir el límite antiabuso por IP.
+      RATE_LIMIT_MAX: 10000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ambie}:${POSTGRES_PASSWORD}@postgres:5432/ambie_test?schema=public
+      CORS_ALLOWED_ORIGIN: http://localhost:5173,http://localhost:5181,http://localhost:8180,http://localhost:3100
+  bootstrap:
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ambie}:${POSTGRES_PASSWORD}@postgres:5432/ambie_test?schema=public

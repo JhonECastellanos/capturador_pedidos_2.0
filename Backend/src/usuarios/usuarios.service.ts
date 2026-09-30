@@ -4,14 +4,11 @@ import { z } from "zod";
 import { PrismaService } from "../common/prisma.module";
 import { ErrorDominio } from "../common/errores";
 import { siguienteCodigo } from "../common/consecutivos";
+import { codigoDeRol } from "../common/roles";
 import { RolUsuario } from "@prisma/client";
+import { CrearUsuarioEsquema } from "@ambie/contrato";
 
-const CrearUsuarioSchema = z.object({
-  nombre: z.string().min(2),
-  email: z.string().email(),
-  rol: z.enum(["administrador", "vendedor"]),
-  password: z.string().min(6),
-});
+const CrearUsuarioSchema = CrearUsuarioEsquema;
 
 @Injectable()
 export class UsuariosService {
@@ -27,9 +24,10 @@ export class UsuariosService {
           codigo: u.codigo,
           nombre: u.nombre,
           email: u.email,
-          rol: u.rol,
+          rol: codigoDeRol(u.rol),
           permisos,
           activo: u.activo,
+          esSistema: u.esSistema,
           creadoEn: u.creadoEn,
         };
       }),
@@ -38,6 +36,7 @@ export class UsuariosService {
   }
 
   async crear(datos: z.infer<typeof CrearUsuarioSchema>) {
+    if (datos.nombre.trim().toLowerCase() === "system") throw new ErrorDominio("NOMBRE_RESERVADO", "system es un usuario reservado de la instalación", 409);
     const existente = await this.prisma.usuario.findUnique({ where: { email: datos.email } });
     if (existente) throw new ErrorDominio("EMAIL_DUPLICADO", "Ya existe un usuario con ese correo", 409);
 
@@ -61,26 +60,47 @@ export class UsuariosService {
       codigo: usuario.codigo,
       nombre: usuario.nombre,
       email: usuario.email,
-      rol: usuario.rol,
+      rol: codigoDeRol(usuario.rol),
       activo: usuario.activo,
     };
   }
 
-  async cambiarEstado(usuarioId: string) {
-    const usuario = await this.prisma.usuario.findUnique({ where: { id: usuarioId } });
-    if (!usuario) throw new ErrorDominio("NO_ENCONTRADO", "Usuario no encontrado", 404);
-    const actualizado = await this.prisma.usuario.update({
-      where: { id: usuarioId },
-      data: { activo: !usuario.activo },
+  async cambiarEstado(usuarioId: string, actorId: string) {
+    return this.actualizarAcceso(usuarioId, actorId);
+  }
+
+  async cambiarRol(usuarioId: string, rol: "administrador" | "vendedor", actorId: string) {
+    return this.actualizarAcceso(usuarioId, actorId, rol === "administrador" ? RolUsuario.ADMINISTRADOR : RolUsuario.VENDEDOR);
+  }
+
+  private async actualizarAcceso(usuarioId: string, actorId: string, rol?: RolUsuario) {
+    if (usuarioId === actorId) throw new ErrorDominio("ACCESO_PROPIO", "Otro administrador debe modificar tu acceso", 409);
+    return this.prisma.$transaction(async (tx) => {
+      // Serializar cambios administrativos evita desactivar a los dos últimos administradores a la vez.
+      await tx.$queryRaw`SELECT id FROM usuarios WHERE rol = 'administrador' ORDER BY id FOR UPDATE`;
+      const usuario = await tx.usuario.findUnique({ where: { id: usuarioId } });
+      if (!usuario) throw new ErrorDominio("NO_ENCONTRADO", "Usuario no encontrado", 404);
+      if (usuario.esSistema) throw new ErrorDominio("SYSTEM_PROTEGIDO", "No se puede desactivar ni cambiar el rol de system", 409);
+      const activo = rol ? usuario.activo : !usuario.activo;
+      const nuevoRol = rol ?? usuario.rol;
+      if (usuario.activo && usuario.rol === RolUsuario.ADMINISTRADOR && (!activo || nuevoRol !== RolUsuario.ADMINISTRADOR)) {
+        const administradores = await tx.usuario.count({ where: { activo: true, rol: RolUsuario.ADMINISTRADOR } });
+        if (administradores <= 1) throw new ErrorDominio("ULTIMO_ADMINISTRADOR", "Debe quedar al menos un administrador activo", 409);
+      }
+      const actualizado = await tx.usuario.update({ where: { id: usuarioId }, data: { activo, rol: nuevoRol } });
+      await tx.sesion.updateMany({ where: { usuarioId, revocadoEn: null }, data: { revocadoEn: new Date() } });
+      await tx.auditoriaEvento.create({ data: { entidadTipo: "usuario", entidadId: usuarioId, accion: rol ? "cambiar-rol" : "cambiar-estado", usuarioId: actorId,
+        datosAntes: { activo: usuario.activo, rol: codigoDeRol(usuario.rol) }, datosDespues: { activo, rol: codigoDeRol(nuevoRol) } } });
+      return { id: actualizado.id, activo, rol: codigoDeRol(nuevoRol) };
     });
-    return { id: actualizado.id, activo: actualizado.activo };
   }
 
   private async permisosDe(usuarioId: string): Promise<string[]> {
     const usuario = await this.prisma.usuario.findUnique({ where: { id: usuarioId } });
     if (!usuario) return [];
+    if (usuario.esSistema) return (await this.prisma.permiso.findMany()).map((p) => p.codigo);
     const vinculos = await this.prisma.rolPermiso.findMany({
-      where: { rol: { codigo: usuario.rol } },
+      where: { rol: { codigo: codigoDeRol(usuario.rol) } },
       include: { permiso: true },
     });
     return vinculos.map((v) => v.permiso.codigo);

@@ -88,11 +88,11 @@ export function CreditosAdmin() {
   const totalPendiente = grupos.reduce((s, g) => s + g.total, 0);
   const clienteDetalle = grupos.find((g) => g.clienteId === clienteDetalleId) ?? null;
 
-  function handleRegistrarAbono() {
+  async function handleRegistrarAbono() {
     if (!clienteDetalle) return;
     const monto = Number(montoAbono);
     if (!monto || monto <= 0) return;
-    const res = registrarAbono(clienteDetalle.clienteId, monto, metodoAbono, comentarioAbono || undefined);
+    const res = await registrarAbono(clienteDetalle.clienteId, monto, metodoAbono, comentarioAbono || undefined);
     if (res) {
       mostrarAviso(`Abono ${formatoMoneda(monto)} por ${metodoAbono} registrado`, "exito");
       setMontoAbono("");

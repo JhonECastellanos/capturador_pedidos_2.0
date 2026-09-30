@@ -1,8 +1,10 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
-import { Usuario, EstadoPedido } from "@prisma/client";
+import { Usuario, EstadoPedido, RolUsuario } from "@prisma/client";
 import { PedidosService, NuevoPedidoSchema } from "./pedidos.service";
-import { UsuarioActual } from "../common/guards";
+import { Roles, UsuarioActual } from "../common/guards";
 import { ErrorDominio } from "../common/errores";
+import { paginacion } from "../common/paginacion";
+import { fechaISO } from "@ambie/contrato";
 
 const ESTADOS_VALIDOS: Record<string, EstadoPedido> = {
   pendiente: EstadoPedido.PENDIENTE,
@@ -25,14 +27,18 @@ export class PedidosController {
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
   ) {
+    for (const fecha of [desde, hasta]) {
+      if (fecha !== undefined && (!fechaISO.safeParse(fecha).success || !Number.isFinite(Date.parse(`${fecha}T00:00:00.000Z`)) || new Date(`${fecha}T00:00:00.000Z`).toISOString().slice(0, 10) !== fecha)) {
+        throw new ErrorDominio("VALIDACION", "Usa una fecha válida YYYY-MM-DD");
+      }
+    }
     return this.pedidos.listar({
       segmento,
       estado,
       q,
       desde,
       hasta,
-      pagina: Number(page ?? 1),
-      porPagina: Number(pageSize ?? 20),
+      ...paginacion(page, pageSize),
     });
   }
 
@@ -45,7 +51,16 @@ export class PedidosController {
   async crear(@Body() body: unknown, @UsuarioActual() usuario: Usuario) {
     const datos = NuevoPedidoSchema.safeParse(body);
     if (!datos.success) throw new ErrorDominio("VALIDACION", "Revisa las líneas y el método de pago del pedido");
+    if (usuario.rol !== RolUsuario.ADMINISTRADOR && datos.data.vendedorId && datos.data.vendedorId !== usuario.id) {
+      throw new ErrorDominio("VENDEDOR_INVALIDO", "No puedes registrar ventas con otro usuario", 403);
+    }
     return { data: await this.pedidos.crear(datos.data, datos.data.vendedorId ?? usuario.id) };
+  }
+
+  @Roles(RolUsuario.ADMINISTRADOR)
+  @Post(":pedidoId/trasladar")
+  async trasladar(@Param("pedidoId") pedidoId: string, @UsuarioActual() usuario: Usuario) {
+    return { data: await this.pedidos.trasladar(pedidoId, usuario.id) };
   }
 
   @Patch(":pedidoId/estado")

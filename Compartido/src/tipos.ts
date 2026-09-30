@@ -45,9 +45,24 @@ export interface ErrorAPI {
   message: string;
 }
 
+export interface AuditoriaEventoDTO {
+  id: string;
+  entidadTipo: string;
+  entidadId: string;
+  accion: string;
+  usuarioId: string | null;
+  usuario: string;
+  requestId: string | null;
+  creadoEn: string;
+  datosAntes: unknown;
+  datosDespues: unknown;
+}
+
 // ─── Identidad ────────────────────────────────────────────────────
 
 export interface UsuarioDTO {
+  /** Identidad protegida del desarrollador, no un rol adicional. */
+  esSistema?: boolean;
   id: string;
   codigo: string;
   nombre: string;
@@ -66,6 +81,17 @@ export interface SesionDTO {
   refreshToken?: string;
   expiraEn?: string;
   usuario: UsuarioDTO;
+}
+
+export interface DashboardResumenDTO {
+  rango: { desde: string; hasta: string };
+  ventas: number; pedidos: number; ticketPromedio: number;
+  gastos: number; compras: number; utilidad: number;
+  creditoPendiente: number; creditoPendienteGlobal: number; alertasStock: number;
+  serie: Array<{ dia: string; ventas: number; pedidos: number; gastos: number; compras: number; costo: number }>;
+  topProductos: Array<{ productoId: string; nombre: string; unidades: number; venta: number; ganancia: number }>;
+  topClientes: Array<{ clienteId: string; nombre: string; comprado: number; pedidos: number; ganancia: number }>;
+  cache?: { estado: "hit" | "miss"; version: string };
 }
 
 export interface BootstrapDTO {
@@ -203,7 +229,7 @@ export interface FacturaDTO {
   id: string;
   numero: string;
   pedidoId: string;
-  clienteId: string;
+  clienteId: string | null;
   clienteNombre: string;
   clienteIdentificacion: string | null;
   clienteDireccion: string | null;
@@ -219,7 +245,7 @@ export interface FacturaDTO {
 export interface PedidoDTO {
   id: string;
   numero: string;
-  clienteId: string;
+  clienteId: string | null;
   clienteNombre?: string;
   vendedorId: string;
   vendedor?: string;
@@ -237,6 +263,7 @@ export interface PedidoDTO {
   creadoEn: string;
   actualizadoEn?: string;
   historialEstados: HistorialEstadoDTO[];
+  comprobantePagoAdjuntoId?: string | null;
 }
 
 // ─── Pagos y abonos ───────────────────────────────────────────────
@@ -251,7 +278,7 @@ export interface PagoAplicacionDTO {
 
 export interface AbonoDTO {
   id: string;
-  clienteId: string;
+  clienteId: string | null;
   clienteNombre?: string;
   tipo: TipoPago;
   metodo: MetodoPago;

@@ -1,0 +1,8 @@
+[wsl2]
+memory=6GB
+processors=4
+swap=1GB
+swapFile=D:\\DockerDesktop\\wsl-swap.vhdx
+
+[experimental]
+autoMemoryReclaim=gradual

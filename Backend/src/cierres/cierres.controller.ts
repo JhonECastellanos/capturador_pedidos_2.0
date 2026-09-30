@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import { Usuario, RolUsuario } from "@prisma/client";
 import { CierresService } from "./cierres.service";
+import { paginacion } from "../common/paginacion";
 import { Roles, UsuarioActual } from "../common/guards";
 import { ErrorDominio } from "../common/errores";
 import { z } from "zod";
@@ -32,6 +33,7 @@ export class CierresController {
 
   @Get()
   historial(@Query("page") page?: string, @Query("pageSize") pageSize?: string) {
-    return this.cierres.historial(Number(page ?? 1), Number(pageSize ?? 20));
+    const p = paginacion(page, pageSize);
+    return this.cierres.historial(p.pagina, p.porPagina);
   }
 }

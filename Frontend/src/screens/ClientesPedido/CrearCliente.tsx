@@ -8,6 +8,7 @@ import { SelectorOpciones } from "../../components/SelectorOpciones";
 import { useOperaciones } from "../../context/operaciones";
 import type { TipoCredito } from "../../types";
 import { ETIQUETA_TIPO_CREDITO, FRECUENCIA_POR_TIPO_CREDITO } from "../../types";
+import { usePantallaVoz } from "../../modules/asistente/pantalla-voz";
 
 interface CrearClienteProps {
   /** Ruta de la pantalla inicial del rol (botón volver). */
@@ -35,18 +36,29 @@ export default function CrearCliente({ rutaInicio = "/vendedor", rutaTrasGuardar
     setFormulario((actual) => ({ ...actual, [campo]: valor }));
   }
 
-  function guardarCliente(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault();
-    const cliente = crearCliente({
+  async function guardarCliente(evento?: FormEvent<HTMLFormElement>) {
+    evento?.preventDefault();
+    if (!formularioValido) return false;
+    const cliente = await crearCliente({
       nombre: formulario.nombre,
       telefono: formulario.telefono,
       direccion: formulario.direccion,
       fechaNacimiento: formulario.fechaNacimiento || undefined,
       tipoCredito,
     });
+    if (!cliente) return false;
     // El flujo se cierra y vuelve al inicio del rol para iniciar el pedido.
     navegar(rutaTrasGuardar, { state: { clienteCreado: cliente.nombre, clienteId: cliente.id }, replace: true });
+    return true;
   }
+  usePantallaVoz(["crear_cliente"], {
+    aplicar: (p) => {
+      setFormulario((f) => Object.fromEntries(Object.entries(f).map(([k, v]) => [k, typeof p[k] === "string" ? p[k] : v])) as typeof formulario);
+      if (["diario", "semanal", "quincenal", "mensual"].includes(String(p.tipoCredito))) setTipoCredito(p.tipoCredito as TipoCredito);
+    },
+    leer: () => ({ ...formulario, tipoCredito }), confirmar: () => guardarCliente(),
+    cancelar: () => setFormulario({ nombre: "", telefono: "", direccion: "", fechaNacimiento: "" }),
+  });
 
   const formularioValido =
     formulario.nombre.trim().length > 1 &&

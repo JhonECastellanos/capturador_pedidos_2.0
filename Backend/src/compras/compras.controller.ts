@@ -4,6 +4,7 @@ import { ComprasService } from "./compras.service";
 import { Roles, UsuarioActual } from "../common/guards";
 import { ErrorDominio } from "../common/errores";
 import { z } from "zod";
+import { paginacion } from "../common/paginacion";
 
 const RecepcionSchema = z.object({
   proveedorId: z.string().min(1),
@@ -37,7 +38,8 @@ export class ComprasController {
 
   @Get("recepciones-compra")
   listarRecepciones(@Query("page") page?: string, @Query("pageSize") pageSize?: string) {
-    return this.compras.listarRecepciones(Number(page ?? 1), Number(pageSize ?? 20));
+    const p = paginacion(page, pageSize);
+    return this.compras.listarRecepciones(p.pagina, p.porPagina);
   }
 
   @Get("gastos")
@@ -50,8 +52,7 @@ export class ComprasController {
     return this.compras.listarGastos({
       desde,
       hasta,
-      pagina: Number(page ?? 1),
-      porPagina: Number(pageSize ?? 20),
+      ...paginacion(page, pageSize),
     });
   }
 

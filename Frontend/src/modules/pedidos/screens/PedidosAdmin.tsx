@@ -7,13 +7,18 @@ import { SegmentoControl } from "../../../components/SegmentoControl";
 import { TarjetaClicable } from "../../../components/TarjetaClicable";
 import { POR_PAGINA, paginar } from "../../../utils/paginacion";
 import { useOperaciones } from "../../../context/operaciones";
-import type { EstadoPedido } from "../../../types";
+import type { EstadoPedido, Pedido } from "../../../types";
+import { usePaginaApi } from "../../../data/usePaginaApi";
 import { formatoMoneda } from "../../../utils/formato";
 import { exportarPedidosCSV } from "../../../utils/exportar";
 import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodo, dentroDeRangoFecha, esMismoDia, formatoFechaHora, type Periodo } from "../../../utils/fechas";
 import { EtiquetaEstado } from "../../administracion/components/EtiquetaEstado";
 import { EtiquetaPago } from "../../administracion/components/EtiquetaPago";
 import { PedidoDetalle } from "../../ventas/screens/PedidoDetalle";
+import { usaApi, baseApi } from "../../../data/api";
+import { fechaOperativa } from "../../../utils/fechas";
+import { usePantallaVoz } from "../../asistente/pantalla-voz";
+import { resolverReferencia } from "../../asistente/intencion";
 
 type Segmento = "hoy" | "historial";
 type FiltroEstado = "todos" | EstadoPedido;
@@ -29,19 +34,42 @@ export function PedidosAdmin() {
   const [mostrarFiltroFecha, setMostrarFiltroFecha] = useState(false);
   const [detalleId, setDetalleId] = useState<string | null>(null);
   const [pagina, setPagina] = useState(1);
+  const consulta = new URLSearchParams({ segmento, estado: filtroEstado, q: busqueda.trim(), page: String(pagina), pageSize: String(POR_PAGINA) });
+  const fechaISO = (fecha: Date) => `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}-${String(fecha.getDate()).padStart(2, "0")}`;
+  let desdePeriodo = "";
+  let hastaPeriodo = "";
+  if (segmento === "historial" && periodo !== "todo") {
+    const inicio = new Date();
+    const fin = new Date(inicio);
+    const dias = { hoy: 0, ayer: 1, semana: 6, mes: 29, anio: 364 }[periodo];
+    inicio.setDate(inicio.getDate() - dias);
+    if (periodo === "ayer") fin.setDate(fin.getDate() - 1);
+    desdePeriodo = fechaISO(inicio); hastaPeriodo = fechaISO(fin);
+  }
+  const desde = [desdePeriodo, fechaDesde].filter(Boolean).sort().at(-1);
+  const hasta = [hastaPeriodo, fechaHasta].filter(Boolean).sort().at(0);
+  if (desde) consulta.set("desde", desde);
+  if (hasta) consulta.set("hasta", hasta);
+  const remoto = usePaginaApi<Pedido>(`/pedidos?${consulta.toString()}`);
+  const pedidosVisibles = usaApi ? remoto.items.map((p) => ({ ...p, comprobantePagoUrl: p.comprobantePagoAdjuntoId ? `${baseApi}/archivos/${p.comprobantePagoAdjuntoId}` : undefined })) : pedidos;
+  usePantallaVoz(["cambiar_estado_pedido", "cobrar_pedido"], {
+    aplicar: p => { const id = resolverReferencia(p.pedidoId, pedidosVisibles.map(p => ({ id: p.id, nombre: p.numero }))); if (id) setDetalleId(id); else { setSegmento("historial"); setBusqueda(typeof p.pedidoId === "string" ? p.pedidoId : ""); } },
+    leer: () => ({}), confirmar: async () => false, cancelar: () => setDetalleId(null),
+  });
 
   const hoy = useMemo(() => new Date(), []);
 
   useEffect(() => { setPagina(1); }, [segmento, periodo, filtroEstado, busqueda, fechaDesde, fechaHasta]);
-  const pedidoDetalle = useMemo(() => pedidos.find((p) => p.id === detalleId) ?? null, [detalleId, pedidos]);
+  const pedidoDetalle = pedidosVisibles.find((p) => p.id === detalleId) ?? null;
 
   const pedidosFiltrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
+    if (usaApi) return remoto.items;
     return pedidos
       .filter((pedido) => {
-        if (segmento === "hoy" && !esMismoDia(pedido.creadoEn, hoy)) return false;
-        if (segmento === "historial" && !dentroDePeriodo(pedido.creadoEn, periodo, hoy)) return false;
-        if (!dentroDeRangoFecha(pedido.creadoEn, fechaDesde, fechaHasta)) return false;
+        if (segmento === "hoy" && !esMismoDia(fechaOperativa(pedido), hoy)) return false;
+        if (segmento === "historial" && !dentroDePeriodo(fechaOperativa(pedido), periodo, hoy)) return false;
+        if (!dentroDeRangoFecha(fechaOperativa(pedido), fechaDesde, fechaHasta)) return false;
         if (filtroEstado !== "todos" && pedido.estado !== filtroEstado) return false;
         if (q) {
           const cliente = obtenerCliente(pedido.clienteId);
@@ -54,7 +82,7 @@ export function PedidosAdmin() {
         return true;
       })
       .sort((a, b) => (b.creadoEn < a.creadoEn ? -1 : b.creadoEn > a.creadoEn ? 1 : 0));
-  }, [busqueda, fechaDesde, fechaHasta, filtroEstado, hoy, obtenerCliente, pedidos, periodo, segmento]);
+  }, [busqueda, fechaDesde, fechaHasta, filtroEstado, hoy, obtenerCliente, pedidos, periodo, segmento, remoto.items]);
 
   // El detalle es informativo: los estados y cobros se gestionan en Ventas.
   // La única acción administrativa es reactivar un pedido cancelado.
@@ -75,7 +103,7 @@ export function PedidosAdmin() {
         varianteHeader="compacto"
         soloLectura
         alReactivar={
-          pedidoDetalle.estado === "cancelado"
+          !usaApi && pedidoDetalle.estado === "cancelado"
             ? () => actualizarEstadoPedido(pedidoDetalle.id, estadoAnteriorDelDetalle)
             : undefined
         }
@@ -104,7 +132,7 @@ export function PedidosAdmin() {
             onClick={() => exportarPedidosCSV(pedidosFiltrados, (id) => obtenerCliente(id)?.nombre ?? id)}
             className="rounded-xl border border-line bg-paper-raised px-3 py-1.5 text-[11.5px] font-semibold text-ink active:bg-paper-sunken shadow-sm"
           >
-            Exportar Excel
+            {usaApi ? "Exportar página" : "Exportar Excel"}
           </button>
         </div>
       </div>
@@ -179,6 +207,8 @@ export function PedidosAdmin() {
 
       {/* ─── Lista con scroll propio ─── */}
       <div className="flex min-h-0 flex-1 flex-col px-0 py-2.5">
+        {usaApi && remoto.cargando && <p role="status">Cargando pedidos…</p>}
+        {usaApi && remoto.error && <p role="alert" className="text-danger">{remoto.error} <button onClick={remoto.actualizar}>Reintentar</button></p>}
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
           <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
             <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">
@@ -191,14 +221,14 @@ export function PedidosAdmin() {
         {pedidosFiltrados.length === 0 ? (
           <ListaVacia titulo="No hay pedidos que coincidan con la búsqueda." texto="Ajusta el segmento, el estado o el rango de fechas." />
         ) : (
-          paginar(pedidosFiltrados, pagina, POR_PAGINA).items.map((pedido) => {
+          (usaApi ? pedidosFiltrados : paginar(pedidosFiltrados, pagina, POR_PAGINA).items).map((pedido) => {
             const cliente = obtenerCliente(pedido.clienteId);
             return (
               <TarjetaClicable key={pedido.id} onClick={() => setDetalleId(pedido.id)} className="p-3.5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-mono text-[12px] font-semibold text-ink-faint">{pedido.numero} · {formatoFechaHora(pedido.creadoEn)}</p>
-                    <p className="mt-1 truncate text-[14px] font-semibold text-ink">{cliente?.nombre ?? "Cliente"} {cliente?.alias ? `“${cliente.alias}”` : ""}</p>
+                    <p className="mt-1 truncate text-[14px] font-semibold text-ink">{cliente?.nombre ?? pedido.clienteNombre ?? "Venta ocasional"} {cliente?.alias ? `“${cliente.alias}”` : ""}</p>
                     <p className="text-[12px] text-ink-soft">{pedido.lineas.length} referencias · {formatoMoneda(pedido.total)}</p>
                     <p className="text-[10.5px] text-ink-faint">Generó {nombreUsuario(pedido.vendedorId)}</p>
                   </div>
@@ -219,7 +249,7 @@ export function PedidosAdmin() {
 
       {/* Paginación fija */}
       <div className="flex-shrink-0 mt-2">
-        <Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil(pedidosFiltrados.length / POR_PAGINA))} total={pedidosFiltrados.length} porPagina={POR_PAGINA} onChange={setPagina} />
+        <Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil((usaApi ? remoto.total : pedidosFiltrados.length) / POR_PAGINA))} total={usaApi ? remoto.total : pedidosFiltrados.length} porPagina={POR_PAGINA} onChange={setPagina} />
       </div>
     </div>
   );

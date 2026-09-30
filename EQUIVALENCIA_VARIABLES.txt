@@ -282,7 +282,7 @@ estado           estado              estado              Pedido.estado          
                                                            enum EstadoPedido
 facturaNumero    (no existe)         facturaNumero       Factura.numero           NUEVO
                                                            FAC-0001 (unico)
-fechaOperacion   creadoEn            fechaOperacion      Pedido.fechaOperacion    DIFERENTE
+fechaOperacion   fechaOperacion      fechaOperacion      Pedido.fechaOperacion    IGUAL
                  (string)            (YYYY-MM-DD)        (date)
 creadoEn         creadoEn            creadoEn            Pedido.creadoEn          IGUAL
 actualizadoEn    (no existe)         actualizadoEn       Pedido.actualizadoEn    NUEVO
@@ -680,7 +680,7 @@ ArchivoAdjunto  (archivosAdjuntos)  - NUEVO, todavia sin endpoint
   Producto.stock              Producto.stock (= stockFisico - stockReservado)
   (nuevo)                     Producto.stockFisico
   (nuevo)                     Producto.stockReservado
-  Pedido.creadoEn              Pedido.fechaOperacion (fecha del negocio)
+  Pedido.fechaOperacion       Pedido.fechaOperacion (fecha del negocio)
   (nuevo)                     Pedido.momentoCobro
   (nuevo)                     Pedido.facturaNumero (FAC-0001)
   (nuevo)                     Cliente.codigo (CLI-0001)
@@ -692,6 +692,44 @@ ArchivoAdjunto  (archivosAdjuntos)  - NUEVO, todavia sin endpoint
   Ajuste.conteoId = "manual"   Ajuste.conteoId = null (ajuste manual)
 
 ================================================================================
+Venta ocasional:
+  Pedido.clienteId = null       Pedido.clienteId = null       pedidos.clienteId NULL
+  Factura.clienteId = null      Factura.clienteId = null      facturas.clienteId NULL
+  Pago.clienteId = null         Pago.clienteId = null         pagos.clienteId NULL
+  Sin cliente no hay credito   NuevoPedidoEsquema            pedido_ocasional_sin_credito
+
+Asistente de voz:
+  IntencionAsistente            POST /asistente/entender      Borrador sin persistencia
+  ConfiguracionAsistente       /asistente/configuracion      asistente.enc cifrado
+  vozHabilitada                 vozHabilitada                 configuracion cifrada
+  confirmacionVoz               confirmacionVoz               configuracion cifrada
+  responderConVoz               responderConVoz               configuracion cifrada
+  SesionVoz PCM 16 kHz          /asistente/voz WebSocket      Vosk sin guardar audio
+
+Despliegue producción (sin columnas de BD):
+  FRONTEND_PORT               Docker frontend               Puerto publicado (8080)
+  FRONTEND_BIND               Docker frontend               Interfaz publicada (0.0.0.0 / 127.0.0.1)
+  FRONTEND_MEMORY/CPUS        Docker frontend               Límites RAM/CPU de Nginx
+  API_MEMORY/CPUS             Docker api                    Límites API
+  POSTGRES_MEMORY/CPUS        Docker postgres               Límites BD
+  MINIO_MEMORY/CPUS           Docker minio                  Límites archivos
+  VOZ_MEMORY/CPUS             Docker voz                    Límites reconocimiento local
+  APP_ORIGIN                 CORS_ALLOWED_ORIGIN API       URL pública del frontend
+  TRUST_PROXY_HOPS            Fastify trustProxy            1 detrás de Nginx / 0 directo
+  CLOUDFLARE_TOKEN_FILE       secret cloudflare_token       Archivo privado, nunca en Git
+  Pedido.comprobantePagoAdjuntoId API Pedido                 pedidos.comprobantePagoAdjuntoId
+  pagina/POR_PAGINA           page/pageSize                 skip/take PostgreSQL
+
 Fin del archivo.
+  UsuarioSistema.esSistema   UsuarioDTO.esSistema          usuarios.esSistema
+  SYSTEM_PASSWORD/EMAIL      prisma/seed.ts                usuarios.passwordHash/email (solo primera instalación)
+  CACHE_REDIS_URL             CacheModule / Keyv Redis      Redis interno sin puerto publicado
+  REDIS_MEMORY/CPUS          Docker redis                  Límites de caché (128 MB / 0,5 CPU)
+  cache.version              DashboardService              versionesCache.version (commit transaccional)
 Para regenerar la lista de enums verificados: npm run contrato:verificar
+  RevisionDatosDTO.revision   GET /sincronizacion/revision   versionesCache (id=sincronizacion).version
+  INTERVALO_SINCRONIZACION_MS useSincronizacion             2000 ms, solo pestana visible
+  conectado                  Revision autenticada          Indicador de ultima lectura/conexion
+  DEPLOY_ENABLED             GitHub Actions                Activa despliegue de rama principal
+  AMBIE_DEPLOY_PATH           Runner produccion             Carpeta persistente con .env privado
 ================================================================================

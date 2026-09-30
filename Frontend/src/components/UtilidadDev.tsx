@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { limpiarTodo } from "../data/repositorios/almacenamiento";
 import { ConfirmarAccion } from "./ConfirmarAccion";
+import { usaApi } from "../data/api";
 
 /** Herramienta destructiva solo disponible en desarrollo. */
 export function UtilidadDev() {
   const [confirmar, setConfirmar] = useState(false);
-  if (!import.meta.env.DEV) return null;
+  if (!import.meta.env.DEV || usaApi) return null;
 
   return (
     <div className="text-center">

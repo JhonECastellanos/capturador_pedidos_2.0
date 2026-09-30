@@ -107,6 +107,7 @@ model Usuario {
   passwordHash  String
   rol           RolUsuario
   activo        Boolean    @default(true)
+  esSistema     Boolean    @default(false)
   creadoEn      DateTime   @default(now())
   actualizadoEn DateTime   @updatedAt
   ultimoAccesoEn DateTime?
@@ -135,6 +136,13 @@ model Rol {
   rolPermisos RolPermiso[]
 
   @@map("roles")
+}
+
+model VersionCache {
+  id          String @id
+  version     BigInt @default(0)
+  transaccion BigInt @default(0)
+  @@map("versionesCache")
 }
 
 model Permiso {
@@ -331,7 +339,7 @@ model ArchivoAdjunto {
 model Pedido {
   id             String       @id @default(uuid())
   numero         String       @unique
-  clienteId      String
+  clienteId      String?
   vendedorId     String
   metodo         MetodoPago
   momentoCobro   MomentoCobro @default(AL_ENTREGAR)
@@ -344,7 +352,7 @@ model Pedido {
   version        Int          @default(1)
   comprobantePagoAdjuntoId String?
 
-  cliente        Cliente        @relation(fields: [clienteId], references: [id])
+  cliente        Cliente?       @relation(fields: [clienteId], references: [id])
   vendedor       Usuario        @relation(fields: [vendedorId], references: [id])
   lineas         PedidoLinea[]
   historial      PedidoEstadoHistorial[]
@@ -354,6 +362,9 @@ model Pedido {
 
   @@index([clienteId])
   @@index([fechaOperacion])
+  @@index([creadoEn, id])
+  @@index([fechaOperacion, creadoEn, id])
+  @@index([estado, creadoEn, id])
   @@map("pedidos")
 }
 
@@ -398,7 +409,7 @@ model Factura {
   id             String        @id @default(uuid())
   numero         String        @unique
   pedidoId       String        @unique
-  clienteId      String
+  clienteId      String?
   clienteNombre  String
   clienteIdentificacion String?
   clienteDireccion String?
@@ -412,7 +423,7 @@ model Factura {
   motivoAnulacion String?
 
   pedido  Pedido  @relation(fields: [pedidoId], references: [id])
-  cliente Cliente @relation(fields: [clienteId], references: [id])
+  cliente Cliente? @relation(fields: [clienteId], references: [id])
 
   @@index([clienteId])
   @@map("facturas")
@@ -422,7 +433,7 @@ model Factura {
 
 model Pago {
   id             String          @id @default(uuid())
-  clienteId      String
+  clienteId      String?
   tipo           TipoPago
   metodo         MetodoPago
   monto          Decimal         @db.Decimal(18, 2)
@@ -434,7 +445,7 @@ model Pago {
   reversionDePagoId String?
   idempotencyKey String?         @unique
 
-  cliente      Cliente          @relation(fields: [clienteId], references: [id])
+  cliente      Cliente?         @relation(fields: [clienteId], references: [id])
   usuario      Usuario          @relation(fields: [usuarioId], references: [id])
   aplicaciones PagoAplicacion[]
   movimientosCaja MovimientoCaja[]

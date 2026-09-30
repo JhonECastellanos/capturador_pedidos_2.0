@@ -10,6 +10,9 @@ import type { EstadoPedido, Pedido } from "../../../types";
 import { CLASES_ESTADO, ETIQUETAS_ESTADO } from "../../../utils/estados";
 import { formatoFechaHora } from "../../../utils/fechas";
 import { formatoMoneda } from "../../../utils/formato";
+import { TRANSICIONES_PEDIDO } from "@ambie/contrato";
+import { usaApi } from "../../../data/api";
+import { usePantallaVoz } from "../../asistente/pantalla-voz";
 
 interface PedidoDetalleProps {
   pedido: Pedido;
@@ -42,6 +45,7 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
   const { aviso, mostrarAviso, cerrarAviso } = useAviso();
   const [estadoPendiente, setEstadoPendiente] = useState<EstadoPedido | null>(null);
   const [confirmarCobro, setConfirmarCobro] = useState(false);
+  const [metodoCobro, setMetodoCobro] = useState<"efectivo" | "billetera">("efectivo");
   const [confirmarReactivar, setConfirmarReactivar] = useState(false);
 
   const cliente = useMemo(() => obtenerCliente(pedido.clienteId), [obtenerCliente, pedido.clienteId]);
@@ -53,26 +57,34 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
   const porPreparar = pedido.estado === "pendiente" || pedido.estado === "en-preparacion";
   const unidades = pedido.lineas.reduce((suma, linea) => suma + linea.cantidad, 0);
 
-  function confirmarCambioEstado() {
-    if (!estadoPendiente) return;
+  async function confirmarCambioEstado() {
+    if (!estadoPendiente || soloLectura) return false;
     const etiqueta = estadoPendiente.replace("-", " ");
-    actualizarEstadoPedido(pedido.id, estadoPendiente);
+    if (await actualizarEstadoPedido(pedido.id, estadoPendiente) === false) return false;
     setEstadoPendiente(null);
     mostrarAviso(`Pedido ${pedido.numero} → ${etiqueta}`, "exito");
+    return true;
   }
 
-  function cobrarYEntregar() {
-    if (pendiente <= 0) return;
+  async function cobrarYEntregar() {
+    if (pendiente <= 0 || !permitirCobro || soloLectura) return false;
     // El dinero recibido es de este pedido: no se reparte entre otras deudas del cliente.
-    const abono = registrarPagoPedido(pedido.id, "efectivo", `Cobro al entregar ${pedido.numero}`);
+    const abono = await registrarPagoPedido(pedido.id, metodoCobro, `Cobro al entregar ${pedido.numero}`);
     if (!abono) {
       mostrarAviso("No se pudo registrar el cobro", "error");
-      return;
+      return false;
     }
-    if (pedido.estado !== "entregado") actualizarEstadoPedido(pedido.id, "entregado");
+    if (pedido.estado !== "entregado" && await actualizarEstadoPedido(pedido.id, "entregado") === false) {
+      mostrarAviso("Cobro registrado. Revisa el estado antes de entregar.", "info"); return false;
+    }
     setConfirmarCobro(false);
     mostrarAviso(`Cobrado ${formatoMoneda(pendiente)} · pedido entregado`, "exito");
+    return true;
   }
+  usePantallaVoz(["cambiar_estado_pedido"], {
+    aplicar: p => { if (["pendiente", "en-preparacion", "entregado", "cancelado"].includes(String(p.estado))) setEstadoPendiente(p.estado as EstadoPedido); }, leer: () => ({ pedidoId: pedido.id, estado: estadoPendiente }), confirmar: confirmarCambioEstado, cancelar: () => setEstadoPendiente(null),
+  });
+  usePantallaVoz(["cobrar_pedido"], { aplicar: p => { if (typeof p.monto === "number" && p.monto !== pendiente) throw new Error("Esta pantalla cobra el saldo completo del pedido. Para abonar usa Recibir abono."); if (p.metodo === "efectivo" || p.metodo === "billetera") { setMetodoCobro(p.metodo); setConfirmarCobro(true); } }, leer: () => ({ pedidoId: pedido.id, metodo: metodoCobro }), confirmar: cobrarYEntregar, cancelar: () => setConfirmarCobro(false) });
 
   const etiquetaEstado = (
     <span className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-semibold ${porPreparar ? "bg-accent-soft text-accent-dark" : pedido.estado === "cancelado" ? "bg-danger-soft text-danger" : "bg-success-soft text-success"}`}>
@@ -120,7 +132,7 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
           </div>
           <div className="min-w-0 rounded-2xl border border-line bg-paper-raised px-3.5 py-2.5">
             <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-faint">Cliente</p>
-            <p className="truncate text-[13px] font-semibold text-ink">{cliente?.nombre ?? "Cliente"}</p>
+            <p className="truncate text-[13px] font-semibold text-ink">{cliente?.nombre ?? "Venta ocasional"}</p>
             <p className="truncate text-[11px] text-ink-soft">{cliente?.telefono || "sin teléfono"}</p>
           </div>
         </div>
@@ -139,7 +151,7 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
         <div className="mt-3">
           <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">Cambiar estado</p>
           <div className="no-scrollbar -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
-            {estados.map((estado) => (
+            {estados.filter((e) => !usaApi || e.valor === pedido.estado || TRANSICIONES_PEDIDO[pedido.estado].includes(e.valor)).map((estado) => (
               <button
                 key={estado.valor}
                 type="button"
@@ -230,6 +242,10 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
               permitirCobro &&
               pedido.estado !== "cancelado" &&
               (pendiente > 0 ? (
+                <div className="space-y-2">
+                <label className="flex items-center justify-between gap-3 text-xs text-ink-soft">Medio de cobro
+                  <select aria-label="Medio de cobro" value={metodoCobro} onChange={e => setMetodoCobro(e.target.value as typeof metodoCobro)} className="min-h-11 rounded-lg border border-line bg-paper px-3"><option value="efectivo">Efectivo</option><option value="billetera">Billetera</option></select>
+                </label>
                 <button
                   type="button"
                   onClick={() => setConfirmarCobro(true)}
@@ -238,6 +254,7 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
                   <IconCheckCircle width={17} height={17} />
                   Cobrar al entregar · {formatoMoneda(pendiente)}
                 </button>
+                </div>
               ) : (
                 <div
                   role="status"
@@ -256,7 +273,7 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
                     className="sr-only"
                     onChange={(evento) => {
                       const archivo = evento.target.files?.[0];
-                      if (archivo) void adjuntarComprobante(pedido.id, archivo);
+                      if (archivo) void adjuntarComprobante(pedido.id, archivo).catch(() => mostrarAviso("No se pudo subir el comprobante", "error"));
                     }}
                   />
                   {pedido.comprobantePagoUrl ? "Cambiar comprobante" : "Adjuntar comprobante"}
@@ -307,7 +324,7 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
       <ConfirmarAccion
         abierto={confirmarCobro}
         titulo="Cobrar y entregar"
-        mensaje={`Se registrará un abono de ${formatoMoneda(pendiente)} en efectivo y el pedido quedará entregado.`}
+        mensaje={`Se registrará un abono de ${formatoMoneda(pendiente)} en ${metodoCobro} y el pedido quedará entregado.`}
         textoConfirmar="Sí, cobrar"
         tono="exito"
         alCancelar={() => setConfirmarCobro(false)}

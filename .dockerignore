@@ -4,6 +4,7 @@
 # viajan al daemon en cada build.
 
 **/node_modules
+**/*.tsbuildinfo
 **/dist
 **/.vite
 **/coverage
@@ -14,7 +15,24 @@
 .env.*
 !.env.example
 *.log
+.local
+.ambie-config
+**/.ambie-config
 
 docs
 scripts
-Frontend/public
+.ambie-config
+**/.ambie-config
+.agents
+.codex
+AGENTS.md
+**/*.dump
+**/*.backup
+**/*.pem
+**/*.key
+**/*.pfx
+**/*.p12
+**/*.sqlite
+**/*.db
+.aws
+.github

@@ -3,10 +3,12 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { APP_VERSION } from "../../config";
 import { IconPackage } from "../../components/Icons";
 import { useAuth } from "../../context/auth";
+import { usaApi } from "../../data/api";
 
 export default function Acceso() {
   const navegar = useNavigate();
-  const { usuario, iniciarSesionConCredenciales } = useAuth();
+  const { usuario, cargando, iniciarSesionConCredenciales } = useAuth();
+  const [entrando, setEntrando] = useState(false);
   const [identificador, setIdentificador] = useState("");
   const [password, setPassword] = useState("");
   const [verPassword, setVerPassword] = useState(false);
@@ -14,9 +16,12 @@ export default function Acceso() {
 
   if (usuario) return <Navigate to={usuario.rol === "administrador" ? "/admin" : "/vendedor"} replace />;
 
-  function handleLogin(e: FormEvent) {
+  async function handleLogin(e: FormEvent) {
     e.preventDefault();
-    const res = iniciarSesionConCredenciales(identificador, password);
+    if (entrando) return;
+    setEntrando(true);
+    const res = await iniciarSesionConCredenciales(identificador, password);
+    setEntrando(false);
     if (!res.ok) {
       setError(res.error ?? "Error al iniciar sesión");
       return;
@@ -27,8 +32,10 @@ export default function Acceso() {
   }
 
   return (
-    <div className="flex min-h-full flex-col bg-paper px-5 pb-8 pt-[max(2rem,env(safe-area-inset-top))] md:px-6">
-      <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto bg-paper px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))] md:px-6">
+      {/* Los márgenes automáticos centran solo cuando sobra espacio: en ventanas
+          bajas el contenido empieza arriba y permanece accesible por scroll. */}
+      <div className="mx-auto my-auto flex w-full max-w-sm shrink-0 flex-col">
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-ink text-accent"><IconPackage width={28} height={28} /></div>
         <p className="mt-6 text-[13px] font-semibold uppercase tracking-[0.16em] text-ink-soft">Capturador de pedidos</p>
         <p className="mt-1 font-mono text-[10px] text-ink-faint">{APP_VERSION}</p>
@@ -37,8 +44,9 @@ export default function Acceso() {
         <form onSubmit={handleLogin} className="mt-6 rounded-2xl border border-line bg-paper-raised p-4">
           <div className="space-y-3">
             <div>
-              <label className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Usuario o correo</label>
+              <label htmlFor="usuario-acceso" className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Usuario o correo</label>
               <input
+                id="usuario-acceso"
                 value={identificador}
                 onChange={(e) => { setIdentificador(e.target.value); setError(null); }}
                 placeholder="admin@ambie.local o vendedor@ambie.local"
@@ -47,9 +55,10 @@ export default function Acceso() {
               />
             </div>
             <div>
-              <label className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Contraseña</label>
+              <label htmlFor="password-acceso" className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Contraseña</label>
               <div className="relative mt-1.5">
                 <input
+                  id="password-acceso"
                   type={verPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(null); }}
@@ -67,13 +76,13 @@ export default function Acceso() {
                 </button>
               </div>
             </div>
-            {error && <p className="rounded-lg bg-danger-soft px-3 py-2 text-[12.5px] font-medium text-danger">{error}</p>}
-            <button type="submit" className="w-full rounded-xl bg-ink py-3 text-[14px] font-semibold text-white active:bg-ink/90">Ingresar</button>
+            {error && <p role="alert" className="rounded-lg bg-danger-soft px-3 py-2 text-[12.5px] font-medium text-danger">{error}</p>}
+            <button type="submit" disabled={entrando || cargando} className="w-full rounded-xl bg-ink py-3 text-[14px] font-semibold text-white active:bg-ink/90 disabled:opacity-50">{entrando ? "Ingresando…" : cargando ? "Restaurando sesión…" : "Ingresar"}</button>
           </div>
         </form>
 
         {/* ─── Acceso rápido con credenciales del README ─── */}
-        <div className="mt-5 rounded-2xl border border-line bg-paper-raised p-4">
+        {!usaApi && <div className="mt-5 rounded-2xl border border-line bg-paper-raised p-4">
           <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">
             Usuarios oficiales (toca para rellenar)
           </p>
@@ -114,7 +123,8 @@ export default function Acceso() {
               </span>
             </button>
           </div>
-        </div>
+        </div>}
+        {usaApi && <p className="mt-4 text-sm text-ink-soft">Usa el acceso asignado por tu administrador. Los datos se comparten entre los dispositivos del negocio.</p>}
       </div>
     </div>
   );

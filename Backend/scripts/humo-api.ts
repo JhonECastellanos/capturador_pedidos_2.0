@@ -71,7 +71,9 @@ async function llamar<T = unknown>(
   opciones: { token?: string | null; cruda?: boolean } = {},
 ): Promise<Respuesta<T>> {
   const usarToken = opciones.token === undefined ? accessToken : opciones.token;
-  const cabeceras: Record<string, string> = { "content-type": "application/json" };
+  const cabeceras: Record<string, string> = {};
+  // Sin cuerpo no se manda `content-type`: Fastify rechaza un JSON vacío.
+  if (datos !== undefined) cabeceras["content-type"] = "application/json";
   if (usarToken) cabeceras.authorization = `Bearer ${usarToken}`;
 
   const res = await fetch(`${BASE}${ruta}`, {
@@ -164,9 +166,12 @@ async function main() {
 
   await paso("el refresco es de un solo uso", async () => {
     const anterior = refreshToken;
-    const emitido = await exigir<{ refreshToken: string }>("POST", "/api/v1/auth/refresh", {
+    // Rotar el refresh revoca la sesión anterior, así que también hay que
+    // quedarse con el access token nuevo: el anterior ya no sirve.
+    const emitido = await exigir<{ accessToken: string; refreshToken: string }>("POST", "/api/v1/auth/refresh", {
       refreshToken: anterior,
     });
+    accessToken = emitido.accessToken;
     refreshToken = emitido.refreshToken;
     const repetido = await llamar("POST", "/api/v1/auth/refresh", { refreshToken: anterior }, { token: null });
     afirmar(repetido.status === 401, `reutilizar el refresco fallara (respondió ${repetido.status})`);
@@ -217,11 +222,15 @@ async function main() {
   });
 
   await paso("se crea un pedido con una línea", async () => {
+    // El contrato usa los valores en minúscula (`al-entregar`) y el precio sale
+    // del producto, no del cuerpo. Se crea ya entregado para que el stock se
+    // consuma: al crear solo queda reservado.
     const pedido = await exigir<{ id: string; numero: string; total: number }>("POST", "/api/v1/pedidos", {
       clienteId,
       metodo: "credito",
-      momentoCobro: "AL_ENTREGAR",
-      lineas: [{ productoId, cantidad: 3, precioUnitario: 12000 }],
+      momentoCobro: "al-entregar",
+      estadoInicial: "entregado",
+      lineas: [{ productoId, cantidad: 3 }],
     });
     pedidoId = pedido.id;
     creados.push({ etiqueta: "pedido", url: `/api/v1/pedidos/${pedidoId}` });
@@ -234,22 +243,22 @@ async function main() {
   });
 
   await paso("un abono reduce la cartera del cliente", async () => {
-    const cartera = await exigir<{ saldo: number }>("GET", `/api/v1/clientes/${clienteId}/cartera`);
-    afirmar(cartera.saldo === 36000, `la cartera empezara en 36000 (era ${cartera.saldo})`);
+    const cartera = await exigir<{ saldoPendiente: number }>("GET", `/api/v1/clientes/${clienteId}/cartera`);
+    afirmar(cartera.saldoPendiente === 36000, `la cartera empezara en 36000 (era ${cartera.saldoPendiente})`);
 
-    await exigir("POST", `/api/v1/pagos/clientes/${clienteId}/abonos`, { monto: 10000 });
+    await exigir("POST", `/api/v1/clientes/${clienteId}/abonos`, { monto: 10000, metodo: "efectivo" });
 
-    const despues = await exigir<{ saldo: number }>("GET", `/api/v1/clientes/${clienteId}/cartera`);
-    afirmar(despues.saldo === 26000, `la cartera bajara a 26000 (quedó en ${despues.saldo})`);
+    const despues = await exigir<{ saldoPendiente: number }>("GET", `/api/v1/clientes/${clienteId}/cartera`);
+    afirmar(despues.saldoPendiente === 26000, `la cartera bajara a 26000 (quedó en ${despues.saldoPendiente})`);
   });
 
   await paso("un abono mayor que la deuda se rechaza", async () => {
-    const res = await llamar("POST", `/api/v1/pagos/clientes/${clienteId}/abonos`, { monto: 999999 });
+    const res = await llamar("POST", `/api/v1/clientes/${clienteId}/abonos`, { monto: 999999, metodo: "efectivo" });
     afirmar(res.status >= 400, `la API lo rechazara (respondió ${res.status})`);
   });
 
   await paso("un pago de más sobre un pedido se rechaza", async () => {
-    const res = await llamar("POST", `/api/v1/pagos/pedidos/${pedidoId}/pagos`, { monto: 999999 });
+    const res = await llamar("POST", `/api/v1/pedidos/${pedidoId}/pagos`, { monto: 999999, metodo: "efectivo" });
     afirmar(res.status >= 400, `la API lo rechazara (respondió ${res.status})`);
   });
 
@@ -274,7 +283,10 @@ async function main() {
   });
 
   await paso("un conteo de inventario se puede iniciar y cancelar", async () => {
-    const conteo = await exigir<{ id: string }>("POST", "/api/v1/inventario/conteos", { almacen: "Principal" });
+    const conteo = await exigir<{ id: string }>("POST", "/api/v1/inventario/conteos", {
+      tipo: "general",
+      turno: "mañana",
+    });
     creados.push({ etiqueta: "conteo", url: `/api/v1/inventario/conteos/${conteo.id}` });
     await exigir("POST", `/api/v1/inventario/conteos/${conteo.id}/cancelar`);
   });

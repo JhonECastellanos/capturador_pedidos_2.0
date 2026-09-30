@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Post, Query } from "@nestjs/common";
 import { Usuario, RolUsuario } from "@prisma/client";
 import { CajaService } from "./caja.service";
+import { paginacion } from "../common/paginacion";
 import { Roles, UsuarioActual } from "../common/guards";
 import { ErrorDominio } from "../common/errores";
 import { z } from "zod";
@@ -11,6 +12,7 @@ const EgresoSchema = z.object({
   metodo: z.enum(["efectivo", "billetera"]).optional(),
 });
 
+@Roles(RolUsuario.ADMINISTRADOR)
 @Controller("caja")
 export class CajaController {
   constructor(private readonly caja: CajaService) {}
@@ -22,7 +24,7 @@ export class CajaController {
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
   ) {
-    return this.caja.listar({ tipo, metodo, pagina: Number(page ?? 1), porPagina: Number(pageSize ?? 20) });
+    return this.caja.listar({ tipo, metodo, ...paginacion(page, pageSize) });
   }
 
   @Roles(RolUsuario.ADMINISTRADOR)

@@ -19,6 +19,8 @@ import { construirLineaRecepcion } from "../../../dominio/servicios";
 import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodo, type Periodo } from "../../../utils/fechas";
 import { formatoMoneda } from "../../../utils/formato";
 import { FormularioGasto } from "../components/FormularioGasto";
+import { usePantallaVoz } from "../../asistente/pantalla-voz";
+import { resolverReferencia } from "../../asistente/intencion";
 
 type TabCompras = "compras" | "gastos";
 type Vista = "historial" | "recepcion" | "detalle";
@@ -140,15 +142,17 @@ export function ComprasAdmin() {
     setVista("historial");
   }
 
-  function crearProveedorInline(e: FormEvent) {
-    e.preventDefault();
-    if (!nombreProvNuevo.trim()) return;
-    const prov = crearProveedor(nombreProvNuevo, telProvNuevo);
+  async function crearProveedorInline(e?: FormEvent) {
+    e?.preventDefault();
+    if (!nombreProvNuevo.trim()) return false;
+    const prov = await crearProveedor(nombreProvNuevo, telProvNuevo);
+    if (!prov) return false;
     setProveedorId(prov.id);
     setNombreProvNuevo("");
     setTelProvNuevo("");
     setMostrarCrearProv(false);
     mostrarToast(`Proveedor ${prov.nombre} creado y seleccionado`, "exito");
+    return true;
   }
 
   function agregarLinea(productoId: string) {
@@ -193,16 +197,27 @@ export function ComprasAdmin() {
     });
   }
 
-  function confirmarRecepcion() {
-    if (!proveedorId || lineas.length === 0) return;
-    registrarRecepcion(proveedorId, lineas, descontarCaja);
+  async function confirmarRecepcion() {
+    if (!proveedorId || lineas.length === 0) return false;
+    if (!await registrarRecepcion(proveedorId, lineas, descontarCaja)) return false;
     cancelarRecepcion();
     mostrarToast("Recepción registrada ✓ stock y costos actualizados", "exito");
+    return true;
   }
+  usePantallaVoz(["registrar_compra"], {
+    aplicar: (p, campo) => {
+      setVista("recepcion"); setPaso(campo === "proveedorId" ? 1 : campo === "lineas" || campo.startsWith("lineas.") ? 2 : 3);
+      if (p.proveedorId) { const id = resolverReferencia(p.proveedorId, proveedores); if (id) setProveedorId(id); else setBusquedaProveedor(String(p.proveedorId)); }
+      if (typeof p.descontarCaja === "boolean") setDescontarCaja(p.descontarCaja);
+      if (Array.isArray(p.lineas)) setLineas(p.lineas.flatMap((l: Record<string, unknown>) => { const producto = inventario.find(i => i.id === resolverReferencia(l.productoId, inventario)); return producto ? [construirLineaRecepcion(producto, Number(l.cantidad) || 0, Number(l.costoUnitario) || 0)] : []; }));
+    }, leer: () => ({ proveedorId, lineas: lineas.map(l => ({ productoId: l.productoId, cantidad: l.cantidad, costoUnitario: l.costoUnitario })), descontarCaja }), confirmar: confirmarRecepcion, cancelar: cancelarRecepcion,
+  });
+  usePantallaVoz(["crear_proveedor"], { aplicar: p => { setVista("recepcion"); setPaso(1); setMostrarCrearProv(true); if (typeof p.nombre === "string") setNombreProvNuevo(p.nombre); if (typeof p.telefono === "string") setTelProvNuevo(p.telefono); }, leer: () => ({ nombre: nombreProvNuevo, telefono: telProvNuevo }), confirmar: () => crearProveedorInline(), cancelar: () => { setNombreProvNuevo(""); setTelProvNuevo(""); setMostrarCrearProv(false); } });
+  usePantallaVoz(["registrar_gasto"], { aplicar: () => { setVista("historial"); setTab("gastos"); }, leer: () => ({}), confirmar: async () => false, cancelar: () => setTab("compras") });
 
-  function guardarProductoInline(e: FormEvent) {
+  async function guardarProductoInline(e: FormEvent) {
     e.preventDefault();
-    const prod = crearProducto({
+    const prod = await crearProducto({
       nombre: prodNuevo.nombre,
       categoria: "Abarrotes",
       unidad: "unidad",
@@ -211,6 +226,7 @@ export function ComprasAdmin() {
       stock: 0,
       stockMinimo: 10,
     });
+    if (!prod) return;
     setProdNuevo({ nombre: "", precioVenta: "", costoActual: "" });
     setMostrarCrearProd(false);
     setBusquedaProd(prod.nombre);
@@ -287,9 +303,10 @@ export function ComprasAdmin() {
 
           {tab === "gastos" && (
             <FormularioGasto
-              alGuardar={(concepto, monto) => {
-                registrarGasto(concepto, monto);
+              alGuardar={async (concepto, monto) => {
+                if (!await registrarGasto(concepto, monto)) return false;
                 mostrarToast(`Gasto "${concepto}" descontado de caja`, "exito");
+                return true;
               }}
             />
           )}

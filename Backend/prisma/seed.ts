@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { asegurarSystem } from "./system";
 
 const prisma = new PrismaClient();
 
@@ -25,7 +26,7 @@ const PERMISOS = [
  * (`RolUsuario.ADMINISTRADOR`) son otra cosa y no coinciden con esta columna.
  */
 const PERMISOS_POR_ROL: Record<string, string[]> = {
-  administrador: ["pedidos", "inventario", "caja", "usuarios", "cierre-diario"],
+  administrador: PERMISOS.map((permiso) => permiso.codigo),
   vendedor: ["clientes", "pedidos", "cobros"],
 };
 
@@ -85,7 +86,8 @@ async function main() {
     });
   }
 
-  console.log("✔ Seed completado: roles, permisos, categorías y tipos de crédito.");
+  await asegurarSystem(prisma);
+  console.log("✔ Seed completado: roles, permisos, categorías, tipos de crédito y system.");
 }
 
 main()

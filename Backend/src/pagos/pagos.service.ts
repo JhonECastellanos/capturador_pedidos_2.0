@@ -119,7 +119,11 @@ export class PagosService {
     const metodo = datos.metodo === "efectivo" ? MetodoPago.EFECTIVO : MetodoPago.BILLETERA;
 
     const resultado = await this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${pedidoId}))`;
+      const referencia = await tx.pedido.findUnique({ where: { id: pedidoId }, select: { clienteId: true } });
+      if (!referencia) throw new ErrorDominio("NO_ENCONTRADO", "Pedido no encontrado", 404);
+      // Mismo candado que FIFO y cancelación: ningún cobro puede usar un saldo obsoleto.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${referencia.clienteId ?? pedidoId}))`;
+      await tx.$queryRaw`SELECT id FROM pedidos WHERE id = ${pedidoId} FOR UPDATE`;
 
       const pedido = await tx.pedido.findUnique({ where: { id: pedidoId } });
       if (!pedido) throw new ErrorDominio("NO_ENCONTRADO", "Pedido no encontrado", 404);
@@ -192,7 +196,7 @@ export class PagosService {
       data: pagos.map((pago) => ({
         id: pago.id,
         clienteId: pago.clienteId,
-        cliente: pago.cliente.nombre,
+        cliente: pago.cliente?.nombre ?? "Venta ocasional",
         monto: numero(pago.monto),
         metodo: pago.metodo.toLowerCase(),
         usuarioId: pago.usuarioId,

@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
+import { usePantallaVoz } from "../../asistente/pantalla-voz";
 
 interface FormularioGastoProps {
-  alGuardar: (concepto: string, monto: number) => void;
+  alGuardar: (concepto: string, monto: number) => void | Promise<boolean>;
 }
 
 /** Alta rápida de gasto: concepto y monto, con egreso inmediato en caja. */
@@ -9,14 +10,16 @@ export function FormularioGasto({ alGuardar }: FormularioGastoProps) {
   const [concepto, setConcepto] = useState("");
   const [monto, setMonto] = useState("");
 
-  function guardar(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault();
+  async function guardar(evento?: FormEvent<HTMLFormElement>) {
+    evento?.preventDefault();
     const valor = Number(monto);
-    if (!concepto.trim() || !valor || valor <= 0) return;
-    alGuardar(concepto.trim(), valor);
+    if (!concepto.trim() || !valor || valor <= 0) return false;
+    if (await alGuardar(concepto.trim(), valor) === false) return false;
     setConcepto("");
     setMonto("");
+    return true;
   }
+  usePantallaVoz(["registrar_gasto"], { aplicar: p => { if (typeof p.concepto === "string") setConcepto(p.concepto); if (typeof p.monto === "number") setMonto(String(p.monto)); }, leer: () => ({ concepto, monto: Number(monto) }), confirmar: () => guardar(), cancelar: () => { setConcepto(""); setMonto(""); } });
 
   return (
     <form onSubmit={guardar} className="mt-2 rounded-xl border border-line bg-paper-raised p-2.5">

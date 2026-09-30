@@ -3,7 +3,7 @@ import { z } from "zod";
 import { PrismaService } from "../common/prisma.module";
 import { ErrorDominio } from "../common/errores";
 import { hoyLocal } from "../common/crypto";
-import { EstadoConteo, TipoConteo, TipoMovimientoInventario } from "@prisma/client";
+import { EstadoConteo, TipoConteo, TipoMovimientoInventario, Prisma } from "@prisma/client";
 
 const IniciarConteoSchema = z.object({
   tipo: z.enum(["general", "aleatorio"]),
@@ -96,12 +96,17 @@ export class InventarioService {
     const contadas = conteo.lineas.filter((l) => l.stockFisico !== null);
 
     await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`conteo:${conteoId}`}))`;
+      if (await tx.ajusteInventario.findFirst({ where: { conteoId } })) throw new ErrorDominio("AJUSTE_DUPLICADO", "Este conteo ya fue aplicado", 409);
+      const ids = contadas.map((l) => l.productoId).sort();
+      if (ids.length) await tx.$queryRaw(Prisma.sql`SELECT id FROM productos WHERE id IN (${Prisma.join(ids)}) ORDER BY id FOR UPDATE`);
       const ajuste = await tx.ajusteInventario.create({
         data: { conteoId, usuarioId, motivo: "Conteo de inventario" },
       });
 
       for (const linea of contadas) {
         const producto = await tx.producto.findUniqueOrThrow({ where: { id: linea.productoId } });
+        if ((linea.stockFisico as number) < producto.stockReservado) throw new ErrorDominio("STOCK_RESERVADO", "El stock contado no puede ser menor que las reservas pendientes; resuelve los pedidos primero");
         await tx.ajusteLinea.create({
           data: {
             ajusteInventarioId: ajuste.id,
@@ -138,10 +143,11 @@ export class InventarioService {
   }
 
   async ajusteManual(productoId: string, stockFisico: number, motivo: string, comentario: string | undefined, usuarioId: string) {
-    const producto = await this.prisma.producto.findUnique({ where: { id: productoId } });
-    if (!producto) throw new ErrorDominio("NO_ENCONTRADO", "Producto no encontrado", 404);
-
     await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM productos WHERE id = ${productoId} FOR UPDATE`;
+      const producto = await tx.producto.findUnique({ where: { id: productoId } });
+      if (!producto) throw new ErrorDominio("NO_ENCONTRADO", "Producto no encontrado", 404);
+      if (stockFisico < producto.stockReservado) throw new ErrorDominio("STOCK_RESERVADO", "El stock físico no puede ser menor que las reservas pendientes");
       const ajuste = await tx.ajusteInventario.create({
         data: { conteoId: null, usuarioId, motivo, comentario },
       });
@@ -187,6 +193,11 @@ export class InventarioService {
     return { data: conteos.map((c) => this.dtoConteo(c)) };
   }
 
+  async listarAjustes() {
+    const ajustes = await this.prisma.ajusteInventario.findMany({ orderBy: { creadoEn: "desc" }, include: { lineas: { include: { producto: true } } } });
+    return { data: ajustes.map((a) => ({ ...a, lineas: a.lineas.map((l) => ({ productoId: l.productoId, nombre: l.producto.nombre, stockTeorico: l.stockTeorico, stockFisico: l.stockFisico, diferencia: l.diferencia })) })) };
+  }
+
   async obtener(conteoId: string) {
     const conteo = await this.prisma.conteoInventario.findUnique({
       where: { id: conteoId },
@@ -226,7 +237,7 @@ export class InventarioService {
       turno: c.turno,
       iniciadoEn: c.iniciadoEn,
       finalizadoEn: c.finalizadoEn,
-      estado: c.estado.toLowerCase(),
+      estado: c.estado.toLowerCase().replaceAll("_", "-"),
       lineas: c.lineas.map((l) => ({
         id: l.id,
         productoId: l.productoId,

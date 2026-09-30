@@ -10,6 +10,9 @@ import { useAviso } from "../../../components/useAviso";
 import { useOperaciones } from "../../../context/operaciones";
 import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodoFecha, dentroDeRangoFechaStr, esAyer, esMismoDia, fechaLocalStr, type Periodo } from "../../../utils/fechas";
 import { formatoMoneda } from "../../../utils/formato";
+import { fechaOperativa } from "../../../utils/fechas";
+import { usePantallaVoz } from "../../asistente/pantalla-voz";
+import { resolverReferencia } from "../../asistente/intencion";
 
 type FiltroPagoCierre = "todos" | "credito" | "efectivo" | "billetera";
 
@@ -38,13 +41,14 @@ export function CierreAdmin() {
   const [filtroPago, setFiltroPago] = useState<FiltroPagoCierre>("todos");
   const [mostrarPendientes, setMostrarPendientes] = useState(false);
   const [confirmarEliminarId, setConfirmarEliminarId] = useState<string | null>(null);
+  const [trasladoId, setTrasladoId] = useState<string | null>(null);
   const { aviso, mostrarAviso, cerrarAviso } = useAviso();
 
   const hoy = useMemo(() => new Date(), []);
   const fechaHoyStr = fechaLocalStr(hoy);
 
   // Cálculos de la jornada de hoy
-  const movsHoy = useMemo(() => movimientosCaja.filter((m) => esMismoDia(m.creadoEn, hoy)), [hoy, movimientosCaja]);
+  const movsHoy = useMemo(() => movimientosCaja.filter((m) => esMismoDia(fechaOperativa(m), hoy)), [hoy, movimientosCaja]);
   const ingresosHoy = movsHoy.filter((m) => m.tipo === "ingreso").reduce((s, m) => s + m.monto, 0);
   const egresosHoy = movsHoy.filter((m) => m.tipo === "egreso").reduce((s, m) => s + m.monto, 0);
   // Esperado por método: lo ingresado menos lo reversado en ese mismo método.
@@ -56,7 +60,7 @@ export function CierreAdmin() {
     .reduce((s, m) => s + (m.tipo === "ingreso" ? m.monto : -m.monto), 0);
   const balanceHoy = ingresosHoy - egresosHoy;
 
-  const pedidosHoy = useMemo(() => pedidos.filter((p) => esMismoDia(p.creadoEn, hoy) && p.estado !== "cancelado"), [hoy, pedidos]);
+  const pedidosHoy = useMemo(() => pedidos.filter((p) => esMismoDia(fechaOperativa(p), hoy) && p.estado !== "cancelado"), [hoy, pedidos]);
   const ventasHoy = pedidosHoy.reduce((s, p) => s + p.total, 0);
 
   // Ventas discriminadas por forma de pago
@@ -71,10 +75,10 @@ export function CierreAdmin() {
 
   // Pendientes de hoy y ayer
   const pendientesHoy = useMemo(
-    () => pedidos.filter((p) => (esMismoDia(p.creadoEn, hoy) || esAyer(p.creadoEn, hoy)) && (p.estado === "pendiente" || p.estado === "en-preparacion")),
+    () => pedidos.filter((p) => (esMismoDia(fechaOperativa(p), hoy) || esAyer(fechaOperativa(p), hoy)) && (p.estado === "pendiente" || p.estado === "en-preparacion")),
     [hoy, pedidos],
   );
-  const pendientesAyer = useMemo(() => pendientesHoy.filter((p) => esAyer(p.creadoEn, hoy)), [hoy, pendientesHoy]);
+  const pendientesAyer = useMemo(() => pendientesHoy.filter((p) => esAyer(fechaOperativa(p), hoy)), [hoy, pendientesHoy]);
 
   const conteoEfNum = conteoEfectivo === "" ? null : Number(conteoEfectivo);
   const conteoBilleteraNum = conteoBilletera === "" ? null : Number(conteoBilletera);
@@ -119,8 +123,8 @@ export function CierreAdmin() {
     setVista("cierre");
   }
 
-  function confirmarCierreFinal() {
-    registrarCierre({
+  async function confirmarCierreFinal() {
+    const cierre = await registrarCierre({
       fecha: fechaHoyStr,
       totalVentas: ventasHoy,
       totalIngresos: ingresosHoy,
@@ -134,13 +138,30 @@ export function CierreAdmin() {
       diferenciaBilletera: difBilletera ?? undefined,
     });
 
+    if (!cierre) return false;
     // Al confirmar, vuelve automáticamente al historial
     setVista("historial");
     setPasoCierre(1);
     setPeriodo("hoy");
     setPendientesTrasladados(0);
     setPendientesCancelados(0);
+    return true;
   }
+  usePantallaVoz(["registrar_cierre"], {
+    aplicar: (p, campo) => { if (p.fecha && p.fecha !== fechaHoyStr) throw new Error("Esta pantalla registra el cierre de hoy. Revisa la fecha."); if ((Array.isArray(p.cancelar) && p.cancelar.length) || (Array.isArray(p.trasladar) && p.trasladar.length)) throw new Error("Confirma cada cancelación o traslado desde los pedidos pendientes antes de cerrar."); setVista("cierre"); setPasoCierre(campo ? 1 : 2); if (typeof p.conteoEfectivo === "number") setConteoEfectivo(String(p.conteoEfectivo)); if (typeof p.conteoBilletera === "number") setConteoBilletera(String(p.conteoBilletera)); },
+    leer: () => ({ fecha: fechaHoyStr, conteoEfectivo: conteoEfNum ?? undefined, conteoBilletera: conteoBilleteraNum ?? undefined }), confirmar: confirmarCierreFinal, cancelar: () => { setVista("historial"); setConteoEfectivo(""); setConteoBilletera(""); },
+  });
+  async function trasladar(id: string) {
+    const pedido = pendientesHoy.find(p => p.id === id);
+    if (!pedido || await trasladarPedidoAHoy(id) === false) return false;
+    setPendientesTrasladados(actual => actual + 1);
+    mostrarAviso(`${pedido.numero} ${esAyer(fechaOperativa(pedido), hoy) ? "pasa a hoy" : "se reprogramó para mañana"}`, "exito");
+    setTrasladoId(null); return true;
+  }
+  usePantallaVoz(["trasladar_pedido"], {
+    aplicar: p => { setVista("cierre"); setPasoCierre(1); setMostrarPendientes(true); const id = resolverReferencia(p.pedidoId, pendientesHoy.map(p => ({ id: p.id, nombre: p.numero }))); setTrasladoId(id || null); const pedido = pendientesHoy.find(p => p.id === id); setBusquedaPend(pedido?.numero ?? ""); setFiltroPago("todos"); },
+    leer: () => ({ pedidoId: trasladoId }), confirmar: () => trasladoId ? trasladar(trasladoId) : Promise.resolve(false), cancelar: () => { setTrasladoId(null); setBusquedaPend(""); },
+  });
 
   // ══════════════════════════════════════════════════════════════════════════
   // MÓDULO PASO A PASO: CIERRE (Paso 1: Conteo, Paso 2: Resumen)
@@ -316,7 +337,7 @@ export function CierreAdmin() {
                       )}
                       {pendientesFiltrados.map((pedido) => {
                         const cliente = obtenerCliente(pedido.clienteId);
-                        const deAyer = esAyer(pedido.creadoEn, hoy);
+                        const deAyer = esAyer(fechaOperativa(pedido), hoy);
                         const esCred = pedido.pago.saldoPendiente > 0;
                         return (
                           <li key={pedido.id} className="rounded-xl border border-line bg-paper p-2.5 text-[12px]">
@@ -329,11 +350,7 @@ export function CierreAdmin() {
                               <div className="flex gap-1.5">
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    trasladarPedidoAHoy(pedido.id);
-                                    setPendientesTrasladados((actual) => actual + 1);
-                                    mostrarAviso(`${pedido.numero} ${deAyer ? "pasa a hoy" : "se reprogramó para mañana"}`, "exito");
-                                  }}
+                                  onClick={() => void trasladar(pedido.id)}
                                   className="rounded bg-ink px-2 py-0.5 text-[10.5px] font-medium text-white"
                                 >
                                   {deAyer ? "Pasar para hoy" : "Reprogramar para mañana"}
@@ -500,10 +517,10 @@ export function CierreAdmin() {
           textoConfirmar="Sí, cancelar pedido"
           tono="peligro"
           alCancelar={() => setConfirmarEliminarId(null)}
-          alConfirmar={() => {
+          alConfirmar={async () => {
             if (confirmarEliminarId) {
               const numero = pendientesHoy.find((p) => p.id === confirmarEliminarId)?.numero ?? "";
-              actualizarEstadoPedido(confirmarEliminarId, "cancelado");
+              if (await actualizarEstadoPedido(confirmarEliminarId, "cancelado") === false) return;
               setPendientesCancelados((actual) => actual + 1);
               setConfirmarEliminarId(null);
               mostrarAviso(`${numero} cancelado y revertido de stock, caja y cartera`, "exito");

@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
+import { randomUUID } from "node:crypto";
 import { ErrorDominio } from "./errores";
 
 /** Claims del token de acceso. El refresh es opaco y vive en la base de datos. */
@@ -44,10 +45,14 @@ export class TokensService {
     return process.env.JWT_AUDIENCE ?? "ambie";
   }
 
-  /** Access token de vida corta: el navegador lo renueva con el refresh. */
+  /**
+   * Access token de vida corta: el navegador lo renueva con el refresh.
+   * Lleva un `jti` único para que dos emisiones seguidas nunca coincidan
+   * (si no, renovar dentro del mismo segundo devolvería el mismo token).
+   */
   firmarAcceso(claims: Omit<ClaimsAcceso, "iss" | "aud">): string {
     return this.jwt.sign(
-      { cod: claims.cod, rol: claims.rol, sid: claims.sid },
+      { cod: claims.cod, rol: claims.rol, sid: claims.sid, jti: randomUUID() },
       {
         secret: TokensService.secreto,
         expiresIn: TokensService.ttlAcceso(),

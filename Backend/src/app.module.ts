@@ -1,6 +1,11 @@
 import { Module } from "@nestjs/common";
+import { SincronizacionModule } from "./sincronizacion/sincronizacion.module";
 import { ConfigModule } from "@nestjs/config";
-import { APP_GUARD } from "@nestjs/core";
+import { AsistenteModule } from "./asistente/asistente.module";
+import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
+import { AuditoriaModule } from "./auditoria/auditoria.module";
+import { AuditoriaInterceptor } from "./common/auditoria.interceptor";
+import { ArchivosModule } from "./archivos/archivos.module";
 import { JwtModule } from "@nestjs/jwt";
 import { PrismaModule } from "./common/prisma.module";
 import { AuthGuard } from "./common/guards";
@@ -24,6 +29,7 @@ import { DashboardModule } from "./dashboard/dashboard.module";
     // cualquier módulo, no solo desde AuthModule.
     JwtModule.register({ global: true }),
     PrismaModule,
+    SincronizacionModule,
     AuthModule,
     CatalogosModule,
     ClientesModule,
@@ -36,7 +42,10 @@ import { DashboardModule } from "./dashboard/dashboard.module";
     UsuariosModule,
     CierresModule,
     DashboardModule,
+    AuditoriaModule,
+    ArchivosModule,
+    AsistenteModule,
   ],
-  providers: [{ provide: APP_GUARD, useClass: AuthGuard }],
+  providers: [{ provide: APP_GUARD, useClass: AuthGuard }, { provide: APP_INTERCEPTOR, useClass: AuditoriaInterceptor }],
 })
 export class AppModule {}

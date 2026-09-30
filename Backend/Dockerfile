@@ -30,10 +30,9 @@ COPY Backend ./Backend
 
 # Orden obligatorio: el contrato primero (la API importa su código generado),
 # después el cliente de Prisma (la API importa sus tipos) y al final la API.
-# El CLI de Prisma queda en el node_modules del workspace, no en la raíz: se
-# invoca por ruta explícita para que npx no intente descargarlo.
+# npm exec resuelve el binario instalado aunque npm lo hoistee a la raíz.
 RUN npm run build --workspace @ambie/contrato \
- && Backend/node_modules/.bin/prisma generate --schema Backend/prisma/schema.prisma \
+ && npm exec --no -- prisma generate --schema Backend/prisma/schema.prisma \
  && npm run build --workspace ambie-backend
 
 # ─── 3. Dependencias de producción ─────────────────────────────────
@@ -48,10 +47,10 @@ COPY Frontend/package.json ./Frontend/
 # existir y el COPY de la etapa final falla; la creamos para que sea determinista.
 RUN npm ci --omit=dev --workspace @ambie/contrato --workspace ambie-backend --include-workspace-root \
  && npm rebuild argon2 --workspace ambie-backend \
- && mkdir -p Compartido/node_modules
+ && mkdir -p Compartido/node_modules Backend/node_modules
 
 # ─── 4. Imagen final ───────────────────────────────────────────────
-FROM node:24-alpine AS runtime
+FROM node:24-alpine AS servidor
 WORKDIR /app
 ENV NODE_ENV=production
 
@@ -63,11 +62,6 @@ COPY --from=prod-deps /app/Backend/node_modules ./node_modules
 COPY --from=prod-deps /app/Compartido/node_modules ./Compartido/node_modules
 COPY --from=build /app/Compartido/dist ./Compartido/dist
 COPY --from=prod-deps /app/Compartido/package.json ./Compartido/package.json
-
-COPY --from=build /app/Backend/dist ./dist
-COPY --from=build /app/Backend/prisma ./prisma
-COPY --from=build /app/Backend/cli ./cli
-COPY --from=build /app/Backend/scripts ./scripts
 COPY --from=prod-deps /app/Backend/package.json ./package.json
 
 # tsx ejecuta el CLI y los scripts; el CLI de Prisma aplica las migraciones del
@@ -78,11 +72,19 @@ COPY --from=prod-deps /app/Backend/package.json ./package.json
 RUN TSX_VERSION=$(node -p "require('./package.json').devDependencies.tsx.replace(/^[^0-9]*/, '')") \
  && PRISMA_VERSION=$(node -p "require('./node_modules/@prisma/client/package.json').version") \
  && npm install -g "tsx@$TSX_VERSION" "prisma@$PRISMA_VERSION" \
- && npm rebuild -g prisma @prisma/engines \
- && prisma generate --schema prisma/schema.prisma
+ && npm rebuild -g prisma @prisma/engines
+
+# Cambiar código no vuelve a descargar herramientas de despliegue.
+COPY --from=build /app/Backend/dist ./dist
+COPY --from=build /app/Backend/prisma ./prisma
+COPY --from=build /app/Backend/src/common/consecutivos.ts ./src/common/consecutivos.ts
+COPY --from=build /app/Backend/cli ./cli
+COPY --from=build /app/Backend/scripts ./scripts
+RUN prisma generate --schema prisma/schema.prisma
 
 # La API no debería ejecutarse como root.
-RUN addgroup -S ambie && adduser -S ambie -G ambie && chown -R ambie:ambie /app
+RUN addgroup -S ambie && adduser -S ambie -G ambie \
+ && mkdir -p /home/ambie/.ambie/config && chown -R ambie:ambie /home/ambie/.ambie
 USER ambie
 
 EXPOSE 3000
@@ -93,3 +95,18 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/v1/salud').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 CMD ["node", "dist/main.js"]
+
+# El CLI reutiliza exactamente el backend compilado; su estado vive en un
+# volumen propio y no recibe credenciales de PostgreSQL ni MinIO.
+FROM servidor AS agente
+USER root
+COPY --from=build /app/Backend/src ./src
+RUN mkdir -p /home/ambie/.ambie && chown -R ambie:ambie /home/ambie/.ambie
+USER ambie
+ENV AMBIE_CONFIG=/home/ambie/.ambie/cli.json
+HEALTHCHECK NONE
+ENTRYPOINT ["tsx", "cli/index.ts"]
+CMD ["--help"]
+
+# La imagen por defecto sigue siendo la API existente.
+FROM servidor AS runtime

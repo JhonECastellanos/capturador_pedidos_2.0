@@ -7,9 +7,14 @@ import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
 import { useOperaciones } from "../../../context/operaciones";
 import type { NuevoUsuario, UsuarioSistema } from "../../../types";
+import { useAuth } from "../../../context/auth";
+import { usePantallaVoz } from "../../asistente/pantalla-voz";
+import { resolverReferencia } from "../../asistente/intencion";
 
 export function UsuariosAdmin() {
-  const { usuarios, crearUsuario, cambiarEstadoUsuario } = useOperaciones();
+  const { usuarios, crearUsuario, cambiarEstadoUsuario, cambiarRolUsuario } = useOperaciones();
+  const { usuario: sesion } = useAuth();
+  const [cambioRol, setCambioRol] = useState<{ id: string; rol: UsuarioSistema["rol"] } | null>(null);
   const [vista, setVista] = useState<"lista" | "crear">("lista");
   const [pasoCrear, setPasoCrear] = useState<1 | 2>(1);
   const [usuarioNuevo, setUsuarioNuevo] = useState<NuevoUsuario>({ nombre: "", email: "", rol: "vendedor", password: "" });
@@ -26,22 +31,48 @@ export function UsuariosAdmin() {
     [usuarios]
   );
 
-  function guardarUsuario(evento: FormEvent<HTMLFormElement>) {
-    evento.preventDefault();
-    crearUsuario(usuarioNuevo);
+  async function guardarUsuario(evento?: FormEvent<HTMLFormElement>) {
+    evento?.preventDefault();
+    if (usuarioNuevo.nombre.trim().length < 2 || !usuarioNuevo.email.includes("@") || (usuarioNuevo.password?.length ?? 0) < 8) return false;
+    if (await crearUsuario(usuarioNuevo) === false) return false;
     mostrarAviso(`Usuario ${usuarioNuevo.nombre} creado · rol ${usuarioNuevo.rol}`, "exito");
     setUsuarioNuevo({ nombre: "", email: "", rol: "vendedor", password: "" });
     setPasoCrear(1);
     setVista("lista");
+    return true;
   }
+  usePantallaVoz(["crear_usuario"], {
+    aplicar: (p, campo) => { setVista("crear"); setPasoCrear(campo ? 1 : 2); setUsuarioNuevo(u => ({ ...u, nombre: typeof p.nombre === "string" ? p.nombre : u.nombre, email: typeof p.email === "string" ? p.email : u.email, rol: p.rol === "administrador" || p.rol === "vendedor" ? p.rol : u.rol })); },
+    leer: () => ({ ...usuarioNuevo }), confirmar: () => guardarUsuario(), cancelar: () => { setUsuarioNuevo({ nombre: "", email: "", rol: "vendedor", password: "" }); setVista("lista"); },
+  });
 
+  async function confirmarEstado() {
+    if (!confirmarEstadoId || confirmarEstadoId === sesion?.id) return false;
+    const usuario = usuariosOrdenados.find(u => u.id === confirmarEstadoId);
+    if (!usuario || await cambiarEstadoUsuario(confirmarEstadoId) === false) return false;
+    mostrarAviso(`${usuario.nombre} ${usuario.activo ? "desactivado" : "activado"}`, "exito");
+    setConfirmarEstadoId(null); return true;
+  }
+  async function confirmarRol() {
+    if (!cambioRol || cambioRol.id === sesion?.id || !cambiarRolUsuario) return false;
+    if (!await cambiarRolUsuario(cambioRol.id, cambioRol.rol)) return false;
+    setCambioRol(null); mostrarAviso("Rol actualizado y sesiones cerradas", "exito"); return true;
+  }
+  usePantallaVoz(["cambiar_estado_usuario"], {
+    aplicar: p => { setVista("lista"); const id = resolverReferencia(p.usuarioId, usuarios); if (id && id !== sesion?.id) setConfirmarEstadoId(id); },
+    leer: () => ({ usuarioId: confirmarEstadoId }), confirmar: confirmarEstado, cancelar: () => setConfirmarEstadoId(null),
+  });
+  usePantallaVoz(["cambiar_rol_usuario"], {
+    aplicar: p => { setVista("lista"); const id = resolverReferencia(p.usuarioId, usuarios); if (id && id !== sesion?.id && (p.rol === "administrador" || p.rol === "vendedor")) setCambioRol({ id, rol: p.rol }); },
+    leer: () => ({ usuarioId: cambioRol?.id, rol: cambioRol?.rol }), confirmar: confirmarRol, cancelar: () => setCambioRol(null),
+  });
   function abrirCrear() {
     setPasoCrear(1);
     setVista("crear");
   }
 
   if (vista === "crear") {
-    const datosValidos = usuarioNuevo.nombre.trim().length > 1 && usuarioNuevo.email.trim().length > 3;
+    const datosValidos = usuarioNuevo.nombre.trim().length > 1 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(usuarioNuevo.email) && (usuarioNuevo.password?.length ?? 0) >= 8;
     return (
       <div className="flex h-full flex-col min-h-0">
         <div className="flex-shrink-0 flex items-center justify-between border-b border-line pb-2.5">
@@ -201,10 +232,10 @@ export function UsuariosAdmin() {
             <div className="space-y-2.5">
         {usuariosOrdenados.map((item: UsuarioSistema) => (
           <article key={item.id} className="rounded-xl border border-line bg-paper-raised p-3.5 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
                 <p className="text-[13.5px] font-semibold text-ink">{item.nombre}</p>
-                <p className="text-[12px] text-ink-soft">{item.email}</p>
+                <p className="break-all text-[12px] text-ink-soft">{item.email}</p>
               </div>
               <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${item.rol === "administrador" ? "bg-accent-soft text-accent-dark" : "bg-teal-soft text-teal"}`}>
                 {item.rol}
@@ -214,12 +245,18 @@ export function UsuariosAdmin() {
               <p className="text-[11px] text-ink-faint">{item.permisos.join(" · ")} · {item.activo ? "activo" : "inactivo"}</p>
               <button
                 type="button"
+                disabled={item.id === sesion?.id || item.esSistema}
                 onClick={() => setConfirmarEstadoId(item.id)}
                 className="flex-shrink-0 rounded-lg border border-line px-2.5 py-1 text-[11px] font-semibold text-ink active:bg-paper-sunken"
               >
-                {item.activo ? "Desactivar" : "Activar"}
+                {item.esSistema ? "Sistema protegido" : item.activo ? "Desactivar" : "Activar"}
               </button>
             </div>
+            {cambiarRolUsuario && !item.esSistema && item.id !== sesion?.id && <label className="mt-3 flex items-center justify-between gap-3 text-xs text-ink-soft">Cambiar rol
+              <select aria-label={`Rol de ${item.nombre}`} value={item.rol} className="min-h-11 rounded-lg border border-line bg-paper px-3" onChange={(e) => setCambioRol({ id: item.id, rol: e.target.value as UsuarioSistema["rol"] })}>
+                <option value="vendedor">Vendedor</option><option value="administrador">Administrador</option>
+              </select>
+            </label>}
           </article>
         ))}
             </div>
@@ -229,6 +266,8 @@ export function UsuariosAdmin() {
 
       <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
 
+      <ConfirmarAccion abierto={!!cambioRol} titulo="Cambiar permisos del usuario" mensaje={`El acceso cambiará a ${cambioRol?.rol}. Se cerrarán sus sesiones y deberá ingresar de nuevo.`} textoConfirmar="Cambiar rol" alCancelar={() => setCambioRol(null)} alConfirmar={async () => { await confirmarRol(); }} />
+
       <ConfirmarAccion
         abierto={confirmarEstadoId !== null}
         titulo={usuariosOrdenados.find((u) => u.id === confirmarEstadoId)?.activo ? "Desactivar usuario" : "Activar usuario"}
@@ -236,14 +275,7 @@ export function UsuariosAdmin() {
         textoConfirmar="Sí, continuar"
         tono="peligro"
         alCancelar={() => setConfirmarEstadoId(null)}
-        alConfirmar={() => {
-          if (confirmarEstadoId) {
-            const usuario = usuariosOrdenados.find((u) => u.id === confirmarEstadoId);
-            cambiarEstadoUsuario(confirmarEstadoId);
-            mostrarAviso(`${usuario?.nombre ?? "Usuario"} ${usuario?.activo ? "desactivado" : "activado"}`, "exito");
-            setConfirmarEstadoId(null);
-          }
-        }}
+        alConfirmar={async () => { await confirmarEstado(); }}
       />
     </div>
   );

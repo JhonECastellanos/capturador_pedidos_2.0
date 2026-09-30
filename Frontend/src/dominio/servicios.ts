@@ -82,6 +82,7 @@ export function construirPago(metodo: MetodoPago, total: number): PagoPedido {
 }
 
 export function construirPedido(entrada: NuevoPedido, id: string, numero: string, creadoEn: string): Pedido {
+  if (!entrada.clienteId && entrada.pago.metodo === "credito") throw new Error("La venta ocasional no admite crédito");
   const estadoInicial = entrada.estadoInicial ?? "pendiente";
   return {
     id,
@@ -217,7 +218,7 @@ export function aplicarAbonoEnPedidos(pedidos: Pedido[], actualizados: Map<strin
   });
 }
 
-export function aplicarAbonoEnClientes(clientes: Cliente[], clienteId: string, montoAplicado: number, fecha: string): Cliente[] {
+export function aplicarAbonoEnClientes(clientes: Cliente[], clienteId: string | null, montoAplicado: number, fecha: string): Cliente[] {
   return clientes.map((cliente) => {
     if (cliente.id !== clienteId) return cliente;
     const nuevoSaldo = Math.max(0, cliente.saldoPendiente - montoAplicado);
@@ -231,7 +232,7 @@ export function aplicarAbonoEnClientes(clientes: Cliente[], clienteId: string, m
 }
 
 export function construirAbono(
-  clienteId: string,
+  clienteId: string | null,
   monto: number,
   metodo: AbonoCredito["metodo"],
   usuarioId: string,
@@ -304,6 +305,7 @@ export function topProductosDe(pedidos: Pedido[], inventario: Producto[], limite
 export function topClientesDe(pedidos: Pedido[], inventario: Producto[], limite = 5): FilaTopCliente[] {
   const mapa = new Map<string, FilaTopCliente>();
   pedidos.forEach((pedido) => {
+    if (!pedido.clienteId) return;
     const fila = mapa.get(pedido.clienteId) ?? { clienteId: pedido.clienteId, comprado: 0, ganancia: 0, pedidos: 0 };
     fila.comprado += pedido.total;
     fila.pedidos += 1;
@@ -332,6 +334,7 @@ export function gruposCartera(
   const pendientes = pedidos.filter((p) => p.pago.saldoPendiente > 0 && p.estado !== "cancelado");
   const porCliente = new Map<string, Pedido[]>();
   pendientes.forEach((pedido) => {
+    if (!pedido.clienteId) return;
     const lista = porCliente.get(pedido.clienteId) ?? [];
     lista.push(pedido);
     porCliente.set(pedido.clienteId, lista);

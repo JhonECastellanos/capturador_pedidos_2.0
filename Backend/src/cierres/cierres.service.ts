@@ -4,7 +4,9 @@ import { PrismaService } from "../common/prisma.module";
 import { ErrorDominio } from "../common/errores";
 import { numero, Tx } from "../common/consecutivos";
 import { aplicadoPorPedido } from "../dominio/cartera";
-import { EstadoPedido, EstadoReserva, TipoMovimientoCaja, TipoMovimientoInventario } from "@prisma/client";
+import { hoyLocal } from "../common/crypto";
+import { EstadoPedido, TipoMovimientoCaja, Prisma } from "@prisma/client";
+import { PedidosService } from "../pedidos/pedidos.service";
 
 const CierreSchema = z.object({
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -16,29 +18,29 @@ const CierreSchema = z.object({
 
 @Injectable()
 export class CierresService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly pedidos: PedidosService) {}
 
   private fechaDe(iso: string): Date {
     return new Date(`${iso}T00:00:00.000Z`);
   }
 
-  async previsualizar(fechaISO: string) {
+  async previsualizar(fechaISO: string, tx: Tx = this.prisma) {
     const fecha = this.fechaDe(fechaISO);
     const inicio = fecha;
     const fin = new Date(fecha.getTime() + 24 * 60 * 60 * 1000);
 
-    const pedidos = await this.prisma.pedido.findMany({
+    const pedidos = await tx.pedido.findMany({
       where: { fechaOperacion: { gte: inicio, lt: fin }, estado: { not: EstadoPedido.CANCELADO } },
       include: { cliente: true },
       orderBy: { creadoEn: "asc" },
     });
 
     const aplicados = await aplicadoPorPedido(
-      this.prisma,
+      tx,
       pedidos.map((p) => p.id),
     );
 
-    const movimientos = await this.prisma.movimientoCaja.findMany({
+    const movimientos = await tx.movimientoCaja.findMany({
       where: { fechaContable: { gte: inicio, lt: fin } },
     });
 
@@ -49,7 +51,7 @@ export class CierresService {
       .map((p) => ({
         id: p.id,
         numero: p.numero,
-        cliente: p.cliente.nombre,
+        cliente: p.cliente?.nombre ?? "Venta ocasional",
         total: numero(p.total),
         saldoPendiente: Math.max(0, numero(p.total) - (aplicados.get(p.id) ?? 0)),
         estado: p.estado,
@@ -62,24 +64,35 @@ export class CierresService {
       pedidosCount: pedidos.length,
       totalIngresos: ingresos.reduce((s, m) => s + numero(m.monto), 0),
       totalEgresos: egresos.reduce((s, m) => s + numero(m.monto), 0),
-      efectivoEsperado: ingresos.filter((m) => m.metodo === "EFECTIVO").reduce((s, m) => s + numero(m.monto), 0),
-      billeteraEsperado: ingresos.filter((m) => m.metodo === "BILLETERA").reduce((s, m) => s + numero(m.monto), 0),
+      efectivoEsperado: movimientos.filter((m) => m.metodo === "EFECTIVO").reduce((s, m) => s + (m.tipo === TipoMovimientoCaja.INGRESO ? numero(m.monto) : -numero(m.monto)), 0),
+      billeteraEsperado: movimientos.filter((m) => m.metodo === "BILLETERA").reduce((s, m) => s + (m.tipo === TipoMovimientoCaja.INGRESO ? numero(m.monto) : -numero(m.monto)), 0),
       pendientes,
     };
   }
 
   async crear(datos: z.infer<typeof CierreSchema>, usuarioId: string) {
     const fecha = this.fechaDe(datos.fecha);
-    const existente = await this.prisma.cierreDia.findUnique({ where: { fecha } });
-    if (existente) throw new ErrorDominio("CIERRE_YA_EXISTE", "Este día ya fue cerrado", 409);
-
-    const resumen = await this.previsualizar(datos.fecha);
-
     const cierre = await this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`cierre:${datos.fecha}`}))`;
+      if (await tx.cierreDia.findUnique({ where: { fecha } })) throw new ErrorDominio("CIERRE_YA_EXISTE", "Este día ya fue cerrado", 409);
       const trasladados = datos.trasladar ?? [];
       const cancelados = datos.cancelar ?? [];
+      const acciones = [...trasladados, ...cancelados];
+      if (new Set(acciones).size !== acciones.length) throw new ErrorDominio("VALIDACION", "Un pedido no puede tener dos acciones en el cierre");
+      if (acciones.length) {
+        const referencias = await tx.pedido.findMany({ where: { id: { in: acciones } }, include: { lineas: true } });
+        if (referencias.length !== acciones.length) throw new ErrorDominio("NO_ENCONTRADO", "Hay pedidos inexistentes", 404);
+        for (const clienteId of [...new Set(referencias.map((p) => p.clienteId))].sort()) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${clienteId}))`;
+        await tx.$queryRaw(Prisma.sql`SELECT id FROM pedidos WHERE id IN (${Prisma.join(acciones)}) ORDER BY id FOR UPDATE`);
+        const actuales = await tx.pedido.findMany({ where: { id: { in: acciones } } });
+        if (actuales.some((p) => p.fechaOperacion.getTime() !== fecha.getTime() || ![EstadoPedido.PENDIENTE, EstadoPedido.EN_PREPARACION].includes(p.estado as typeof EstadoPedido.PENDIENTE))) throw new ErrorDominio("CIERRE_ACCION_INVALIDA", "Solo se gestionan pedidos por entregar del día seleccionado");
+        const productos = [...new Set(referencias.flatMap((p) => p.lineas.map((l) => l.productoId)))].sort();
+        if (productos.length) await tx.$queryRaw(Prisma.sql`SELECT id FROM productos WHERE id IN (${Prisma.join(productos)}) ORDER BY id FOR UPDATE`);
+      }
+      let resumen = await this.previsualizar(datos.fecha, tx);
 
-      const nuevoDia = new Date(); // "hoy" operativo para los trasladados
+      const hoy = hoyLocal();
+      const nuevoDia = fecha.getTime() < hoy.getTime() ? hoy : new Date(hoy.getTime() + 86400000);
 
       const creado = await tx.cierreDia.create({
         data: {
@@ -112,7 +125,7 @@ export class CierresService {
       }
 
       for (const pedidoId of cancelados) {
-        await this.cancelarEnTx(tx, pedidoId, usuarioId);
+        await this.pedidos.cambiarEstadoEnTx(tx, pedidoId, EstadoPedido.CANCELADO, usuarioId, "Cancelado en cierre");
         await tx.cierreAccion.create({
           data: {
             cierreId: creado.id,
@@ -124,6 +137,7 @@ export class CierresService {
         });
       }
 
+      resumen = await this.previsualizar(datos.fecha, tx);
       await tx.cierreMedio.create({
         data: {
           cierreId: creado.id,
@@ -143,7 +157,7 @@ export class CierresService {
         },
       });
 
-      return creado;
+      return tx.cierreDia.update({ where: { id: creado.id }, data: { totalVentas: resumen.totalVentas, totalIngresos: resumen.totalIngresos, totalEgresos: resumen.totalEgresos, pedidosCount: resumen.pedidosCount } });
     });
 
     return {
@@ -175,6 +189,7 @@ export class CierresService {
       data: cierres.map((c) => ({
         id: c.id,
         fecha: c.fecha,
+        usuarioId: c.usuarioId,
         usuario: c.usuario.nombre,
         totalVentas: numero(c.totalVentas),
         totalIngresos: numero(c.totalIngresos),
@@ -190,41 +205,13 @@ export class CierresService {
           diferencia: numero(m.diferencia),
         })),
         creadoEn: c.creadoEn,
+        conteoEfectivo: c.medios.find((m) => m.medio === "efectivo") ? numero(c.medios.find((m) => m.medio === "efectivo")!.contado) : undefined,
+        conteoBilletera: c.medios.find((m) => m.medio === "billetera") ? numero(c.medios.find((m) => m.medio === "billetera")!.contado) : undefined,
+        diferenciaEfectivo: c.medios.find((m) => m.medio === "efectivo") ? numero(c.medios.find((m) => m.medio === "efectivo")!.diferencia) : undefined,
+        diferenciaBilletera: c.medios.find((m) => m.medio === "billetera") ? numero(c.medios.find((m) => m.medio === "billetera")!.diferencia) : undefined,
       })),
       meta: { pagina, porPagina, total },
     };
   }
 
-  private async cancelarEnTx(tx: Tx, pedidoId: string, usuarioId: string) {
-    const pedido = await tx.pedido.findUnique({ where: { id: pedidoId }, include: { lineas: true } });
-    if (!pedido || pedido.estado === EstadoPedido.ENTREGADO || pedido.estado === EstadoPedido.CANCELADO) return;
-
-    for (const linea of pedido.lineas) {
-      const producto = await tx.producto.findUniqueOrThrow({ where: { id: linea.productoId } });
-      await tx.producto.update({
-        where: { id: linea.productoId },
-        data: { stockReservado: { decrement: linea.cantidad } },
-      });
-      await tx.movimientoInventario.create({
-        data: {
-          productoId: linea.productoId,
-          tipo: TipoMovimientoInventario.LIBERACION_RESERVA,
-          cantidad: linea.cantidad,
-          deltaStockReservado: -linea.cantidad,
-          stockFisicoAntes: producto.stockFisico,
-          stockFisicoDespues: producto.stockFisico,
-          stockReservadoAntes: producto.stockReservado,
-          stockReservadoDespues: producto.stockReservado - linea.cantidad,
-          pedidoId,
-          usuarioId,
-        },
-      });
-    }
-    await tx.reservaStock.updateMany({
-      where: { pedidoId },
-      data: { estado: EstadoReserva.LIBERADA, liberadoEn: new Date() },
-    });
-    await tx.pedido.update({ where: { id: pedidoId }, data: { estado: EstadoPedido.CANCELADO, version: { increment: 1 } } });
-    await tx.pedidoEstadoHistorial.create({ data: { pedidoId, estado: EstadoPedido.CANCELADO, usuarioId, comentario: "Cancelado en cierre" } });
-  }
 }

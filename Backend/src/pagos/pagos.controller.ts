@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import { Usuario } from "@prisma/client";
 import { PagosService } from "./pagos.service";
+import { paginacion } from "../common/paginacion";
 import { UsuarioActual } from "../common/guards";
 import { ErrorDominio } from "../common/errores";
 import { z } from "zod";
@@ -37,6 +38,7 @@ export class PagosController {
 
   @Get("abonos")
   async historial(@Query("clienteId") clienteId?: string, @Query("page") page?: string, @Query("pageSize") pageSize?: string) {
-    return this.pagos.historial(clienteId, Number(page ?? 1), Number(pageSize ?? 20));
+    const p = paginacion(page, pageSize);
+    return this.pagos.historial(clienteId, p.pagina, p.porPagina);
   }
 }

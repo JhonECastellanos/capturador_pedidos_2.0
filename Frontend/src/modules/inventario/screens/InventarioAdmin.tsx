@@ -17,6 +17,8 @@ import { useOperaciones } from "../../../context/operaciones";
 import { lineasContadasDe, resumenConteo } from "../../../dominio/servicios";
 import { formatoMoneda } from "../../../utils/formato";
 import { FormularioProducto } from "../components/FormularioProducto";
+import { usePantallaVoz } from "../../asistente/pantalla-voz";
+import { resolverReferencia } from "../../asistente/intencion";
 
 const campo = "rounded-lg border border-line bg-paper-raised px-3 py-2.5 text-[13px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none";
 
@@ -45,6 +47,7 @@ export function InventarioAdmin() {
   const [vista, setVista] = useState<VistaInv>("menu");
   const [mostrarProducto, setMostrarProducto] = useState(false);
   const [cantidadAleatoria, setCantidadAleatoria] = useState("5");
+  const [tipoConteo, setTipoConteo] = useState<"general" | "aleatorio">("general");
   const [turno, setTurno] = useState("mañana");
   const [conteoActivoId, setConteoActivoId] = useState<string | null>(null);
   const [indice, setIndice] = useState(0);
@@ -112,26 +115,28 @@ export function InventarioAdmin() {
     return inventario.filter((p) => !q || p.nombre.toLowerCase().includes(q) || p.codigoInterno.toLowerCase().includes(q));
   }, [busquedaAjuste, inventario]);
 
-  function handleIniciar(tipo: "general" | "aleatorio") {
+  async function handleIniciar(tipo: "general" | "aleatorio") {
     if (inventario.length === 0) {
       mostrarAviso("Registra productos antes de iniciar un conteo", "error");
-      return;
+      return false;
     }
     const cantidad = tipo === "aleatorio" ? Number(cantidadAleatoria) || 5 : null;
-    const conteo = iniciarConteo(tipo, cantidad, turno);
+    const conteo = await iniciarConteo(tipo, cantidad, turno);
+    if (!conteo) return false;
     setConteoActivoId(conteo.id);
     setIndice(0);
     setBorradorConteo({});
     setConteoDetalleId(null);
     mostrarAviso(`Conteo ${tipo} iniciado · turno ${turno}`, "exito");
+    return true;
   }
 
-  function handleAjusteManual() {
-    if (!productoAjusteId) return;
+  async function handleAjusteManual() {
+    if (!productoAjusteId) return false;
     const stockFisico = Number(stockFisicoAjuste);
-    if (Number.isNaN(stockFisico) || stockFisico < 0) return;
+    if (!Number.isInteger(stockFisico) || stockFisico < 0 || stockFisicoAjuste === "") return false;
     const producto = inventario.find((p) => p.id === productoAjusteId);
-    registrarAjusteManual(productoAjusteId, stockFisico, motivoAjuste, comentarioAjuste || undefined);
+    if (await registrarAjusteManual(productoAjusteId, stockFisico, motivoAjuste, comentarioAjuste || undefined) === false) return false;
     mostrarAviso(`Ajuste en ${producto?.nombre ?? "producto"}: ${producto?.stock ?? 0} → ${stockFisico}`, "exito");
     setProductoAjusteId(null);
     setStockFisicoAjuste("");
@@ -139,7 +144,13 @@ export function InventarioAdmin() {
     setMotivoAjuste("corrección");
     setMostrarAjusteManual(false);
     setPasoAjuste(1);
+    return true;
   }
+  usePantallaVoz(["crear_producto"], { aplicar: () => { setVista("general"); setMostrarProducto(true); }, leer: () => ({}), confirmar: async () => false, cancelar: () => setMostrarProducto(false) });
+  usePantallaVoz(["ajustar_inventario"], {
+    aplicar: (p, campo) => { setVista("ajustes"); setMostrarAjusteManual(true); setPasoAjuste(campo === "productoId" ? 1 : 2); if (p.productoId) { const id = resolverReferencia(p.productoId, inventario); if (id) setProductoAjusteId(id); else setBusquedaAjuste(String(p.productoId)); } if (typeof p.stockFisico === "number") setStockFisicoAjuste(String(p.stockFisico)); if (typeof p.motivo === "string") setMotivoAjuste(p.motivo); if (typeof p.comentario === "string") setComentarioAjuste(p.comentario); },
+    leer: () => ({ productoId: productoAjusteId, stockFisico: stockFisicoAjuste === "" ? undefined : Number(stockFisicoAjuste), motivo: motivoAjuste, comentario: comentarioAjuste }), confirmar: handleAjusteManual, cancelar: volverAlMenu,
+  });
 
   const productoAjuste = productoAjusteId ? inventario.find((p) => p.id === productoAjusteId) : null;
   const lineaActual = conteoEnCurso ? conteoEnCurso.lineas[indice] : null;
@@ -154,6 +165,43 @@ export function InventarioAdmin() {
   const textoFisico = lineaActual
     ? borradorConteo[lineaActual.productoId] ?? (lineaContada ? String(lineaActual.stockFisico) : "")
     : "";
+
+  async function guardarCantidad() {
+    if (!conteoEnCurso || !lineaActual || textoFisico === "" || !Number.isInteger(Number(textoFisico)) || Number(textoFisico) < 0) return false;
+    return await actualizarConteoLinea(conteoEnCurso.id, lineaActual.productoId, Number(textoFisico)) !== false;
+  }
+  async function finalizarConteo() {
+    if (!conteoEnCurso || !conteoCompleto || await finalizarConteoActivo(conteoEnCurso.id) === false) return false;
+    setIndice(0); setBorradorConteo({}); setConteoDetalleId(conteoEnCurso.id);
+    mostrarAviso("Conteo registrado · revisa los descuadres", "exito"); return true;
+  }
+  async function cancelarConteo() {
+    if (!conteoEnCurso || await cancelarConteoActivo(conteoEnCurso.id) === false) return false;
+    setConteoActivoId(null); setIndice(0); setConfirmarCancelarConteo(false);
+    mostrarAviso("Conteo cancelado · sin cambios al stock", "info"); return true;
+  }
+  async function aplicarConteo() {
+    if (!confirmarAplicarConteoId || await aplicarAjusteDeConteo(confirmarAplicarConteoId) === false) return false;
+    setConfirmarAplicarConteoId(null); mostrarAviso("Ajuste de conteo aplicado al stock", "exito"); return true;
+  }
+  function seleccionarConteo(p: Record<string, unknown>, detalle = false) {
+    setVista("conteo");
+    const id = resolverReferencia(p.conteoId, conteos.map(c => ({ id: c.id, nombre: `${c.tipo} · ${c.turno} · ${c.estado}` })));
+    if (!id) return "";
+    if (detalle) setConteoDetalleId(id); else { setConteoActivoId(id); setConteoDetalleId(null); }
+    return id;
+  }
+  usePantallaVoz(["iniciar_conteo"], {
+    aplicar: p => { setVista("conteo"); setConteoDetalleId(null); if (p.tipo === "general" || p.tipo === "aleatorio") setTipoConteo(p.tipo); if (typeof p.turno === "string") setTurno(p.turno); if (typeof p.cantidadAleatoria === "number") setCantidadAleatoria(String(p.cantidadAleatoria)); },
+    leer: () => ({ tipo: tipoConteo, turno, ...(tipoConteo === "aleatorio" ? { cantidadAleatoria: Number(cantidadAleatoria) } : {}) }), confirmar: () => handleIniciar(tipoConteo), cancelar: volverAlMenu,
+  });
+  usePantallaVoz(["contar_producto"], {
+    aplicar: p => { const id = seleccionarConteo(p); const c = conteos.find(c => c.id === id); const productoId = resolverReferencia(p.productoId, inventario); const i = c?.lineas.findIndex(l => l.productoId === productoId) ?? -1; if (i >= 0) { setIndice(i); if (typeof p.stockFisico === "number") setBorradorConteo(b => ({ ...b, [productoId]: String(p.stockFisico) })); } },
+    leer: () => ({ conteoId: conteoEnCurso?.id, productoId: lineaActual?.productoId, stockFisico: textoFisico === "" ? undefined : Number(textoFisico) }), confirmar: guardarCantidad, cancelar: volverAlMenu,
+  });
+  usePantallaVoz(["finalizar_conteo"], { aplicar: p => { seleccionarConteo(p); }, leer: () => ({ conteoId: conteoCompleto ? conteoEnCurso?.id : undefined }), confirmar: finalizarConteo, cancelar: volverAlMenu });
+  usePantallaVoz(["cancelar_conteo"], { aplicar: p => { if (seleccionarConteo(p)) setConfirmarCancelarConteo(true); }, leer: () => ({ conteoId: confirmarCancelarConteo ? conteoEnCurso?.id : undefined }), confirmar: cancelarConteo, cancelar: () => setConfirmarCancelarConteo(false) });
+  usePantallaVoz(["aplicar_conteo"], { aplicar: p => { const id = seleccionarConteo(p, true); if (id) setConfirmarAplicarConteoId(id); }, leer: () => ({ conteoId: confirmarAplicarConteoId }), confirmar: aplicarConteo, cancelar: () => setConfirmarAplicarConteoId(null) });
 
   function volverAlMenu() {
     setMostrarProducto(false);
@@ -184,7 +232,7 @@ export function InventarioAdmin() {
         id: "descuadres" as VistaInv,
         titulo: "Descuadres",
         descripcion: "Faltantes y sobrantes por aplicar",
-        detalle: `${lineasConDiferencia.length} por resolver`,
+        detalle: `${lineasConDiferencia.filter((l) => !ajustes.some((a) => a.conteoId === l.conteoId)).length} por resolver`,
         icono: <IconChartBar width={24} height={24} />,
         tono: "danger" as const,
       },
@@ -268,11 +316,13 @@ export function InventarioAdmin() {
             <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar py-2">
               <FormularioProducto
                 alCancelar={() => setMostrarProducto(false)}
-                alGuardar={(datos, archivo) => {
-                  const producto = crearProducto(datos);
-                  if (archivo) void actualizarImagenProducto(producto.id, archivo);
+                alGuardar={async (datos, archivo) => {
+                  const producto = await crearProducto(datos);
+                  if (!producto) return false;
+                  if (archivo) await actualizarImagenProducto(producto.id, archivo).catch(() => mostrarAviso("Producto creado; no se pudo subir la foto", "error"));
                   setMostrarProducto(false);
                   mostrarAviso(`Producto ${producto.nombre} creado`, "exito");
+                  return true;
                 }}
               />
             </div>
@@ -478,29 +528,23 @@ export function InventarioAdmin() {
                   onChange={(e) => {
                     const valor = e.target.value.replace(/[^0-9]/g, "");
                     setBorradorConteo((previo) => ({ ...previo, [lineaActual.productoId]: valor }));
-                    if (valor !== "") actualizarConteoLinea(conteoEnCurso.id, lineaActual.productoId, Number(valor));
                   }}
                   className="mt-3 w-full rounded-2xl border-2 border-ink bg-paper px-4 py-6 text-center text-[36px] font-semibold tabular-nums text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
                   autoFocus
                 />
+                <button type="button" disabled={textoFisico === ""} className="mt-3 w-full rounded-xl border border-line bg-paper py-3 text-sm font-semibold disabled:opacity-40" onClick={() => void guardarCantidad()}>Guardar cantidad</button>
                 <p className={`mt-2 text-[13px] font-semibold ${!lineaContada ? "text-ink-faint" : lineaActual.diferencia === 0 ? "text-success" : "text-danger"}`}>
                   {!lineaContada ? "Sin contar" : lineaActual.diferencia === 0 ? "Cuadra" : `Diferencia: ${lineaActual.diferencia > 0 ? "+" : ""}${lineaActual.diferencia}`}
                 </p>
                 <div className="mt-4 grid grid-cols-2 gap-2">
-                  <button type="button" disabled={indice === 0} onClick={() => setIndice((i) => Math.max(0, i - 1))} className="rounded-xl border border-line bg-paper py-3 text-[13px] font-semibold text-ink disabled:opacity-40">← Anterior</button>
+                  <button type="button" disabled={indice === 0} onClick={async () => { if (textoFisico !== "" && await actualizarConteoLinea(conteoEnCurso.id, lineaActual.productoId, Number(textoFisico)) === false) return; setIndice((i) => Math.max(0, i - 1)); }} className="rounded-xl border border-line bg-paper py-3 text-[13px] font-semibold text-ink disabled:opacity-40">← Anterior</button>
                   {indice < conteoEnCurso.lineas.length - 1 ? (
-                    <button type="button" onClick={() => setIndice((i) => i + 1)} className="rounded-xl bg-ink py-3 text-[13px] font-semibold text-white active:bg-ink/90">Siguiente →</button>
+                    <button type="button" onClick={async () => { if (textoFisico !== "" && await actualizarConteoLinea(conteoEnCurso.id, lineaActual.productoId, Number(textoFisico)) === false) return; setIndice((i) => i + 1); }} className="rounded-xl bg-ink py-3 text-[13px] font-semibold text-white active:bg-ink/90">Siguiente →</button>
                   ) : (
                     <button
                       type="button"
                       disabled={!conteoCompleto}
-                      onClick={() => {
-                        finalizarConteoActivo(conteoEnCurso.id);
-                        setIndice(0);
-                        setBorradorConteo({});
-                        setConteoDetalleId(conteoEnCurso.id);
-                        mostrarAviso("Conteo registrado · revisa los descuadres", "exito");
-                      }}
+                      onClick={() => void finalizarConteo()}
                       className="rounded-xl bg-success py-3 text-[13px] font-semibold text-white active:opacity-90 disabled:opacity-40"
                     >
                       Finalizar conteo
@@ -532,8 +576,8 @@ export function InventarioAdmin() {
               <input type="number" min={1} max={inventario.length} value={cantidadAleatoria} onChange={(e) => setCantidadAleatoria(e.target.value)} placeholder="N aleatorio" className={campo} />
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <button type="button" disabled={inventario.length === 0} onClick={() => handleIniciar("general")} className="rounded-xl bg-ink py-3 text-[13px] font-semibold text-white active:bg-ink/90 disabled:opacity-40">General</button>
-              <button type="button" disabled={inventario.length === 0} onClick={() => handleIniciar("aleatorio")} className="rounded-xl border border-line bg-paper py-3 text-[13px] font-semibold text-ink active:bg-paper-sunken disabled:opacity-40">Aleatorio</button>
+              <button type="button" aria-pressed={tipoConteo === "general"} disabled={inventario.length === 0} onClick={() => { setTipoConteo("general"); void handleIniciar("general"); }} className="rounded-xl bg-ink py-3 text-[13px] font-semibold text-white active:bg-ink/90 disabled:opacity-40">General</button>
+              <button type="button" aria-pressed={tipoConteo === "aleatorio"} disabled={inventario.length === 0} onClick={() => { setTipoConteo("aleatorio"); void handleIniciar("aleatorio"); }} className="rounded-xl border border-line bg-paper py-3 text-[13px] font-semibold text-ink active:bg-paper-sunken disabled:opacity-40">Aleatorio</button>
             </div>
             {inventario.length === 0 && (
               <p className="mt-2 text-[11.5px] text-ink-faint">Primero registra productos en Stock general para poder contarlos.</p>
@@ -801,13 +845,7 @@ export function InventarioAdmin() {
         textoConfirmar="Sí, cancelar"
         tono="peligro"
         alCancelar={() => setConfirmarCancelarConteo(false)}
-        alConfirmar={() => {
-          if (conteoEnCurso) cancelarConteoActivo(conteoEnCurso.id);
-          setConteoActivoId(null);
-          setIndice(0);
-          setConfirmarCancelarConteo(false);
-          mostrarAviso("Conteo cancelado · sin cambios al stock", "info");
-        }}
+        alConfirmar={async () => { await cancelarConteo(); }}
       />
 
       <ConfirmarAccion
@@ -817,13 +855,7 @@ export function InventarioAdmin() {
         textoConfirmar="Aplicar ajuste"
         tono="ink"
         alCancelar={() => setConfirmarAplicarConteoId(null)}
-        alConfirmar={() => {
-          if (confirmarAplicarConteoId) {
-            aplicarAjusteDeConteo(confirmarAplicarConteoId);
-            setConfirmarAplicarConteoId(null);
-            mostrarAviso("Ajuste de conteo aplicado al stock", "exito");
-          }
-        }}
+        alConfirmar={async () => { await aplicarConteo(); }}
       />
 
       <ConfirmarAccion

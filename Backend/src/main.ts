@@ -7,7 +7,8 @@ import { AppModule } from "./app.module";
 import { FiltroErrores } from "./common/errores";
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
+  const saltosProxy = Math.max(0, Math.floor(Number(process.env.TRUST_PROXY_HOPS ?? 0) || 0));
+  const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter({ bodyLimit: 8 * 1024 * 1024, trustProxy: (_direccion, salto) => salto < saltosProxy }));
 
   await app.register(fastifyCookie as never);
   // Red de seguridad global contra fuerza bruta; las rutas de autenticación

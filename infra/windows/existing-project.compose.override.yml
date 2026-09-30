@@ -1,0 +1,15 @@
+# Límites locales para proyectos con servicios db, backend y frontend.
+# Docker Compose lo carga automáticamente como docker-compose.override.yml.
+services:
+  db:
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 1.0
+  backend:
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: 1.0
+  frontend:
+    mem_limit: 128m
+    memswap_limit: 128m
+    cpus: 0.5

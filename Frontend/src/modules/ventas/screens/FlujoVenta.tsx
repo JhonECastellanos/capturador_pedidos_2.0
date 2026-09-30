@@ -19,6 +19,8 @@ import { construirPago } from "../../../dominio/servicios";
 import { SelectorPago } from "../../clientes-pedido/components/SelectorPago";
 import type { EstadoPedido, LineaPedido, MetodoPago, Pedido } from "../../../types";
 import { formatoMoneda } from "../../../utils/formato";
+import { usePantallaVoz } from "../../asistente/pantalla-voz";
+import { resolverReferencia } from "../../asistente/intencion";
 
 type Paso = 1 | 2 | 3 | 4;
 type ModoEntrega = Extract<EstadoPedido, "entregado" | "pendiente">;
@@ -56,6 +58,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
   const [entrega, setEntrega] = useState<ModoEntrega>("entregado");
   const [metodo, setMetodo] = useState<MetodoPago>("efectivo");
+  const [ocasional, setOcasional] = useState(false);
 
   useEffect(() => {
     if (clienteIdDeRuta && obtenerCliente(clienteIdDeRuta)) {
@@ -64,10 +67,11 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
     }
   }, [clienteIdDeRuta, obtenerCliente, seleccionarClienteActivo]);
 
-  const clienteSeleccionado = clienteActivo;
+  const clienteSeleccionado = ocasional ? { id: null, nombre: "Venta ocasional", alias: "Sin registro de cliente" } : clienteActivo;
 
   /** Elige cliente y avanza al paso de productos. */
   function elegirCliente(id: string) {
+    setOcasional(false);
     seleccionarClienteActivo(id);
     setPaso(2);
   }
@@ -125,9 +129,10 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
     });
   }
 
-  function confirmarPedido() {
-    if (!clienteSeleccionado || lineas.length === 0) return;
-    const pedido = registrarPedido({
+  async function confirmarPedido() {
+    if (!clienteSeleccionado || lineas.length === 0) return false;
+    if (ocasional && metodo === "credito") { mostrarAviso("La venta ocasional no admite crédito", "info"); return false; }
+    const pedido = await registrarPedido({
       clienteId: clienteSeleccionado.id,
       vendedorId: usuario?.id ?? "usuario-vendedor",
       lineas,
@@ -135,10 +140,33 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
       estadoInicial: entrega,
       pago: construirPago(metodo, total),
     });
+    if (!pedido) return false;
     setCantidades({});
     if (alConfirmar) alConfirmar(pedido);
     navegar(rutaCompletado, { state: { pedidoId: pedido.id }, replace: true });
+    return true;
   }
+  usePantallaVoz(["crear_pedido"], {
+    aplicar: (p, campo) => {
+      if (Object.hasOwn(p, "clienteId")) {
+        setOcasional(p.clienteId === null);
+        const id = resolverReferencia(p.clienteId, clientes);
+        seleccionarClienteActivo(id || null);
+        if (typeof p.clienteId === "string" && !id) setBusquedaCliente(p.clienteId);
+      }
+      if (Array.isArray(p.lineas)) {
+        const cantidadesVoz: Record<string, number> = {};
+        p.lineas.forEach((l: Record<string, unknown>) => { const id = resolverReferencia(l.productoId, inventario); if (id && typeof l.cantidad === "number") cantidadesVoz[id] = (cantidadesVoz[id] ?? 0) + l.cantidad; });
+        setCantidades(cantidadesVoz);
+      }
+      if (p.estadoInicial === "pendiente" || p.estadoInicial === "entregado") setEntrega(p.estadoInicial);
+      if (p.metodo === "efectivo" || p.metodo === "billetera" || (p.metodo === "credito" && p.clienteId)) setMetodo(p.metodo);
+      setPaso(campo === "tipoCliente" || campo === "clienteId" ? 1 : campo === "lineas" ? 2 : campo === "estadoInicial" ? 3 : 4);
+    },
+    leer: () => ({ clienteId: ocasional ? null : clienteSeleccionado?.id ?? "", lineas: lineas.map((l) => ({ productoId: l.productoId, cantidad: l.cantidad })), estadoInicial: entrega, metodo, momentoCobro: metodo === "credito" ? "segun-periodicidad" : "inmediato" }),
+    confirmar: confirmarPedido,
+    cancelar: () => { setCantidades({}); setOcasional(false); seleccionarClienteActivo(null); setPaso(1); },
+  });
 
   function volver() {
     if (paso === 1) {
@@ -168,6 +196,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
             </div>
           )}
           <p className="mb-2.5 text-[12.5px] text-ink-soft">Elige a quién le vas a vender hoy.</p>
+          <TarjetaClicable className="mb-3 p-4" onClick={() => { setOcasional(true); seleccionarClienteActivo(null); if (metodo === "credito") setMetodo("efectivo"); setPaso(2); }}><span className="block font-semibold">Venta abierta · cliente ocasional</span><span className="block text-sm text-ink-soft">Sin registrar un cliente. Efectivo o billetera, sin crédito.</span></TarjetaClicable>
           {clientesFiltrados.length === 0 ? (
             <ListaVacia
               titulo={clientes.length === 0 ? "Aún no hay clientes registrados" : "No se encontró el cliente"}
@@ -365,7 +394,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
 
             <section className="mt-4">
               <p className="mb-2.5 text-[12px] font-semibold uppercase tracking-wide text-ink-soft">Forma de pago</p>
-              <SelectorPago metodo={metodo} onChange={setMetodo} />
+              <SelectorPago metodo={metodo} onChange={setMetodo} permitirCredito={!ocasional} />
               {metodo === "credito" && (
                 <div className="mt-3 rounded-xl border border-danger/20 bg-danger-soft p-3">
                   <p className="text-[13px] font-semibold text-danger">Saldo pendiente: {formatoMoneda(total)}</p>
@@ -376,7 +405,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
               )}
               {metodo !== "credito" && entrega === "pendiente" && (
                 <p className="mt-3 rounded-xl bg-paper-sunken px-3 py-2.5 text-[12px] leading-relaxed text-ink-soft">
-                  Estás cobrando un pedido aún no entregado. Si prefieres cobrarlo al entregar, elige <strong>Crédito</strong> y usa Abonos.
+                  El pago queda registrado ahora y el pedido permanece por preparar. Podrás marcarlo como entregado desde el detalle sin cobrarlo nuevamente.
                 </p>
               )}
             </section>

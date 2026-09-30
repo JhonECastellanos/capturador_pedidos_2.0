@@ -5,10 +5,8 @@
 
 // ─── Enumeraciones ────────────────────────────────────────────────
 
-export type MetodoPago = "efectivo" | "billetera" | "credito";
-export type EstadoPedido = "pendiente" | "en-preparacion" | "entregado" | "cancelado";
-export type RolUsuario = "administrador" | "vendedor";
-export type EstadoCuenta = "al-dia" | "pendiente";
+export type { MetodoPago, EstadoPedido, RolUsuario, EstadoCuenta } from "@ambie/contrato";
+import type { MetodoPago, EstadoPedido, RolUsuario, EstadoCuenta, PedidoDTO, UsuarioDTO } from "@ambie/contrato";
 /** Periodicidad pactada de pago para el crédito del cliente. */
 export type TipoCredito = "diario" | "semanal" | "quincenal" | "mensual";
 
@@ -82,7 +80,7 @@ export interface AbonoCreditoParcial {
 
 export interface AbonoCredito {
   id: string;
-  clienteId: string;
+  clienteId: string | null;
   monto: number;
   metodo: "efectivo" | "billetera";
   usuarioId: string;
@@ -148,10 +146,11 @@ export interface HistorialEstadoPedido {
   fecha: string;
 }
 
-export interface Pedido {
+export interface Pedido extends Pick<PedidoDTO, "clienteNombre" | "comprobantePagoAdjuntoId"> {
+  fechaOperacion?: string;
   id: string;
   numero: string;
-  clienteId: string;
+  clienteId: string | null;
   vendedorId: string;
   lineas: LineaPedido[];
   subtotal: number;
@@ -165,7 +164,7 @@ export interface Pedido {
 }
 
 export interface NuevoPedido {
-  clienteId: string;
+  clienteId: string | null;
   vendedorId: string;
   lineas: LineaPedido[];
   total: number;
@@ -190,7 +189,7 @@ export interface MovimientoCaja {
 
 // ─── Usuarios ─────────────────────────────────────────────────────
 
-export interface UsuarioSistema {
+export interface UsuarioSistema extends Pick<UsuarioDTO, "esSistema"> {
   id: string;
   nombre: string;
   email: string;

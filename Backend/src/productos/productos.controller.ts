@@ -3,6 +3,7 @@ import { Usuario, RolUsuario } from "@prisma/client";
 import { ProductosService, NuevoProductoSchema } from "./productos.service";
 import { Roles, UsuarioActual } from "../common/guards";
 import { ErrorDominio } from "../common/errores";
+import { paginacion } from "../common/paginacion";
 
 @Controller("productos")
 export class ProductosController {
@@ -16,7 +17,15 @@ export class ProductosController {
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
   ) {
-    return this.productos.listar(q, categoria, stockEstado, Number(page ?? 1), Number(pageSize ?? 20));
+    const p = paginacion(page, pageSize);
+    return this.productos.listar(q, categoria, stockEstado, p.pagina, p.porPagina);
+  }
+
+  @Roles(RolUsuario.ADMINISTRADOR)
+  @Get("cambios-precio")
+  listarCambios(@Query("page") page?: string, @Query("pageSize") pageSize?: string) {
+    const p = paginacion(page, pageSize);
+    return this.productos.listarCambios(p.pagina, p.porPagina);
   }
 
   @Get(":productoId")

@@ -1,5 +1,31 @@
 @import "tailwindcss";
 
+.microfono-flotante {
+  position: fixed;
+  z-index: 75;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid var(--color-line);
+  border-radius: 50%;
+  background: var(--color-ink);
+  color: var(--color-paper-raised);
+  box-shadow: 0 4px 16px #304d2530;
+  cursor: grab;
+  user-select: none;
+}
+.microfono-flotante:active { cursor: grabbing; }
+.microfono-flotante:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 4px; }
+.microfono-ondas { position: absolute; inset: -3px; pointer-events: none; }
+.microfono-ondas i { position: absolute; inset: 0; border: 1px solid var(--color-accent); border-radius: 50%; opacity: 0; }
+.microfono-activo .microfono-ondas i { animation: onda-microfono 1.4s ease-out infinite; border-width: calc(1px + var(--nivel-voz, 0) * 2px); }
+.microfono-activo .microfono-ondas i:nth-child(2) { animation-delay: .45s; }
+.microfono-activo .microfono-ondas i:nth-child(3) { animation-delay: .9s; }
+@keyframes onda-microfono { from { transform: scale(1); opacity: .75; } to { transform: scale(calc(1.2 + var(--nivel-voz, 0) * .25)); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .microfono-activo .microfono-ondas i { animation: none; opacity: .7; } }
+
 /*
  * Paleta de marca AMBIÉ (café & antojos):
  * verde bosque como tinta principal, fondo crema, naranja como acento,
@@ -52,8 +78,7 @@ body {
   color: var(--color-ink);
   background: var(--color-paper-sunken);
   overscroll-behavior-y: none;
-  /* La página no hace scroll; cada pantalla gestiona su propio scroll interno.
-     Excepción: con ≤ 824px de alto o ancho, el scroll pasa al navegador. */
+  /* Cada pantalla gestiona su scroll interno y conserva sus acciones fijas. */
   overflow: hidden;
 }
 
@@ -95,23 +120,14 @@ body {
 }
 
 /*
- * Vista vertical/móvil o ventanas bajas (alto o ancho ≤ 824px): la app deja de
- * encogerse. Los módulos conservan sus dimensiones completas y el scroll
- * vertical pasa al navegador para poder llegar hasta el final de cada pantalla
- * e interactuar con todos sus elementos.
+ * Vista móvil o ventanas bajas: el contenido se ajusta al viewport y cada
+ * pantalla ofrece su propio scroll; no se pierden las acciones del pie.
  */
 @media (max-width: 824px), (max-height: 824px) {
-  html,
-  body,
-  #root {
-    height: auto;
-  }
+  html, body, #root { height: 100%; }
+  body { overflow: hidden; }
 
-  body {
-    overflow-y: auto;
-  }
-
-  /* Scrollbar delgada y visible para el scroll general de la página. */
+  /* Scrollbar delgada para navegadores que la muestran. */
   html::-webkit-scrollbar,
   body::-webkit-scrollbar {
     width: 9px;
@@ -126,29 +142,41 @@ body {
     background: transparent;
   }
 
-  /* El contenedor crece con su contenido en lugar de encogerse. */
+  /* El contenedor conserva el alto disponible. */
   .app-viewport {
-    height: auto;
-    overflow: visible;
-    overflow: clip;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
   }
 
-  /* La pantalla activa completa al menos el viewport y crece si hace falta. */
+  /* Permite encoger el área desplazable de la pantalla activa. */
   .app-viewport > * {
-    flex: 1 0 auto;
+    min-height: 0;
   }
 
-  /* En admin la barra de pestañas se pega arriba: sus contenedores dejan de
-     recortar para que `sticky` pueda seguir al scroll de la página. */
+  /* El marco administrativo no produce un segundo scroll de documento. */
   .app-viewport--amplio .admin-cuerpo,
   .app-viewport--amplio .admin-cuerpo > main {
-    overflow: visible;
+    overflow: hidden;
   }
 
   /* El título de la pantalla no se pega (quedaría bajo la barra fija). */
   .app-viewport--amplio main header.sticky {
     position: static;
   }
+}
+
+.operaciones-remotas { display: flex; flex-direction: column; height: 100dvh; min-height: 0; }
+.operaciones-remotas .app-viewport-outer { display: flex; justify-content: center; flex: 1; min-height: 0; box-sizing: border-box; }
+@media (min-width: 1280px) { .operaciones-remotas .app-viewport-outer { min-height: 0; } }
+.operaciones-remotas .app-viewport { height: 100%; min-height: 0; }
+@media (pointer: coarse) {
+  button, select, a[role="button"], nav a { min-height: 44px; }
+  input, select, textarea { font-size: max(16px, 1em); }
+}
+:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
 
 ::-webkit-scrollbar {

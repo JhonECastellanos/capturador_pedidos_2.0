@@ -58,6 +58,7 @@ export class CajaService {
         usuario: m.usuario.nombre,
         referenciaId: m.pagoId ?? m.recepcionCompraId ?? m.gastoId ?? null,
         creadoEn: m.creadoEn,
+        fechaContable: m.fechaContable,
       })),
       meta: {
         pagina,

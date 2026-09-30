@@ -4,11 +4,13 @@ import { BarraSuperior } from "../../../components/BarraSuperior";
 import { IconCash, IconChevronRight, IconClipboard, IconPackage, IconUser } from "../../../components/Icons";
 import { ListaVacia } from "../../../components/ListaVacia";
 import { useAuth } from "../../../context/auth";
+import { fechaOperativa } from "../../../utils/fechas";
 import { useOperaciones } from "../../../context/operaciones";
 import { descuadreCajaDe } from "../../../dominio/servicios";
 import { formatoMoneda } from "../../../utils/formato";
 import { EtiquetaEstado } from "../../administracion/components/EtiquetaEstado";
 import { EtiquetaPago } from "../../administracion/components/EtiquetaPago";
+import { usaApi } from "../../../data/api";
 
 interface InicioVentasProps {
   /** Asistente para tomar un pedido. */
@@ -50,7 +52,7 @@ export function InicioVentas({ rutaPedido, rutaAbonos, rutaNuevoCliente, rutaDet
   const pedidosHoy = useMemo(
     () =>
       pedidos
-        .filter((p) => esMismoDia(p.creadoEn, hoy) && p.estado !== "cancelado")
+        .filter((p) => esMismoDia(fechaOperativa(p), hoy) && p.estado !== "cancelado")
         .sort((a, b) => (b.creadoEn < a.creadoEn ? -1 : b.creadoEn > a.creadoEn ? 1 : 0)),
     [pedidos, hoy],
   );
@@ -88,8 +90,8 @@ export function InicioVentas({ rutaPedido, rutaAbonos, rutaNuevoCliente, rutaDet
     },
   ];
 
-  function salir() {
-    cerrarSesion();
+  async function salir() {
+    if (!await cerrarSesion()) return;
     navegar("/");
   }
 
@@ -126,7 +128,7 @@ export function InicioVentas({ rutaPedido, rutaAbonos, rutaNuevoCliente, rutaDet
               </div>
               <div>
                 <p className={`font-mono text-[16px] font-semibold ${descuadre === 0 ? "text-success" : "text-danger"}`}>
-                  {descuadre === 0 ? "Cuadra ✓" : formatoMoneda(descuadre)}
+                  {usaApi && usuario?.rol === "vendedor" ? "Solo administración" : descuadre === 0 ? "Cuadra ✓" : formatoMoneda(descuadre)}
                 </p>
                 <p className="text-[12px] text-ink-soft">Descuadre de caja</p>
               </div>

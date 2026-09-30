@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, Res } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res } from "@nestjs/common";
 import { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { AuthService } from "./auth.service";
@@ -46,6 +46,9 @@ export class AuthController {
 
   @Public()
   @Post("login")
+  // Entrar es una acción, no la creación de un recurso: 200 en vez del 201
+  // que Nest responde por defecto a los POST.
+  @HttpCode(HttpStatus.OK)
   async login(
     @Body() body: unknown,
     @Req() req: FastifyRequest,
@@ -74,6 +77,7 @@ export class AuthController {
 
   @Public()
   @Post("refresh")
+  @HttpCode(HttpStatus.OK)
   async refrescar(
     @Body() body: unknown,
     @Req() req: FastifyRequest,
@@ -100,6 +104,7 @@ export class AuthController {
   }
 
   @Post("logout")
+  @HttpCode(HttpStatus.OK)
   async logout(
     @Body() body: unknown,
     @Req() req: FastifyRequest,

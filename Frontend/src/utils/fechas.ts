@@ -8,6 +8,12 @@ export type Periodo = "hoy" | "ayer" | "semana" | "mes" | "anio" | "todo";
 
 export const PERIODOS: Periodo[] = ["hoy", "ayer", "semana", "mes", "anio", "todo"];
 
+/** DATE de la API es un día contable, no un instante UTC que deba desplazarse. */
+export function fechaOperativa(registro: { creadoEn: string; fechaOperacion?: string; fechaContable?: string }): string {
+  const dia = registro.fechaOperacion ?? registro.fechaContable;
+  return dia ? `${dia.slice(0, 10)}T12:00:00` : registro.creadoEn;
+}
+
 export const ETIQUETA_PERIODO: Record<Periodo, string> = {
   hoy: "Hoy",
   ayer: "Ayer",
@@ -62,11 +68,11 @@ export function dentroDeRangoFecha(fechaIso: string, desde: string, hasta: strin
   if (!desde && !hasta) return true;
   const fecha = inicioDelDia(new Date(fechaIso));
   if (desde) {
-    const dDesde = inicioDelDia(new Date(desde));
+    const dDesde = inicioDelDia(new Date(`${desde}T00:00:00`));
     if (fecha < dDesde) return false;
   }
   if (hasta) {
-    const dHasta = inicioDelDia(new Date(hasta));
+    const dHasta = inicioDelDia(new Date(`${hasta}T00:00:00`));
     dHasta.setHours(23, 59, 59, 999);
     if (fecha > dHasta) return false;
   }

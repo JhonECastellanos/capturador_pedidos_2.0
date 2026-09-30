@@ -1,9 +1,11 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { RolUsuario, UsuarioSistema } from "../types";
 import { PERMISOS_POR_ROL } from "../dominio/servicios";
 import { cargarUsuarios } from "../data/repositorios/usuarios";
 import { guardar, leer } from "../data/repositorios/almacenamiento";
 import { AuthContext } from "./auth-context";
+import { api, ErrorApi, usaApi } from "../data/api";
+import { limpiarConsultas } from "../data/query";
 
 const CLAVE_SESION = "sesion-usuario";
 
@@ -55,15 +57,35 @@ function coincideUsuario(u: UsuarioSistema, idOrEmail: string): boolean {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [usuario, setUsuario] = useState<UsuarioSistema | null>(restaurarSesion);
+  const [usuario, setUsuario] = useState<UsuarioSistema | null>(() => usaApi ? null : restaurarSesion());
+  const [cargando, setCargando] = useState(usaApi);
+
+  useEffect(() => {
+    if (!usaApi) return;
+    let vigente = true;
+    const expirar = () => { limpiarConsultas(); setUsuario(null); };
+    window.addEventListener("ambie:sesion-expirada", expirar);
+    void api<UsuarioSistema>("/auth/me").then((u) => { if (vigente) setUsuario(u); })
+      .catch(() => {}).finally(() => { if (vigente) setCargando(false); });
+    return () => { vigente = false; window.removeEventListener("ambie:sesion-expirada", expirar); };
+  }, []);
 
   function iniciarSesion(rol: RolUsuario) {
+    if (usaApi) return;
     const sesion = usuarioDesdeRol(rol);
     setUsuario(sesion);
     guardar(CLAVE_SESION, sesion.id);
   }
 
-  function iniciarSesionConCredenciales(identificador: string, password: string): { ok: boolean; error?: string; usuario?: UsuarioSistema } {
+  async function iniciarSesionConCredenciales(identificador: string, password: string): Promise<{ ok: boolean; error?: string; usuario?: UsuarioSistema }> {
+    if (usaApi) {
+      try {
+        const sesion = await api<{ usuario: UsuarioSistema }>("/auth/login", "POST", { identifier: identificador.trim(), password });
+        limpiarConsultas();
+        setUsuario(sesion.usuario);
+        return { ok: true, usuario: sesion.usuario };
+      } catch (error) { return { ok: false, error: error instanceof Error ? error.message : "No se pudo iniciar sesión" }; }
+    }
     const idOrEmail = identificador.trim().toLowerCase();
     if (!idOrEmail || !password) return { ok: false, error: "Ingresa usuario y contraseña" };
     const usuarios = cargarUsuarios();
@@ -85,11 +107,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { ok: true, usuario: candidato };
   }
 
-  function cerrarSesion() {
+  async function cerrarSesion(): Promise<boolean> {
+    if (usaApi) {
+      try { await api("/auth/logout", "POST", {}); limpiarConsultas(); setUsuario(null); return true; }
+      catch (e) { if (e instanceof ErrorApi && e.status === 401) { limpiarConsultas(); setUsuario(null); return true; } window.alert("No se pudo cerrar la sesión en el servidor. Revisa la conexión e intenta de nuevo."); return false; }
+    }
     setUsuario(null);
     guardar(CLAVE_SESION, null);
+    return true;
   }
 
-  const value = useMemo(() => ({ usuario, iniciarSesion, iniciarSesionConCredenciales, cerrarSesion }), [usuario]);
+  const value = useMemo(() => ({ usuario, cargando, iniciarSesion, iniciarSesionConCredenciales, cerrarSesion }), [usuario, cargando]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

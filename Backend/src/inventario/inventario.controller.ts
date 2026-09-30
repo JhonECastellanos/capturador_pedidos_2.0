@@ -2,11 +2,15 @@ import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
 import { Usuario, RolUsuario } from "@prisma/client";
 import { InventarioService } from "./inventario.service";
 import { Roles, UsuarioActual } from "../common/guards";
-import { ErrorDominio } from "../common/errores";
+import { IniciarConteoEsquema, ContarLineaEsquema, AjusteManualEsquema } from "@ambie/contrato";
 
+@Roles(RolUsuario.ADMINISTRADOR)
 @Controller("inventario")
 export class InventarioController {
   constructor(private readonly inventario: InventarioService) {}
+
+  @Get("ajustes")
+  listarAjustes() { return this.inventario.listarAjustes(); }
 
   @Get("conteos")
   listarConteos() {
@@ -20,8 +24,7 @@ export class InventarioController {
 
   @Post("conteos")
   async iniciarConteo(@Body() body: unknown, @UsuarioActual() usuario: Usuario) {
-    const datos = body as { tipo?: string; cantidadAleatoria?: number | null; turno?: string };
-    if (!datos.tipo || !datos.turno) throw new ErrorDominio("VALIDACION", "Faltan datos del conteo");
+    const datos = IniciarConteoEsquema.parse(body);
     return {
       data: await this.inventario.iniciarConteo(
         {
@@ -40,10 +43,8 @@ export class InventarioController {
     @Param("productoId") productoId: string,
     @Body() body: { stockFisico?: number },
   ) {
-    if (typeof body?.stockFisico !== "number" || body.stockFisico < 0) {
-      throw new ErrorDominio("VALIDACION", "Cantidad física inválida");
-    }
-    return { data: await this.inventario.actualizarLinea(conteoId, productoId, body.stockFisico) };
+    const datos = ContarLineaEsquema.parse(body);
+    return { data: await this.inventario.actualizarLinea(conteoId, productoId, datos.stockFisico) };
   }
 
   @Post("conteos/:conteoId/finalizar")
@@ -67,15 +68,13 @@ export class InventarioController {
     @Body() body: { productoId?: string; stockFisico?: number; motivo?: string; comentario?: string },
     @UsuarioActual() usuario: Usuario,
   ) {
-    if (!body?.productoId || typeof body.stockFisico !== "number" || body.stockFisico < 0) {
-      throw new ErrorDominio("VALIDACION", "Revisa el ajuste");
-    }
+    const datos = AjusteManualEsquema.parse(body);
     return {
       data: await this.inventario.ajusteManual(
-        body.productoId,
-        body.stockFisico,
-        body.motivo ?? "corrección",
-        body.comentario,
+        datos.productoId,
+        datos.stockFisico,
+        datos.motivo ?? "corrección",
+        datos.comentario,
         usuario.id,
       ),
     };
