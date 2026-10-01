@@ -15,14 +15,16 @@ export function validarUrlProveedor(valor: string): URL {
   return url;
 }
 
-export async function pedirProveedor(urlTexto: string, cabeceras: Record<string, string>, cuerpo?: unknown): Promise<unknown> {
+export async function pedirProveedor(urlTexto: string, cabeceras: Record<string, string>, cuerpo?: unknown, consulta?: Record<string, string>): Promise<unknown> {
   const url = validarUrlProveedor(urlTexto);
+  for (const [nombre, valor] of Object.entries(consulta ?? {})) url.searchParams.set(nombre, valor);
   const direcciones = await lookup(url.hostname, { family: 4, all: true }).catch(() => { throw new ErrorDominio("PROVEEDOR", "No se pudo resolver el proveedor.", 502); });
   if (!direcciones.length || direcciones.some(({ address }) => !esIpv4Publica(address))) throw new ErrorDominio("VALIDACION", "El proveedor debe usar una dirección pública. No se permiten redes internas.");
   const datos = cuerpo === undefined ? undefined : JSON.stringify(cuerpo);
   return new Promise((resolve, reject) => {
     const fallo = (mensaje: string, status = 502) => new ErrorDominio("PROVEEDOR", mensaje, status);
     const req = request(url, {
+      family: 4,
       method: datos === undefined ? "GET" : "POST",
       headers: { ...cabeceras, "Content-Type": "application/json", ...(datos ? { "Content-Length": String(Buffer.byteLength(datos)) } : {}) },
       lookup: (_host, _opciones, callback) => callback(null, direcciones[0].address, 4),
@@ -32,7 +34,7 @@ export async function pedirProveedor(urlTexto: string, cabeceras: Record<string,
       respuesta.on("error", () => reject(fallo("Se interrumpió la respuesta del proveedor.")));
       respuesta.on("end", () => {
         if (!respuesta.statusCode || respuesta.statusCode < 200 || respuesta.statusCode >= 300) {
-          reject(fallo(respuesta.statusCode === 429 ? "El proveedor alcanzó su cuota. Intenta más tarde o cambia de modelo." : "El proveedor rechazó la solicitud. Revisa su clave, modelo y disponibilidad.")); return;
+          reject(fallo(mensajeErrorProveedor(respuesta.statusCode ?? 502))); return;
         }
         try { resolve(JSON.parse(Buffer.concat(buffers).toString("utf8"))); } catch { reject(fallo("El proveedor no devolvió JSON válido.")); }
       });
@@ -42,4 +44,12 @@ export async function pedirProveedor(urlTexto: string, cabeceras: Record<string,
     req.on("error", (error) => reject(error instanceof ErrorDominio ? error : fallo("No se pudo conectar con el proveedor.")));
     req.end(datos);
   });
+}
+
+export function mensajeErrorProveedor(status: number): string {
+  if (status === 400) return "El proveedor rechazó los parámetros o la clave. Revisa la clave de Gemini API y el modelo seleccionado (HTTP 400).";
+  if (status === 401 || status === 403) return `La clave no tiene acceso. Revisa su validez, restricciones y proyecto en Google AI Studio (HTTP ${status}).`;
+  if (status === 404) return "Modelo o ruta no disponible. Consulta el catálogo y elige otro modelo (HTTP 404).";
+  if (status === 429) return "Cuota agotada o demasiadas solicitudes. Revisa los límites del proyecto; no se activa facturación automáticamente (HTTP 429).";
+  return `El proveedor no pudo responder (HTTP ${status}). Intenta más tarde.`;
 }

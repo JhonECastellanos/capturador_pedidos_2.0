@@ -50,6 +50,18 @@ async function main() {
   token = sesion.accessToken;
   const actor = sesion.usuario;
   assert.equal(actor.rol, "administrador");
+  await caso("interpretar voz y emitir tickets no modifica revisión ni tablero", async () => {
+    const antes = await pedir<{ revision: string }>("/sincronizacion/revision");
+    await pedir("/asistente/entender", "POST", { texto: "abrir ventas" });
+    const pendiente = { accion: "crear_pedido", destino: null, payload: { clienteId: null }, mensaje: "Dicta los productos" };
+    const lista = await pedir<{ payload: { lineas: Array<{ productoId: string; cantidad: number }> } }>("/asistente/entender", "POST", { texto: "dos Pepsi 400 ml y tres Doritos queso", pendiente, campo: "lineas" });
+    assert.deepEqual(lista.payload.lineas.map(l => l.cantidad), [2, 3]);
+    const reemplazo = await pedir<typeof lista>("/asistente/entender", "POST", { texto: "reemplaza por una Coca Cola 400 ml", pendiente: { ...pendiente, payload: { ...pendiente.payload, ...lista.payload } }, campo: "lineas" });
+    assert.deepEqual(reemplazo.payload.lineas, [{ productoId: "coca cola 400 ml", cantidad: 1 }]);
+    await pedir("/asistente/voz/sesion", "POST", {});
+    const despues = await pedir<{ revision: string }>("/sincronizacion/revision");
+    assert.equal(despues.revision, antes.revision, "Las lecturas del asistente no deben simular escrituras de negocio");
+  });
 
   const existentes = await pedir<UsuarioDTO[]>("/usuarios");
   await caso("system único, autenticado, con permisos completos y protegido", async () => {
@@ -261,6 +273,28 @@ async function main() {
     const dia = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(new Date());
     const hoy = await todos<Pedido & { fechaOperacion: string }>(`/pedidos?desde=${dia}&hasta=${dia}`);
     assert.ok(hoy.length > 0); assert.ok(hoy.every((p) => p.fechaOperacion.slice(0, 10) === dia));
+  });
+  await caso("factura conserva productos, cantidades y precios históricos", async () => {
+    const productos = await Promise.all([
+      pedir<{ id: string }>("/productos", "POST", { nombre: `${marca} Coca-Cola 400 ml`, precioVenta: 3500, costoActual: 2000, stock: 10 }),
+      pedir<{ id: string }>("/productos", "POST", { nombre: `${marca} Doritos queso`, precioVenta: 5200, costoActual: 3000, stock: 10 }),
+    ]);
+    type Factura = { facturaNumero: string; total: number; lineas: Array<{ productoId: string; cantidad: number; precioUnitario: number; subtotal: number }> };
+    const venta = await pedir<Factura & { id: string }>("/pedidos", "POST", { clienteId: null, metodo: "efectivo", estadoInicial: "entregado", momentoCobro: "inmediato", lineas: productos.map((p, i) => ({ productoId: p.id, cantidad: i + 2 })) }, vendedor.accessToken);
+    assert.ok(venta.facturaNumero);
+    assert.equal(venta.total, 22600);
+    assert.equal(venta.lineas.length, 2);
+    for (const [i, p] of productos.entries()) {
+      const linea = venta.lineas.find((l) => l.productoId === p.id)!;
+      assert.equal(linea.cantidad, i + 2);
+      assert.equal(linea.precioUnitario, i === 0 ? 3500 : 5200);
+      assert.equal(linea.subtotal, i === 0 ? 7000 : 15600);
+      await pedir(`/productos/${p.id}/precio`, "POST", { nuevoPrecio: i === 0 ? 4500 : 6200 });
+    }
+    const guardada = await pedir<Factura>(`/pedidos/${venta.id}`, "GET", undefined, vendedor.accessToken);
+    assert.equal(guardada.total, venta.total);
+    assert.equal(guardada.facturaNumero, venta.facturaNumero);
+    assert.deepEqual(guardada.lineas, venta.lineas, "Cambiar el catálogo no debe cambiar una factura guardada");
   });
   console.log(`\n${pasos} casos de integración correctos. Datos del negocio intactos.`);
 }

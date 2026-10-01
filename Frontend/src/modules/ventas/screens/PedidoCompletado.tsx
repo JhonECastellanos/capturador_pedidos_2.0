@@ -6,6 +6,13 @@ import { Boton } from "../../../components/Boton";
 import { IconCheckCircle } from "../../../components/Icons";
 import { useOperaciones } from "../../../context/operaciones";
 import { formatoMoneda } from "../../../utils/formato";
+import { formatoFechaHora } from "../../../utils/fechas";
+import { DetalleProductosPedido } from "../components/DetalleProductosPedido";
+import { useQuery } from "@tanstack/react-query";
+import type { Envelope } from "@ambie/contrato";
+import type { Pedido } from "../../../types";
+import { respuestaRed, usaApi } from "../../../data/api";
+import { claveConsulta } from "../../../data/query";
 
 interface PedidoCompletadoProps {
   rutaInicio: string;
@@ -17,14 +24,19 @@ export function PedidoCompletado({ rutaInicio }: PedidoCompletadoProps) {
   const ubicacion = useLocation();
   const { obtenerCliente, obtenerPedido, seleccionarClienteActivo } = useOperaciones();
   const pedidoId = (ubicacion.state as { pedidoId?: string } | null)?.pedidoId;
-  const pedido = pedidoId ? obtenerPedido(pedidoId) : null;
+  const enContexto = pedidoId ? obtenerPedido(pedidoId) : null;
+  const rutaPedido = `/pedidos/${encodeURIComponent(pedidoId ?? "")}`;
+  const consulta = useQuery({ queryKey: claveConsulta(rutaPedido), queryFn: ({ signal }) => respuestaRed<Envelope<Pedido>>(rutaPedido, "GET", undefined, signal), enabled: usaApi && !!pedidoId,
+    initialData: enContexto ? { data: enContexto } : undefined });
+  const pedido = consulta.data?.data ?? enContexto;
   const cliente = pedido ? obtenerCliente(pedido.clienteId) : null;
 
   useEffect(() => {
-    if (!pedido) navegar(rutaInicio, { replace: true });
-  }, [navegar, pedido, rutaInicio]);
+    if (!pedidoId) navegar(rutaInicio, { replace: true });
+  }, [navegar, pedidoId, rutaInicio]);
 
-  if (!pedido || !cliente) return null;
+  if (!pedido) return <div className="p-5"><p role={consulta.error ? "alert" : "status"}>{consulta.error ? "El pedido ya se guardó, pero no se pudo cargar su detalle. No lo registres de nuevo." : "Cargando el pedido confirmado…"}</p>{consulta.error && <Boton onClick={() => void consulta.refetch()}>Reintentar detalle</Boton>}<Boton variante="fantasma" onClick={() => navegar(rutaInicio)}>Volver al inicio</Boton></div>;
+  const nombreCliente = pedido.clienteId === null ? "Venta ocasional" : cliente?.nombre ?? pedido.clienteNombre ?? "Cliente registrado";
 
   const esCredito = pedido.pago.saldoPendiente > 0;
   const porPreparar = pedido.estado === "pendiente" || pedido.estado === "en-preparacion";
@@ -33,7 +45,7 @@ export function PedidoCompletado({ rutaInicio }: PedidoCompletadoProps) {
     <div className="flex h-full flex-col min-h-0">
       <BarraSuperior
         titulo={esCredito ? "Crédito registrado" : "Pedido confirmado"}
-        subtitulo={`${pedido.numero} · ${cliente.alias}`}
+        subtitulo={`${pedido.numero} · ${nombreCliente}`}
         onVolver={() => navegar(rutaInicio)}
       />
 
@@ -44,7 +56,8 @@ export function PedidoCompletado({ rutaInicio }: PedidoCompletadoProps) {
         <h1 className="mt-4 font-display text-[21px] font-semibold text-ink">
           {esCredito ? "Crédito registrado" : "Pedido confirmado"}
         </h1>
-        <p className="mt-1 text-[13.5px] text-ink-soft">{cliente.alias}</p>
+        <p className="mt-1 text-[13.5px] text-ink-soft">{nombreCliente}</p>
+        <p className="mt-1 text-[11.5px] text-ink-soft">{formatoFechaHora(pedido.creadoEn)}</p>
         <div className="mt-2.5 flex flex-wrap items-center justify-center gap-2">
           <span className="rounded-full bg-paper-sunken px-4 py-1.5 font-mono text-[13px] font-semibold tracking-wide text-ink">{pedido.numero}</span>
           <span className={`rounded-full px-3 py-1.5 text-[11.5px] font-semibold ${porPreparar ? "bg-accent-soft text-accent-dark" : "bg-success-soft text-success"}`}>
@@ -53,7 +66,10 @@ export function PedidoCompletado({ rutaInicio }: PedidoCompletadoProps) {
         </div>
 
         <div className="mx-auto mt-5 w-full max-w-sm rounded-2xl border border-line bg-paper-raised p-4 text-left">
-          <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Resumen del pedido</p>
+          <p className="mb-3 text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">{pedido.facturaNumero ? `Factura ${pedido.facturaNumero}` : "Resumen del pedido"}</p>
+          <DetalleProductosPedido lineas={pedido.lineas} />
+          <div className="ticket-edge -mx-4 my-3.5" />
+          <div className="flex items-center justify-between text-[13.5px]"><span className="text-ink-soft">Subtotal</span><span className="font-mono text-ink">{formatoMoneda(pedido.subtotal)}</span></div>
           <div className="mt-2.5 flex items-center justify-between text-[13.5px]">
             <span className="text-ink-soft">Total</span>
             <span className="font-mono text-[17px] font-semibold text-ink">{formatoMoneda(pedido.total)}</span>
@@ -62,6 +78,7 @@ export function PedidoCompletado({ rutaInicio }: PedidoCompletadoProps) {
             <span className="text-ink-soft">Pago</span>
             <span className="font-medium capitalize text-ink">{pedido.pago.metodo}</span>
           </div>
+          <div className="mt-1.5 flex items-center justify-between text-[13.5px]"><span className="text-ink-soft">Recibido</span><span className="font-mono text-ink">{formatoMoneda(pedido.pago.montoRecibido)}</span></div>
           {esCredito && (
             <>
               <div className="ticket-edge -mx-4 my-3.5" />

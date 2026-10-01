@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { BarraInferior } from "../../../components/BarraInferior";
 import { BarraSuperior } from "../../../components/BarraSuperior";
@@ -21,6 +21,8 @@ import type { EstadoPedido, LineaPedido, MetodoPago, Pedido } from "../../../typ
 import { formatoMoneda } from "../../../utils/formato";
 import { usePantallaVoz } from "../../asistente/pantalla-voz";
 import { resolverReferencia } from "../../asistente/intencion";
+import { DetalleProductosPedido } from "../components/DetalleProductosPedido";
+import { POR_PAGINA } from "../../../utils/paginacion";
 
 type Paso = 1 | 2 | 3 | 4;
 type ModoEntrega = Extract<EstadoPedido, "entregado" | "pendiente">;
@@ -59,13 +61,21 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
   const [entrega, setEntrega] = useState<ModoEntrega>("entregado");
   const [metodo, setMetodo] = useState<MetodoPago>("efectivo");
   const [ocasional, setOcasional] = useState(false);
+  const [vozGuiada, setVozGuiada] = useState(false);
+  const clienteRutaAplicado = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    if (clienteIdDeRuta && obtenerCliente(clienteIdDeRuta)) {
+    if (clienteIdDeRuta && clienteRutaAplicado.current !== clienteIdDeRuta && obtenerCliente(clienteIdDeRuta)) {
+      clienteRutaAplicado.current = clienteIdDeRuta;
       seleccionarClienteActivo(clienteIdDeRuta);
       setPaso(2);
     }
   }, [clienteIdDeRuta, obtenerCliente, seleccionarClienteActivo]);
+  useEffect(() => {
+    const detener = () => setVozGuiada(false);
+    window.addEventListener("ambie:voz-detenida", detener);
+    return () => window.removeEventListener("ambie:voz-detenida", detener);
+  }, []);
 
   const clienteSeleccionado = ocasional ? { id: null, nombre: "Venta ocasional", alias: "Sin registro de cliente" } : clienteActivo;
 
@@ -73,7 +83,10 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
   function elegirCliente(id: string) {
     setOcasional(false);
     seleccionarClienteActivo(id);
-    setPaso(2);
+    if (vozGuiada) {
+      setPaso(1);
+      window.dispatchEvent(new CustomEvent("ambie:voz-cliente", { detail: { clienteId: id, confirmado: false } }));
+    } else setPaso(2);
   }
 
   const clientesFiltrados = useMemo(() => {
@@ -148,11 +161,11 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
   }
   usePantallaVoz(["crear_pedido"], {
     aplicar: (p, campo) => {
+      setVozGuiada(true);
       if (Object.hasOwn(p, "clienteId")) {
         setOcasional(p.clienteId === null);
         const id = resolverReferencia(p.clienteId, clientes);
         seleccionarClienteActivo(id || null);
-        if (typeof p.clienteId === "string" && !id) setBusquedaCliente(p.clienteId);
       }
       if (Array.isArray(p.lineas)) {
         const cantidadesVoz: Record<string, number> = {};
@@ -161,11 +174,11 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
       }
       if (p.estadoInicial === "pendiente" || p.estadoInicial === "entregado") setEntrega(p.estadoInicial);
       if (p.metodo === "efectivo" || p.metodo === "billetera" || (p.metodo === "credito" && p.clienteId)) setMetodo(p.metodo);
-      setPaso(campo === "tipoCliente" || campo === "clienteId" ? 1 : campo === "lineas" ? 2 : campo === "estadoInicial" ? 3 : 4);
+      setPaso(campo === "tipoCliente" || campo === "clienteId" || campo === "confirmarCliente" ? 1 : campo === "lineas" ? 2 : campo === "estadoInicial" ? 3 : 4);
     },
     leer: () => ({ clienteId: ocasional ? null : clienteSeleccionado?.id ?? "", lineas: lineas.map((l) => ({ productoId: l.productoId, cantidad: l.cantidad })), estadoInicial: entrega, metodo, momentoCobro: metodo === "credito" ? "segun-periodicidad" : "inmediato" }),
     confirmar: confirmarPedido,
-    cancelar: () => { setCantidades({}); setOcasional(false); seleccionarClienteActivo(null); setPaso(1); },
+    cancelar: () => { setVozGuiada(false); setCantidades({}); setOcasional(false); seleccionarClienteActivo(null); setPaso(1); },
   });
 
   function volver() {
@@ -173,7 +186,11 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
       navegar(rutaInicio);
       return;
     }
-    setPaso((p) => (p - 1) as Paso);
+    cambiarPaso((paso - 1) as Paso);
+  }
+  function cambiarPaso(nuevo: Paso) {
+    setPaso(nuevo);
+    if (vozGuiada) window.dispatchEvent(new CustomEvent("ambie:voz-paso", { detail: { campo: ({ 1: "clienteId", 2: "lineas", 3: "estadoInicial", 4: "metodo" } as const)[nuevo] } }));
   }
 
   // ─── Paso 1 · Cliente ───
@@ -196,7 +213,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
             </div>
           )}
           <p className="mb-2.5 text-[12.5px] text-ink-soft">Elige a quién le vas a vender hoy.</p>
-          <TarjetaClicable className="mb-3 p-4" onClick={() => { setOcasional(true); seleccionarClienteActivo(null); if (metodo === "credito") setMetodo("efectivo"); setPaso(2); }}><span className="block font-semibold">Venta abierta · cliente ocasional</span><span className="block text-sm text-ink-soft">Sin registrar un cliente. Efectivo o billetera, sin crédito.</span></TarjetaClicable>
+          <TarjetaClicable className="mb-3 p-4" onClick={() => { setOcasional(true); seleccionarClienteActivo(null); if (metodo === "credito") setMetodo("efectivo"); setPaso(2); if (vozGuiada) window.dispatchEvent(new CustomEvent("ambie:voz-cliente", { detail: { clienteId: null, confirmado: true } })); }}><span className="block font-semibold">Venta abierta · cliente ocasional</span><span className="block text-sm text-ink-soft">Sin registrar un cliente. Efectivo o billetera, sin crédito.</span></TarjetaClicable>
           {clientesFiltrados.length === 0 ? (
             <ListaVacia
               titulo={clientes.length === 0 ? "Aún no hay clientes registrados" : "No se encontró el cliente"}
@@ -204,9 +221,9 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
             />
           ) : (
             <ul className="space-y-2">
-              {clientesFiltrados.map((cliente) => (
+              {clientesFiltrados.slice(0, POR_PAGINA).map((cliente) => (
                 <li key={cliente.id}>
-                  <TarjetaClicable onClick={() => elegirCliente(cliente.id)} className="flex items-center gap-3">
+                  <TarjetaClicable onClick={() => elegirCliente(cliente.id)} ariaLabel={`${cliente.nombre}${clienteActivo?.id === cliente.id ? ", seleccionado" : ""}`} className={`flex items-center gap-3 ${vozGuiada && clienteActivo?.id === cliente.id ? "border-accent bg-accent-soft" : ""}`}>
                     <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-ink font-display text-[12.5px] font-semibold text-white">
                       {cliente.nombre.slice(0, 2).toUpperCase()}
                     </span>
@@ -231,6 +248,8 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
           )}
         </main>
         <BarraInferior>
+          {clientesFiltrados.length > POR_PAGINA && <p className="mb-2 text-xs text-ink-soft">Se muestran 30 clientes. Usa el buscador para encontrar otro.</p>}
+          {vozGuiada && !ocasional && clienteActivo && <Boton onClick={() => { setPaso(2); window.dispatchEvent(new CustomEvent("ambie:voz-cliente", { detail: { clienteId: clienteActivo.id, confirmado: true } })); }}>Confirmar cliente · {clienteActivo.nombre}</Boton>}
           <Boton variante="fantasma" onClick={() => navegar(rutaNuevoCliente, { state: { volverA: "pedido" } })}>
             + Crear cliente nuevo
           </Boton>
@@ -279,7 +298,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
 
           <main className="no-scrollbar flex-1 min-h-0 overflow-y-auto px-5 py-3 md:px-6">
             <ul className="space-y-2">
-              {productosFiltrados.map((producto) => {
+              {productosFiltrados.slice(0, POR_PAGINA).map((producto) => {
                 const cantidad = cantidades[producto.id] ?? 0;
                 const sinStock = producto.stock <= 0;
                 if (sinStock) {
@@ -322,11 +341,12 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
 
           <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
           <BarraInferior>
+            {productosFiltrados.length > POR_PAGINA && <p className="mb-2 text-xs text-ink-soft">Se muestran 30 productos. Usa categoría o buscador para encontrar otro.</p>}
             <div className="mb-2.5 flex items-center justify-between">
               <span className="text-[13px] text-ink-soft">{unidades} unidad(es)</span>
               <span className="font-mono text-[17px] font-semibold text-ink">{formatoMoneda(total)}</span>
             </div>
-            <Boton disabled={lineas.length === 0} onClick={() => setPaso(3)}>
+            <Boton disabled={lineas.length === 0} onClick={() => cambiarPaso(3)}>
               Continuar a entrega <IconChevronRight width={17} height={17} />
             </Boton>
           </BarraInferior>
@@ -362,7 +382,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
             </div>
           </main>
           <BarraInferior>
-            <Boton onClick={() => setPaso(4)}>
+            <Boton onClick={() => cambiarPaso(4)}>
               Continuar al pago <IconChevronRight width={17} height={17} />
             </Boton>
           </BarraInferior>
@@ -385,6 +405,8 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
                   {entrega === "entregado" ? "Entregado" : "Por preparar"}
                 </span>
               </div>
+              <div className="ticket-edge -mx-4 my-3" />
+              <DetalleProductosPedido lineas={lineas} />
               <div className="ticket-edge -mx-4 my-3" />
               <div className="flex items-center justify-between">
                 <span className="text-[13.5px] text-ink-soft">{unidades} unidades</span>
@@ -410,17 +432,6 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
               )}
             </section>
 
-            <section className="mt-4 rounded-xl border border-line bg-paper-raised p-4">
-              <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Resumen</p>
-              <ul className="mt-2 divide-y divide-line">
-                {lineas.map((linea) => (
-                  <li key={linea.productoId} className="flex justify-between gap-3 py-2 text-[13px]">
-                    <span className="truncate text-ink-soft">{linea.cantidad} × {linea.nombre}</span>
-                    <span className="font-mono text-ink">{formatoMoneda(linea.subtotal)}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
           </main>
           <BarraInferior>
             <Boton onClick={confirmarPedido}>

@@ -11,7 +11,11 @@
   "engines": {
     "node": ">=24"
   },
-  "overrides": { "@nestjs/platform-fastify": { "fastify": "5.12.5" } },
+  "overrides": {
+    "@nestjs/platform-fastify": {
+      "fastify": "5.12.5"
+    }
+  },
   "allowScripts": {
     "@prisma/client@6.19.3": true,
     "@prisma/engines@6.19.3": true,
@@ -37,6 +41,9 @@
     "prueba:carga": "node Backend/scripts/probar-carga.cjs",
     "seguridad:repositorio": "node scripts/verificar-repositorio.mjs",
     "prueba:voz": "node Backend/scripts/integracion-voz.cjs",
+    "prueba:asistente:ui": "npm run contrato:build && npm run api:build && npm run front:build && node Backend/scripts/probar-asistente-ui.cjs",
+    "prueba:paneles": "node --env-file=.env Backend/scripts/probar-paneles-ui.cjs",
+    "demo:catalogo": "node --env-file=.env Backend/scripts/cargar-demo.cjs",
     "prueba": "npm run prueba --workspace ambie-backend",
     "verificar": "npm run contrato:build && npm run contrato:verificar && npm run api:build && npm run api:verificar && npm run front:build && npm run front:lint",
     "docker:arriba": "docker compose up -d --build",
@@ -44,5 +51,8 @@
     "docker:limpiar": "docker compose down -v",
     "docker:logs": "docker compose logs -f --tail 200",
     "docker:estado": "docker compose ps"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
   }
 }

@@ -4,31 +4,38 @@ import { resolverDatosIntencion } from "./intencion";
 
 const preguntas: Record<string, string> = {
   clienteId: "¿Qué cliente? Di su nombre o selecciónalo en pantalla.",
-  lineas: "¿Qué productos necesita? Di cantidad y nombre de cada producto. Puedes editar o quitar productos en pantalla.",
+  lineas: "¿Qué productos necesita?",
   estadoInicial: "¿Hay algo que preparar en este pedido? Responde sí o no.",
   metodo: "¿Cuál es el método de pago? Efectivo, billetera o crédito para clientes registrados.",
   proveedorId: "¿A qué proveedor corresponde la compra?", productoId: "¿Qué producto?", pedidoId: "¿Qué número de pedido?", usuarioId: "¿Qué usuario?", conteoId: "¿Qué conteo de inventario?",
   nombre: "¿Cuál es el nombre?", telefono: "¿Cuál es el teléfono?", direccion: "¿Cuál es la dirección?", email: "¿Cuál es el correo?", password: "Escribe la contraseña en el formulario. No la dictes.",
-  monto: "¿Cuál es el monto?", precioVenta: "¿Cuál es el precio de venta?", costoActual: "¿Cuál es el costo?", concepto: "¿Cuál es el concepto?", fecha: "¿Qué fecha? Escríbela en el formulario.", conteoEfectivo: "¿Cuánto efectivo contaste?", conteoBilletera: "¿Cuánto hay en billetera?", descontarCaja: "¿Se descuenta esta compra de la caja? Responde sí o no.",
+  monto: "¿Cuál es el monto?", precioVenta: "¿Cuál es el precio de venta?", nuevoPrecio: "¿Cuál es el nuevo precio?", costoActual: "¿Cuál es el costo?", concepto: "¿Cuál es el concepto?", fecha: "¿Qué fecha? Escríbela en el formulario.", conteoEfectivo: "¿Cuánto efectivo contaste?", conteoBilletera: "¿Cuánto hay en billetera?", descontarCaja: "¿Se descuenta esta compra de la caja? Responde sí o no.",
 };
+export function camposConversacion(accion: keyof typeof ACCIONES_ASISTENTE): string[] {
+  if (accion === "crear_pedido") return ["tipoCliente", "clienteId", "lineas", "estadoInicial", "metodo"];
+  if (accion === "cambiar_precio") return ["productoId", "nuevoPrecio"];
+  if (accion === "recibir_abono") return ["clienteId", "monto", "metodo"];
+  return camposAsistente(ACCIONES_ASISTENTE[accion].esquema).filter((c) => c.requerido || c.nombre === "descontarCaja" || (accion === "registrar_cierre" && /^conteo/.test(c.nombre)) || (accion === "registrar_egreso" && c.nombre === "metodo")).map((c) => c.nombre);
+}
+export function preguntaCampo(campo: string): string {
+  return campo === "tipoCliente" ? "¿Es para un cliente habitual o un cliente ocasional?" : preguntas[campo] ?? `Revisa ${campo.replace(/([A-Z])/g, " $1").toLowerCase()} en pantalla.`;
+}
+export function campoAnteriorConversacion(accion: keyof typeof ACCIONES_ASISTENTE, campo: string): string {
+  const campos = camposConversacion(accion);
+  const indice = campo ? campos.indexOf(campo === "confirmarCliente" ? "clienteId" : campo.split(".")[0]) : campos.length;
+  return campos[Math.max(0, indice - 1)] ?? campos[0];
+}
 export function pasoConversacion(orden: IntencionAsistente, rol: RolUsuario, datos: OperacionesContextValue): { campo: string; pregunta: string } | null {
   if (!orden.accion || !(orden.accion in ACCIONES_ASISTENTE)) return null;
   const accion = orden.accion as keyof typeof ACCIONES_ASISTENTE;
   if (accion === "crear_pedido" && !Object.hasOwn(orden.payload, "clienteId")) return { campo: "tipoCliente", pregunta: "¿Es para un cliente habitual o un cliente ocasional?" };
-  const campos = camposAsistente(ACCIONES_ASISTENTE[accion].esquema);
-  const ordenCampos = accion === "crear_pedido" ? ["clienteId", "lineas", "estadoInicial", "metodo"] : campos.filter((c) => c.requerido || c.nombre === "descontarCaja" || (accion === "registrar_cierre" && /^conteo/.test(c.nombre)) || (accion === "iniciar_conteo" && orden.payload.tipo === "aleatorio" && c.nombre === "cantidadAleatoria") || (accion === "registrar_egreso" && c.nombre === "metodo")).map((c) => c.nombre);
+  const ordenCampos = camposConversacion(accion).filter((c) => c !== "tipoCliente");
+  if (accion === "iniciar_conteo" && orden.payload.tipo === "aleatorio" && !ordenCampos.includes("cantidadAleatoria")) ordenCampos.push("cantidadAleatoria");
   for (const campo of ordenCampos) {
     if (campo === "clienteId" && orden.payload.clienteId === null) continue;
     const valor = orden.payload[campo];
     if (valor === undefined || valor === "" || (Array.isArray(valor) && !valor.length)) {
       if (campo === "metodo" && accion === "crear_pedido" && orden.payload.clienteId === null) return { campo, pregunta: "¿Cuál es el método de pago? Para esta venta ocasional solo efectivo o billetera; no admite crédito." };
-      if (campo === "estadoInicial" && Array.isArray(orden.payload.lineas)) {
-        try {
-          const resuelto = resolverDatosIntencion({ lineas: orden.payload.lineas }, datos).lineas as Array<{ productoId: string; cantidad: number }>;
-          const total = resuelto.reduce((suma, l) => suma + l.cantidad * (datos.inventario.find((p) => p.id === l.productoId)?.precioVenta ?? 0), 0);
-          return { campo, pregunta: `El total estimado es ${total.toLocaleString("es-CO")} pesos. ${preguntas[campo]}` };
-        } catch (e) { return { campo: "lineas", pregunta: e instanceof Error ? e.message + " Corrige los productos en pantalla." : "Revisa los productos." }; }
-      }
       return { campo, pregunta: preguntas[campo] ?? `Indica ${campo.replace(/([A-Z])/g, " $1").toLowerCase()}.` };
     }
   }

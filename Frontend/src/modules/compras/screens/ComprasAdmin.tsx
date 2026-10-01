@@ -525,7 +525,7 @@ export function ComprasAdmin() {
               </div>
               <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2">
                 <ul className="space-y-1.5">
-                  {proveedoresFiltrados.map((prov) => (
+                  {proveedoresFiltrados.slice(0, POR_PAGINA).map((prov) => (
                     <li key={prov.id}>
                       <button
                         type="button"
@@ -634,7 +634,7 @@ export function ComprasAdmin() {
               </div>
               <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2">
                 <ul className="space-y-1.5">
-                  {productosFiltrados.map((prod) => {
+                  {productosFiltrados.slice(0, POR_PAGINA).map((prod) => {
                     const enLinea = lineas.find((l) => l.productoId === prod.id);
                     return (
                       <li

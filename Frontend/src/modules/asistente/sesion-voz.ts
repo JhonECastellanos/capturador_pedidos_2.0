@@ -1,5 +1,6 @@
 import type { EventoVoz } from "@ambie/contrato";
 import { api, baseApi } from "../../data/api";
+import { AgrupadorVoz } from "./agrupador-voz";
 
 export class SesionVoz {
   private socket: WebSocket | null = null;
@@ -10,7 +11,8 @@ export class SesionVoz {
   private cerrada = false;
   private readonly recibir: (evento: EventoVoz) => void;
   private readonly nivel: (valor: number) => void;
-  constructor(recibir: (evento: EventoVoz) => void, nivel: (valor: number) => void) { this.recibir = recibir; this.nivel = nivel; }
+  private readonly turnos: AgrupadorVoz;
+  constructor(recibir: (evento: EventoVoz) => void, nivel: (valor: number) => void) { this.recibir = recibir; this.nivel = nivel; this.turnos = new AgrupadorVoz(recibir); }
   async iniciar() {
     if (!navigator.mediaDevices?.getUserMedia || !window.AudioWorkletNode) throw new Error("Para la voz necesitas HTTPS o localhost y un navegador actualizado.");
     try {
@@ -28,7 +30,7 @@ export class SesionVoz {
           const evento = JSON.parse(String(e.data)) as EventoVoz;
           if (evento.tipo === "lista") { window.clearTimeout(timeout); resolve(); }
           else if (evento.tipo === "error") { window.clearTimeout(timeout); reject(new Error(evento.mensaje)); }
-          this.recibir(evento);
+          if (!this.cerrada && (!this.pausada || evento.tipo === "error" || evento.tipo === "lista")) this.turnos.recibir(evento);
         };
         this.socket!.onerror = () => { window.clearTimeout(timeout); reject(new Error("No se pudo conectar a la voz local.")); };
         this.socket!.onclose = () => { window.clearTimeout(timeout); reject(new Error("La sesión de voz terminó.")); if (!this.cerrada) { this.recibir({ tipo: "error", mensaje: "La sesión de voz terminó. Puedes volver a conectarte." }); this.cerrar(); } };
@@ -51,11 +53,13 @@ export class SesionVoz {
     } catch (error) { this.cerrar(); throw error; }
   }
   pausar(valor: boolean) {
+    if (valor) this.turnos.cancelar();
     if (valor && !this.pausada && this.socket?.readyState === WebSocket.OPEN) this.socket.send('{"reset":1}');
     this.pausada = valor;
   }
   cerrar() {
     this.cerrada = true;
+    this.turnos.cancelar();
     this.nodo?.disconnect(); this.nodo = null;
     this.stream?.getTracks().forEach((t) => t.stop()); this.stream = null;
     if (this.audio) void this.audio.close().catch(() => undefined); this.audio = null;

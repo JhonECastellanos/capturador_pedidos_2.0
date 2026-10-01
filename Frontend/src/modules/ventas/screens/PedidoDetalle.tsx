@@ -13,6 +13,7 @@ import { formatoMoneda } from "../../../utils/formato";
 import { TRANSICIONES_PEDIDO } from "@ambie/contrato";
 import { usaApi } from "../../../data/api";
 import { usePantallaVoz } from "../../asistente/pantalla-voz";
+import { DetalleProductosPedido } from "../components/DetalleProductosPedido";
 
 interface PedidoDetalleProps {
   pedido: Pedido;
@@ -174,17 +175,7 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
       {/* ─── Único scroll: líneas e historial ─── */}
       <div className="mt-2.5 flex-1 min-h-0 overflow-y-auto no-scrollbar px-5 pb-2 md:px-6">
         <div className="rounded-2xl border border-line bg-paper-sunken/30 p-2">
-          <ul className="space-y-1.5">
-            {pedido.lineas.map((linea) => (
-              <li key={linea.productoId} className="flex items-center justify-between gap-3 rounded-xl border border-line bg-paper-raised px-3 py-2">
-                <div className="min-w-0">
-                  <p className="truncate text-[12.5px] font-medium text-ink">{linea.nombre}</p>
-                  <p className="text-[11px] text-ink-soft">{linea.cantidad} × {formatoMoneda(linea.precioUnitario)}</p>
-                </div>
-                <span className="flex-shrink-0 font-mono text-[12.5px] font-semibold text-ink">{formatoMoneda(linea.subtotal)}</span>
-              </li>
-            ))}
-          </ul>
+          <DetalleProductosPedido lineas={pedido.lineas} />
 
           <div className="mt-2 rounded-xl border border-line bg-paper-raised px-3 py-2">
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">Auditoría</p>

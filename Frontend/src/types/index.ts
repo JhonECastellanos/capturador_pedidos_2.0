@@ -148,6 +148,7 @@ export interface HistorialEstadoPedido {
 
 export interface Pedido extends Pick<PedidoDTO, "clienteNombre" | "comprobantePagoAdjuntoId"> {
   fechaOperacion?: string;
+  facturaNumero?: PedidoDTO["facturaNumero"];
   id: string;
   numero: string;
   clienteId: string | null;

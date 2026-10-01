@@ -30,6 +30,7 @@ export function Boton({
 }: BotonProps) {
   return (
     <button
+      type="button"
       className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 font-sans text-[15px] font-semibold tracking-tight transition-colors disabled:cursor-not-allowed ${
         ancho === "completo" ? "w-full" : ""
       } ${estilosPorVariante[variante]} ${className}`}

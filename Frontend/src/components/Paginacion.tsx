@@ -9,7 +9,7 @@ interface PaginacionProps {
 export function Paginacion({ pagina, totalPaginas, total, porPagina, onChange }: PaginacionProps) {
   if (total <= porPagina) return <p className="mt-3 text-center text-[11.5px] text-ink-faint">{total} registro(s)</p>;
   return (
-    <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-line bg-paper-raised px-3 py-2.5">
+    <div className="mt-3 shrink-0 flex items-center justify-between gap-2 rounded-xl border border-line bg-paper-raised px-3 py-2.5">
       <button
         type="button"
         disabled={pagina <= 1}

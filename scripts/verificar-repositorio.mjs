@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, existsSync } from 'node:fs';
-const archivos = execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 }).split('\0').filter(Boolean);
+const archivos = [...new Set(execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '-z'], { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 }).split('\0').filter(Boolean))];
 const problemas = [];
 const secretosLocales = existsSync('.env') ? readFileSync('.env', 'utf8').split(/\r?\n/).flatMap(linea => {
   const m = linea.match(/^([A-Z0-9_]*(?:PASSWORD|SECRET|TOKEN|API_KEY|ACCESS_KEY)[A-Z0-9_]*)=(.*)$/);
@@ -22,4 +22,4 @@ for (const archivo of archivos) {
   }
 }
 if (problemas.length) { console.error([...new Set(problemas)].join('\n')); process.exitCode = 1; }
-else console.log(`✓ ${archivos.length} archivos versionados revisados; sin patrones sensibles detectados. Complementar con revisión del diff.`);
+else console.log(`✓ ${archivos.length} archivos versionados y nuevos no ignorados revisados; sin patrones sensibles detectados. Complementar con revisión del diff.`);

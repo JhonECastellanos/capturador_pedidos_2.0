@@ -1,4 +1,4 @@
-import { ACCIONES_ASISTENTE, accionesParaRol, camposAsistente, DESTINOS_ASISTENTE, esAccionAsistente, IntencionAsistenteEsquema, rutaAsistente, type IntencionAsistente, type RolUsuario } from "@ambie/contrato";
+import { ACCIONES_ASISTENTE, accionesParaRol, camposAsistente, DESTINOS_ASISTENTE, esAccionAsistente, IntencionAsistenteEsquema, rutaAsistente, numeroHablado, productosHablados, type IntencionAsistente, type RolUsuario } from "@ambie/contrato";
 import { z } from "zod";
 
 export function normalizarTexto(texto: string) { return texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim(); }
@@ -129,29 +129,14 @@ export function entenderBasico(texto: string, rol: RolUsuario, pendiente?: Inten
   return validarIntencion({ accion: nombreAccion, payload, destino: null, mensaje: "Revisa y completa los datos antes de confirmar." }, rol);
 }
 
-function numeroHablado(texto: string): number | undefined {
-  const digitos = texto.replace(/\s|\$/g, "").replace(/\.(?=\d{3}(?:\D|$))/g, "").replace(",", ".");
-  if (/^\d+(\.\d+)?$/.test(digitos)) return Number(digitos);
-  const unidades: Record<string, number> = { cero: 0, uno: 1, un: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10, once: 11, doce: 12, trece: 13, catorce: 14, quince: 15, dieciseis: 16, diecisiete: 17, dieciocho: 18, diecinueve: 19, veinte: 20, treinta: 30, cuarenta: 40, cincuenta: 50, sesenta: 60, setenta: 70, ochenta: 80, noventa: 90, cien: 100, ciento: 100, doscientos: 200, trescientos: 300, cuatrocientos: 400, quinientos: 500, seiscientos: 600, setecientos: 700, ochocientos: 800, novecientos: 900 };
-  let grupo = 0, total = 0;
-  for (const palabra of normalizarTexto(texto).split(/\s+/)) {
-    if (palabra === "y" || palabra === "pesos") continue;
-    if (palabra === "mil") { total += (grupo || 1) * 1000; grupo = 0; }
-    else if (unidades[palabra] !== undefined) grupo += unidades[palabra];
-    else return undefined;
-  }
-  return total + grupo;
-}
 export function responderCampo(texto: string, pendiente: IntencionAsistente, campo: string, rol: RolUsuario): IntencionAsistente | null {
   if (!pendiente.accion || !esAccionAsistente(pendiente.accion)) return null;
   const normal = normalizarTexto(texto).replace(/[.!?]$/g, "");
   const payload = { ...pendiente.payload };
   if (pendiente.accion === "crear_pedido" && /^(reconstruir factura|vaciar productos|empezar productos de nuevo)$/.test(normal)) return { ...pendiente, payload: { ...payload, lineas: [] }, mensaje: "Agrega de nuevo los productos." };
-  const agregar = pendiente.accion === "crear_pedido" && texto.match(/^(?:agrega|agregar|anade|añade)\s+(.+)$/i);
-  if (agregar) {
-    const nuevas = responderCampo(agregar[1], { ...pendiente, payload: { ...payload, lineas: [] } }, "lineas", rol);
-    if (!nuevas) return null;
-    return validarIntencion({ ...pendiente, payload: { ...payload, lineas: [...(Array.isArray(payload.lineas) ? payload.lineas : []), ...(nuevas.payload.lineas as unknown[])] } }, rol);
+  const productos = pendiente.accion === "crear_pedido" ? productosHablados(texto) : null;
+  if (productos) {
+    return validarIntencion({ ...pendiente, payload: { ...payload, lineas: [...(!productos.reemplazar && Array.isArray(payload.lineas) ? payload.lineas : []), ...productos.lineas] } }, rol);
   }
   if (campo === "tipoCliente" && pendiente.accion === "crear_pedido") {
     if (/ocasional|abierta|sin cliente|de paso/.test(normal)) payload.clienteId = null;
@@ -179,13 +164,9 @@ export function responderCampo(texto: string, pendiente: IntencionAsistente, cam
     } else if (descriptor.tipo === "booleano") {
       if (!/^(si|no)$/.test(normal)) return null; payload[campo] = normal === "si";
     } else if (descriptor.tipo === "lineas") {
-      const lineas: Record<string, unknown>[] = [];
-      for (const fragmento of texto.split(/[,;]|\s+y\s+(?=(?:\d+|un[oa]?|dos|tres|cuatro|cinco)\s)/i)) {
-        const match = fragmento.trim().match(/^(\d+|un[oa]?|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\s+(.+)$/i);
-        if (!match) return null;
-        lineas.push({ productoId: match[2].trim(), cantidad: numeroHablado(match[1].toLowerCase() === "una" ? "uno" : match[1]) });
-      }
-      payload.lineas = lineas;
+      const lista = productosHablados(texto);
+      if (!lista) return null;
+      payload.lineas = lista.lineas;
     } else if (descriptor.tipo === "seleccion") {
       const opcion = descriptor.opciones?.find((v) => normalizarTexto(v.replace(/-/g, " ")) === normal);
       if (!opcion) return null; payload[campo] = opcion;

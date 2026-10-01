@@ -20,6 +20,8 @@ import { formatoMoneda } from "../../../utils/formato";
 import { BadgeMora } from "../../ventas/components/BadgeMora";
 import { FormularioAbono } from "../../ventas/components/FormularioAbono";
 import { PedidoDetalle } from "../../ventas/screens/PedidoDetalle";
+import { usePantallaVoz } from "../../asistente/pantalla-voz";
+import { resolverReferencia } from "../../asistente/intencion";
 
 type TabCredito = "pendientes" | "historial";
 
@@ -36,6 +38,7 @@ export function CreditosAdmin() {
   const [busqueda, setBusqueda] = useState("");
   const [periodo, setPeriodo] = useState<Periodo>("todo");
   const [clienteDetalleId, setClienteDetalleId] = useState<string | null>(null);
+  const [busquedaPedidos, setBusquedaPedidos] = useState("");
   const [pedidoDetalleId, setPedidoDetalleId] = useState<string | null>(null);
   const [montoAbono, setMontoAbono] = useState("");
   const [metodoAbono, setMetodoAbono] = useState<AbonoCredito["metodo"]>("efectivo");
@@ -87,18 +90,26 @@ export function CreditosAdmin() {
 
   const totalPendiente = grupos.reduce((s, g) => s + g.total, 0);
   const clienteDetalle = grupos.find((g) => g.clienteId === clienteDetalleId) ?? null;
+  const pedidosDetalle = (clienteDetalle?.pedidos ?? []).filter((p) => p.numero.toLowerCase().includes(busquedaPedidos.trim().toLowerCase()));
 
   async function handleRegistrarAbono() {
-    if (!clienteDetalle) return;
+    if (!clienteDetalle) return false;
     const monto = Number(montoAbono);
-    if (!monto || monto <= 0) return;
+    if (!monto || monto <= 0 || monto > clienteDetalle.total) return false;
     const res = await registrarAbono(clienteDetalle.clienteId, monto, metodoAbono, comentarioAbono || undefined);
     if (res) {
       mostrarAviso(`Abono ${formatoMoneda(monto)} por ${metodoAbono} registrado`, "exito");
       setMontoAbono("");
       setComentarioAbono("");
+      return true;
     }
+    return false;
   }
+  usePantallaVoz(["recibir_abono"], {
+    aplicar: (p) => { const id = resolverReferencia(p.clienteId, clientes); if (id) setClienteDetalleId(id); if (typeof p.monto === "number") setMontoAbono(String(p.monto)); if (p.metodo === "efectivo" || p.metodo === "billetera") setMetodoAbono(p.metodo); if (typeof p.comentario === "string") setComentarioAbono(p.comentario); },
+    leer: () => ({ clienteId: clienteDetalleId, monto: Number(montoAbono), metodo: metodoAbono, comentario: comentarioAbono }),
+    confirmar: handleRegistrarAbono, cancelar: () => { setClienteDetalleId(null); setMontoAbono(""); setComentarioAbono(""); setConfirmarAbono(false); },
+  });
 
   // Paso: detalle del pedido en crédito (se abre al tocar un pedido que debe).
   if (pedidoDetalleId) {
@@ -172,13 +183,15 @@ export function CreditosAdmin() {
               </div>
             </div>
 
-            {/* 3 · Pedidos que debe (lista completa dentro del scroll general) */}
+            {/* El filtro limita la presentación, nunca el saldo ni la aplicación FIFO. */}
             <div className="rounded-2xl border border-line bg-paper-sunken/30 p-2">
               <p className="px-1 pb-1.5 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
                 Pedidos que debe
               </p>
+              <BuscadorInput value={busquedaPedidos} onChange={setBusquedaPedidos} placeholder="Buscar pedido pendiente por consecutivo" />
+              {pedidosDetalle.length > POR_PAGINA && <p className="p-1 text-[11px] text-ink-soft">Se muestran {POR_PAGINA} pedidos. Filtra por consecutivo para encontrar otro.</p>}
               <ul className="space-y-1.5">
-                {clienteDetalle.pedidos.map((p) => (
+                {pedidosDetalle.slice(0, POR_PAGINA).map((p) => (
                   <li key={p.id}>
                     <button
                       type="button"
@@ -299,7 +312,7 @@ export function CreditosAdmin() {
             <ListaVacia titulo="Sin créditos pendientes. Todo al día ✓" texto="Los clientes con saldo aparecerán aquí." />
           ) : (
             paginar(gruposFiltrados, pagina, POR_PAGINA).items.map((g) => (
-              <TarjetaClicable key={g.clienteId} onClick={() => setClienteDetalleId(g.clienteId)} className="p-3.5">
+              <TarjetaClicable key={g.clienteId} onClick={() => { setBusquedaPedidos(""); setClienteDetalleId(g.clienteId); }} className="p-3.5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-[14px] font-semibold text-ink">{g.cliente?.nombre ?? "Cliente"} {g.cliente?.alias ? `“${g.cliente.alias}”` : ""}</p>

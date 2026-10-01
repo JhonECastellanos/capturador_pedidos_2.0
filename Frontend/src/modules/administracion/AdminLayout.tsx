@@ -12,7 +12,7 @@ import {
   IconUser,
 } from "../../components/Icons";
 import { useAuth } from "../../context/auth";
-import { useEffect, useRef, type ComponentType } from "react";
+import { Suspense, useEffect, useRef, type ComponentType } from "react";
 
 interface ItemNavegacion {
   to: string;
@@ -63,7 +63,8 @@ export function AdminLayout() {
   useEffect(() => {
     const activo = refsItems.current[ubicacion.pathname];
     if (activo && contenedorNav.current) {
-      activo.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+      const nav = contenedorNav.current;
+      nav.scrollTo({ left: activo.offsetLeft - nav.offsetLeft - (nav.clientWidth - activo.clientWidth) / 2, behavior: "smooth" });
     }
   }, [ubicacion.pathname]);
 
@@ -127,8 +128,8 @@ export function AdminLayout() {
         </header>
 
         {/* ─── Contenido ─── */}
-        <main className="flex flex-1 flex-col min-h-0 overflow-hidden px-4 pb-3 pt-3 md:px-6 lg:px-8 lg:pt-5">
-          <Outlet />
+        <main className="admin-contenido flex flex-1 flex-col min-h-0 overflow-y-auto px-4 pb-3 pt-3 md:px-6 lg:px-8 lg:pt-5">
+          <div className="admin-pantalla flex flex-1 flex-col"><Suspense fallback={<p role="status" className="p-4">Cargando módulo…</p>}><Outlet /></Suspense></div>
         </main>
       </div>
     </div>

@@ -7,7 +7,7 @@ Una sola empresa. Base nueva vacía (no se migran datos comerciales de `ambie:v1
 
 Los nombres de campo son **camelCase** en frontend, API y base de datos. Las tablas
 son plurales y camelCase (`clientes`, `pedidos`, `pedidoLineas`). El esquema real vive en
-[`Backend/prisma/schema.prisma`](../Backend/prisma/schema.prisma); esta página documenta
+[`Backend/prisma/schema.prisma`](../../Backend/prisma/schema.prisma); esta página documenta
 el mapeo entre el modelo actual del frontend (`Frontend/src/types/index.ts`) y la base.
 
 - `id`: UUID técnico (Prisma `uuid()`), nunca se expone un código visible como PK/FK.

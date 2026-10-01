@@ -36,7 +36,7 @@ export class ConfiguracionAsistente {
   guardar(entrada: unknown): Promise<ConfiguracionAsistentePublica> {
     const tarea = this.escritura.then(async () => {
       const datos = ConfiguracionAsistenteEsquema.parse(entrada);
-      if (datos.proveedor !== "basico" && !datos.modelo) throw new ErrorDominio("VALIDACION", "Selecciona o escribe un modelo.");
+      if (datos.proveedor === "gemini") datos.modelo = datos.modelo.replace(/^models\//, "");
       if (datos.proveedor === "compatible") validarUrlProveedor(datos.urlBase);
       const anterior = await this.leer();
       const mismaConexion = anterior.proveedor === datos.proveedor && anterior.urlBase === datos.urlBase;

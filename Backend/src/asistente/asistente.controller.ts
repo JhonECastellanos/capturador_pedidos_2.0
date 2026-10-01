@@ -41,4 +41,18 @@ export class AsistenteController {
   @Roles(RolUsuario.ADMINISTRADOR)
   @Get("modelos")
   async modelos() { return { data: await this.asistente.modelos() }; }
+  @Roles(RolUsuario.ADMINISTRADOR)
+  @Post("modelos")
+  async modelosConexion(@Body() cuerpo: unknown) {
+    const datos = ConfiguracionAsistenteEsquema.safeParse(cuerpo);
+    if (!datos.success) throw new ErrorDominio("VALIDACION", "Revisa la conexión del asistente.");
+    return { data: await this.asistente.modelos(datos.data) };
+  }
+  @Roles(RolUsuario.ADMINISTRADOR)
+  @Post("conexion")
+  async comprobarConexion(@Body() cuerpo: unknown) {
+    const datos = ConfiguracionAsistenteEsquema.safeParse(cuerpo);
+    if (!datos.success) throw new ErrorDominio("VALIDACION", "Revisa la conexión del asistente.");
+    return { data: await this.asistente.comprobarConexion(datos.data) };
+  }
 }

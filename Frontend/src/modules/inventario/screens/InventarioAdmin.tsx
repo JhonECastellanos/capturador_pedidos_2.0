@@ -66,6 +66,7 @@ export function InventarioAdmin() {
   const [motivoAjuste, setMotivoAjuste] = useState<string>("corrección");
   const [comentarioAjuste, setComentarioAjuste] = useState("");
   const [pagina, setPagina] = useState(1);
+  const [busquedaHistorial, setBusquedaHistorial] = useState("");
   // Confirmaciones críticas
   const [confirmarCancelarConteo, setConfirmarCancelarConteo] = useState(false);
   const [confirmarAplicarConteoId, setConfirmarAplicarConteoId] = useState<string | null>(null);
@@ -90,6 +91,9 @@ export function InventarioAdmin() {
   }, [conteos]);
 
   const alertasStock = inventario.filter((p) => p.stock <= p.stockMinimo).length;
+  const qHistorial = busquedaHistorial.trim().toLowerCase();
+  const diferenciasFiltradas = lineasConDiferencia.filter((l) => !qHistorial || `${l.nombre} ${l.turno}`.toLowerCase().includes(qHistorial));
+  const ajustesFiltrados = ajustes.filter((a) => !qHistorial || `${a.motivo ?? ""} ${a.comentario ?? ""} ${a.lineas.map((l) => l.nombre).join(" ")}`.toLowerCase().includes(qHistorial));
   const conteosEnCurso = conteos.filter((c) => c.estado === "en-curso").length;
 
   const inventarioFiltradoGeneral = useMemo(() => {
@@ -637,6 +641,7 @@ export function InventarioAdmin() {
 
       {vista === "descuadres" && (
         <div className="flex min-h-0 flex-1 flex-col py-2.5">
+          <div className="mb-2 shrink-0"><BuscadorInput value={busquedaHistorial} onChange={(q) => { setBusquedaHistorial(q); setPagina(1); }} placeholder="Buscar producto o turno" /></div>
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
             <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
               <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">
@@ -649,7 +654,7 @@ export function InventarioAdmin() {
           {lineasConDiferencia.length === 0 ? (
             <div className="rounded-xl border border-dashed border-line bg-paper-raised p-8 text-center text-[13px] text-ink-soft">Sin descuadres confirmados. Inicia un conteo y registra faltantes/sobrantes.</div>
           ) : (
-            lineasConDiferencia.map((linea) => {
+            paginar(diferenciasFiltradas, pagina).items.map((linea) => {
               const yaAjustado = ajustes.some((a) => a.conteoId === linea.conteoId);
               const conteo = conteos.find((c) => c.id === linea.conteoId);
               return (
@@ -673,6 +678,7 @@ export function InventarioAdmin() {
               </div>
             </div>
           </div>
+          <div className="shrink-0"><Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil(diferenciasFiltradas.length / POR_PAGINA))} total={diferenciasFiltradas.length} porPagina={POR_PAGINA} onChange={setPagina} /></div>
         </div>
       )}
 
@@ -680,6 +686,7 @@ export function InventarioAdmin() {
         <div className="flex flex-1 flex-col min-h-0 mt-3">
           {!mostrarAjusteManual ? (
             <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-3">
+              <BuscadorInput value={busquedaHistorial} onChange={(q) => { setBusquedaHistorial(q); setPagina(1); }} placeholder="Buscar producto, motivo o comentario" />
               <button
                 type="button"
                 onClick={() => {
@@ -698,7 +705,7 @@ export function InventarioAdmin() {
                 {ajustes.length === 0 ? (
                   <p className="rounded-xl border border-dashed border-line bg-paper-raised p-8 text-center text-[13px] text-ink-soft">Sin ajustes registrados.</p>
                 ) : (
-                  ajustes.map((ajuste) => (
+                  paginar(ajustesFiltrados, pagina).items.map((ajuste) => (
                     <article key={ajuste.id} className="rounded-xl border border-line bg-paper-raised p-3.5 shadow-sm">
                       <p className="text-[12px] font-semibold text-ink-faint">{new Date(ajuste.creadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })} · {nombreUsuario(ajuste.usuarioId)} {ajuste.motivo ? `· ${ajuste.motivo}` : ""} {ajuste.conteoId === "manual" ? "· manual" : ""}</p>
                       {ajuste.comentario && <p className="mt-1 text-[12px] italic text-ink-soft">“{ajuste.comentario}”</p>}
@@ -714,6 +721,7 @@ export function InventarioAdmin() {
                   ))
                 )}
               </div>
+              <Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil(ajustesFiltrados.length / POR_PAGINA))} total={ajustesFiltrados.length} porPagina={POR_PAGINA} onChange={setPagina} />
             </div>
           ) : (
             <>
@@ -734,7 +742,7 @@ export function InventarioAdmin() {
                   </div>
                   <div className="mt-2.5 flex-1 min-h-0 overflow-y-auto no-scrollbar rounded-2xl border border-line bg-paper-sunken/30 p-2">
                     <ul className="space-y-1.5">
-                      {productosFiltradosAjuste.map((p) => (
+                      {productosFiltradosAjuste.slice(0, POR_PAGINA).map((p) => (
                         <li key={p.id}>
                           <button
                             type="button"

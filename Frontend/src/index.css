@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+.asistente-subtitulo {
+  position: fixed;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  z-index: 74;
+  width: min(360px, calc(100% - 32px));
+  transform: translateX(-50%);
+  pointer-events: none;
+  border-radius: 12px;
+  padding: 8px 12px;
+  background: color-mix(in srgb, var(--color-paper-raised) 65%, transparent);
+  color: var(--color-ink);
+  font-size: 12px;
+  line-height: 16px;
+}
+
 .microfono-flotante {
   position: fixed;
   z-index: 75;
@@ -155,8 +171,7 @@ body {
   }
 
   /* El marco administrativo no produce un segundo scroll de documento. */
-  .app-viewport--amplio .admin-cuerpo,
-  .app-viewport--amplio .admin-cuerpo > main {
+  .app-viewport--amplio .admin-cuerpo {
     overflow: hidden;
   }
 
@@ -170,6 +185,15 @@ body {
 .operaciones-remotas .app-viewport-outer { display: flex; justify-content: center; flex: 1; min-height: 0; box-sizing: border-box; }
 @media (min-width: 1280px) { .operaciones-remotas .app-viewport-outer { min-height: 0; } }
 .operaciones-remotas .app-viewport { height: 100%; min-height: 0; }
+/* Una ventana baja desplaza el panel, no aplasta su lista ni sus tarjetas. */
+.admin-pantalla { min-height: 600px; }
+.admin-pantalla > .h-full { height: auto; min-height: 600px; flex: 1; }
+.admin-pantalla .overflow-y-auto { min-height: 160px; }
+.admin-cuerpo .overflow-y-auto > *, .admin-cuerpo .overflow-y-auto article,
+.admin-cuerpo .overflow-y-auto li { flex-shrink: 0; }
+.admin-cuerpo .overflow-y-auto article { min-height: 64px; }
+.app-viewport--amplio aside { min-height: 0; overflow-y: auto; }
+.app-viewport--amplio aside nav { flex-shrink: 0; }
 @media (pointer: coarse) {
   button, select, a[role="button"], nav a { min-height: 44px; }
   input, select, textarea { font-size: max(16px, 1em); }

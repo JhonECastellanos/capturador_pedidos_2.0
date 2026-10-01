@@ -154,7 +154,7 @@ Los resultados duran cinco minutos. Las transacciones de pedidos, líneas, pagos
 
 `GET /api/v1/dashboard/totales` y `/dashboard/resumen` comparten el servicio. `data.cache.estado` indica `hit`/`miss`; `version` permite comprobar la invalidación. `soloTops=true` evita series enormes al consultar todo el histórico. Las series normales aceptan hasta 2000 días. Sin `CACHE_REDIS_URL` fuera de Docker se usa caché en memoria, no Redis.
 
-Pruebas: `npm run prueba:cache`, `npm run prueba:integracion` y `npm run prueba:carga` contra QA. Las pestañas visibles consultan `/sincronizacion/revision` cada dos segundos e invalidan lecturas al cambiar una revisión confirmada en PostgreSQL. Las ocultas reanudan al volver. Es actualización casi en tiempo real (intervalo más latencia), no entrega instantánea garantizada. Un indicador avisa de desconexión; se mantiene el refresco periódico y **Actualizar**. Las pantallas heredadas aún necesitan optimizar snapshots; estas pruebas no equivalen a validar 100.000 pedidos.
+Pruebas: `npm run prueba:cache`, `npm run prueba:integracion` y `npm run prueba:carga` contra QA. Las pestañas visibles consultan `/sincronizacion/revision` cada dos segundos e invalidan lecturas al cambiar una revisión confirmada en PostgreSQL. Las ocultas reanudan al volver. Es actualización casi en tiempo real (intervalo más latencia), no entrega instantánea garantizada. La banda «Datos compartidos / Actualizar» se retiró para recuperar espacio: la sincronización continúa y solo se muestra desconexión con **Reintentar** si falla. Las pantallas heredadas aún necesitan optimizar snapshots; estas pruebas no equivalen a validar 100.000 pedidos.
 
 ### Diagnósticos de TypeScript en VS Code
 
@@ -226,11 +226,11 @@ npm run api:cli -- probar --proveedor gemini
 
 Le da al modelo los endpoints reales de la API, este propone casos —casos felices, límites, reglas de negocio y permisos— y los ejecuta de verdad. Lo que no se puede comprobar queda marcado como fallido, sin adornos.
 
-Más detalle en [docs/CLI.md](docs/CLI.md).
+Más detalle en [docs/info/CLI.md](docs/info/CLI.md).
 
 ## Accesos
 
-El negocio arranca vacío, con el acceso técnico system y los catálogos base. Los usuarios del negocio se crean desde **Usuarios**. No hay pedidos, productos ni clientes de demostración precargados.
+Una instalación nueva arranca vacía, con el acceso técnico system y los catálogos base. Los usuarios del negocio se crean desde **Usuarios**. La semilla no precarga pedidos, productos ni clientes de demostración. El catálogo ficticio optativo y su preparación QA se explican a continuación.
 
 ## Qué se puede hacer
 
@@ -307,7 +307,7 @@ docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.prue
 npm run prueba:integracion
 ```
 
-La instancia QA usa otro proyecto/volúmenes y puerto [8180](http://localhost:8180/) para el frontend, 3100 para API. Termina con `docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml down` **sin `-v`**. No ejecutes pruebas que escriben contra la base del negocio. La configuración portátil queda lista para el VPS, pero una prueba local no acredita conectividad, firewall, DNS ni HTTPS del servidor remoto.
+La instancia QA usa otro proyecto/volúmenes y puerto [8180](http://localhost:8180/) para el frontend, 3100 para API. Termina con `docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml --profile voz down` **sin `-v`**, incluyendo el servicio opcional de voz. No ejecutes pruebas que escriben contra la base del negocio. La configuración portátil queda lista para el VPS, pero una prueba local no acredita conectividad, firewall, DNS ni HTTPS del servidor remoto.
 
 En Windows, con QA arriba, `node --env-file=.env Backend/scripts/probar-cache-caida.cjs` detiene únicamente Redis de `ambie-integracion`, escribe un gasto QA, verifica los totales y restaura Redis en `finally`. No ejecutes esa prueba contra producción. Al actualizar el frontend, recarga las pestañas abiertas para usar la nueva compilación.
 
@@ -350,13 +350,13 @@ El modo predeterminado usa la API: sesión con cookies, datos compartidos entre 
 
 ## Antes de hacer cambios
 
-Resultados y límites de concurrencia: [pruebas de carga y sincronización](docs/PRUEBAS_CARGA.md). QA eleva su límite antiabuso para medir persistencia; producción conserva el configurado en `.env`.
+Resultados y límites de concurrencia: [pruebas de carga y sincronización](docs/info/PRUEBAS_CARGA.md). QA eleva su límite antiabuso para medir persistencia; producción conserva el configurado en `.env`.
 
-Para publicar desde la rama principal hacia un servidor local o VPS, consulta [despliegue continuo](docs/DESPLIEGUE_CONTINUO.md). Queda desactivado hasta configurar el runner y `DEPLOY_ENABLED` en GitHub.
+Para publicar desde la rama principal hacia un servidor local o VPS, consulta [despliegue continuo](docs/info/DESPLIEGUE_CONTINUO.md). Queda desactivado hasta configurar el runner y `DEPLOY_ENABLED` en GitHub.
 
 Si una corrección cambia fórmulas o la estructura de los agregados, incrementa el prefijo de formato `v1` de las claves en `DashboardService` junto con el contrato. Así no se reutilizan resultados de la implementación anterior durante sus cinco minutos de vida.
 
-Consulta `AGENTS.md` para las convenciones del proyecto. En resumen:
+Consulta `AGENTS.md` para las convenciones del proyecto; la [constitución](docs/constitucion/01_stack_y_reglas.md) fija las reglas vigentes, la arquitectura, los estándares y el roadmap. En resumen:
 
 - Reutiliza los componentes y utilidades existentes.
 - Mantén las reglas de negocio fuera de los componentes visuales.
@@ -367,7 +367,56 @@ Consulta `AGENTS.md` para las convenciones del proyecto. En resumen:
 
 ## Documentos relacionados
 
+La documentación vive en `docs/` en dos zonas:
+
+**`docs/constitucion/` — reglas vigentes (normativo).** Las lee cualquier persona o agente **antes** de tocar el proyecto.
+
+| Archivo | Contenido |
+|---|---|
+| [01_stack_y_reglas.md](docs/constitucion/01_stack_y_reglas.md) | Tecnologías exactas y reglas no negociables (negocio, datos, seguridad, pruebas). |
+| [02_arquitectura.md](docs/constitucion/02_arquitectura.md) | Estructura del monorepo, patrones por capa, caché, sincronización y runtime. |
+| [03_estandares_codigo.md](docs/constitucion/03_estandares_codigo.md) | Nombres, TypeScript, manejo de errores, fechas/dinero, UI y Git. |
+| [04_roadmap_y_tareas.md](docs/constitucion/04_roadmap_y_tareas.md) | Objetivo vigente, tareas completadas y pendientes por fases. |
+
+**`docs/info/` — documentación técnica e histórica (referencia).** Documentos preservados tal cual; citan rutas antiguas del estilo `docs/X.md`, que desde esta reorganización equivalen a `docs/info/X.md`.
+
+| Documento | Contenido |
+|---|---|
+| [arquitectura-backend.md](docs/info/arquitectura-backend.md) | Diseño original del backend y límites de la v1. |
+| [AUDITORIA_PROFESIONAL.md](docs/info/AUDITORIA_PROFESIONAL.md) | Evidencia ejecutada de las validaciones (con fechas). |
+| [CLI.md](docs/info/CLI.md) | Manual del CLI con IA. |
+| [DESPLIEGUE_CONTINUO.md](docs/info/DESPLIEGUE_CONTINUO.md) | Publicación desde el repositorio hacia el servidor. |
+| [diccionario-contrato-api.md](docs/info/diccionario-contrato-api.md) | Contrato de la API por ruta. |
+| [modelo-datos.md](docs/info/modelo-datos.md) | Mapeo frontend → base de datos. |
+| [OPORTUNIDADES_MEJORA.md](docs/info/OPORTUNIDADES_MEJORA.md) | Revisión completa con IDs (FE-/BE-/API-/BD-/INF-/NEG-) y roadmap detallado. |
+| [PRUEBAS_CARGA.md](docs/info/PRUEBAS_CARGA.md) | Resultados de carga y límites antiabuso. |
+
+> Regla de convivencia: si un documento de `info/` contradice a `constitucion/`, gana `constitucion/`; el documento histórico se conserva como evidencia, no como norma.
+
+### Validación de paneles y catálogo ficticio
+
+Los paneles conservan los registros y formularios durante el refresco en segundo plano, sin recargar el navegador. Las listas muestran hasta 30 registros por página; los selectores y pendientes extensos se acotan a 30 y ofrecen búsqueda. El límite es visual: los saldos, totales y abonos FIFO siguen incluyendo todos los registros. Al reducir la altura se desplaza el panel exterior, sin aplastar las tarjetas ni el área de registros.
+
+Pruebas de navegador requieren Chrome instalado y las dependencias de desarrollo (`npm install` desde la raíz). En PowerShell usar `npm.cmd`:
+
+```powershell
+npm.cmd run prueba:asistente:ui
+docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml --profile voz up -d --build --wait
+$env:BASE_PRUEBAS_API='http://localhost:3100/api/v1'
+npm.cmd run prueba:integracion
+npm.cmd run demo:catalogo
+npm.cmd run prueba:paneles
+npm.cmd run prueba:voz
+docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml --profile voz down
+```
+
+`prueba:asistente:ui` usa respuestas de API/transcripciones simuladas, micrófono artificial y los componentes compilados reales. `prueba:paneles` usa Chrome y Nginx/API/PostgreSQL QA reales; verifica todos los módulos, filtros, retroceso de formularios, scroll y estabilidad ante sincronizaciones a 390×844, 390×320 y 1440×320. También crea dos productos y una venta exclusivamente QA, cambia sus precios y comprueba la factura histórica después de recargar. Conserva esos registros. Capturas privadas en `.local/pruebas-ui`. No sustituye probar micrófono físico, acentos y ruido reales.
+
+`demo:catalogo` carga 32 productos (Coca-Cola, Pepsi, papas, Doritos, De Todito, jugos naturales, sándwiches, entre otros), 8 clientes **ficticios** y pedidos con cantidades, estados y pagos variados. No contactes sus teléfonos ni trates esas ventas como reales. Repetirlo reutiliza nombres/teléfonos y las combinaciones de pedido ya existentes. `--solo-catalogo` omite los pedidos. No borra ejemplos anteriores ni se ejecuta automáticamente. Si se autoriza una instalación local de demostración, desde el host: `BASE_PRUEBAS_API=http://localhost:8080/api/v1` y `npm run demo:catalogo -- --demo-local-autorizado`. No usar en una empresa con datos reales para hacer pruebas.
+
 ### Venta abierta y voz local
+
+Consulta la [guía de pruebas de dictado y configuración de Google Gemini](docs/info/PRUEBAS_VOZ_Y_GEMINI.md). El catálogo se puede consultar antes de guardar y sin escribir primero un modelo. El diagnóstico del micrófono permite ver la transcripción local sin crear pedidos.
 
 La venta abierta registra un pedido y una factura sin crear un cliente. Solo admite efectivo o billetera; el crédito se bloquea también en la API y PostgreSQL.
 
@@ -383,6 +432,14 @@ El administrador configura el asistente desde **Configuración**. El modo básic
 
 Tocar el micrófono activa la escucha; tocarlo de nuevo la detiene. Se mueve arrastrándolo o con las flechas del teclado. La conversación pregunta los datos por pasos y completa los controles de las pantallas existentes, sin formularios ni modal propios del asistente. Se puede quitar y volver a agregar productos. **Confirmar operación** utiliza el mismo guardado de la pantalla después de revisar los datos; **cancelar operación** descarta el borrador. Los sonidos diferencian procesamiento, revisión lista y guardado exitoso. Los cambios de estado usan las mismas reglas de Pedidos: no se borra una factura emitida ni se anula una venta entregada fuera de esas reglas.
 
+En pedidos de cliente habitual, elige el registro o di su nombre: el asistente pide **confirmar cliente** antes de pasar a productos, sin llenar el buscador. Esa confirmación no guarda. Después pregunta productos, preparación/entrega y pago. Puedes decir **volver**, **volver a cliente**, **volver a productos**, **volver al pago** y **continuar**, o usar los botones normales; se conserva el borrador. La venta ocasional no requiere confirmar una identidad y sigue sin admitir crédito.
+
+En productos puedes dictar **dos Pepsi cuatrocientos mililitros y tres Doritos queso**, o **quiero cinco yogures de durazno y uno de fresa**. Se admiten plurales y nombres parciales cuando identifican un solo producto. Si hay varias presentaciones, pregunta cuál quieres y conserva las cantidades mientras aclaras; nunca elige una al azar ni modifica medidas numéricas. La escucha agrupa segmentos y espera 2,2 segundos sin nuevas transcripciones antes de responder; una pausa más larga inicia otro turno, que puede agregar más productos. El asistente confirma brevemente los cambios, sin leer toda la lista, y espera **confirmar productos** para pasar a entrega. **Quita Pepsi 400 ml** elimina esa línea; **reemplaza por dos Pepsi 400 ml** sustituye la lista completa. Cantidades inválidas, productos desconocidos o stock insuficiente no reemplazan el borrador. La confirmación final sigue siendo **confirmar operación**.
+
+Antes del pago se muestran todas las líneas con cantidad, precio unitario y subtotal en la misma tarjeta del pedido. Las listas de pedidos incluyen una vista breve de productos; al abrir un pedido se ve el detalle completo con sus precios históricos. Los avisos del asistente ocupan como máximo dos líneas, tienen fondo semitransparente, no bloquean controles y desaparecen después de 3,5 segundos.
+
+La pantalla final y el detalle del pedido muestran todas las líneas, cantidades, precios unitarios y subtotales guardados en PostgreSQL. No recalculan facturas históricas con precios nuevos del catálogo. La venta ocasional también muestra su detalle; si falla la lectura posterior al guardado, permite reintentar sin volver a registrar el pedido.
+
 En VPS se necesita HTTPS y un proxy que permita WebSocket para `/api/v1/asistente/voz`. El contenedor de voz no publica un puerto. En desarrollo sin Docker para la API, `VOZ_STT_URL` debe apuntar al servicio local de voz. La configuración cifrada se conserva en el volumen `asistente_config`; respalda ese volumen y conserva `ASISTENTE_CONFIG_SECRET` (o `JWT_SECRET` si no se configuró otro secreto). El CLI sigue independiente.
 
 ```bash
@@ -391,8 +448,6 @@ npm run verificar
 ```
 
 - [Equivalencia de variables](EQUIVALENCIA_VARIABLES.txt)
-- [CLI con IA](docs/CLI.md)
-- [Auditoría y resultados de validación](docs/AUDITORIA_PROFESIONAL.md)
 - [Pruebas aisladas y contenedor CLI/VPS](infra/README.md)
 - [Imágenes de productos](Frontend/public/assets/productos/README.md)
 - [Comprobantes](Frontend/public/assets/comprobantes/README.md)

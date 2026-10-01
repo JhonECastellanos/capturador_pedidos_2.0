@@ -104,7 +104,7 @@ export function Resumen() {
 
   return (
     <div className="flex h-full flex-col min-h-0">
-      {usaApi && [remotoHoy, remotoAyer, remotoBarras, remotoLinea, remotoTops].some((c) => c.error) && <p role="alert" className="shrink-0 rounded-xl bg-danger-soft p-3 text-sm text-danger">No se pudo actualizar el tablero. Se muestra la última lectura; pulsa Actualizar para reintentar.</p>}
+      {usaApi && [remotoHoy, remotoAyer, remotoBarras, remotoLinea, remotoTops].some((c) => c.error) && <p role="alert" className="shrink-0 rounded-xl bg-danger-soft p-3 text-sm text-danger">No se pudo actualizar el tablero. Se muestra la última lectura. <button type="button" onClick={() => [remotoHoy, remotoAyer, remotoBarras, remotoLinea, remotoTops].forEach((c) => { void c.refetch(); })}>Reintentar</button></p>}
       <div className="flex-shrink-0 flex items-center justify-between border-b border-line pb-2.5">
         <div className="flex items-center gap-2">
           <h2 className="font-display text-[18px] font-semibold text-ink">Inicio</h2>
@@ -158,6 +158,7 @@ export function Resumen() {
             <SegmentoControl opciones={GRANULARIDADES} valor={granBarras} onChange={setGranBarras} />
           </div>
           <GraficaBarrasDobles datos={serieBarras} formato={formatoMonedaCorta} />
+          {remotoBarras.isPlaceholderData && <p role="status" className="text-xs text-ink-soft">Actualizando periodo; se conserva la gráfica anterior…</p>}
           <p className="mt-2 text-[11px] text-ink-faint">
             Ventas {formatoMoneda(totalVentasBarras)} · compras y gastos {formatoMoneda(totalEgresosBarras)}
           </p>
@@ -175,6 +176,7 @@ export function Resumen() {
             <SegmentoControl opciones={GRANULARIDADES} valor={granLinea} onChange={setGranLinea} />
           </div>
           <GraficaLinea datos={puntosRentabilidad} formato={formatoMonedaCorta} />
+          {remotoLinea.isPlaceholderData && <p role="status" className="text-xs text-ink-soft">Actualizando periodo; se conserva la gráfica anterior…</p>}
           <p className="mt-2 text-[11px] text-ink-faint">Rentabilidad del periodo {formatoMoneda(rentabilidadPeriodo)}</p>
         </div>
       )}

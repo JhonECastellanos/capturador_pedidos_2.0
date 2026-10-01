@@ -335,7 +335,8 @@ export function CierreAdmin() {
                           Sin pendientes para este filtro.
                         </li>
                       )}
-                      {pendientesFiltrados.map((pedido) => {
+                      {pendientesFiltrados.length > POR_PAGINA && <li className="p-2 text-[11px] text-ink-soft">Se muestran {POR_PAGINA} pendientes. Usa el buscador para encontrar los demás.</li>}
+                      {pendientesFiltrados.slice(0, POR_PAGINA).map((pedido) => {
                         const cliente = obtenerCliente(pedido.clienteId);
                         const deAyer = esAyer(fechaOperativa(pedido), hoy);
                         const esCred = pedido.pago.saldoPendiente > 0;

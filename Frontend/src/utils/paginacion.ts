@@ -4,7 +4,7 @@
  * también constantes ni funciones).
  */
 
-export const POR_PAGINA = 20;
+export const POR_PAGINA = 30;
 
 export function paginar<T>(
   lista: T[],

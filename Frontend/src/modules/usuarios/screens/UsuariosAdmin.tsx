@@ -10,6 +10,9 @@ import type { NuevoUsuario, UsuarioSistema } from "../../../types";
 import { useAuth } from "../../../context/auth";
 import { usePantallaVoz } from "../../asistente/pantalla-voz";
 import { resolverReferencia } from "../../asistente/intencion";
+import { BuscadorInput } from "../../../components/BuscadorInput";
+import { Paginacion } from "../../../components/Paginacion";
+import { POR_PAGINA, paginar } from "../../../utils/paginacion";
 
 export function UsuariosAdmin() {
   const { usuarios, crearUsuario, cambiarEstadoUsuario, cambiarRolUsuario } = useOperaciones();
@@ -20,15 +23,17 @@ export function UsuariosAdmin() {
   const [usuarioNuevo, setUsuarioNuevo] = useState<NuevoUsuario>({ nombre: "", email: "", rol: "vendedor", password: "" });
   const [confirmarEstadoId, setConfirmarEstadoId] = useState<string | null>(null);
   const { aviso, mostrarAviso, cerrarAviso } = useAviso();
+  const [busqueda, setBusqueda] = useState("");
+  const [pagina, setPagina] = useState(1);
 
   const usuariosOrdenados = useMemo(() =>
-    [...usuarios].sort((a, b) => {
+    usuarios.filter((u) => !busqueda.trim() || `${u.nombre} ${u.email} ${u.rol}`.toLowerCase().includes(busqueda.trim().toLowerCase())).sort((a, b) => {
       const rolOrden = a.rol === "administrador" ? 0 : 1;
       const bRolOrden = b.rol === "administrador" ? 0 : 1;
       if (rolOrden !== bRolOrden) return rolOrden - bRolOrden;
       return a.nombre.localeCompare(b.nombre);
     }),
-    [usuarios]
+    [usuarios, busqueda]
   );
 
   async function guardarUsuario(evento?: FormEvent<HTMLFormElement>) {
@@ -218,6 +223,7 @@ export function UsuariosAdmin() {
       <div className="flex-shrink-0 pt-2 text-[12px] text-ink-soft">
         {usuariosOrdenados.length} usuarios registrados en el sistema
       </div>
+      <div className="shrink-0 mt-2 max-w-xl"><BuscadorInput value={busqueda} onChange={(q) => { setBusqueda(q); setPagina(1); }} placeholder="Buscar usuario, correo o rol" /></div>
 
       {/* Lista con scroll propio */}
       <div className="flex min-h-0 flex-1 flex-col px-0 py-2.5">
@@ -230,7 +236,7 @@ export function UsuariosAdmin() {
           </div>
           <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
             <div className="space-y-2.5">
-        {usuariosOrdenados.map((item: UsuarioSistema) => (
+        {paginar(usuariosOrdenados, pagina).items.map((item: UsuarioSistema) => (
           <article key={item.id} className="rounded-xl border border-line bg-paper-raised p-3.5 shadow-sm">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
@@ -263,6 +269,7 @@ export function UsuariosAdmin() {
           </div>
         </div>
       </div>
+      <div className="shrink-0 max-w-xl"><Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil(usuariosOrdenados.length / POR_PAGINA))} total={usuariosOrdenados.length} porPagina={POR_PAGINA} onChange={setPagina} /></div>
 
       <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
 

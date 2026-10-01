@@ -30,7 +30,7 @@ const PERMISOS_POR_ROL: Record<string, string[]> = {
   vendedor: ["clientes", "pedidos", "cobros"],
 };
 
-const CATEGORIAS = ["Bebidas", "Lácteos", "Aseo", "Snacks", "Abarrotes"];
+const CATEGORIAS = ["Bebidas", "Lácteos", "Aseo", "Snacks", "Abarrotes", "Preparados"];
 
 const TIPOS_CREDITO = [
   { codigo: "TC-0001", nombre: "diario", frecuenciaCreditoDias: 1 },

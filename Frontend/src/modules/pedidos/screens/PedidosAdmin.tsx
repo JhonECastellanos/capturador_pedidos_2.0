@@ -129,6 +129,7 @@ export function PedidosAdmin() {
         <div className="flex items-center gap-2">
           <button
             type="button"
+            disabled={usaApi && (remoto.cargando || remoto.actualizando)}
             onClick={() => exportarPedidosCSV(pedidosFiltrados, (id) => obtenerCliente(id)?.nombre ?? id)}
             className="rounded-xl border border-line bg-paper-raised px-3 py-1.5 text-[11.5px] font-semibold text-ink active:bg-paper-sunken shadow-sm"
           >
@@ -208,6 +209,7 @@ export function PedidosAdmin() {
       {/* ─── Lista con scroll propio ─── */}
       <div className="flex min-h-0 flex-1 flex-col px-0 py-2.5">
         {usaApi && remoto.cargando && <p role="status">Cargando pedidos…</p>}
+        {usaApi && remoto.actualizando && <p role="status" className="shrink-0 text-xs text-ink-soft">Actualizando filtro; se conserva la página anterior…</p>}
         {usaApi && remoto.error && <p role="alert" className="text-danger">{remoto.error} <button onClick={remoto.actualizar}>Reintentar</button></p>}
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
           <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
@@ -224,12 +226,13 @@ export function PedidosAdmin() {
           (usaApi ? pedidosFiltrados : paginar(pedidosFiltrados, pagina, POR_PAGINA).items).map((pedido) => {
             const cliente = obtenerCliente(pedido.clienteId);
             return (
-              <TarjetaClicable key={pedido.id} onClick={() => setDetalleId(pedido.id)} className="p-3.5">
+              <TarjetaClicable key={pedido.id} onClick={() => { if (!remoto.actualizando) setDetalleId(pedido.id); }} className="p-3.5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-mono text-[12px] font-semibold text-ink-faint">{pedido.numero} · {formatoFechaHora(pedido.creadoEn)}</p>
                     <p className="mt-1 truncate text-[14px] font-semibold text-ink">{cliente?.nombre ?? pedido.clienteNombre ?? "Venta ocasional"} {cliente?.alias ? `“${cliente.alias}”` : ""}</p>
                     <p className="text-[12px] text-ink-soft">{pedido.lineas.length} referencias · {formatoMoneda(pedido.total)}</p>
+                    <p className="mt-1 line-clamp-2 text-[12px] text-ink-soft">{pedido.lineas.map(l => `${l.cantidad} × ${l.nombre}`).join(" · ")}</p>
                     <p className="text-[10.5px] text-ink-faint">Generó {nombreUsuario(pedido.vendedorId)}</p>
                   </div>
                   <div className="flex flex-shrink-0 flex-col items-end gap-1">

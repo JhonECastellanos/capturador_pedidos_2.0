@@ -6,6 +6,7 @@ from http import HTTPStatus
 
 from vosk import KaldiRecognizer, Model, SetLogLevel
 from websockets.asyncio.server import serve
+from confianza import confianza_frase
 
 SetLogLevel(-1)
 modelo = Model(os.environ.get("VOSK_MODEL_PATH", "/opt/vosk-model-small-es-0.42"))
@@ -25,7 +26,8 @@ def procesar(rec, audio):
     datos = json.loads(rec.Result() if final else rec.PartialResult())
     if final:
         palabras = datos.get("result", [])
-        confianza = min((p.get("conf", 0) for p in palabras), default=0)
+        texto = datos.get("text", "").strip()
+        confianza = confianza_frase(texto, palabras)
         return {"tipo": "final", "texto": datos.get("text", ""), "confianza": confianza}
     return {"tipo": "parcial", "texto": datos.get("partial", "")}
 

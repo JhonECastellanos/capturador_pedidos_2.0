@@ -6,7 +6,7 @@ import type { UsuarioSistema } from "../types";
  * se crean desde la interfaz.
  */
 
-export const categorias = ["Bebidas", "Lácteos", "Aseo", "Snacks", "Abarrotes"] as const;
+export const categorias = ["Bebidas", "Lácteos", "Aseo", "Snacks", "Abarrotes", "Preparados"] as const;
 
 /** Los dos accesos oficiales del sistema: sin ellos no se puede entrar. */
 export function semillaUsuarios(): UsuarioSistema[] {

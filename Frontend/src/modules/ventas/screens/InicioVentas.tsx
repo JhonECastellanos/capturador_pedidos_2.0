@@ -11,6 +11,9 @@ import { formatoMoneda } from "../../../utils/formato";
 import { EtiquetaEstado } from "../../administracion/components/EtiquetaEstado";
 import { EtiquetaPago } from "../../administracion/components/EtiquetaPago";
 import { usaApi } from "../../../data/api";
+import { BuscadorInput } from "../../../components/BuscadorInput";
+import { Paginacion } from "../../../components/Paginacion";
+import { POR_PAGINA, paginar } from "../../../utils/paginacion";
 
 interface InicioVentasProps {
   /** Asistente para tomar un pedido. */
@@ -46,6 +49,8 @@ export function InicioVentas({ rutaPedido, rutaAbonos, rutaNuevoCliente, rutaDet
 
   const estadoInicial = ubicacion.state as { clienteCreado?: string } | null;
   const [clienteCreado, setClienteCreado] = useState<string | null>(estadoInicial?.clienteCreado ?? null);
+  const [busqueda, setBusqueda] = useState("");
+  const [pagina, setPagina] = useState(1);
 
   const hoy = useMemo(() => new Date(), []);
 
@@ -57,6 +62,7 @@ export function InicioVentas({ rutaPedido, rutaAbonos, rutaNuevoCliente, rutaDet
     [pedidos, hoy],
   );
   const ventasHoy = pedidosHoy.reduce((total, pedido) => total + pedido.total, 0);
+  const pedidosFiltrados = pedidosHoy.filter((p) => !busqueda.trim() || `${p.numero} ${obtenerCliente(p.clienteId)?.nombre ?? "Venta ocasional"} ${nombreUsuario(p.vendedorId)}`.toLowerCase().includes(busqueda.trim().toLowerCase()));
   const porCobrar = pedidos
     .filter((pedido) => pedido.estado !== "cancelado" && pedido.pago.saldoPendiente > 0)
     .reduce((suma, p) => suma + p.pago.saldoPendiente, 0);
@@ -169,9 +175,10 @@ export function InicioVentas({ rutaPedido, rutaAbonos, rutaNuevoCliente, rutaDet
             <span className="text-[11.5px] text-ink-faint">Toca para gestionar</span>
           </div>
 
+          <div className="mt-2 shrink-0"><BuscadorInput value={busqueda} onChange={(q) => { setBusqueda(q); setPagina(1); }} placeholder="Buscar pedido, cliente o vendedor" /></div>
           <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
             <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
-              {pedidosHoy.length === 0 ? (
+              {pedidosFiltrados.length === 0 ? (
                 <ListaVacia
                   icono={<IconClipboard width={22} height={22} className="text-ink-faint" />}
                   titulo="Aún no hay pedidos hoy."
@@ -180,7 +187,7 @@ export function InicioVentas({ rutaPedido, rutaAbonos, rutaNuevoCliente, rutaDet
                 />
               ) : (
                 <ul className="space-y-2">
-                  {pedidosHoy.map((pedido) => {
+                  {paginar(pedidosFiltrados, pagina).items.map((pedido) => {
                     const cliente = obtenerCliente(pedido.clienteId);
                     const porCobrarPedido = pedido.pago.saldoPendiente > 0;
                     return (
@@ -198,7 +205,8 @@ export function InicioVentas({ rutaPedido, rutaAbonos, rutaNuevoCliente, rutaDet
                               <span className="truncate font-mono text-[12.5px] font-bold text-ink">{pedido.numero}</span>
                               <EtiquetaEstado estado={pedido.estado} compacta />
                             </span>
-                            <span className="mt-0.5 block truncate text-[12px] text-ink-soft">{cliente?.nombre ?? "Cliente"}</span>
+                            <span className="mt-0.5 block truncate text-[12px] text-ink-soft">{cliente?.nombre ?? "Venta ocasional"}</span>
+                            <span className="mt-1 line-clamp-2 text-[11px] text-ink-soft">{pedido.lineas.map(l => `${l.cantidad} × ${l.nombre}`).join(" · ")}</span>
                             <span className="block truncate text-[10.5px] text-ink-faint">Generó {nombreUsuario(pedido.vendedorId)}</span>
                           </span>
                           <span className="flex flex-shrink-0 flex-col items-end gap-1">
@@ -214,6 +222,7 @@ export function InicioVentas({ rutaPedido, rutaAbonos, rutaNuevoCliente, rutaDet
               )}
             </div>
           </div>
+          <div className="shrink-0"><Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil(pedidosFiltrados.length / POR_PAGINA))} total={pedidosFiltrados.length} porPagina={POR_PAGINA} onChange={setPagina} /></div>
         </section>
       </main>
 

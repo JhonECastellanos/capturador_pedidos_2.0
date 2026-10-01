@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { api, listaApi, baseApi } from "../data/api";
 import { consultas } from "../data/query";
+import { replaceEqualDeep } from "@tanstack/react-query";
 import { useSincronizacion } from "../data/useSincronizacion";
 import { archivoAImagenDataUrl } from "../utils/imagen";
 import { useAuth } from "./auth";
@@ -26,13 +27,20 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
   const refrescoPendiente = useRef(false);
   const sesionId = useRef(usuario?.id);
   const revision = useRef(0);
+  const datosSesion = useRef<string | undefined>(undefined);
 
   const cargar = useCallback(async () => {
     if (!usuario) return;
-    if (esTablero) { setDatos(vacios); setCargadoPara(usuario.id); return; }
+    if (esTablero) {
+      if (datosSesion.current !== usuario.id) setDatos(vacios);
+      datosSesion.current = usuario.id;
+      setCargadoPara(usuario.id);
+      return;
+    }
     const claveSnapshot = ["operaciones", usuario.id, necesitaHistorialPedidos];
     const anterior = consultas.getQueryData<Datos>(claveSnapshot);
-    if (anterior) { setDatos(anterior); setCargadoPara(usuario.id); }
+    // Un refresco no debe volver atrás a un snapshot de otra pantalla.
+    if (anterior && datosSesion.current !== usuario.id) { setDatos(anterior); setCargadoPara(usuario.id); }
     const lectura = ++revision.current;
     const esAdmin = usuario.rol === "administrador";
     const [clientes, pedidos, inventario, abonos, movimientosCaja, usuarios, proveedores, recepciones, gastos, conteos, ajustes, cambiosPrecio, cierres, archivos] = await Promise.all([
@@ -56,13 +64,15 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
       conteos: conteos.map((c) => ({ ...c, lineasContadas: c.lineas.filter((l) => l.stockFisico !== null).map((l) => l.productoId), lineas: c.lineas.map((l) => ({ ...l, nombre: inventario.find((p) => p.id === l.productoId)?.nombre ?? "Producto", stockFisico: l.stockFisico ?? 0, diferencia: l.diferencia ?? 0 })) })),
     };
     consultas.setQueryData(claveSnapshot, nuevosDatos);
-    setDatos(nuevosDatos);
+    const mismaSesion = datosSesion.current === usuario.id;
+    setDatos((actuales) => mismaSesion ? replaceEqualDeep(actuales, nuevosDatos) : nuevosDatos);
+    datosSesion.current = usuario.id;
     setCargadoPara(usuario.id);
   }, [usuario, necesitaHistorialPedidos, esTablero]);
 
   useEffect(() => {
     sesionId.current = usuario?.id;
-    if (!usuario) return;
+    if (!usuario) { revision.current++; datosSesion.current = undefined; setDatos(vacios); setClienteActivoId(null); setCargadoPara(null); setError(""); return; }
     const refrescar = () => {
       if (ocupado.current) { refrescoPendiente.current = true; return; }
       void cargar().catch((e: Error) => setError(e.message));
@@ -81,7 +91,7 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
     try {
       const resultado = await api<T>(ruta, metodo, cuerpo);
       // Si falla la lectura posterior, la escritura ya está confirmada: no inducir a duplicarla.
-      await cargar().catch(() => setError("Guardado correctamente. No se pudo actualizar la lista; pulsa Actualizar."));
+      await cargar().catch(() => setError("Guardado correctamente. No se pudo actualizar la lista; pulsa Reintentar."));
       window.dispatchEvent(new Event("ambie:datos-actualizados"));
       return resultado;
     } catch (e) { setError(e instanceof Error ? e.message : "No se pudo guardar"); return null; }
@@ -133,8 +143,8 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
 
   if (usuario && cargadoPara !== usuario.id) return <div className="p-6 text-ink-soft"><p role="status">Cargando datos del negocio…</p>{error && <p role="alert" className="mt-3 text-danger">{error}</p>}<button className="mt-4 rounded-xl border border-line px-4 py-3" onClick={() => void cargar().catch((e: Error) => setError(e.message))}>Reintentar</button></div>;
   return <OperacionesContext.Provider value={value}><div className="operaciones-remotas">
-    {usuario && <div className="flex shrink-0 items-center justify-between gap-2 bg-paper-raised px-4 py-2 text-xs text-ink-soft"><span role="status">{guardando ? "Guardando…" : conectado ? "Actualización automática" : "Sin conexión · datos de la última lectura"}</span><button disabled={guardando} className="min-h-11 px-2" onClick={() => { setError(""); window.dispatchEvent(new Event("ambie:datos-actualizados")); }}>Actualizar</button></div>}
-    {error && <div role="alert" className="flex shrink-0 items-center gap-2 bg-danger-soft px-4 py-3 text-sm text-danger"><span className="flex-1">{error}</span><button className="min-h-11 px-2" onClick={() => setError("")}>Cerrar</button></div>}
+    {usuario && !conectado && <p role="status" className="shrink-0 bg-danger-soft px-4 py-2 text-xs text-danger">Sin conexión. Se muestra la última lectura; la sincronización se reanudará automáticamente.</p>}
+    {error && <div role="alert" className="flex shrink-0 items-center gap-2 bg-danger-soft px-4 py-3 text-sm text-danger"><span className="flex-1">{error}</span><button type="button" disabled={guardando} className="min-h-11 px-2" onClick={() => { setError(""); window.dispatchEvent(new Event("ambie:datos-actualizados")); }}>Reintentar</button><button type="button" className="min-h-11 px-2" onClick={() => setError("")}>Cerrar</button></div>}
     <fieldset disabled={guardando} className="contents">{children}</fieldset>
   </div></OperacionesContext.Provider>;
 }

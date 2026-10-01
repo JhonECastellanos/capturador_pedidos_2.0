@@ -35,6 +35,7 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
 
   const [busqueda, setBusqueda] = useState("");
   const [clienteId, setClienteId] = useState<string | null>(null);
+  const [busquedaPedidos, setBusquedaPedidos] = useState("");
   const [monto, setMonto] = useState("");
   const [metodo, setMetodo] = useState<AbonoCredito["metodo"]>("efectivo");
   const [comentario, setComentario] = useState("");
@@ -59,10 +60,12 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
 
   const totalPendiente = grupos.reduce((suma, g) => suma + g.total, 0);
   const detalle = grupos.find((g) => g.clienteId === clienteId) ?? null;
+  const pedidosDetalle = (detalle?.pedidos ?? []).filter((p) => p.numero.toLowerCase().includes(busquedaPedidos.trim().toLowerCase()));
 
   function abrirCliente(id: string) {
     const grupo = grupos.find((g) => g.clienteId === id);
     setClienteId(id);
+    setBusquedaPedidos("");
     setMonto(grupo ? String(grupo.total) : "");
     setComentario("");
     setMetodo("efectivo");
@@ -128,8 +131,10 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
             <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
               Pedidos pendientes
             </p>
+            <BuscadorInput value={busquedaPedidos} onChange={setBusquedaPedidos} placeholder="Buscar pedido pendiente por consecutivo" />
+            {pedidosDetalle.length > POR_PAGINA && <p className="mt-1 text-[11px] text-ink-soft">Se muestran {POR_PAGINA} pedidos. Filtra por consecutivo para encontrar otro.</p>}
             <ul className="mt-1.5 divide-y divide-line/60">
-              {detalle.pedidos.map((p) => (
+              {pedidosDetalle.slice(0, POR_PAGINA).map((p) => (
                 <li key={p.id} className="flex items-center justify-between gap-2 py-2">
                   <div className="min-w-0">
                     <p className="truncate text-[12.5px] font-medium text-ink">
