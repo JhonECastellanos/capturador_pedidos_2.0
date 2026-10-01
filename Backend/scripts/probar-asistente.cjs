@@ -11,6 +11,18 @@ const { ConfiguracionAsistente } = require('../dist/asistente/configuracion-asis
 const { AsistenteService } = require('../dist/asistente/asistente.service');
 const { validarUrlProveedor } = require('../dist/asistente/red-proveedor');
 
+test('cliente: acepta el nombre directamente sin exigir habitual u ocasional', () => {
+  const orden = { accion: 'crear_pedido', payload: {}, destino: null, mensaje: 'Pedido pendiente' };
+  for (const frase of ['Isabel Rojas', 'para Isabel Rojas', 'es para Isabel Rojas', 'el cliente es Isabel Rojas']) {
+    assert.equal(responderCampo(frase, orden, 'tipoCliente', 'vendedor').payload.clienteId, 'Isabel Rojas');
+  }
+  assert.equal(responderCampo('ocasional', orden, 'tipoCliente', 'vendedor').payload.clienteId, null);
+  assert.equal(entenderBasico('tomar pedido para Isabel Rojas', 'vendedor').payload.clienteId, 'Isabel Rojas');
+  const completa = responderCampo('dos Pepsi 400 ml para entregar de una vez en efectivo', { ...orden, payload: { clienteId: 'isabel' } }, 'lineas', 'vendedor');
+  assert.deepEqual(completa.payload.lineas, [{ productoId: 'pepsi 400 ml', cantidad: 2 }]);
+  assert.equal(completa.payload.estadoInicial, 'entregado');
+  assert.equal(completa.payload.metodo, 'efectivo');
+});
 test('vendedor: exclusivamente pedidos, clientes y abonos', () => {
   assert.deepEqual(contrato.accionesParaRol('vendedor'), ['crear_cliente', 'crear_pedido', 'recibir_abono']);
   for (const accion of contrato.accionesParaRol('administrador')) {

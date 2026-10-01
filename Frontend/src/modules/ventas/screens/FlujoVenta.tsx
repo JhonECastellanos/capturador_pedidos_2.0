@@ -156,7 +156,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
     if (!pedido) return false;
     setCantidades({});
     if (alConfirmar) alConfirmar(pedido);
-    navegar(rutaCompletado, { state: { pedidoId: pedido.id }, replace: true });
+    navegar(vozGuiada ? rutaInicio : rutaCompletado, { state: vozGuiada ? { pedidoConfirmado: pedido.id } : { pedidoId: pedido.id }, replace: true });
     return true;
   }
   usePantallaVoz(["crear_pedido"], {

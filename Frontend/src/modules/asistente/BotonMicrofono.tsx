@@ -6,7 +6,7 @@ import { useAuth } from "../../context/auth";
 import { useOperaciones } from "../../context/operaciones";
 import { ProductoVozAmbiguo, resolverProductoVoz, resolverReferencia, resumenIntencion, respuestaHablada, totalIntencion } from "./intencion";
 import { limitarPosicion, SesionVoz } from "./sesion-voz";
-import { campoAnteriorConversacion, camposConversacion, pasoConversacion, preguntaCampo } from "./conversacion";
+import { campoAnteriorConversacion, camposConversacion, firmaProductosVoz, pasoConversacion, preguntaCampo } from "./conversacion";
 import { prepararSonidos, sonar } from "./sonidos";
 import { despuesDePintar, pantallaVoz } from "./pantalla-voz";
 
@@ -88,7 +88,7 @@ function Microfono({ rol }: { rol: RolUsuario }) {
     }
     if (orden.accion === "crear_pedido" && typeof orden.payload.clienteId === "string") {
       const id = resolverReferencia(orden.payload.clienteId, datos.clientes);
-      if (id) orden = { ...orden, payload: { ...orden.payload, clienteId: id } };
+      if (id) { orden = { ...orden, payload: { ...orden.payload, clienteId: id } }; if (!campoForzado) clienteConfirmado.current = id; }
     }
     if (orden.accion === "crear_pedido" && Array.isArray(orden.payload.lineas)) {
       const unificadas = new Map<string, { productoId: string; cantidad: number }>();
@@ -111,7 +111,7 @@ function Microfono({ rol }: { rol: RolUsuario }) {
     if (orden.destino) { const destino = rutaAsistente(orden.destino, rol); if (destino) navegar(destino); pendiente.current = null; responder(orden.mensaje); return; }
     if (!orden.accion || !esAccionAsistente(orden.accion)) { responder(orden.mensaje); return; }
     let paso = campoForzado ? { campo: campoForzado, pregunta: preguntaCampo(campoForzado) } : pasoConversacion(orden, rol, datos);
-    if (orden.accion === "crear_pedido" && Array.isArray(orden.payload.lineas) && orden.payload.lineas.length && !["tipoCliente", "clienteId", "confirmarCliente"].includes(paso?.campo ?? "") && JSON.stringify(orden.payload.lineas) !== productosConfirmados.current) paso = { campo: "lineas", pregunta: preguntaCampo("lineas") };
+    if (!campoForzado && orden.accion === "crear_pedido" && Array.isArray(orden.payload.lineas) && orden.payload.lineas.length && !["tipoCliente", "clienteId", "confirmarCliente"].includes(paso?.campo ?? "") && firmaProductosVoz(orden.payload.lineas) !== productosConfirmados.current) paso = { campo: "lineas", pregunta: preguntaCampo("lineas") };
     if (orden.accion === "crear_pedido" && typeof orden.payload.clienteId === "string" && orden.payload.clienteId && !["tipoCliente", "clienteId"].includes(campoForzado || "")) {
       const cliente = datos.clientes.find((c) => c.id === orden.payload.clienteId);
       if (!cliente) paso = { campo: "clienteId", pregunta: "No identifico un cliente único con ese nombre. Selecciona el registro correcto en pantalla." };
@@ -143,7 +143,7 @@ function Microfono({ rol }: { rol: RolUsuario }) {
     ocupado.current = true;
     try {
       clienteConfirmado.current = confirmado ? id : null;
-      await mostrar({ ...orden, payload: { ...orden.payload, clienteId: id } }, confirmado ? "lineas" : undefined);
+      await mostrar({ ...orden, payload: { ...orden.payload, clienteId: id } }, confirmado ? "lineas" : "confirmarCliente");
     } finally { ocupado.current = false; reanudar(); }
   }
   async function guiarPaso(campoNuevo: string) {
@@ -154,21 +154,35 @@ function Microfono({ rol }: { rol: RolUsuario }) {
       const actual = (await pantallaVoz("crear_pedido"))?.leer() ?? {};
       const editados = Object.fromEntries(Object.entries(actual).filter(([k]) => Object.hasOwn(orden.payload, k) || k === campo.current));
       if (campoNuevo === "clienteId") clienteConfirmado.current = null;
-      if (campo.current === "lineas" && campoNuevo === "estadoInicial") productosConfirmados.current = JSON.stringify(actual.lineas);
+      if (campo.current === "lineas" && campoNuevo === "estadoInicial") productosConfirmados.current = firmaProductosVoz(actual.lineas);
       await mostrar({ ...orden, payload: { ...orden.payload, ...editados } }, campoNuevo);
     } finally { ocupado.current = false; reanudar(); }
   }
   useEffect(() => { clienteEvento.current = elegirClienteVoz; pasoEvento.current = guiarPaso; });
   async function confirmar() {
     const orden = pendiente.current;
-    if (!orden?.accion || !esAccionAsistente(orden.accion) || !firma.current) { responder("Primero completa los datos y di revisar operación."); return; }
+    if (!orden?.accion || !esAccionAsistente(orden.accion)) { responder("Primero completa los datos de la operación."); return; }
     if (!preferencias.current.confirmacionVoz) { responder("Confirma con el botón de esta pantalla."); return; }
+    if (!firma.current) {
+      try { prepararOperacionAsistente(orden.accion, orden.payload, rol); }
+      catch { await mostrar(orden); return; }
+      if (orden.accion === "crear_pedido") {
+        clienteConfirmado.current = typeof orden.payload.clienteId === "string" ? orden.payload.clienteId : null;
+        productosConfirmados.current = firmaProductosVoz(orden.payload.lineas);
+        for (const paso of ["lineas", "estadoInicial", "metodo"]) {
+          await mostrar(orden, paso);
+          if (!vigente.current || !sesion.current) return;
+        }
+      }
+      await mostrar(orden);
+      if (!firma.current) return;
+    }
     const pantalla = await pantallaVoz(orden.accion);
     if (!pantalla) { responder("Abre de nuevo la operación antes de confirmar."); return; }
     const actual = pantalla.leer();
     if (firma.current !== JSON.stringify(actual)) { firma.current = ""; await mostrar({ ...orden, payload: actual as IntencionAsistente["payload"] }); return; }
     prepararOperacionAsistente(orden.accion, actual, rol); firma.current = ""; setEstado("guardando"); sonar("procesando");
-    if (await pantalla.confirmar()) { pendiente.current = null; aclaracionProducto.current = null; clienteConfirmado.current = null; productosConfirmados.current = ""; sonar("guardado"); const total = totalIntencion(orden.accion, actual, datos); responder(orden.accion === "crear_pedido" ? `Pedido confirmado.${total !== null ? ` Total: ${total.toLocaleString("es-CO")} pesos.` : ""}` : "La operación quedó guardada."); }
+    if (await pantalla.confirmar()) { pendiente.current = null; campo.current = ""; aclaracionProducto.current = null; clienteConfirmado.current = null; productosConfirmados.current = ""; sonar("guardado"); const total = totalIntencion(orden.accion, actual, datos); responder(orden.accion === "crear_pedido" ? `Pedido confirmado.${total !== null ? ` Total: ${total.toLocaleString("es-CO")} pesos.` : ""} ¿Otro pedido, crear cliente o recibir abono?` : "La operación quedó guardada. ¿Qué quieres hacer ahora?"); }
     else { sonar("error"); responder("No se guardó. Revisa el aviso y los datos de la pantalla."); }
   }
   async function recibir(evento: EventoVoz) {
@@ -191,6 +205,18 @@ function Microfono({ rol }: { rol: RolUsuario }) {
       const comando = comandoVoz(evento.texto, evento.confianza);
       const texto = evento.texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[.!?]+$/, "");
       const ordenActual = pendiente.current;
+      if (ordenActual?.accion === "crear_pedido" && (["tipoCliente", "clienteId", "confirmarCliente"].includes(campo.current) || /^(?:no,?\s+)?(?:me equivoque|cambia(?:r)? cliente|otro cliente|es para)\b/.test(texto))) {
+        const nombre = texto.replace(/^(?:no,?\s+)?(?:me equivoque[,]?\s*|cambia(?:r)? cliente\s*(?:a\s+)?|otro cliente\s*|es para\s*|para\s*|el cliente es\s*)/, "");
+        const candidatos = datos.clientes.filter(c => c.nombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === nombre);
+        if (candidatos.length === 1) {
+          clienteConfirmado.current = candidatos[0].id;
+          await mostrar({ ...ordenActual, payload: { ...ordenActual.payload, clienteId: candidatos[0].id } }, "lineas"); return;
+        }
+        if (/^(?:no,?\s+)?(?:me equivoque|cambia(?:r)? cliente|otro cliente)\b/.test(texto)) {
+          clienteConfirmado.current = null;
+          await mostrar({ ...ordenActual, payload: { ...ordenActual.payload, clienteId: "" } }, "clienteId"); return;
+        }
+      }
       if (/^(continuar|siguiente|continuar a entrega|continuar al pago|confirmar productos|productos correctos|lista correcta|productos listos)$/.test(texto) && ordenActual?.accion && esAccionAsistente(ordenActual.accion)) {
         aclaracionProducto.current = null;
         if (/^(confirmar productos|productos correctos|lista correcta|productos listos)$/.test(texto) && (ordenActual.accion !== "crear_pedido" || campo.current !== "lineas")) { responder("Primero revisa la lista de productos en su paso."); return; }
@@ -202,7 +228,7 @@ function Microfono({ rol }: { rol: RolUsuario }) {
         if (valor === undefined || valor === "" || (Array.isArray(valor) && !valor.length)) { responder(preguntaCampo(campo.current)); return; }
         const campos = camposConversacion(ordenActual.accion);
         const siguiente = campos[campos.indexOf(campo.current) + 1];
-        if (ordenActual.accion === "crear_pedido" && campo.current === "lineas") productosConfirmados.current = JSON.stringify(valor);
+        if (ordenActual.accion === "crear_pedido" && campo.current === "lineas") productosConfirmados.current = firmaProductosVoz(valor);
         await mostrar({ ...ordenActual, payload: { ...ordenActual.payload, [campo.current]: valor } }, siguiente); return;
       }
       if (campo.current === "confirmarCliente" && ordenActual?.accion === "crear_pedido" && /^(no|no es|otro cliente|cambiar cliente)$/.test(texto)) {
@@ -217,12 +243,14 @@ function Microfono({ rol }: { rol: RolUsuario }) {
         clienteConfirmado.current = id;
         await mostrar({ ...ordenActual, payload: { ...ordenActual.payload, clienteId: id } }, "lineas"); return;
       }
-      if (/^(volver|atras|regresar|paso anterior|devolverme|me quiero devolver|quiero volver)(?: al? | a | en el proceso| un paso)?(cliente|clientes|productos|entrega|pago)?$/.test(texto)) {
+      if (/^(volver|atras|regresar|paso anterior|devolverme|me quiero devolver|quiero volver)(?: al? | a | en el proceso| un paso)?(cliente|clientes|productos|entrega|pago|proveedor|monto|metodo|concepto|conteo|fecha|precio)?$/.test(texto)) {
         cantidadProducto.current = null;
         aclaracionProducto.current = null;
         firma.current = "";
         if (!ordenActual?.accion || !esAccionAsistente(ordenActual.accion)) { navegar(rol === "vendedor" ? "/vendedor" : "/admin"); responder("Volvimos al inicio. ¿Qué sección quieres abrir?"); return; }
-        const objetivo = /cliente/.test(texto) ? "clienteId" : /producto/.test(texto) ? "lineas" : /entrega/.test(texto) ? "estadoInicial" : /pago/.test(texto) ? "metodo" : campoAnteriorConversacion(ordenActual.accion, campo.current);
+        const camposDisponibles = camposConversacion(ordenActual.accion);
+        const solicitado = /cliente/.test(texto) ? "clienteId" : /producto/.test(texto) ? (ordenActual.accion === "crear_pedido" ? "lineas" : "productoId") : /entrega/.test(texto) ? "estadoInicial" : /pago|metodo/.test(texto) ? "metodo" : /proveedor/.test(texto) ? "proveedorId" : /monto/.test(texto) ? "monto" : /concepto/.test(texto) ? "concepto" : /conteo/.test(texto) ? "conteoId" : /fecha/.test(texto) ? "fecha" : /precio/.test(texto) ? "nuevoPrecio" : undefined;
+        const objetivo = solicitado && camposDisponibles.includes(solicitado) ? solicitado : campoAnteriorConversacion(ordenActual.accion, campo.current);
         if (["clienteId", "tipoCliente"].includes(objetivo)) clienteConfirmado.current = null;
         const pantalla = await pantallaVoz(ordenActual.accion);
         const actual = pantalla?.leer() ?? {};

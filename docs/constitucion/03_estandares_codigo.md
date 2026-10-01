@@ -83,7 +83,7 @@ Ojo con los enums: el cliente Prisma expone `EstadoPedido.CANCELADO`, pero la ba
 
 ## 8. Git y revisión
 
-- Rama de trabajo: **V3**. La entrega hacia la rama principal se hace por pull request; el workflow detecta la rama principal de GitHub (no asumir que se llama `main`).
+- Rama de trabajo: **V4P1**, creada desde el estado consolidado de V3 por solicitud del usuario el 01/10/2026. La entrega hacia la rama principal se hace por pull request; el workflow detecta la rama principal de GitHub (no asumir que se llama `main`).
 - Mensajes descriptivos, sin atribuciones automáticas.
 - Antes de commit: revisar diff, archivos nuevos y secretos; **no versionar** `.env`, tokens, dumps, volúmenes, `.local`, sesiones del CLI ni datos reales. `.env.example` solo con placeholders.
 - `npm run seguridad:repositorio` complementa la revisión (no sanea el historial de Git).

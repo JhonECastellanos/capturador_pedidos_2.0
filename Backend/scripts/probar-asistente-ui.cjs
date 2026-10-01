@@ -56,15 +56,15 @@ async function main() {
         else if (ruta === '/asistente/entender') { interpretaciones++; data = cuerpo.pendiente && cuerpo.campo ? responderCampo(cuerpo.texto, cuerpo.pendiente, cuerpo.campo, rol) || entenderBasico(cuerpo.texto, rol, cuerpo.pendiente) : entenderBasico(cuerpo.texto, rol, cuerpo.pendiente); }
         else if (ruta === '/productos') data = productosMock;
         else if (ruta === '/inventario/conteos') data = conteosMock;
-        else if (ruta === '/clientes') data = [{ ...catalogo.clientes[0], id: 'isabel', codigo: 'CLI-ISABEL', saldoPendiente: 0, activo: true }];
+        else if (ruta === '/clientes') data = [{ ...catalogo.clientes[0], id: 'isabel', codigo: 'CLI-ISABEL', saldoPendiente: 0, activo: true }, { ...catalogo.clientes[1], id: 'carlos', codigo: 'CLI-CARLOS', saldoPendiente: 0, activo: true }];
         else if (ruta === '/dashboard/resumen') data = { ventas: 6000, pedidos: 1, gastos: 0, compras: 0, ticketPromedio: 6000, creditoPendienteGlobal: 0, alertasStock: 0, serie: [{ dia: new Date().toLocaleDateString('en-CA'), ventas: 6000, costo: 3800, compras: 0, gastos: 0 }], topProductos: [], topClientes: [] };
         else if (ruta === '/usuarios') data = [usuario];
         else if (ruta === '/proveedores') data = [{ id: 'proveedor-demo', nombre: 'Distribuidora Bebidas Demo', telefono: '', activo: true }];
         else if (ruta === '/caja/egresos' && req.method() === 'POST') { assert.deepEqual(cuerpo, { concepto: 'Retiro de caja', monto: 5000, metodo: 'billetera' }); egresos++; data = { id: 'egreso-prueba' }; }
         else if (ruta === '/pedidos') {
           if (req.method() === 'POST') {
-            guardados++; assert.equal(cuerpo.clienteId, guardados === 1 ? null : 'isabel'); assert.equal(cuerpo.metodo, guardados === 1 ? 'efectivo' : 'billetera');
-            const esperadas = guardados === 1 ? [{ productoId: 'coca', cantidad: 1 }, { productoId: 'pepsi', cantidad: 2 }, { productoId: 'doritos', cantidad: 3 }] : [{ productoId: 'pepsi', cantidad: 3 }];
+            guardados++; assert.equal(cuerpo.clienteId, guardados === 1 ? null : 'isabel'); assert.equal(cuerpo.metodo, guardados === 2 ? 'billetera' : 'efectivo');
+            const esperadas = guardados === 1 ? [{ productoId: 'coca', cantidad: 1 }, { productoId: 'pepsi', cantidad: 2 }, { productoId: 'doritos', cantidad: 3 }] : [{ productoId: 'pepsi', cantidad: guardados === 2 ? 3 : 2 }];
             assert.deepEqual([...cuerpo.lineas].sort((a,b) => a.productoId.localeCompare(b.productoId)), [...esperadas].sort((a,b) => a.productoId.localeCompare(b.productoId)));
             const lineas = cuerpo.lineas.map(l => { const p = productosMock.find(p => p.id === l.productoId); return { ...l, nombre: p.nombre, precioUnitario: p.precioVenta, subtotal: l.cantidad * p.precioVenta }; });
             const total = lineas.reduce((s,l) => s + l.subtotal, 0);
@@ -160,6 +160,8 @@ async function main() {
       await page.screenshot({ path: resolve('.ambie-config', `voz-${rol}-movil.png`) });
       await decir('sí', 'Di confirmar operación'); assert.equal(guardados, 0);
       await decir('confirmar operación', 'La operación quedó guardada'); assert.equal(guardados, 1);
+      assert.match(page.url(), rol === 'administrador' ? /\/admin\/ventas$/ : /\/vendedor$/);
+      await page.getByRole('button', { name: 'Ver factura del pedido confirmado' }).click();
       const factura = page.getByRole('region', { name: 'Detalle de productos' });
       await factura.waitFor(); assert.equal(await factura.locator('li').count(), 3);
       await page.getByText('Factura FAC-PRUEBA-1', { exact: true }).waitFor();
@@ -168,6 +170,15 @@ async function main() {
       assert.match(await pepsiFacturada.innerText(), /3\.000/); assert.match(await pepsiFacturada.innerText(), /6\.000/);
       assert.doesNotMatch(await pepsiFacturada.innerText(), /9\.000/);
       await page.screenshot({ path: resolve('.ambie-config', `factura-${rol}-movil.png`) });
+      await decir('tomar pedido', '¿Es para un cliente habitual');
+      await decir('Isabel Rojas', '¿Qué productos necesita?');
+      assert.ok(await page.getByPlaceholder('Buscar producto').isVisible());
+      await decir('cambiar cliente a Carlos Medina', '¿Qué productos necesita?');
+      assert.match(await page.locator('body').innerText(), /Carlos/);
+      await decir('cambiar cliente a Isabel Rojas', '¿Qué productos necesita?');
+      await decir('volver a cliente', '¿Qué cliente?');
+      await decir('Isabel Rojas', '¿Qué productos necesita?');
+      await decir('cancelar operación', 'Operación descartada');
       await decir('tomar pedido', '¿Es para un cliente habitual');
       await decir('habitual', '¿Qué cliente?');
       await page.getByRole('button', { name: 'Isabel Rojas', exact: true }).click();
@@ -193,6 +204,12 @@ async function main() {
       await decir('billetera', 'Di confirmar operación');
       assert.equal(guardados, 1);
       await decir('confirmar operación', 'La operación quedó guardada'); assert.equal(guardados, 2);
+      assert.match(page.url(), rol === 'administrador' ? /\/admin\/ventas$/ : /\/vendedor$/);
+      await decir('tomar pedido para Isabel Rojas', '¿Qué productos necesita?');
+      await decir('dos Pepsi 400 ml para entregar de una vez en efectivo', 'En la lista:');
+      assert.equal(guardados, 2, 'Indicar todos los datos no guarda sin confirmar');
+      await decir('confirmar operación', 'La operación quedó guardada'); assert.equal(guardados, 3);
+      assert.match(page.url(), rol === 'administrador' ? /\/admin\/ventas$/ : /\/vendedor$/);
       if (rol === 'administrador') {
         await decir('registrar egreso', '¿Cuál es el concepto?');
         assert.match(page.url(), /admin\/caja$/);
@@ -308,7 +325,7 @@ async function main() {
       await page.setViewportSize({ width: 1440, height: 900 });
       assert.ok(await detalleLista.isVisible());
       await page.screenshot({ path: resolve('.ambie-config', `detalle-pedido-${rol}-escritorio.png`) });
-      assert.equal(guardados, 2, 'Consultar el detalle no genera nuevas transacciones');
+      assert.equal(guardados, 3, 'Consultar el detalle no genera nuevas transacciones');
       if (rol === 'administrador') {
         await page.goto(`${base}/admin/configuracion`);
         await page.getByLabel('Proveedor', { exact: false }).selectOption('gemini');
@@ -320,7 +337,7 @@ async function main() {
         await page.getByRole('status').filter({ hasText: 'Gemini respondió correctamente' }).last().waitFor();
         await page.setViewportSize({ width: 390, height: 844 });
         await page.screenshot({ path: resolve('.ambie-config', 'configuracion-gemini-movil.png') });
-        assert.equal(guardados, 2);
+        assert.equal(guardados, 3);
       }
       assert.deepEqual(errores, []); console.log(`✓ ${rol}: selección y confirmación de cliente, retroceso cliente/productos/entrega/pago, borrador conservado, guardado explícito y navegación de módulos`);
       await context.close();

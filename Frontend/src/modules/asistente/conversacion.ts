@@ -11,6 +11,9 @@ const preguntas: Record<string, string> = {
   nombre: "¿Cuál es el nombre?", telefono: "¿Cuál es el teléfono?", direccion: "¿Cuál es la dirección?", email: "¿Cuál es el correo?", password: "Escribe la contraseña en el formulario. No la dictes.",
   monto: "¿Cuál es el monto?", precioVenta: "¿Cuál es el precio de venta?", nuevoPrecio: "¿Cuál es el nuevo precio?", costoActual: "¿Cuál es el costo?", concepto: "¿Cuál es el concepto?", fecha: "¿Qué fecha? Escríbela en el formulario.", conteoEfectivo: "¿Cuánto efectivo contaste?", conteoBilletera: "¿Cuánto hay en billetera?", descontarCaja: "¿Se descuenta esta compra de la caja? Responde sí o no.",
 };
+export function firmaProductosVoz(lineas: unknown): string {
+  return JSON.stringify(Array.isArray(lineas) ? lineas.map(({ productoId, cantidad }) => ({ productoId, cantidad })).sort((a, b) => a.productoId.localeCompare(b.productoId)) : []);
+}
 export function camposConversacion(accion: keyof typeof ACCIONES_ASISTENTE): string[] {
   if (accion === "crear_pedido") return ["tipoCliente", "clienteId", "lineas", "estadoInicial", "metodo"];
   if (accion === "cambiar_precio") return ["productoId", "nuevoPrecio"];

@@ -32,6 +32,19 @@ Para probar comprensión, activa el micrófono flotante y empieza un pedido ocas
 
 Antes de guardar revisa nombres, cantidades, precios, subtotal y total visibles. Para comprobar el guardado sin afectar el negocio, usa QA; no confirmes ventas ficticias en producción. Prueba singular/plural, habla normal y ruido razonable desde cada dispositivo. Audio sintético y transcripciones simuladas no certifican micrófonos físicos ni todos los acentos.
 
+## Navegación de voz en V4P1
+
+Prueba en QA o cancela antes del guardado en el negocio:
+
+1. «Tomar pedido» → «Isabel Rojas»: abre productos si ese nombre identifica un cliente único.
+2. «Cambiar cliente a Carlos Medina»: corrige el cliente en el mismo borrador. «Volver a cliente» muestra el paso anterior.
+3. Agrega productos → «confirmar productos» → «no» → «efectivo»: avanza productos → entrega → pago con detalle visible.
+4. «Dos Pepsi 400 ml para entregar de una vez en efectivo»: conserva los tres datos. Todavía no guarda; «confirmar operación» valida el conjunto, muestra los pasos y guarda.
+5. Tras guardar por voz, vuelve al inicio de Ventas con accesos a nuevo pedido, cliente y abono, y un botón para consultar la factura confirmada.
+6. En créditos, compras, inventario, conteo, cierre y caja, «volver» conserva los campos; «volver al monto», «volver al proveedor» o «volver al concepto» apunta al campo si pertenece a esa operación. «Cancelar operación» descarta el borrador, no borra documentos guardados.
+
+Las frases deben usar registros existentes. Un cliente ambiguo exige selección, una venta ocasional no admite crédito y los permisos del vendedor no cambian. La selección manual de cliente conserva la confirmación de identidad. No existe garantía de interpretar todas las variaciones verbales.
+
 ## Google Gemini paso a paso
 
 1. Crea o revisa una clave de **Gemini API** en [Google AI Studio](https://aistudio.google.com/api-keys). Una clave de Maps u otro servicio no sustituye la de Gemini; verifica proyecto, restricciones y cuota. No compartas la clave en chat ni Git.

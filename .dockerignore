@@ -25,6 +25,8 @@ scripts
 **/.ambie-config
 .agents
 .codex
+.claude
+skills-lock.json
 AGENTS.md
 **/*.dump
 **/*.backup

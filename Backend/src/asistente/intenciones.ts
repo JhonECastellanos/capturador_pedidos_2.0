@@ -112,6 +112,8 @@ export function entenderBasico(texto: string, rol: RolUsuario, pendiente?: Inten
   if (!nombreAccion) return { accion: null, payload: {}, destino: null, mensaje: "Puedes pedir crear un cliente, tomar un pedido o recibir un abono. También puedes usar los controles del aplicativo. El modo básico entiende instrucciones sencillas; configura un proveedor para frases más complejas." };
   const payload: Record<string, unknown> = {};
   if (nombreAccion === "crear_pedido") {
+    const cliente = texto.match(/pedido\s+(?:a|para)\s+(.+?)(?=\s+(?:por|con)\s+|[,;]|$)/i)?.[1];
+    if (cliente) payload.clienteId = cliente.trim();
     const coincidencia = texto.match(/pedido\s+(?:a|para)\s+(.+?)\s+(?:por|con|de)\s+(\d+)\s+(.+?)(?:\s+(?:en\s+)?(?:efectivo|a\s+cr[eé]dito|por\s+(?:nequi|billetera)))?\s*$/i);
     if (coincidencia) { payload.clienteId = coincidencia[1]; payload.lineas = [{ productoId: coincidencia[3], cantidad: Number(coincidencia[2]) }]; }
   }
@@ -134,14 +136,19 @@ export function responderCampo(texto: string, pendiente: IntencionAsistente, cam
   const normal = normalizarTexto(texto).replace(/[.!?]$/g, "");
   const payload = { ...pendiente.payload };
   if (pendiente.accion === "crear_pedido" && /^(reconstruir factura|vaciar productos|empezar productos de nuevo)$/.test(normal)) return { ...pendiente, payload: { ...payload, lineas: [] }, mensaje: "Agrega de nuevo los productos." };
-  const productos = pendiente.accion === "crear_pedido" ? productosHablados(texto) : null;
+  const textoProductos = texto.replace(/\s*[,;]?\s+(?:para entregar(?: de una vez| ya)?|sin preparar|no hay que preparar|en efectivo|por billetera|con billetera|a credito)\b.*$/i, "");
+  const productos = pendiente.accion === "crear_pedido" ? productosHablados(textoProductos) : null;
   if (productos) {
+    if (/para entregar|sin preparar|no hay que preparar/.test(normal)) payload.estadoInicial = "entregado";
+    else if (/para preparar/.test(normal)) payload.estadoInicial = "pendiente";
+    const metodo = /\befectivo\b/.test(normal) ? "efectivo" : /\bbilletera|\bnequi\b/.test(normal) ? "billetera" : /\bcredito\b/.test(normal) ? "credito" : undefined;
+    if (metodo && !(payload.clienteId === null && metodo === "credito")) { payload.metodo = metodo; payload.momentoCobro = metodo === "credito" ? "segun-periodicidad" : "inmediato"; }
     return validarIntencion({ ...pendiente, payload: { ...payload, lineas: [...(!productos.reemplazar && Array.isArray(payload.lineas) ? payload.lineas : []), ...productos.lineas] } }, rol);
   }
   if (campo === "tipoCliente" && pendiente.accion === "crear_pedido") {
     if (/ocasional|abierta|sin cliente|de paso/.test(normal)) payload.clienteId = null;
     else if (/habitual|registrado|con cliente/.test(normal)) payload.clienteId = "";
-    else return null;
+    else payload.clienteId = texto.trim().replace(/^(?:es para|para|el cliente es|cliente|se llama)\s+/i, "");
   } else {
     const partes = campo.split(".");
     const principal = camposAsistente(ACCIONES_ASISTENTE[pendiente.accion].esquema).find((c) => c.nombre === partes[0]);

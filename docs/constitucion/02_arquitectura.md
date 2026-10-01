@@ -132,7 +132,7 @@ Flujo obligatorio de un enum nuevo o modificado: `schema.prisma` → `enums.ts` 
 - Un único servicio local (Vosk, español) dentro de la agrupación; el audio no se guarda.
 - WebSocket `/api/v1/asistente/voz` con tickets de un solo uso; permiso y origen verificados.
 - Separación estricta: transcripción → interpretación → confirmación → escritura.
-- Pedido por voz: cliente real seleccionado y confirmado antes de productos; «Confirmar cliente» no guarda; «Volver»/«continuar» conservan el borrador; solo «confirmar operación» puede guardar. El micrófono detenido restaura la navegación manual.
+- Pedido por voz: un nombre exacto y único pronunciado selecciona el cliente y avanza a productos; la selección manual pide confirmar su identidad. Un nombre ambiguo nunca elige un registro arbitrario. «Confirmar cliente» no guarda; «Volver»/«continuar» conservan el borrador y permiten corregirlo; solo «confirmar operación» puede guardar. El micrófono detenido restaura la navegación manual.
 
 ## 11. Dónde va cada cosa nueva
 

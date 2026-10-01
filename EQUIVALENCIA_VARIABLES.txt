@@ -737,7 +737,7 @@ Para regenerar la lista de enums verificados: npm run contrato:verificar
   BASE_PRUEBAS_UI            prueba:paneles                Solo http://localhost:8180 (QA)
   productosHablados          intenciones.ts / voz.ts       Cantidades y presentaciones de varias lineas
   ESPERA_TURNO_VOZ_MS=2200   AgrupadorVoz / SesionVoz       Agrupa finales y reinicia espera con parciales
-  confirmar productos       productosConfirmados          Confirma borrador, sin escritura API/BD
+  confirmar productos       productosConfirmados          Firma de productoId/cantidad ordenada; sin escritura API/BD
   Pedido.facturaNumero      PedidoDTO.facturaNumero       Numero de factura persistido
   DetalleProductosPedido    PedidoDTO.lineas              nombre/cantidad/precioUnitario/subtotal historicos
   ProductoVozAmbiguo.opciones aclaracionProducto            Candidatos de catalogo, sin elegir presentacion automaticamente

@@ -18,6 +18,7 @@ import { POR_PAGINA, paginar } from "../../../utils/paginacion";
 interface InicioVentasProps {
   /** Asistente para tomar un pedido. */
   rutaPedido: string;
+  rutaCompletado: string;
   /** Pantalla de abonos del rol. */
   rutaAbonos: string;
   /** Alta rápida de cliente. */
@@ -40,14 +41,14 @@ function esMismoDia(fechaIso: string, referencia: Date): boolean {
  * El administrador también vende: aquí tiene sus métricas, sus accesos
  * directos y la lista de pedidos del día para gestionarlos.
  */
-export function InicioVentas({ rutaPedido, rutaAbonos, rutaNuevoCliente, rutaDetalle, etiquetaRol, descripcion }: InicioVentasProps) {
+export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevoCliente, rutaDetalle, etiquetaRol, descripcion }: InicioVentasProps) {
   const navegar = useNavigate();
   const ubicacion = useLocation();
   const { usuario, cerrarSesion } = useAuth();
   const { pedidos, movimientosCaja, obtenerCliente, nombreUsuario } = useOperaciones();
   // `movimientosCaja` se usa indirectamente en el descuadre del dominio.
 
-  const estadoInicial = ubicacion.state as { clienteCreado?: string } | null;
+  const estadoInicial = ubicacion.state as { clienteCreado?: string; pedidoConfirmado?: string } | null;
   const [clienteCreado, setClienteCreado] = useState<string | null>(estadoInicial?.clienteCreado ?? null);
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
@@ -147,6 +148,7 @@ export function InicioVentas({ rutaPedido, rutaAbonos, rutaNuevoCliente, rutaDet
           )}
         </section>
 
+        {estadoInicial?.pedidoConfirmado && <button type="button" className="mt-3 min-h-11 shrink-0 rounded-xl border border-line bg-paper-raised px-3 text-sm font-semibold text-ink" onClick={() => navegar(rutaCompletado, { state: { pedidoId: estadoInicial.pedidoConfirmado } })}>Ver factura del pedido confirmado</button>}
         <section className="mt-3 flex-shrink-0">
           <div className="grid grid-cols-3 gap-2">
             {acciones.map((accion) => (

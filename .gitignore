@@ -26,5 +26,7 @@ coverage/
 *.db
 .agents/
 .codex/
+.claude/
+skills-lock.json
 .aws/
 **/.ambie/

@@ -38,6 +38,7 @@ export function VendedorInicio() {
   return (
     <InicioVentas
       rutaPedido="/vendedor/pedido"
+      rutaCompletado="/vendedor/pedido/completado"
       rutaAbonos="/vendedor/abonos"
       rutaNuevoCliente="/vendedor/clientes/nuevo"
       rutaDetalle={(pedidoId) => `/vendedor/pedido/${pedidoId}`}
@@ -78,6 +79,7 @@ export function AdminVentas() {
   return (
     <InicioVentas
       rutaPedido="/admin/ventas/pedido"
+      rutaCompletado="/admin/ventas/completado"
       rutaAbonos="/admin/ventas/abonos"
       rutaNuevoCliente="/admin/ventas/clientes/nuevo"
       rutaDetalle={(pedidoId) => `/admin/ventas/pedido/${pedidoId}`}
