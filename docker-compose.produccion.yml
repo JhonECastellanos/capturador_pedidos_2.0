@@ -1,0 +1,9 @@
+services:
+  frontend:
+    ports: !override ["127.0.0.1:${FRONTEND_PORT:-8080}:8080"]
+  api:
+    ports: !reset []
+  cloudflared:
+    image: cloudflare/cloudflared@sha256:9b49eed8f62806d5d45ddf59ecefb5710429598ea6d3fcccd2af938f621b2b07
+  minio:
+    image: bitnamilegacy/minio@sha256:6dabb4a2088c9a79908de3bc05f4586c23ad2182c8908e7e3acbf61c1467fb20

@@ -1,0 +1,9 @@
+Host ambie-produccion
+    HostName IP_PUBLICA_DEL_VPS
+    User ubuntu
+    IdentityFile ~/.ssh/ambie-oracle
+    IdentitiesOnly yes
+    ForwardAgent no
+    StrictHostKeyChecking ask
+    ServerAliveInterval 30
+    ServerAliveCountMax 3
