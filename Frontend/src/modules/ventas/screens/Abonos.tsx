@@ -98,7 +98,8 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
     return true;
   }
   usePantallaVoz(["recibir_abono"], {
-    aplicar: (p) => {
+    aplicar: (p, campo) => {
+      setConfirmarCobro(!campo);
       if (p.clienteId) { const id = resolverReferencia(p.clienteId, clientes); if (id) setClienteId(id); else setBusqueda(String(p.clienteId)); }
       if (typeof p.monto === "number") setMonto(String(p.monto));
       if (p.metodo === "efectivo" || p.metodo === "billetera") setMetodo(p.metodo);

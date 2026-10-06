@@ -83,10 +83,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
   function elegirCliente(id: string) {
     setOcasional(false);
     seleccionarClienteActivo(id);
-    if (vozGuiada) {
-      setPaso(1);
-      window.dispatchEvent(new CustomEvent("ambie:voz-cliente", { detail: { clienteId: id, confirmado: false } }));
-    } else setPaso(2);
+    setPaso(2);
   }
 
   const clientesFiltrados = useMemo(() => {
@@ -174,10 +171,11 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
       }
       if (p.estadoInicial === "pendiente" || p.estadoInicial === "entregado") setEntrega(p.estadoInicial);
       if (p.metodo === "efectivo" || p.metodo === "billetera" || (p.metodo === "credito" && p.clienteId)) setMetodo(p.metodo);
-      setPaso(campo === "tipoCliente" || campo === "clienteId" || campo === "confirmarCliente" ? 1 : campo === "lineas" ? 2 : campo === "estadoInicial" ? 3 : 4);
+      setPaso(campo === "tipoCliente" || campo === "clienteId" ? 1 : campo === "lineas" ? 2 : campo === "estadoInicial" ? 3 : 4);
     },
     leer: () => ({ clienteId: ocasional ? null : clienteSeleccionado?.id ?? "", lineas: lineas.map((l) => ({ productoId: l.productoId, cantidad: l.cantidad })), estadoInicial: entrega, metodo, momentoCobro: metodo === "credito" ? "segun-periodicidad" : "inmediato" }),
     confirmar: confirmarPedido,
+    volver,
     cancelar: () => { setVozGuiada(false); setCantidades({}); setOcasional(false); seleccionarClienteActivo(null); setPaso(1); },
   });
 
@@ -190,7 +188,6 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
   }
   function cambiarPaso(nuevo: Paso) {
     setPaso(nuevo);
-    if (vozGuiada) window.dispatchEvent(new CustomEvent("ambie:voz-paso", { detail: { campo: ({ 1: "clienteId", 2: "lineas", 3: "estadoInicial", 4: "metodo" } as const)[nuevo] } }));
   }
 
   // ─── Paso 1 · Cliente ───
@@ -213,7 +210,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
             </div>
           )}
           <p className="mb-2.5 text-[12.5px] text-ink-soft">Elige a quién le vas a vender hoy.</p>
-          <TarjetaClicable className="mb-3 p-4" onClick={() => { setOcasional(true); seleccionarClienteActivo(null); if (metodo === "credito") setMetodo("efectivo"); setPaso(2); if (vozGuiada) window.dispatchEvent(new CustomEvent("ambie:voz-cliente", { detail: { clienteId: null, confirmado: true } })); }}><span className="block font-semibold">Venta abierta · cliente ocasional</span><span className="block text-sm text-ink-soft">Sin registrar un cliente. Efectivo o billetera, sin crédito.</span></TarjetaClicable>
+          <TarjetaClicable className="mb-3 p-4" onClick={() => { setOcasional(true); seleccionarClienteActivo(null); if (metodo === "credito") setMetodo("efectivo"); setPaso(2); }}><span className="block font-semibold">Venta abierta · cliente ocasional</span><span className="block text-sm text-ink-soft">Sin registrar un cliente. Efectivo o billetera, sin crédito.</span></TarjetaClicable>
           {clientesFiltrados.length === 0 ? (
             <ListaVacia
               titulo={clientes.length === 0 ? "Aún no hay clientes registrados" : "No se encontró el cliente"}
@@ -249,7 +246,6 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
         </main>
         <BarraInferior>
           {clientesFiltrados.length > POR_PAGINA && <p className="mb-2 text-xs text-ink-soft">Se muestran 30 clientes. Usa el buscador para encontrar otro.</p>}
-          {vozGuiada && !ocasional && clienteActivo && <Boton onClick={() => { setPaso(2); window.dispatchEvent(new CustomEvent("ambie:voz-cliente", { detail: { clienteId: clienteActivo.id, confirmado: true } })); }}>Confirmar cliente · {clienteActivo.nombre}</Boton>}
           <Boton variante="fantasma" onClick={() => navegar(rutaNuevoCliente, { state: { volverA: "pedido" } })}>
             + Crear cliente nuevo
           </Boton>

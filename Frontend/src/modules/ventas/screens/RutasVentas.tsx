@@ -84,6 +84,7 @@ export function AdminVentas() {
       rutaNuevoCliente="/admin/ventas/clientes/nuevo"
       rutaDetalle={(pedidoId) => `/admin/ventas/pedido/${pedidoId}`}
       etiquetaRol="Administrador · Ventas"
+      headerGlobal
       descripcion="Vende, cobra y gestiona los pedidos del día"
     />
   );

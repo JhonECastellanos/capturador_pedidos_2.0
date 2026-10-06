@@ -352,6 +352,8 @@ El modo predeterminado usa la API: sesión con cookies, datos compartidos entre 
 
 Resultados y límites de concurrencia: [pruebas de carga y sincronización](docs/info/PRUEBAS_CARGA.md). QA eleva su límite antiabuso para medir persistencia; producción conserva el configurado en `.env`.
 
+La [validación de guardado V4P2](docs/info/VALIDACION_GUARDADO_V4P2.md) reúne tiempos de respuesta, comprobaciones directas en PostgreSQL y aparición automática en otra sesión. También documenta un pendiente: reenviar la misma solicitud puede duplicar una venta. Ante una respuesta dudosa, consulta el pedido antes de confirmarlo nuevamente.
+
 Para publicar desde la rama principal hacia un servidor local o VPS, consulta [despliegue continuo](docs/info/DESPLIEGUE_CONTINUO.md). Queda desactivado hasta configurar el runner y `DEPLOY_ENABLED` en GitHub.
 
 Si una corrección cambia fórmulas o la estructura de los agregados, incrementa el prefijo de formato `v1` de las claves en `DashboardService` junto con el contrato. Así no se reutilizan resultados de la implementación anterior durante sus cinco minutos de vida.
@@ -400,17 +402,17 @@ Los paneles conservan los registros y formularios durante el refresco en segundo
 Pruebas de navegador requieren Chrome instalado y las dependencias de desarrollo (`npm install` desde la raíz). En PowerShell usar `npm.cmd`:
 
 ```powershell
-npm.cmd run prueba:asistente:ui
 docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml --profile voz up -d --build --wait
 $env:BASE_PRUEBAS_API='http://localhost:3100/api/v1'
 npm.cmd run prueba:integracion
 npm.cmd run demo:catalogo
+npm.cmd run prueba:asistente:ui
 npm.cmd run prueba:paneles
 npm.cmd run prueba:voz
 docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml --profile voz down
 ```
 
-`prueba:asistente:ui` usa respuestas de API/transcripciones simuladas, micrófono artificial y los componentes compilados reales. `prueba:paneles` usa Chrome y Nginx/API/PostgreSQL QA reales; verifica todos los módulos, filtros, retroceso de formularios, scroll y estabilidad ante sincronizaciones a 390×844, 390×320 y 1440×320. También crea dos productos y una venta exclusivamente QA, cambia sus precios y comprueba la factura histórica después de recargar. Conserva esos registros. Capturas privadas en `.local/pruebas-ui`. No sustituye probar micrófono físico, acentos y ruido reales.
+`prueba:asistente:ui` requiere QA y sus usuarios de integración: usa el frontend compilado real, transcripciones controladas y API/PostgreSQL QA reales. Pedidos prueban interpretación básica real; los otros módulos reciben intenciones simuladas para aislar formularios, confirmación, permisos y persistencia sin consumir proveedores externos. `prueba:paneles` usa Chrome y Nginx/API/PostgreSQL QA reales; verifica todos los módulos, filtros, retroceso, scroll y sincronización a 390×844, 390×320 y 1440×320. Ambos conservan sus registros ficticios y capturas privadas en `.local/pruebas-ui`. No sustituyen micrófono físico, acentos y ruido reales. Ver [flujo de voz y matriz de pruebas](docs/info/FLUJOS_VOZ.md).
 
 `demo:catalogo` carga 32 productos (Coca-Cola, Pepsi, papas, Doritos, De Todito, jugos naturales, sándwiches, entre otros), 8 clientes **ficticios** y pedidos con cantidades, estados y pagos variados. No contactes sus teléfonos ni trates esas ventas como reales. Repetirlo reutiliza nombres/teléfonos y las combinaciones de pedido ya existentes. `--solo-catalogo` omite los pedidos. No borra ejemplos anteriores ni se ejecuta automáticamente. Si se autoriza una instalación local de demostración, desde el host: `BASE_PRUEBAS_API=http://localhost:8080/api/v1` y `npm run demo:catalogo -- --demo-local-autorizado`. No usar en una empresa con datos reales para hacer pruebas.
 
@@ -430,15 +432,15 @@ Todos estos servicios quedan agrupados bajo `capturador_pedidos_20` (nombre fijo
 
 El administrador configura el asistente desde **Configuración**. El modo básico funciona sin clave ni consumo externo; también puede elegir proveedor, modelo y su propia clave. Vosk transcribe español localmente, con un límite de 512 MB y un núcleo. El audio no se guarda. La voz de respuesta utiliza una voz española local instalada en el dispositivo; si no existe, se muestra el texto.
 
-Tocar el micrófono activa la escucha; tocarlo de nuevo la detiene. Se mueve arrastrándolo o con las flechas del teclado. La conversación pregunta los datos por pasos y completa los controles de las pantallas existentes, sin formularios ni modal propios del asistente. Se puede quitar y volver a agregar productos. **Confirmar operación** utiliza el mismo guardado de la pantalla después de revisar los datos; **cancelar operación** descarta el borrador. Los sonidos diferencian procesamiento, revisión lista y guardado exitoso. Los cambios de estado usan las mismas reglas de Pedidos: no se borra una factura emitida ni se anula una venta entregada fuera de esas reglas.
+Tocar el micrófono activa la escucha; tocarlo de nuevo la detiene. Se mueve arrastrándolo o con las flechas del teclado. El dictado completo se interpreta al terminar; mientras hablas no modifica formularios. Completa los controles y abre la revisión existente, sin formularios ni modal propios del asistente. **Confirma** o **confirmar operación** utiliza el mismo guardado de la pantalla; **cancelar** descarta el borrador. Los sonidos diferencian procesamiento, revisión lista y guardado exitoso. Los cambios de estado respetan las mismas reglas de Pedidos.
 
-En pedidos puedes decir directamente el nombre exacto de un cliente único, sin responder primero habitual u ocasional: se selecciona y avanza a productos. La selección manual conserva **confirmar cliente**, que no guarda. Puedes corregir diciendo **cambiar cliente a Isabel Rojas**, **volver**, **volver a cliente**, **volver a productos**, **volver al pago** y **continuar**, o usar los botones normales; se conserva el borrador. Un nombre inexistente o ambiguo no selecciona un registro al azar. La venta ocasional sigue sin admitir crédito.
+Por ejemplo: **crea un pedido para Isabel Rojas de dos Pepsi 400 ml, entrega inmediata, pago en efectivo**. Abre directamente el detalle anterior al guardado cuando todos los datos sean válidos. **Crear pedido**, **hacer pedido** y **crear venta** usan Ventas; Pedidos consulta documentos registrados. Un cliente inexistente o ambiguo exige aclaración. La venta ocasional no admite crédito.
 
-En productos puedes dictar **dos Pepsi cuatrocientos mililitros y tres Doritos queso**, o **quiero cinco yogures de durazno y uno de fresa**. Se admiten plurales y nombres parciales cuando identifican un solo producto. Si hay varias presentaciones, pregunta cuál quieres y conserva las cantidades mientras aclaras; nunca elige una al azar ni modifica medidas numéricas. La escucha agrupa segmentos y espera 2,2 segundos sin nuevas transcripciones antes de responder; una pausa más larga inicia otro turno, que puede agregar más productos. El asistente confirma brevemente los cambios, sin leer toda la lista, y espera **confirmar productos** para pasar a entrega. **Quita Pepsi 400 ml** elimina esa línea; **reemplaza por dos Pepsi 400 ml** sustituye la lista completa. Cantidades inválidas, productos desconocidos o stock insuficiente no reemplazan el borrador. La confirmación final sigue siendo **confirmar operación**.
+Se admiten plurales y nombres parciales inequívocos, por ejemplo **cinco yogures de durazno y uno de fresa**. Si hay varias presentaciones, pregunta cuál quieres y conserva las cantidades; nunca escoge al azar ni modifica medidas numéricas. Agrupa segmentos y espera 2,2 segundos sin nuevas transcripciones antes de interpretar. **Cambia las dos Pepsi 400 ml por cinco y el pago a transferencia** corrige el borrador y vuelve al mismo detalle. Cantidades inválidas, productos desconocidos o stock insuficiente no reemplazan el formulario visible.
 
 Antes del pago se muestran todas las líneas con cantidad, precio unitario y subtotal en la misma tarjeta del pedido. Las listas de pedidos incluyen una vista breve de productos; al abrir un pedido se ve el detalle completo con sus precios históricos. Los avisos del asistente ocupan como máximo dos líneas, tienen fondo semitransparente, no bloquean controles y desaparecen después de 3,5 segundos.
 
-Si indicas productos, preparación y pago juntos, conserva esos datos; **confirmar operación** revisa y muestra los pasos completos antes de usar el guardado normal. Si falta algo, lo pregunta y no guarda. Después de guardar por voz vuelve al inicio de Ventas y ofrece otro pedido, crear cliente o recibir abono; **Ver factura del pedido confirmado** conserva el acceso al detalle. El guardado manual mantiene su pantalla de éxito. V4P1 es la rama de estos ajustes, creada desde V3; no implica otra base de datos ni otra instalación del negocio.
+Si falta algo, lo pregunta y no guarda. **Volver** usa el retroceso del flujo; puedes corregir manualmente y decir **revisar operación** para regresar a su confirmación. Después del guardado por voz vuelve a Ventas con el toast habitual y accesos a pedido, cliente y abono; **Ver factura del pedido confirmado** conserva el detalle. El guardado manual mantiene su pantalla de éxito. V4P1 no implica otra base de datos ni otra instalación del negocio.
 
 La pantalla final y el detalle del pedido muestran todas las líneas, cantidades, precios unitarios y subtotales guardados en PostgreSQL. No recalculan facturas históricas con precios nuevos del catálogo. La venta ocasional también muestra su detalle; si falla la lectura posterior al guardado, permite reintentar sin volver a registrar el pedido.
 

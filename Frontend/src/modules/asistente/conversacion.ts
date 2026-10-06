@@ -11,22 +11,11 @@ const preguntas: Record<string, string> = {
   nombre: "¿Cuál es el nombre?", telefono: "¿Cuál es el teléfono?", direccion: "¿Cuál es la dirección?", email: "¿Cuál es el correo?", password: "Escribe la contraseña en el formulario. No la dictes.",
   monto: "¿Cuál es el monto?", precioVenta: "¿Cuál es el precio de venta?", nuevoPrecio: "¿Cuál es el nuevo precio?", costoActual: "¿Cuál es el costo?", concepto: "¿Cuál es el concepto?", fecha: "¿Qué fecha? Escríbela en el formulario.", conteoEfectivo: "¿Cuánto efectivo contaste?", conteoBilletera: "¿Cuánto hay en billetera?", descontarCaja: "¿Se descuenta esta compra de la caja? Responde sí o no.",
 };
-export function firmaProductosVoz(lineas: unknown): string {
-  return JSON.stringify(Array.isArray(lineas) ? lineas.map(({ productoId, cantidad }) => ({ productoId, cantidad })).sort((a, b) => a.productoId.localeCompare(b.productoId)) : []);
-}
 export function camposConversacion(accion: keyof typeof ACCIONES_ASISTENTE): string[] {
   if (accion === "crear_pedido") return ["tipoCliente", "clienteId", "lineas", "estadoInicial", "metodo"];
   if (accion === "cambiar_precio") return ["productoId", "nuevoPrecio"];
   if (accion === "recibir_abono") return ["clienteId", "monto", "metodo"];
   return camposAsistente(ACCIONES_ASISTENTE[accion].esquema).filter((c) => c.requerido || c.nombre === "descontarCaja" || (accion === "registrar_cierre" && /^conteo/.test(c.nombre)) || (accion === "registrar_egreso" && c.nombre === "metodo")).map((c) => c.nombre);
-}
-export function preguntaCampo(campo: string): string {
-  return campo === "tipoCliente" ? "¿Es para un cliente habitual o un cliente ocasional?" : preguntas[campo] ?? `Revisa ${campo.replace(/([A-Z])/g, " $1").toLowerCase()} en pantalla.`;
-}
-export function campoAnteriorConversacion(accion: keyof typeof ACCIONES_ASISTENTE, campo: string): string {
-  const campos = camposConversacion(accion);
-  const indice = campo ? campos.indexOf(campo === "confirmarCliente" ? "clienteId" : campo.split(".")[0]) : campos.length;
-  return campos[Math.max(0, indice - 1)] ?? campos[0];
 }
 export function pasoConversacion(orden: IntencionAsistente, rol: RolUsuario, datos: OperacionesContextValue): { campo: string; pregunta: string } | null {
   if (!orden.accion || !(orden.accion in ACCIONES_ASISTENTE)) return null;

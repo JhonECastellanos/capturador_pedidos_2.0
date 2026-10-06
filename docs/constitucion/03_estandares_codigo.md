@@ -22,7 +22,7 @@
 | Esquemas Zod | sufijo `Esquema`/`Schema` | `LoginEsquema`, `NuevoPedidoSchema` |
 | Enums | MAYÚSCULAS en código; `@map` en minúsculas en base | `EstadoPedido.CANCELADO` ↔ `'cancelado'` |
 | Constantes | MAYÚSCULAS | `POR_PAGINA` |
-| Claves y eventos del navegador | prefijo `ambie:` | `ambie:v2:*`, `ambie:datos-actualizados`, `ambie:voz-paso`, `ambie:voz-cliente`, `ambie:voz-detenida` |
+| Claves y eventos del navegador | prefijo `ambie:` | `ambie:v2:*`, `ambie:datos-actualizados`, `ambie:voz-detenida` |
 | Scripts npm (raíz) | `área:acción` | `prueba:cache`, `api:verificar`, `front:build` |
 
 Ojo con los enums: el cliente Prisma expone `EstadoPedido.CANCELADO`, pero la base guarda `'cancelado'`. En SQL crudo usar el valor `@map`; para traducir rol a `codigo` existe `Backend/src/common/roles.ts` (`codigoDeRol`).

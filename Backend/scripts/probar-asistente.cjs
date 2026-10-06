@@ -11,6 +11,47 @@ const { ConfiguracionAsistente } = require('../dist/asistente/configuracion-asis
 const { AsistenteService } = require('../dist/asistente/asistente.service');
 const { validarUrlProveedor } = require('../dist/asistente/red-proveedor');
 
+test('abrir una sección tiene prioridad sobre una operación pendiente o rechazada', async () => {
+  const servicio = new AsistenteService({ leer: async () => contrato.ConfiguracionAsistenteEsquema.parse({}) });
+  for (const accion of ['registrar_cierre', 'crear_pedido', 'crear_cliente']) {
+    const pendiente = { accion, payload: {}, destino: null, mensaje: 'Revisa los datos' };
+    const respuesta = await servicio.entender('abrir inicio', 'administrador', accion, pendiente, 'nombre');
+    assert.equal(respuesta.destino, 'inicio'); assert.equal(respuesta.accion, null);
+    assert.equal(entenderBasico('abrir inventario', 'administrador', pendiente).destino, 'inventario');
+    assert.equal((await servicio.entender('abrir usuarios', 'vendedor', accion, pendiente)).destino, null);
+  }
+});
+
+test('dictado completo: datos etiquetados de módulos administrativos y permisos', () => {
+  const casos = [
+    ['registrar egreso, concepto Retiro QA, monto cinco mil, metodo transferencia', 'registrar_egreso', { concepto: 'Retiro QA', monto: 5000, metodo: 'billetera' }],
+    ['registrar gasto, concepto Transporte QA, monto mil', 'registrar_gasto', { concepto: 'Transporte QA', monto: 1000 }],
+    ['cambiar precio, producto Pepsi 400 ml, precio cinco mil', 'cambiar_precio', { productoId: 'Pepsi 400 ml', nuevoPrecio: 5000 }],
+    ['ajustar inventario, producto Pepsi 400 ml, stock fisico cincuenta, motivo conteo', 'ajustar_inventario', { productoId: 'Pepsi 400 ml', stockFisico: 50, motivo: 'conteo' }],
+    ['crear proveedor, nombre Distribuidor QA, telefono 3000000000', 'crear_proveedor', { nombre: 'Distribuidor QA', telefono: '3000000000' }],
+    ['recibir abono credito, cliente Isabel Rojas, monto mil, metodo efectivo', 'recibir_abono', { clienteId: 'Isabel Rojas', monto: 1000, metodo: 'efectivo' }],
+    ['crear producto, nombre Bebida QA, precio cuatro mil, costo mil, stock veinte', 'crear_producto', { nombre: 'Bebida QA', precioVenta: 4000, costoActual: 1000, stock: 20 }],
+    ['iniciar conteo, tipo aleatorio, turno tarde', 'iniciar_conteo', { tipo: 'aleatorio', turno: 'tarde' }],
+    ['registrar cierre, fecha 2026-10-06, conteo efectivo cinco mil, conteo billetera seis mil', 'registrar_cierre', { fecha: '2026-10-06', conteoEfectivo: 5000, conteoBilletera: 6000 }],
+  ];
+  for (const [texto, accion, esperado] of casos) {
+    const intencion = entenderBasico(texto, 'administrador'); assert.equal(intencion.accion, accion, texto);
+    for (const [campo, valor] of Object.entries(esperado)) assert.equal(intencion.payload[campo], valor, texto + ': ' + campo);
+    if (contrato.ACCIONES_ASISTENTE[accion].admin) assert.equal(entenderBasico(texto, 'vendedor').accion, null);
+  }
+});
+
+test('pedido completo y corrección conservan cantidades, cliente y método sin escribir', () => {
+  const { interpretarPedidoCompleto } = require('../dist/asistente/intenciones');
+  const orden = interpretarPedidoCompleto('Crea un pedido para Isabel Rojas de tres leches y dos yogures, preparación inmediata, pago en efectivo', 'administrador');
+  assert.equal(orden.payload.clienteId, 'Isabel Rojas'); assert.equal(orden.payload.estadoInicial, 'pendiente'); assert.equal(orden.payload.metodo, 'efectivo');
+  assert.deepEqual(orden.payload.lineas.map(l => l.cantidad), [3, 2]);
+  const pendiente = { ...orden, payload: { ...orden.payload, lineas: [{ productoId: 'leche', cantidad: 3 }, { productoId: 'yogur', cantidad: 2 }] } };
+  const cambio = interpretarPedidoCompleto('Cambia las tres leches por cinco y el pago a transferencia', 'administrador', pendiente, { leche: 'Leche 1 L', yogur: 'Yogur fresa 200 ml' });
+  assert.deepEqual(cambio.payload.lineas.map(l => l.cantidad), [5, 2]); assert.equal(cambio.payload.metodo, 'billetera');
+  assert.equal(interpretarPedidoCompleto('Cambia las tres bebidas por cinco', 'administrador', pendiente).accion, null);
+});
+
 test('cliente: acepta el nombre directamente sin exigir habitual u ocasional', () => {
   const orden = { accion: 'crear_pedido', payload: {}, destino: null, mensaje: 'Pedido pendiente' };
   for (const frase of ['Isabel Rojas', 'para Isabel Rojas', 'es para Isabel Rojas', 'el cliente es Isabel Rojas']) {

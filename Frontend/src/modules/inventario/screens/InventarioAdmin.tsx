@@ -120,6 +120,7 @@ export function InventarioAdmin() {
   }, [busquedaAjuste, inventario]);
 
   async function handleIniciar(tipo: "general" | "aleatorio") {
+    if (conteoEnCurso?.estado === "en-curso") { mostrarAviso("Termina o cancela el conteo en curso antes de iniciar otro.", "info"); return false; }
     if (inventario.length === 0) {
       mostrarAviso("Registra productos antes de iniciar un conteo", "error");
       return false;
@@ -153,7 +154,7 @@ export function InventarioAdmin() {
   usePantallaVoz(["crear_producto"], { aplicar: () => { setVista("general"); setMostrarProducto(true); }, leer: () => ({}), confirmar: async () => false, cancelar: () => setMostrarProducto(false) });
   usePantallaVoz(["ajustar_inventario"], {
     aplicar: (p, campo) => { setVista("ajustes"); setMostrarAjusteManual(true); setPasoAjuste(campo === "productoId" ? 1 : 2); if (p.productoId) { const id = resolverReferencia(p.productoId, inventario); if (id) setProductoAjusteId(id); else setBusquedaAjuste(String(p.productoId)); } if (typeof p.stockFisico === "number") setStockFisicoAjuste(String(p.stockFisico)); if (typeof p.motivo === "string") setMotivoAjuste(p.motivo); if (typeof p.comentario === "string") setComentarioAjuste(p.comentario); },
-    leer: () => ({ productoId: productoAjusteId, stockFisico: stockFisicoAjuste === "" ? undefined : Number(stockFisicoAjuste), motivo: motivoAjuste, comentario: comentarioAjuste }), confirmar: handleAjusteManual, cancelar: volverAlMenu,
+    leer: () => ({ productoId: productoAjusteId, stockFisico: stockFisicoAjuste === "" ? undefined : Number(stockFisicoAjuste), motivo: motivoAjuste, comentario: comentarioAjuste }), confirmar: handleAjusteManual, cancelar: volverAlMenu, volver: () => { if (pasoAjuste === 2) setPasoAjuste(1); else volverAlMenu(); },
   });
 
   const productoAjuste = productoAjusteId ? inventario.find((p) => p.id === productoAjusteId) : null;
@@ -196,8 +197,8 @@ export function InventarioAdmin() {
     return id;
   }
   usePantallaVoz(["iniciar_conteo"], {
-    aplicar: p => { setVista("conteo"); setConteoDetalleId(null); if (p.tipo === "general" || p.tipo === "aleatorio") setTipoConteo(p.tipo); if (typeof p.turno === "string") setTurno(p.turno); if (typeof p.cantidadAleatoria === "number") setCantidadAleatoria(String(p.cantidadAleatoria)); },
-    leer: () => ({ tipo: tipoConteo, turno, ...(tipoConteo === "aleatorio" ? { cantidadAleatoria: Number(cantidadAleatoria) } : {}) }), confirmar: () => handleIniciar(tipoConteo), cancelar: volverAlMenu,
+    aplicar: p => { if (conteoEnCurso?.estado === "en-curso") throw new Error("Termina o cancela el conteo en curso antes de iniciar otro."); setVista("conteo"); setConteoActivoId(null); setConteoDetalleId(null); if (p.tipo === "general" || p.tipo === "aleatorio") setTipoConteo(p.tipo); if (typeof p.turno === "string") setTurno(p.turno); if (typeof p.cantidadAleatoria === "number") setCantidadAleatoria(String(p.cantidadAleatoria)); },
+    leer: () => conteoEnCurso?.estado === "en-curso" ? {} : ({ tipo: tipoConteo, turno, ...(tipoConteo === "aleatorio" ? { cantidadAleatoria: Number(cantidadAleatoria) } : {}) }), confirmar: () => handleIniciar(tipoConteo), cancelar: volverAlMenu,
   });
   usePantallaVoz(["contar_producto"], {
     aplicar: p => { const id = seleccionarConteo(p); const c = conteos.find(c => c.id === id); const productoId = resolverReferencia(p.productoId, inventario); const i = c?.lineas.findIndex(l => l.productoId === productoId) ?? -1; if (i >= 0) { setIndice(i); if (typeof p.stockFisico === "number") setBorradorConteo(b => ({ ...b, [productoId]: String(p.stockFisico) })); } },

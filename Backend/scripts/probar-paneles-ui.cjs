@@ -57,6 +57,14 @@ async function main() {
   try {
     const login = await context.request.post(base + '/api/v1/auth/login', { data: { identifier: 'system', password: process.env.SYSTEM_PASSWORD || process.env.BOOTSTRAP_PASSWORD } });
     assert.equal(login.status(), 200, 'System entra por la API con cookie normal');
+    const clientesDemo = (await (await context.request.get(base + '/api/v1/clientes?q=Isabel%20Rojas')).json()).data;
+    const productosDemo = (await (await context.request.get(base + '/api/v1/productos?q=Pepsi%20400')).json()).data;
+    const clienteDemo = clientesDemo.find(c => c.nombre === 'Isabel Rojas'), productoDemo = productosDemo.find(p => p.nombre === 'Pepsi 400 ml');
+    assert.ok(clienteDemo && productoDemo, 'Preparar demo:catalogo en QA');
+    for (let i = 0; i < 3; i++) {
+      const pedidoHoy = await context.request.post(base + '/api/v1/pedidos', { data: { clienteId: clienteDemo.id, lineas: [{ productoId: productoDemo.id, cantidad: 1 }], estadoInicial: 'entregado', metodo: 'efectivo', momentoCobro: 'inmediato' } });
+      assert.equal(pedidoHoy.status(), 201, 'Pedidos ficticios de hoy para validar tarjetas y filtros');
+    }
     await page.goto(base + '/admin'); await reposo();
     assert.equal(await page.getByRole('button', { name: 'Actualizar', exact: true }).count(), 0);
     await estable('Inicio');
@@ -66,6 +74,7 @@ async function main() {
     await abrir('Ventas', '/admin/ventas'); await estable('Ventas');
     await filtro('Buscar pedido, cliente o vendedor', 'Isabel', 'Isabel Rojas');
     await page.getByRole('button', { name: /Crear Pedido/ }).click(); await reposo();
+    await page.getByPlaceholder('Buscar por nombre, alias o teléfono').fill('Isabel Rojas'); await reposo();
     await page.getByRole('button', { name: 'Isabel Rojas', exact: true }).click();
     await page.getByRole('button', { name: 'Volver', exact: true }).click();
     await page.getByText('Paso 1 de 4 · Cliente', { exact: true }).waitFor();

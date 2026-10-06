@@ -62,7 +62,7 @@ export function PreciosAdmin() {
   }
   usePantallaVoz(["cambiar_precio"], {
     aplicar: (p, campo) => { if (p.productoId) { const id = resolverReferencia(p.productoId, inventario); if (id) setProductoId(id); else setBusqueda(String(p.productoId)); } if (typeof p.nuevoPrecio === "number") setPrecio(String(p.nuevoPrecio)); setPaso(campo ? 1 : 2); },
-    leer: () => ({ productoId, nuevoPrecio: Number(precio) }), confirmar: guardarPrecio, cancelar: cerrarProceso,
+    leer: () => ({ productoId, nuevoPrecio: Number(precio) }), confirmar: guardarPrecio, cancelar: cerrarProceso, volver: () => { if (paso === 2) setPaso(1); else cerrarProceso(); },
   });
 
   // ─── Proceso paso a paso: cambiar precio ───

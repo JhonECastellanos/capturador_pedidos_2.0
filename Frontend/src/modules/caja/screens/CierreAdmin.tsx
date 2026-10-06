@@ -13,6 +13,7 @@ import { formatoMoneda } from "../../../utils/formato";
 import { fechaOperativa } from "../../../utils/fechas";
 import { usePantallaVoz } from "../../asistente/pantalla-voz";
 import { resolverReferencia } from "../../asistente/intencion";
+import { usaApi } from "../../../data/api";
 
 type FiltroPagoCierre = "todos" | "credito" | "efectivo" | "billetera";
 
@@ -124,6 +125,7 @@ export function CierreAdmin() {
   }
 
   async function confirmarCierreFinal() {
+    if (usaApi && yaCerradoHoy) { mostrarAviso("Este día ya fue cerrado. Consulta el historial.", "info"); return false; }
     const cierre = await registrarCierre({
       fecha: fechaHoyStr,
       totalVentas: ventasHoy,
@@ -139,6 +141,7 @@ export function CierreAdmin() {
     });
 
     if (!cierre) return false;
+    mostrarAviso("Cierre registrado", "exito");
     // Al confirmar, vuelve automáticamente al historial
     setVista("historial");
     setPasoCierre(1);
@@ -149,7 +152,7 @@ export function CierreAdmin() {
   }
   usePantallaVoz(["registrar_cierre"], {
     aplicar: (p, campo) => { if (p.fecha && p.fecha !== fechaHoyStr) throw new Error("Esta pantalla registra el cierre de hoy. Revisa la fecha."); if ((Array.isArray(p.cancelar) && p.cancelar.length) || (Array.isArray(p.trasladar) && p.trasladar.length)) throw new Error("Confirma cada cancelación o traslado desde los pedidos pendientes antes de cerrar."); setVista("cierre"); setPasoCierre(campo ? 1 : 2); if (typeof p.conteoEfectivo === "number") setConteoEfectivo(String(p.conteoEfectivo)); if (typeof p.conteoBilletera === "number") setConteoBilletera(String(p.conteoBilletera)); },
-    leer: () => ({ fecha: fechaHoyStr, conteoEfectivo: conteoEfNum ?? undefined, conteoBilletera: conteoBilleteraNum ?? undefined }), confirmar: confirmarCierreFinal, cancelar: () => { setVista("historial"); setConteoEfectivo(""); setConteoBilletera(""); },
+    leer: () => ({ fecha: fechaHoyStr, conteoEfectivo: conteoEfNum ?? undefined, conteoBilletera: conteoBilleteraNum ?? undefined }), confirmar: confirmarCierreFinal, volver: () => { if (pasoCierre === 2) setPasoCierre(1); else setVista("historial"); }, cancelar: () => { setVista("historial"); setConteoEfectivo(""); setConteoBilletera(""); },
   });
   async function trasladar(id: string) {
     const pedido = pendientesHoy.find(p => p.id === id);
@@ -376,7 +379,6 @@ export function CierreAdmin() {
             )}
 
             {/* Botón hacia el paso 2 */}
-            <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
             <div className="pt-2">
               <button
                 type="button"
@@ -485,7 +487,7 @@ export function CierreAdmin() {
 
               {yaCerradoHoy && (
                 <p className="mt-3 rounded-xl bg-accent-soft p-2.5 text-center text-[12px] font-medium text-accent-dark">
-                  Nota: Ya existe un cierre registrado para hoy. Si confirmas, se guardará un nuevo registro y el anterior se conservará en el historial.
+                  {usaApi ? "Este día ya fue cerrado. El registro se conserva en el historial; no se permite duplicarlo." : "Ya existe un cierre registrado para hoy. El modo local conserva los registros anteriores."}
                 </p>
               )}
             </div>
@@ -502,6 +504,7 @@ export function CierreAdmin() {
               <button
                 type="button"
                 onClick={confirmarCierreFinal}
+                disabled={usaApi && yaCerradoHoy}
                 className="flex items-center justify-center gap-1.5 rounded-xl bg-ink py-3.5 text-[13.5px] font-semibold text-white active:bg-ink/90 shadow-sm"
               >
                 <IconCheck width={17} height={17} />
@@ -511,6 +514,7 @@ export function CierreAdmin() {
           </div>
         )}
 
+        <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
         <ConfirmarAccion
           abierto={confirmarEliminarId !== null}
           titulo="Cancelar pedido pendiente"
@@ -537,6 +541,7 @@ export function CierreAdmin() {
   // ══════════════════════════════════════════════════════════════════════════
   return (
     <div className="flex h-full flex-col min-h-0">
+      <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
       {/* ─── Cabecera fija: Título + Guía + Botón de nuevo cierre en la misma línea ─── */}
       <div className="flex-shrink-0 flex items-center justify-between gap-2 border-b border-line pb-3">
         <div className="flex items-center gap-2">

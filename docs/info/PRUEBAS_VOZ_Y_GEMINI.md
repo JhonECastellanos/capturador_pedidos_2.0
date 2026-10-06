@@ -5,10 +5,11 @@
 Los cambios del código no actualizan automáticamente los contenedores que ya están funcionando. Desde la raíz, con Docker iniciado:
 
 ```powershell
-docker.exe compose --profile voz up -d --build api frontend voz
+docker.exe compose build api frontend
+docker.exe compose --profile voz up -d --no-build api frontend voz
 ```
 
-Este comando reconstruye y reinicia servicios; puede interrumpir sesiones. Termina los formularios abiertos antes de ejecutarlo. No elimina volúmenes. Después recarga la aplicación. Si falla la descarga de una imagen, no asumas que la actualización se aplicó.
+Estos comandos reconstruyen API/frontend y reutilizan la imagen Vosk ya instalada; reinician servicios y pueden interrumpir sesiones. Termina los formularios abiertos antes de ejecutarlos. No eliminan volúmenes. Después recarga la aplicación. Una instalación nueva requiere construir también `voz`; si falla su descarga, no asumas que se instaló.
 
 ## Separar transcripción de interpretación
 
@@ -27,7 +28,7 @@ Para probar comprensión, activa el micrófono flotante y empieza un pedido ocas
 | Yogur con nombre poco claro | Ofrece coincidencias parecidas; no agrega hasta aclarar |
 | El de 200 ml | Resuelve únicamente entre las alternativas preguntadas |
 | Noventa unidades cuando no hay stock | Conserva el borrador anterior y avisa |
-| Confirmar productos | Avanza al paso siguiente; no guarda |
+| Revisar operación | Muestra el detalle existente; no guarda |
 | Cancelar operación | Descarta; no registra una venta |
 
 Antes de guardar revisa nombres, cantidades, precios, subtotal y total visibles. Para comprobar el guardado sin afectar el negocio, usa QA; no confirmes ventas ficticias en producción. Prueba singular/plural, habla normal y ruido razonable desde cada dispositivo. Audio sintético y transcripciones simuladas no certifican micrófonos físicos ni todos los acentos.
@@ -36,14 +37,14 @@ Antes de guardar revisa nombres, cantidades, precios, subtotal y total visibles.
 
 Prueba en QA o cancela antes del guardado en el negocio:
 
-1. «Tomar pedido» → «Isabel Rojas»: abre productos si ese nombre identifica un cliente único.
-2. «Cambiar cliente a Carlos Medina»: corrige el cliente en el mismo borrador. «Volver a cliente» muestra el paso anterior.
-3. Agrega productos → «confirmar productos» → «no» → «efectivo»: avanza productos → entrega → pago con detalle visible.
-4. «Dos Pepsi 400 ml para entregar de una vez en efectivo»: conserva los tres datos. Todavía no guarda; «confirmar operación» valida el conjunto, muestra los pasos y guarda.
+1. Dicta la instrucción completa: «Crea un pedido para Isabel Rojas de dos Pepsi 400 ml, entrega inmediata, efectivo». Al terminar se abre el detalle existente, sin guardar.
+2. «Cambia las dos Pepsi por tres y el pago a transferencia»: actualiza el mismo borrador y vuelve a mostrar su revisión.
+3. Si faltan datos, responde únicamente a la pregunta pendiente. No se rellenan formularios mientras continúa el dictado.
+4. «Volver» utiliza el retroceso de la pantalla. «Revisar operación» vuelve a revisar el formulario, incluidas modificaciones manuales. Solo «confirma» o «confirmar operación» guarda después de la revisión.
 5. Tras guardar por voz, vuelve al inicio de Ventas con accesos a nuevo pedido, cliente y abono, y un botón para consultar la factura confirmada.
-6. En créditos, compras, inventario, conteo, cierre y caja, «volver» conserva los campos; «volver al monto», «volver al proveedor» o «volver al concepto» apunta al campo si pertenece a esa operación. «Cancelar operación» descarta el borrador, no borra documentos guardados.
+6. En los demás módulos se reutilizan sus formularios y confirmaciones. «Volver» solo está disponible cuando la pantalla tiene retroceso; si no lo tiene, el asistente conserva el borrador y lo indica. «Cancelar operación» descarta el borrador, no borra documentos guardados.
 
-Las frases deben usar registros existentes. Un cliente ambiguo exige selección, una venta ocasional no admite crédito y los permisos del vendedor no cambian. La selección manual de cliente conserva la confirmación de identidad. No existe garantía de interpretar todas las variaciones verbales.
+Las frases deben usar registros existentes. Un cliente ambiguo exige aclaración, una venta ocasional no admite crédito y los permisos del vendedor no cambian. No existe garantía de interpretar todas las variaciones verbales.
 
 ## Google Gemini paso a paso
 
@@ -68,6 +69,6 @@ npm.cmd run prueba:asistente
 npm.cmd run prueba:asistente:ui
 ```
 
-Las pruebas del asistente incluyen una matriz de 40 expresiones, ambigüedad, medidas, cantidades, respuestas breves y catálogo de Gemini paginado con claves ficticias. La interfaz usa Chrome real con API y transcripciones simuladas para ambos roles. Consultar el catálogo real valida la conexión y la clave, pero no garantiza cuota de generación; la respuesta del modelo y el micrófono físico se comprueban con los pasos anteriores. No hay garantía absoluta de reconocimiento.
+Prepara antes el entorno QA como se indica en [Flujos de voz](FLUJOS_VOZ.md). Las pruebas del asistente incluyen expresiones, ambigüedad, medidas, cantidades, respuestas breves y catálogo de Gemini paginado con claves ficticias. La interfaz usa Chrome real, transcripciones simuladas y persistencia real en la API/BD QA: pedidos con interpretación básica real y otras acciones con intenciones controladas. No equivale a probar un proveedor remoto ni el micrófono físico. Consultar el catálogo real valida la conexión y la clave, pero no garantiza cuota de generación; la respuesta del modelo y el micrófono físico se comprueban con los pasos anteriores.
 
 Si aparece un 502 por conexión al proveedor, comprueba que API y frontend tengan la compilación actualizada. El transporte fija IPv4 para conservar la validación de destinos y evitar el formato incompatible del lookup automático en Node.js 24. La consulta correcta muestra un aviso «Conexión verificada» con la cantidad de modelos; una consulta fallida elimina la lista anterior y muestra el error.

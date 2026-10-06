@@ -101,12 +101,13 @@ export function CreditosAdmin() {
       mostrarAviso(`Abono ${formatoMoneda(monto)} por ${metodoAbono} registrado`, "exito");
       setMontoAbono("");
       setComentarioAbono("");
+      setConfirmarAbono(false);
       return true;
     }
     return false;
   }
   usePantallaVoz(["recibir_abono"], {
-    aplicar: (p) => { const id = resolverReferencia(p.clienteId, clientes); if (id) setClienteDetalleId(id); if (typeof p.monto === "number") setMontoAbono(String(p.monto)); if (p.metodo === "efectivo" || p.metodo === "billetera") setMetodoAbono(p.metodo); if (typeof p.comentario === "string") setComentarioAbono(p.comentario); },
+    aplicar: (p, campo) => { setConfirmarAbono(!campo); const id = resolverReferencia(p.clienteId, clientes); if (id) setClienteDetalleId(id); if (typeof p.monto === "number") setMontoAbono(String(p.monto)); if (p.metodo === "efectivo" || p.metodo === "billetera") setMetodoAbono(p.metodo); if (typeof p.comentario === "string") setComentarioAbono(p.comentario); },
     leer: () => ({ clienteId: clienteDetalleId, monto: Number(montoAbono), metodo: metodoAbono, comentario: comentarioAbono }),
     confirmar: handleRegistrarAbono, cancelar: () => { setClienteDetalleId(null); setMontoAbono(""); setComentarioAbono(""); setConfirmarAbono(false); },
   });
@@ -232,10 +233,7 @@ export function CreditosAdmin() {
           textoConfirmar="Registrar abono"
           tono="exito"
           alCancelar={() => setConfirmarAbono(false)}
-          alConfirmar={() => {
-            setConfirmarAbono(false);
-            handleRegistrarAbono();
-          }}
+          alConfirmar={handleRegistrarAbono}
         />
       </div>
     );

@@ -4,7 +4,7 @@
 
 Monorepo para **una empresa por instalación**, en servidor local, nube o VPS. No introducir tenants ni multiempresa. La API ya existe: NestJS/Fastify, Prisma y PostgreSQL en `Backend/`, prefijo `/api/v1`. La SPA `Frontend/` usa API por defecto; `VITE_DATOS_ORIGEN=local` conserva compatibilidad local, no autenticación de producción.
 
-Leer `README.md` antes de cambiar flujos; el catálogo detallado de entidades vive ahí. Consultar `EQUIVALENCIA_VARIABLES.txt`, `docs/AUDITORIA_PROFESIONAL.md`, `infra/README.md` y `docs/DESPLIEGUE_CONTINUO.md`. Preservar diseño y trabajo simultáneo del usuario; revisar Git antes de editar. No repetir funcionalidades ya implementadas. Distinguir resultados históricos de pruebas actuales.
+Leer `README.md` antes de cambiar flujos; el catálogo detallado de entidades vive ahí. Consultar `docs/constitucion/` (reglas vigentes), `EQUIVALENCIA_VARIABLES.txt`, `docs/info/AUDITORIA_PROFESIONAL.md`, `infra/README.md` y `docs/info/DESPLIEGUE_CONTINUO.md`. Preservar diseño y trabajo simultáneo del usuario; revisar Git antes de editar. No repetir funcionalidades ya implementadas. Distinguir resultados históricos de pruebas actuales.
 
 ## Comandos desde la raíz
 
@@ -14,6 +14,9 @@ Node.js 24 o superior. En PowerShell usar `npm.cmd`/`npx.cmd`.
 - `contrato:build`, `contrato:verificar`, `front:dev`, `front:build`, `front:lint`, `api:dev`, `api:build`, `api:verificar`: comandos puntuales.
 - `prueba:cache`: caché frontend, invalidación y separación de sesiones.
 - `prueba:asistente`: reglas/contrato del asistente sin proveedores remotos.
+- `prueba:asistente:ui`: Chrome/Playwright con API y transcripciones simuladas; confirmación de cliente, retroceso y guardado explícito.
+- `prueba:paneles`: Chrome real sobre Nginx/API/BD QA 8180; sincronización, filtros, borradores y retroceso de todos los módulos. Preparar primero `demo:catalogo` en QA; no guarda formularios operativos.
+- `demo:catalogo`: carga optativa de 32 productos y 8 clientes ficticios, con pedidos variados, vía API QA. Nunca se ejecuta en la semilla. Local 8080 requiere autorización y `--demo-local-autorizado`; no elimina datos existentes.
 - `prueba:integracion`: permisos, system, negocio y caché; escribe solo en QA.
 - `prueba:voz`: permisos, tickets WebSocket, audio sintético y Vosk en QA.
 - `prueba:carga`: pedidos concurrentes, persistencia, reservas y totales en QA.
@@ -78,7 +81,9 @@ Backend usa @nestjs/cache-manager compatible con CommonJS, Keyv y Redis interno,
 
 `Compartido/src/sincronizacion.ts` define RevisionDatosDTO e intervalo. `/sincronizacion/revision` está autenticado, sin caché HTTP, y devuelve una revisión opaca. Triggers de sincronización cubren tablas operativas; agregar cobertura cuando aparezcan nuevas tablas que afecten pantallas.
 
-`useSincronizacion` consulta cada dos segundos con sesión/pestaña visible, sin superponer solicitudes; cambios confirmados disparan `ambie:datos-actualizados`. Reconexión/visibilidad reanudan lecturas. Es actualización casi en tiempo real, intervalo más latencia, no entrega instantánea garantizada. Mantener indicador de desconexión, botón Actualizar y refresco periódico de respaldo.
+`useSincronizacion` consulta cada dos segundos con sesión/pestaña visible, sin superponer solicitudes; cambios confirmados disparan `ambie:datos-actualizados`. Reconexión/visibilidad reanudan lecturas. Es actualización casi en tiempo real, intervalo más latencia, no entrega instantánea garantizada. No reintroducir la banda blanca «Datos compartidos / Actualizar»: conservar indicador de desconexión con Reintentar y refresco periódico de respaldo. Una actualización mantiene el snapshot de la misma sesión y referencias compartidas, sin desmontar pantallas ni perder scroll/borradores. Los placeholders de consultas paginadas solo pertenecen a la misma sesión y recurso; indicar actualización y bloquear acciones sobre páginas anteriores. Interpretar voz y emitir un ticket no son escrituras de negocio: no auditar ni invalidar consultas por esas dos rutas.
+
+Listas operativas: `POR_PAGINA=30`, filtros sobre el conjunto completo antes de paginar. Selectores y pendientes extensos muestran máximo 30 con buscador. Nunca recortar saldos, totales, FIFO o líneas de un documento por este límite visual. Panel administrativo con mínimo de 600 px de contenido y scroll exterior al reducir altura; listas mínimo 160 px, tarjetas mínimo 64 px. Boton usa type=button por defecto; formularios que guardan deben indicar type=submit.
 
 ## TypeScript
 
@@ -106,6 +111,8 @@ CLI preparado sin llamadas externas; --help y rutas no llaman modelos. No activa
 
 Vosk transcribe español localmente; audio no se guarda. Tickets de un solo uso para /asistente/voz. Asistente respeta roles, rellena pantallas existentes y confirmar ejecuta su guardado normal; cancelar descarta borrador. Separar transcripción, interpretación, confirmación y escritura. Audio sintético/silencio valida transporte, no reconocimiento de frases ni micrófono físico.
 
+Pedido por voz: seleccionar un cliente real y confirmar su identidad antes de productos; no rellenar automáticamente el buscador. «Confirmar cliente» no guarda el pedido. «Volver» y «continuar» conservan el borrador y guían la pantalla; botones manuales de pasos notifican `ambie:voz-paso` y selección `ambie:voz-cliente`. Solo «confirmar operación» puede guardar. Detener el micrófono notifica `ambie:voz-detenida` y restaura navegación manual normal.
+
 ## Pruebas y seguridad operativa
 
 Ejecutar verificar tras cambios de código. UI: 390×844 y escritorio 1440 px; login también 320×320/poca altura. Distinguir navegador real, mocks, HTTP y compilación.
@@ -127,6 +134,8 @@ Workflow detecta rama principal de GitHub. Despliegue desactivado hasta configur
 No ejecutar docker:limpiar, down -v, podas de volúmenes ni restauraciones sobre negocio sin autorización específica. Preservar respaldos, cambios locales y proyectos ajenos. Reevaluar pendientes de auditoría: dependencias, snapshots grandes, carga mayor, restauración y VPS/HTTPS real.
 
 ## Activos
+
+Voz de pedidos: `Compartido/src/voz.ts` interpreta varias cantidades/productos conservando presentaciones. `AgrupadorVoz` espera 2200 ms sin nuevos finales/parciales antes de interpretar; cancelar/pausar descarta segmentos pendientes. No elegir productos ambiguos: pedir presentación. Agregar acumula líneas; reemplazar debe ser explícito. Confirmar productos avanza al paso de entrega, sin guardar. La factura usa todas las líneas persistidas y sus precios históricos, nunca el catálogo actual; `PedidoCompletado` puede leer `/pedidos/:id` aunque falte en el snapshot paginado. Probar errores, retroceso y venta ocasional con `prueba:asistente:ui`; ese recorrido usa transcripciones/API simuladas, no micrófono físico.
 
 - [Imágenes de productos](Frontend/public/assets/productos/README.md)
 - [Comprobantes](Frontend/public/assets/comprobantes/README.md)

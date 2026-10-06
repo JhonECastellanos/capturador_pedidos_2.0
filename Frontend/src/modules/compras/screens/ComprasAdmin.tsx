@@ -210,7 +210,7 @@ export function ComprasAdmin() {
       if (p.proveedorId) { const id = resolverReferencia(p.proveedorId, proveedores); if (id) setProveedorId(id); else setBusquedaProveedor(String(p.proveedorId)); }
       if (typeof p.descontarCaja === "boolean") setDescontarCaja(p.descontarCaja);
       if (Array.isArray(p.lineas)) setLineas(p.lineas.flatMap((l: Record<string, unknown>) => { const producto = inventario.find(i => i.id === resolverReferencia(l.productoId, inventario)); return producto ? [construirLineaRecepcion(producto, Number(l.cantidad) || 0, Number(l.costoUnitario) || 0)] : []; }));
-    }, leer: () => ({ proveedorId, lineas: lineas.map(l => ({ productoId: l.productoId, cantidad: l.cantidad, costoUnitario: l.costoUnitario })), descontarCaja }), confirmar: confirmarRecepcion, cancelar: cancelarRecepcion,
+    }, leer: () => ({ proveedorId, lineas: lineas.map(l => ({ productoId: l.productoId, cantidad: l.cantidad, costoUnitario: l.costoUnitario })), descontarCaja }), confirmar: confirmarRecepcion, cancelar: cancelarRecepcion, volver: volverWizard,
   });
   usePantallaVoz(["crear_proveedor"], { aplicar: p => { setVista("recepcion"); setPaso(1); setMostrarCrearProv(true); if (typeof p.nombre === "string") setNombreProvNuevo(p.nombre); if (typeof p.telefono === "string") setTelProvNuevo(p.telefono); }, leer: () => ({ nombre: nombreProvNuevo, telefono: telProvNuevo }), confirmar: () => crearProveedorInline(), cancelar: () => { setNombreProvNuevo(""); setTelProvNuevo(""); setMostrarCrearProv(false); } });
   usePantallaVoz(["registrar_gasto"], { aplicar: () => { setVista("historial"); setTab("gastos"); }, leer: () => ({}), confirmar: async () => false, cancelar: () => setTab("compras") });

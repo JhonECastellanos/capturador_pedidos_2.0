@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type TipoAviso = "exito" | "error" | "info";
 
@@ -24,16 +24,16 @@ export function useAviso(duracion = 2200) {
     [],
   );
 
-  function mostrarAviso(mensaje: string, tipo: TipoAviso = "info", deshacer?: () => void) {
+  const mostrarAviso = useCallback((mensaje: string, tipo: TipoAviso = "info", deshacer?: () => void) => {
     if (temporizador.current !== null) window.clearTimeout(temporizador.current);
     setAviso({ mensaje, tipo, deshacer });
     temporizador.current = window.setTimeout(() => setAviso(null), duracion);
-  }
+  }, [duracion]);
 
-  function cerrarAviso() {
+  const cerrarAviso = useCallback(() => {
     if (temporizador.current !== null) window.clearTimeout(temporizador.current);
     setAviso(null);
-  }
+  }, []);
 
   return { aviso, mostrarAviso, cerrarAviso };
 }

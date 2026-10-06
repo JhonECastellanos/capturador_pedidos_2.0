@@ -1,6 +1,7 @@
 ================================================================================
 EQUIVALENCIA DE VARIABLES · FRONTEND / API / BASE DE DATOS
 Proyecto AMBIÉ · Capturador de pedidos
+APP_VERSION: Frontend/src/config.ts muestra V4P2; no cambia el formato de datos.
 ================================================================================
 
 Este archivo muestra, campo por campo, cómo se llama la misma variable en las
@@ -731,19 +732,19 @@ Para regenerar la lista de enums verificados: npm run contrato:verificar
   INTERVALO_SINCRONIZACION_MS useSincronizacion             2000 ms, solo pestana visible
   conectado                  Revision autenticada          Indicador de ultima lectura/conexion
   POR_PAGINA=30              pageSize=30                   Limite visual, no modifica totales/FIFO
-  confirmarCliente           ambie:voz-cliente             Confirmacion de identidad sin escritura BD
-  campo de conversacion      ambie:voz-paso                Navegacion manual/voz del mismo borrador
+  campo de conversacion      pasoConversacion              Solicita solo datos faltantes al terminar el dictado
+  nombres                    POST /asistente/entender      ID/nombre del borrador, maximo 60; no persiste
+  firma                      PantallaVoz.leer              Revision visible antes del guardado; no persiste
   voz detenida               ambie:voz-detenida            Restaura seleccion manual sin guardar
   BASE_PRUEBAS_UI            prueba:paneles                Solo http://localhost:8180 (QA)
   productosHablados          intenciones.ts / voz.ts       Cantidades y presentaciones de varias lineas
   ESPERA_TURNO_VOZ_MS=2200   AgrupadorVoz / SesionVoz       Agrupa finales y reinicia espera con parciales
-  confirmar productos       productosConfirmados          Firma de productoId/cantidad ordenada; sin escritura API/BD
+  revisar operacion         PantallaVoz.aplicar/leer       Abre revision existente sin escribir; admite edicion manual
   Pedido.facturaNumero      PedidoDTO.facturaNumero       Numero de factura persistido
   DetalleProductosPedido    PedidoDTO.lineas              nombre/cantidad/precioUnitario/subtotal historicos
   ProductoVozAmbiguo.opciones aclaracionProducto            Candidatos de catalogo, sin elegir presentacion automaticamente
   aclaracionProducto.indice  orden.payload.lineas          Conserva cantidades al resolver una variedad ambigua
   temporizadorMensaje       asistente-subtitulo           Aviso de 3500 ms, maximo dos lineas; sin persistencia
-  cantidadProducto          Microfono                     Producto identificado pendiente de cantidad; no persiste
   respuestaHablada          speechSynthesis               Respuesta breve independiente del aviso visual
   confianza_frase           EventoVoz.confianza           Promedio para nombres; minimo en confirmaciones y cantidades dudosas
   POST /asistente/modelos   ConfiguracionAsistente        Consulta de borrador sin modelo ni escritura de configuracion

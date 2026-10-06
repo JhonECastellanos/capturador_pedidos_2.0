@@ -21,7 +21,7 @@ export class AsistenteController {
   async entender(@Body() cuerpo: unknown, @UsuarioActual() usuario: Usuario) {
     const datos = EntenderAsistenteEsquema.safeParse(cuerpo);
     if (!datos.success) throw new ErrorDominio("VALIDACION", "Escribe una instrucción de entre 2 y 2000 caracteres.");
-    return { data: await this.asistente.entender(datos.data.texto, usuario.rol === RolUsuario.ADMINISTRADOR ? "administrador" : "vendedor", usuario.id, datos.data.pendiente, datos.data.campo) };
+    return { data: await this.asistente.entender(datos.data.texto, usuario.rol === RolUsuario.ADMINISTRADOR ? "administrador" : "vendedor", usuario.id, datos.data.pendiente, datos.data.campo, datos.data.nombres) };
   }
   @Get("preferencias")
   async preferencias() {

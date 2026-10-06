@@ -1,4 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { TiraToast } from "../../../components/TiraToast";
+import { useAviso } from "../../../components/useAviso";
 import { useLocation, useNavigate } from "react-router-dom";
 import { BarraSuperior } from "../../../components/BarraSuperior";
 import { IconCash, IconChevronRight, IconClipboard, IconPackage, IconUser } from "../../../components/Icons";
@@ -29,6 +31,7 @@ interface InicioVentasProps {
   etiquetaRol: string;
   /** Texto de apoyo bajo el saludo. */
   descripcion: string;
+  headerGlobal?: boolean;
 }
 
 function esMismoDia(fechaIso: string, referencia: Date): boolean {
@@ -41,7 +44,7 @@ function esMismoDia(fechaIso: string, referencia: Date): boolean {
  * El administrador también vende: aquí tiene sus métricas, sus accesos
  * directos y la lista de pedidos del día para gestionarlos.
  */
-export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevoCliente, rutaDetalle, etiquetaRol, descripcion }: InicioVentasProps) {
+export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevoCliente, rutaDetalle, etiquetaRol, descripcion, headerGlobal = false }: InicioVentasProps) {
   const navegar = useNavigate();
   const ubicacion = useLocation();
   const { usuario, cerrarSesion } = useAuth();
@@ -49,6 +52,9 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
   // `movimientosCaja` se usa indirectamente en el descuadre del dominio.
 
   const estadoInicial = ubicacion.state as { clienteCreado?: string; pedidoConfirmado?: string } | null;
+  const { aviso, mostrarAviso, cerrarAviso } = useAviso();
+  const pedidoConfirmado = estadoInicial?.pedidoConfirmado;
+  useEffect(() => { if (pedidoConfirmado) mostrarAviso("Pedido confirmado", "exito"); }, [pedidoConfirmado, mostrarAviso]);
   const [clienteCreado, setClienteCreado] = useState<string | null>(estadoInicial?.clienteCreado ?? null);
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
@@ -104,7 +110,7 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
 
   return (
     <div className="flex h-full flex-col min-h-0">
-      <BarraSuperior
+      {!headerGlobal && <BarraSuperior
         variante="hero"
         etiqueta={etiquetaRol}
         titulo={`Hola, ${usuario?.nombre.split(" ")[0]}`}
@@ -114,10 +120,10 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
             Salir
           </button>
         }
-      />
+      />}
 
       <main className="flex min-h-0 flex-1 flex-col px-5 md:px-6">
-        <section className="-mt-4 flex-shrink-0 rounded-2xl bg-paper-raised p-4 shadow-[0_12px_28px_-16px_rgba(48,77,37,0.35)]">
+        <section className={`${headerGlobal ? "mt-3" : "-mt-4"} flex-shrink-0 rounded-2xl bg-paper-raised p-4 shadow-[0_12px_28px_-16px_rgba(48,77,37,0.35)]`}>
           <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Resumen de la jornada</p>
           {tieneMetricasHoy ? (
             <div className="mt-3 grid grid-cols-2 gap-3">
@@ -197,7 +203,7 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
                         <button
                           type="button"
                           onClick={() => navegar(rutaDetalle(pedido.id))}
-                          className="flex w-full items-center gap-3 rounded-xl border border-line bg-paper-raised p-3 text-left active:bg-paper-sunken"
+                          className="flex min-h-16 w-full items-center gap-2 rounded-xl border border-line bg-paper-raised px-3 py-2 text-left active:bg-paper-sunken"
                         >
                           <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full ${porCobrarPedido ? "bg-accent-soft text-accent-dark" : "bg-success-soft text-success"}`}>
                             <IconClipboard width={17} height={17} />
@@ -208,8 +214,7 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
                               <EtiquetaEstado estado={pedido.estado} compacta />
                             </span>
                             <span className="mt-0.5 block truncate text-[12px] text-ink-soft">{cliente?.nombre ?? "Venta ocasional"}</span>
-                            <span className="mt-1 line-clamp-2 text-[11px] text-ink-soft">{pedido.lineas.map(l => `${l.cantidad} × ${l.nombre}`).join(" · ")}</span>
-                            <span className="block truncate text-[10.5px] text-ink-faint">Generó {nombreUsuario(pedido.vendedorId)}</span>
+                            <span className="block truncate text-[11px] text-ink-soft">{pedido.lineas.map(l => `${l.cantidad} × ${l.nombre}`).join(" · ")}</span>
                           </span>
                           <span className="flex flex-shrink-0 flex-col items-end gap-1">
                             <span className="font-mono text-[13px] font-semibold text-ink">{formatoMoneda(pedido.total)}</span>
@@ -242,6 +247,7 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
           </div>
         </div>
       )}
+      <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
     </div>
   );
 }

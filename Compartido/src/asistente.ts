@@ -70,7 +70,7 @@ export const DESTINOS_ASISTENTE = {
 export function rutaAsistente(destino: string, rol: RolUsuario): string | null {
   if (!Object.hasOwn(DESTINOS_ASISTENTE, destino)) return null;
   if (rol === "administrador") return DESTINOS_ASISTENTE[destino as keyof typeof DESTINOS_ASISTENTE];
-  return ({ inicio: "/vendedor", ventas: "/vendedor/pedido", pedidos: "/vendedor/pedido", clientes: "/vendedor/clientes/nuevo", abonos: "/vendedor/abonos" } as Record<string, string>)[destino] ?? null;
+  return ({ inicio: "/vendedor", ventas: "/vendedor/pedido", pedidos: "/vendedor", clientes: "/vendedor/pedido", creditos: "/vendedor/abonos", abonos: "/vendedor/abonos" } as Record<string, string>)[destino] ?? null;
 }
 
 export const ConfiguracionAsistenteEsquema = z.object({
@@ -94,13 +94,13 @@ export const IntencionAsistenteEsquema = z.object({
   mensaje: z.string().min(1).max(600),
 }).strict();
 export type IntencionAsistente = z.infer<typeof IntencionAsistenteEsquema>;
-export const EntenderAsistenteEsquema = z.object({ texto: z.string().trim().min(1).max(2000), pendiente: IntencionAsistenteEsquema.optional(), campo: z.string().max(80).optional() }).strict();
+export const EntenderAsistenteEsquema = z.object({ texto: z.string().trim().min(1).max(2000), pendiente: IntencionAsistenteEsquema.optional(), campo: z.string().max(80).optional(), nombres: z.record(z.string().max(200)).refine(v => Object.keys(v).length <= 60).optional() }).strict();
 export type EventoVoz = { tipo: "lista" } | { tipo: "parcial"; texto: string } | { tipo: "final"; texto: string; confianza: number } | { tipo: "error"; mensaje: string };
 export function comandoVoz(texto: string, confianza: number): "confirmar" | "cancelar" | null {
   if (confianza < 0.85) return null;
   const normal = texto.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[.,!?¿¡]/g, "").trim();
-  if (normal === "confirmar operacion" || normal === "confirmo la operacion") return "confirmar";
-  if (normal === "cancelar operacion" || normal === "cancela la operacion") return "cancelar";
+  if (["confirma", "confirmar", "confirmar operacion", "confirmo la operacion"].includes(normal)) return "confirmar";
+  if (["cancelar", "cancela", "cancelar operacion", "cancela la operacion"].includes(normal)) return "cancelar";
   return null;
 }
 

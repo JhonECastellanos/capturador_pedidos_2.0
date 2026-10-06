@@ -6,6 +6,7 @@ export interface PantallaVoz {
   leer: () => Record<string, unknown>;
   confirmar: () => Promise<boolean>;
   cancelar: () => void;
+  volver?: () => void;
 }
 const pantallas = new Map<AccionAsistente, PantallaVoz[]>();
 export function usePantallaVoz(acciones: AccionAsistente[], pantalla: PantallaVoz) {
@@ -13,7 +14,7 @@ export function usePantallaVoz(acciones: AccionAsistente[], pantalla: PantallaVo
   const clave = acciones.join(",");
   useLayoutEffect(() => { ref.current = pantalla; });
   useLayoutEffect(() => {
-    const enlace: PantallaVoz = { aplicar: (p, c) => ref.current.aplicar(p, c), leer: () => ref.current.leer(), confirmar: () => ref.current.confirmar(), cancelar: () => ref.current.cancelar() };
+    const enlace: PantallaVoz = { aplicar: (p, c) => ref.current.aplicar(p, c), leer: () => ref.current.leer(), confirmar: () => ref.current.confirmar(), cancelar: () => ref.current.cancelar(), volver: () => { if (ref.current.volver) ref.current.volver(); else throw new Error("Usa Volver en esta pantalla; tu borrador se conserva."); } };
     const nombres = clave.split(",") as AccionAsistente[];
     nombres.forEach((a) => pantallas.set(a, [...(pantallas.get(a) ?? []), enlace]));
     return () => { nombres.forEach((a) => { const restantes = (pantallas.get(a) ?? []).filter((p) => p !== enlace); if (restantes.length) pantallas.set(a, restantes); else pantallas.delete(a); }); };
