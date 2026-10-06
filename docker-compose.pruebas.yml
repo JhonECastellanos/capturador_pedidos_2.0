@@ -9,6 +9,8 @@ services:
   postgres:
     environment:
       POSTGRES_DB: ambie_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
   migrate:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-ambie}:${POSTGRES_PASSWORD}@postgres:5432/ambie_test?schema=public

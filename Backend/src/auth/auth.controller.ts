@@ -122,8 +122,8 @@ export class AuthController {
   }
 
   @Get("me")
-  async me(@UsuarioActual() usuario: Usuario) {
-    return { data: await this.auth.me(usuario.id) };
+  async me(@UsuarioActual() usuario: Usuario, @Req() req: FastifyRequest) {
+    return { data: { ...await this.auth.me(usuario.id), expiraEn: (req as unknown as RequestAutenticado).expiraAccesoEn } };
   }
 
   private ponerCookies(reply: FastifyReply, accessToken: string, refreshToken: string) {

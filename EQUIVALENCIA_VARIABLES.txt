@@ -752,4 +752,32 @@ Para regenerar la lista de enums verificados: npm run contrato:verificar
   pruebaVoz/dictado          ConfiguracionAsistente        Diagnostico local de 20 s, sin interprete ni proveedor
   DEPLOY_ENABLED             GitHub Actions                Activa despliegue de rama principal
   AMBIE_DEPLOY_PATH           Runner produccion             Carpeta persistente con .env privado
+  Idempotency-Key             GuardadoInterceptor           escriturasConfirmadas.(usuarioId,clave)
+  guardado pendiente          SHA-256 + UUID                sessionStorage de pestana; sin formulario/respuesta
+  huella de solicitud         Cuerpo canonico SHA-256       escriturasConfirmadas.huella (sin cuerpo original)
+  confirmacion de guardado    Envelope original             escriturasConfirmadas.respuesta; no otro documento contable
+  ConteoInventario.tipo        general/aleatorio/inicial     conteosInventario.tipo (enum TipoConteo)
+  LineaConteo.nombreInicial    nombreInicial                 conteoLineas.nombreInicial (al aplicar inicio)
+  costoUnitarioInicial        costoUnitarioInicial          conteoLineas.costoUnitarioInicial (historico)
+  movimientoNeto              SUM(delta)-acumuladoInicial   conteoLineas.deltaAcumuladoInicial + ledger actual
+  stockInicial                LineaConteo.stockFisico       conteoLineas.stockFisico del inicio aplicado
+  stockEsperado/diferencia    inicial+neto / actual-esperado GET /inventario/inicial; calculados en SQL
+  unidades/valor iniciales    InventarioInicialDTO          SUM(conteoLineas.stockFisico*costoUnitarioInicial)
+  valorActualCostoInicial     InventarioInicialDTO          SUM(productos.stockFisico*costoUnitarioInicial)
+  comprasYGastosMes           compras + gastos              DashboardResumenDTO existente; suma frontend
+  ventas/gastos/comprasMes    GET /dashboard/resumen        fechaOperacion desde dia 1 hasta hoy Bogota
+  ticketPromedioMes           DashboardResumenDTO           ventas / pedidos no cancelados del mes
+  BASE_PRUEBAS inventario     prueba:inventario:inicial      Solo QA 8180/ambie_test; conserva inicio aplicado
+
+  ComprobacionModeloAsistenteDTO: modelo, disponible, estado, mensaje, comprobadoEn
+  POST /asistente/conexion: prueba puntual autenticada; reutiliza conexión y devuelve estado comprobado.
+  estado: disponible / cuota-agotada / temporal / no-disponible; no es un enum de PostgreSQL.
+  Modelo → icono y texto en select/datalist: solo nombre real en el valor enviado a API.
+  resultados/progreso (RAM del panel): no persisten claves, cuotas ni estados en base o almacenamiento web.
+  Cambio de clave/proveedor/URL invalida estados; abortar detiene nuevas pruebas, no deshace una ya enviada.
+  Cuota diaria: únicamente cuando metadatos quotaId/quotaMetric del proveedor identifican PerDay.
+  cantidadConsumida/liberada  Estado de ReservaStock        Igual a reservada al consumir/liberar; CHECK y correccion historica V4P2
 ================================================================================
+  /auth/me.data.expiraEn       RequestAutenticado.expiraAccesoEn  JWT verificado exp; fecha ISO, sin nuevo campo en BD
+  expiraEn/revisionAcceso      Frontend data/api.ts               Solo RAM; renovacion previa con margen de 30 segundos
+  sesionExpirada              ambie:sesion-expirada               Bloquea lecturas tras revocacion/logout; login habilita de nuevo

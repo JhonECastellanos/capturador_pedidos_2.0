@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { performance } = require('node:perf_hooks');
 const { mkdirSync, writeFileSync } = require('node:fs');
+const { randomUUID } = require('node:crypto');
 
 const base = process.env.BASE_PRUEBAS_API || 'http://localhost:8180/api/v1';
 assert.ok(['http://localhost:3100/api/v1', 'http://localhost:8180/api/v1'].includes(base), 'Usa solamente la instalación de pruebas');
@@ -14,7 +15,7 @@ async function main() {
   let token;
   async function pedir(ruta, metodo = 'GET', datos) {
     const inicio = performance.now();
-    const respuesta = await fetch(base + ruta, { method: metodo, signal: AbortSignal.timeout(30000), headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: datos === undefined ? undefined : JSON.stringify(datos) });
+    const respuesta = await fetch(base + ruta, { method: metodo, signal: AbortSignal.timeout(30000), headers: { 'Content-Type': 'application/json', ...(metodo !== 'GET' ? { 'Idempotency-Key': randomUUID() } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: datos === undefined ? undefined : JSON.stringify(datos) });
     const cuerpo = await respuesta.json();
     assert.ok(respuesta.ok, `${metodo} ${ruta}: ${respuesta.status} ${cuerpo.message || ''}`);
     return { datos: cuerpo.data, ms: performance.now() - inicio };

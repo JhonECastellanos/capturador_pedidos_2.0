@@ -100,7 +100,7 @@ export type TipoMovimientoInventario = (typeof TIPO_MOVIMIENTO_INVENTARIO)[numbe
 export const ESTADO_RESERVA = ["reservada", "consumida", "liberada"] as const;
 export type EstadoReserva = (typeof ESTADO_RESERVA)[number];
 
-export const TIPO_CONTEO = ["general", "aleatorio"] as const;
+export const TIPO_CONTEO = ["general", "aleatorio", "inicial"] as const;
 export type TipoConteo = (typeof TIPO_CONTEO)[number];
 
 export const ESTADO_CONTEO = ["en-curso", "confirmado", "cancelado"] as const;

@@ -86,6 +86,15 @@ export const ConfiguracionAsistenteEsquema = z.object({
 export type ConfiguracionAsistenteEntrada = z.input<typeof ConfiguracionAsistenteEsquema>;
 export type ConfiguracionAsistentePublica = Omit<z.output<typeof ConfiguracionAsistenteEsquema>, "clave" | "borrarClave"> & { tieneClave: boolean };
 
+/** Resultado de una prueba puntual con esta conexión, nunca una garantía futura. */
+export interface ComprobacionModeloAsistenteDTO {
+  modelo: string;
+  disponible: boolean;
+  estado: "disponible" | "cuota-agotada" | "temporal" | "no-disponible";
+  mensaje: string;
+  comprobadoEn: string;
+}
+
 const valorJson: z.ZodType<unknown> = z.lazy(() => z.union([z.string().max(2000), z.number().finite(), z.boolean(), z.null(), z.array(valorJson).max(60), z.record(valorJson)]));
 export const IntencionAsistenteEsquema = z.object({
   accion: z.string().max(80).nullable(),

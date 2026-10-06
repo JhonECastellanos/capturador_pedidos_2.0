@@ -64,9 +64,9 @@ export class TokensService {
   }
 
   /** Valida firma, emisor, audiencia y expiración. */
-  verificarAcceso(token: string): ClaimsAcceso {
+  verificarAcceso(token: string): ClaimsAcceso & { exp: number } {
     try {
-      const payload = this.jwt.verify<ClaimsAcceso>(token, {
+      const payload = this.jwt.verify<ClaimsAcceso & { exp: number }>(token, {
         secret: TokensService.secreto,
         issuer: TokensService.emisor,
         audience: TokensService.audiencia,

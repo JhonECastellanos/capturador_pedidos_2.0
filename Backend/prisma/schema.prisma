@@ -1,7 +1,7 @@
 // Esquema de datos de AMBIÉ (PostgreSQL).
 // Convención: nombres de campo en camelCase para que frontend, backend y base
 // compartan la misma nomenclatura. Los nombres de tabla son plurales camelCase.
-// Dinero: Decimal(18,2) · Cantidades: Int · Timestamps: timestamptz · Fechas: date.
+// Dinero: Decimal(18,2) · Cantidades: Int · Instantes UTC: timestamp(3) · Días: date.
 
 generator client {
   provider = "prisma-client-js"
@@ -60,6 +60,7 @@ enum TipoMovimientoCaja {
 }
 
 enum TipoConteo {
+  INICIAL   @map("inicial")
   GENERAL   @map("general")
   ALEATORIO @map("aleatorio")
 }
@@ -207,6 +208,19 @@ model AuditoriaEvento {
 
   @@index([entidadTipo, entidadId])
   @@map("auditoriaEventos")
+}
+
+// Confirmación técnica del guardado; no es otro documento de negocio.
+model EscrituraConfirmada {
+  usuarioId String
+  clave     String
+  ruta      String
+  huella    String
+  respuesta Json
+  creadoEn  DateTime @default(now())
+
+  @@id([usuarioId, clave])
+  @@map("escriturasConfirmadas")
 }
 
 model Categoria {
@@ -550,6 +564,10 @@ model ConteoLinea {
   stockFisico  Int?
   diferencia   Int?
   contadoEn    DateTime?
+  // Solo el inventario inicial: identidad y costo conservados al aplicar.
+  nombreInicial String?
+  costoUnitarioInicial Decimal? @db.Decimal(18, 2)
+  deltaAcumuladoInicial BigInt?
 
   conteo   ConteoInventario @relation(fields: [conteoId], references: [id], onDelete: Cascade)
   producto Producto         @relation(fields: [productoId], references: [id])

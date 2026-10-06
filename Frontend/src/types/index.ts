@@ -6,7 +6,7 @@
 // ─── Enumeraciones ────────────────────────────────────────────────
 
 export type { MetodoPago, EstadoPedido, RolUsuario, EstadoCuenta } from "@ambie/contrato";
-import type { MetodoPago, EstadoPedido, RolUsuario, EstadoCuenta, PedidoDTO, UsuarioDTO } from "@ambie/contrato";
+import type { MetodoPago, EstadoPedido, RolUsuario, EstadoCuenta, PedidoDTO, UsuarioDTO, TipoConteo } from "@ambie/contrato";
 /** Periodicidad pactada de pago para el crédito del cliente. */
 export type TipoCredito = "diario" | "semanal" | "quincenal" | "mensual";
 
@@ -249,11 +249,13 @@ export interface LineaConteo {
   stockTeorico: number;
   stockFisico: number;
   diferencia: number;
+  nombreInicial?: string | null;
+  costoUnitarioInicial?: number | null;
 }
 
 export interface ConteoInventario {
   id: string;
-  tipo: "general" | "aleatorio";
+  tipo: TipoConteo;
   usuarioId: string;
   turno: string;
   iniciadoEn: string;

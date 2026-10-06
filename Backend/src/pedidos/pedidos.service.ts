@@ -8,7 +8,6 @@ import { aplicadoPorPedido } from "../dominio/cartera";
 import { NuevoPedidoEsquema, LineaPedidoEsquema } from "@ambie/contrato";
 import {
   EstadoPedido,
-  EstadoReserva,
   MetodoPago,
   MomentoCobro,
   TipoMovimientoCaja,
@@ -264,10 +263,7 @@ export class PedidosService {
             },
           });
         }
-        await tx.reservaStock.updateMany({
-          where: { pedidoId: pedido.id },
-          data: { estado: EstadoReserva.CONSUMIDA, consumidoEn: new Date() },
-        });
+        await tx.$executeRaw`UPDATE "reservasStock" SET estado = 'consumida', "cantidadConsumida" = "cantidadReservada", "cantidadLiberada" = 0, "consumidoEn" = ${new Date()} WHERE "pedidoId" = ${pedido.id}`;
 
       }
         if (metodo !== MetodoPago.CREDITO && (estadoInicial === EstadoPedido.ENTREGADO || momentoCobro === MomentoCobro.INMEDIATO)) {
@@ -347,10 +343,7 @@ export class PedidosService {
             },
           });
         }
-        await tx.reservaStock.updateMany({
-          where: { pedidoId },
-          data: { estado: EstadoReserva.CONSUMIDA, consumidoEn: new Date() },
-        });
+        await tx.$executeRaw`UPDATE "reservasStock" SET estado = 'consumida', "cantidadConsumida" = "cantidadReservada", "cantidadLiberada" = 0, "consumidoEn" = ${new Date()} WHERE "pedidoId" = ${pedidoId}`;
       }
 
       if (estado === EstadoPedido.CANCELADO) {
@@ -385,10 +378,7 @@ export class PedidosService {
             },
           });
         }
-        await tx.reservaStock.updateMany({
-          where: { pedidoId },
-          data: { estado: EstadoReserva.LIBERADA, liberadoEn: new Date() },
-        });
+        await tx.$executeRaw`UPDATE "reservasStock" SET estado = 'liberada', "cantidadLiberada" = "cantidadReservada", "cantidadConsumida" = 0, "liberadoEn" = ${new Date()} WHERE "pedidoId" = ${pedidoId}`;
       }
 
       await tx.pedido.update({

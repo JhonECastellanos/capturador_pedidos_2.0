@@ -61,7 +61,7 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
       inventario: inventario.map((p: Producto & { stockDisponible?: number }) => { const archivo = archivos.find((a) => a.productoId === p.id); return { ...p, stock: p.stockDisponible ?? p.stock, imagenUrl: archivo ? `${baseApi}/archivos/${archivo.id}` : undefined }; }),
       abonos: abonos.map((a) => ({ ...a, pedidosAfectados: a.pedidosAfectados.map((p) => ({ ...p, numero: pedidos.find((pedido) => pedido.id === p.pedidoId)?.numero ?? "" })) })),
       movimientosCaja, usuarios, proveedores, recepciones, gastos, ajustes, cambiosPrecio, cierres: cierres.map((c) => ({ ...c, fecha: c.fecha.slice(0, 10) })),
-      conteos: conteos.map((c) => ({ ...c, lineasContadas: c.lineas.filter((l) => l.stockFisico !== null).map((l) => l.productoId), lineas: c.lineas.map((l) => ({ ...l, nombre: inventario.find((p) => p.id === l.productoId)?.nombre ?? "Producto", stockFisico: l.stockFisico ?? 0, diferencia: l.diferencia ?? 0 })) })),
+      conteos: conteos.map((c) => ({ ...c, lineasContadas: c.lineas.filter((l) => l.stockFisico !== null).map((l) => l.productoId), lineas: c.lineas.map((l) => ({ ...l, nombre: l.nombreInicial ?? inventario.find((p) => p.id === l.productoId)?.nombre ?? "Producto", stockFisico: l.stockFisico ?? 0, diferencia: l.diferencia ?? 0 })) })),
     };
     consultas.setQueryData(claveSnapshot, nuevosDatos);
     const mismaSesion = datosSesion.current === usuario.id;

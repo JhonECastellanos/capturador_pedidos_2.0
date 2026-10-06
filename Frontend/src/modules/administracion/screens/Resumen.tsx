@@ -7,7 +7,7 @@ import { UtilidadDev } from "../../../components/UtilidadDev";
 import { useOperaciones } from "../../../context/operaciones";
 import { topClientesDe, topProductosDe } from "../../../dominio/servicios";
 import { esAyer, esMismoDia, fechaOperativa } from "../../../utils/fechas";
-import { formatoMoneda, formatoMonedaCorta } from "../../../utils/formato";
+import { formatoMoneda } from "../../../utils/formato";
 import { dentroDePeriodo, dentroDeTramo, tramosDe, type Granularidad, type PeriodoLista, type Tramo } from "../../../utils/periodos";
 import { GraficaBarrasDobles } from "../components/GraficaBarrasDobles";
 import { GraficaLinea } from "../components/GraficaLinea";
@@ -44,6 +44,9 @@ export function Resumen() {
   const inicioTops = new Date(hoy);
   inicioTops.setDate(inicioTops.getDate() - (periodoTops === "dia" ? 0 : periodoTops === "semana" ? 7 : periodoTops === "mes" ? 30 : 365));
   const remotoHoy = useResumenApi(diaTablero(hoy), diaTablero(hoy));
+  const diaMes = hoy.toLocaleDateString("en-CA", { timeZone: "America/Bogota" });
+  const inicioMes = `${diaMes.slice(0, 7)}-01`;
+  const remotoMes = useResumenApi(inicioMes, diaMes);
   const remotoAyer = useResumenApi(diaTablero(ayer), diaTablero(ayer));
   const remotoBarras = useResumenApi(...rangoBarras);
   const remotoLinea = useResumenApi(...rangoLinea);
@@ -59,6 +62,12 @@ export function Resumen() {
   const gastosHoy = usaApi ? remotoHoy.data?.gastos ?? 0 : gastos.filter((g) => esMismoDia(g.creadoEn, hoy)).reduce((s, g) => s + g.monto, 0);
   const comprasHoy = usaApi ? remotoHoy.data?.compras ?? 0 : recepciones.filter((r) => esMismoDia(r.creadoEn, hoy)).reduce((s, r) => s + r.total, 0);
   const ticketPromedio = usaApi ? remotoHoy.data?.ticketPromedio ?? 0 : pedidosHoy.length ? ventasHoy / pedidosHoy.length : 0;
+  const delMes = (registro: { creadoEn: string; fechaOperacion?: string }) => { const dia = registro.fechaOperacion?.slice(0, 10) ?? new Date(registro.creadoEn).toLocaleDateString("en-CA", { timeZone: "America/Bogota" }); return dia >= inicioMes && dia <= diaMes; };
+  const pedidosMes = pedidosValidos.filter(delMes);
+  const ventasMes = usaApi ? remotoMes.data?.ventas ?? 0 : pedidosMes.reduce((s, p) => s + p.total, 0);
+  const gastosMes = usaApi ? remotoMes.data?.gastos ?? 0 : gastos.filter(delMes).reduce((s, g) => s + g.monto, 0);
+  const comprasMes = usaApi ? remotoMes.data?.compras ?? 0 : recepciones.filter(delMes).reduce((s, r) => s + r.total, 0);
+  const ticketMes = usaApi ? remotoMes.data?.ticketPromedio ?? 0 : pedidosMes.length ? ventasMes / pedidosMes.length : 0;
   const alertasStock = usaApi ? remotoHoy.data?.alertasStock ?? 0 : inventario.filter((p) => p.stock <= p.stockMinimo).length;
   const pendientes = usaApi ? remotoHoy.data?.creditoPendienteGlobal ?? 0 : pedidosValidos.filter((p) => p.pago.saldoPendiente > 0).reduce((s, p) => s + p.pago.saldoPendiente, 0);
   const variacion = ventasAyer > 0 ? ((ventasHoy - ventasAyer) / ventasAyer) * 100 : ventasHoy > 0 ? 100 : 0;
@@ -97,14 +106,14 @@ export function Resumen() {
   const topClientes = usaApi ? (remotoTops.data?.topClientes ?? []).map((fila) => ({ ...fila, cliente: { nombre: fila.nombre } })) : topClientesDe(pedidosPeriodo, inventario).map((fila) => ({ ...fila, cliente: obtenerCliente(fila.clienteId) }));
 
   if (usaApi) {
-    const consultas = [remotoHoy, remotoAyer, remotoBarras, remotoLinea, remotoTops];
+    const consultas = [remotoHoy, remotoMes, remotoAyer, remotoBarras, remotoLinea, remotoTops];
     const error = consultas.find((c) => c.error)?.error;
     if (consultas.some((c) => !c.data)) return <div className="p-4"><p role={error ? "alert" : "status"}>{error?.message ?? "Cargando tablero…"}</p>{error && <button className="mt-3 min-h-11 rounded-xl border border-line px-4" onClick={() => { consultas.forEach((c) => { void c.refetch(); }); }}>Reintentar</button>}</div>;
   }
 
   return (
     <div className="flex h-full flex-col min-h-0">
-      {usaApi && [remotoHoy, remotoAyer, remotoBarras, remotoLinea, remotoTops].some((c) => c.error) && <p role="alert" className="shrink-0 rounded-xl bg-danger-soft p-3 text-sm text-danger">No se pudo actualizar el tablero. Se muestra la última lectura. <button type="button" onClick={() => [remotoHoy, remotoAyer, remotoBarras, remotoLinea, remotoTops].forEach((c) => { void c.refetch(); })}>Reintentar</button></p>}
+      {usaApi && [remotoHoy, remotoMes, remotoAyer, remotoBarras, remotoLinea, remotoTops].some((c) => c.error) && <p role="alert" className="shrink-0 rounded-xl bg-danger-soft p-3 text-sm text-danger">No se pudo actualizar el tablero. Se muestra la última lectura. <button type="button" onClick={() => [remotoHoy, remotoMes, remotoAyer, remotoBarras, remotoLinea, remotoTops].forEach((c) => { void c.refetch(); })}>Reintentar</button></p>}
       <div className="flex-shrink-0 flex items-center justify-between border-b border-line pb-2.5">
         <div className="flex items-center gap-2">
           <h2 className="font-display text-[18px] font-semibold text-ink">Inicio</h2>
@@ -112,6 +121,7 @@ export function Resumen() {
             pantalla="Inicio"
             pasos={[
               { titulo: "1 · KPIs del día", texto: "Ventas, gastos, compras, ticket promedio, crédito pendiente y alertas de stock de hoy." },
+              { titulo: "Resumen del mes", texto: "Acumulados desde el primer día del mes hasta hoy. El ticket promedio divide las ventas entre los pedidos no cancelados; compras y gastos muestra la suma de ambos." },
               { titulo: "2 · Gráficas con filtro", texto: "Ventas contra compras y gastos, y la rentabilidad que queda. Cambia el filtro a día, semana, mes o año: el eje X siempre es el tiempo." },
               { titulo: "3 · Tops con ganancia", texto: "Los 5 productos y clientes que más mueven el negocio, con lo vendido y la ganancia real (costo conocido). Filtra por día, semana, mes, año o todo." },
             ]}
@@ -136,6 +146,18 @@ export function Resumen() {
         </div>
       )}
 
+      <section className="max-w-3xl" aria-label="Resumen del mes">
+        <h3 className="text-[13px] font-semibold text-ink">Este mes · {hoy.toLocaleDateString("es-CO", { month: "long", year: "numeric", timeZone: "America/Bogota" })}</h3>
+        <p className="mt-1 text-[11px] text-ink-soft">Del primer día del mes hasta hoy</p>
+        <div className="mt-2 grid grid-cols-2 gap-3 lg:grid-cols-3">
+          <TarjetaMetrica etiqueta="Ventas del mes" valor={formatoMoneda(ventasMes)} tono="teal" />
+          <TarjetaMetrica etiqueta="Gastos del mes" valor={formatoMoneda(gastosMes)} tono="danger" />
+          <TarjetaMetrica etiqueta="Compras del mes" valor={formatoMoneda(comprasMes)} tono="accent" />
+          <TarjetaMetrica etiqueta="Compras y gastos del mes" valor={formatoMoneda(comprasMes + gastosMes)} tono="danger" />
+          <TarjetaMetrica etiqueta="Ticket promedio del mes" valor={formatoMoneda(ticketMes)} tono="ink" />
+        </div>
+      </section>
+
       {tieneHoyAyer && (
         <div className="mt-3 max-w-3xl rounded-xl border border-line bg-paper-raised p-3">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-faint">Hoy vs ayer</p>
@@ -157,7 +179,7 @@ export function Resumen() {
             <p className="font-display text-[14px] font-semibold text-ink">Ventas vs compras y gastos</p>
             <SegmentoControl opciones={GRANULARIDADES} valor={granBarras} onChange={setGranBarras} />
           </div>
-          <GraficaBarrasDobles datos={serieBarras} formato={formatoMonedaCorta} />
+          <GraficaBarrasDobles datos={serieBarras} formato={formatoMoneda} />
           {remotoBarras.isPlaceholderData && <p role="status" className="text-xs text-ink-soft">Actualizando periodo; se conserva la gráfica anterior…</p>}
           <p className="mt-2 text-[11px] text-ink-faint">
             Ventas {formatoMoneda(totalVentasBarras)} · compras y gastos {formatoMoneda(totalEgresosBarras)}
@@ -175,7 +197,7 @@ export function Resumen() {
             </div>
             <SegmentoControl opciones={GRANULARIDADES} valor={granLinea} onChange={setGranLinea} />
           </div>
-          <GraficaLinea datos={puntosRentabilidad} formato={formatoMonedaCorta} />
+          <GraficaLinea datos={puntosRentabilidad} formato={formatoMoneda} />
           {remotoLinea.isPlaceholderData && <p role="status" className="text-xs text-ink-soft">Actualizando periodo; se conserva la gráfica anterior…</p>}
           <p className="mt-2 text-[11px] text-ink-faint">Rentabilidad del periodo {formatoMoneda(rentabilidadPeriodo)}</p>
         </div>

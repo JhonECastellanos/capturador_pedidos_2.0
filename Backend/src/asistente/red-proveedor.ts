@@ -1,6 +1,25 @@
 import { lookup } from "node:dns/promises";
 import { request } from "node:https";
 import { ErrorDominio } from "../common/errores";
+import type { ComprobacionModeloAsistenteDTO } from "@ambie/contrato";
+
+export class ErrorProveedor extends ErrorDominio {
+  constructor(mensaje: string, public readonly estado: ComprobacionModeloAsistenteDTO["estado"] = "temporal") { super("PROVEEDOR", mensaje, 502); }
+}
+
+/** Interpreta solo metadatos conocidos; nunca devuelve el cuerpo ni la clave. */
+export function errorRespuestaProveedor(status: number, cuerpo: unknown): ErrorProveedor {
+  if (status === 429) {
+    const detalles = (cuerpo as { error?: { details?: Array<{ violations?: Array<{ quotaId?: string; quotaMetric?: string; quotaValue?: string | number }> }> } } | null)?.error?.details;
+    const cuotas = Array.isArray(detalles) ? detalles.flatMap(d => Array.isArray(d?.violations) ? d.violations : []).filter(Boolean) : [];
+    if (cuotas.some(c => c.quotaValue === 0 || c.quotaValue === "0")) return new ErrorProveedor("Este modelo no tiene cuota asignada en tu cuenta. Revisa el plan y los límites del proyecto (HTTP 429).", "no-disponible");
+    if (cuotas.some(c => /PerDay|daily|per_day/i.test(String(c.quotaId ?? "") + String(c.quotaMetric ?? "")))) return new ErrorProveedor("Cuota diaria agotada para este modelo. Espera a que se renueve en tu cuenta (HTTP 429).", "cuota-agotada");
+    if (cuotas.some(c => /PerMinute|per_minute/i.test(String(c.quotaId ?? "") + String(c.quotaMetric ?? "")))) return new ErrorProveedor("Límite por minuto alcanzado. Espera antes de volver a comprobar este modelo (HTTP 429).", "temporal");
+    return new ErrorProveedor("Cuota o límite de solicitudes alcanzado. El proveedor no indicó si es diario; revisa los límites de tu cuenta (HTTP 429).", "cuota-agotada");
+  }
+  if (status === 503) return new ErrorProveedor("El modelo está temporalmente ocupado o no disponible. Puedes volver a comprobarlo (HTTP 503).");
+  return new ErrorProveedor(mensajeErrorProveedor(status), [400, 401, 402, 403, 404, 410, 422].includes(status) ? "no-disponible" : "temporal");
+}
 
 export function esIpv4Publica(ip: string): boolean {
   const partes = ip.split(".").map(Number);
@@ -18,11 +37,11 @@ export function validarUrlProveedor(valor: string): URL {
 export async function pedirProveedor(urlTexto: string, cabeceras: Record<string, string>, cuerpo?: unknown, consulta?: Record<string, string>): Promise<unknown> {
   const url = validarUrlProveedor(urlTexto);
   for (const [nombre, valor] of Object.entries(consulta ?? {})) url.searchParams.set(nombre, valor);
-  const direcciones = await lookup(url.hostname, { family: 4, all: true }).catch(() => { throw new ErrorDominio("PROVEEDOR", "No se pudo resolver el proveedor.", 502); });
+  const direcciones = await lookup(url.hostname, { family: 4, all: true }).catch(() => { throw new ErrorProveedor("No se pudo resolver el proveedor."); });
   if (!direcciones.length || direcciones.some(({ address }) => !esIpv4Publica(address))) throw new ErrorDominio("VALIDACION", "El proveedor debe usar una dirección pública. No se permiten redes internas.");
   const datos = cuerpo === undefined ? undefined : JSON.stringify(cuerpo);
   return new Promise((resolve, reject) => {
-    const fallo = (mensaje: string, status = 502) => new ErrorDominio("PROVEEDOR", mensaje, status);
+    const fallo = (mensaje: string) => new ErrorProveedor(mensaje);
     const req = request(url, {
       family: 4,
       method: datos === undefined ? "GET" : "POST",
@@ -34,7 +53,9 @@ export async function pedirProveedor(urlTexto: string, cabeceras: Record<string,
       respuesta.on("error", () => reject(fallo("Se interrumpió la respuesta del proveedor.")));
       respuesta.on("end", () => {
         if (!respuesta.statusCode || respuesta.statusCode < 200 || respuesta.statusCode >= 300) {
-          reject(fallo(mensajeErrorProveedor(respuesta.statusCode ?? 502))); return;
+          let cuerpoError: unknown;
+          try { cuerpoError = JSON.parse(Buffer.concat(buffers).toString("utf8")); } catch { /* Puede venir una respuesta de texto del proveedor. */ }
+          reject(errorRespuestaProveedor(respuesta.statusCode ?? 502, cuerpoError)); return;
         }
         try { resolve(JSON.parse(Buffer.concat(buffers).toString("utf8"))); } catch { reject(fallo("El proveedor no devolvió JSON válido.")); }
       });
@@ -47,8 +68,9 @@ export async function pedirProveedor(urlTexto: string, cabeceras: Record<string,
 }
 
 export function mensajeErrorProveedor(status: number): string {
-  if (status === 400) return "El proveedor rechazó los parámetros o la clave. Revisa la clave de Gemini API y el modelo seleccionado (HTTP 400).";
-  if (status === 401 || status === 403) return `La clave no tiene acceso. Revisa su validez, restricciones y proyecto en Google AI Studio (HTTP ${status}).`;
+  if (status === 400) return "El proveedor rechazó los parámetros o la clave. Revisa la conexión y el modelo seleccionado (HTTP 400).";
+  if (status === 401 || status === 403) return `La clave no tiene acceso. Revisa su validez, restricciones y permisos en tu cuenta del proveedor (HTTP ${status}).`;
+  if (status === 402) return "Este modelo requiere acceso de pago en tu cuenta. La aplicación no cambia tu plan (HTTP 402).";
   if (status === 404) return "Modelo o ruta no disponible. Consulta el catálogo y elige otro modelo (HTTP 404).";
   if (status === 429) return "Cuota agotada o demasiadas solicitudes. Revisa los límites del proyecto; no se activa facturación automáticamente (HTTP 429).";
   return `El proveedor no pudo responder (HTTP ${status}). Intenta más tarde.`;

@@ -10,10 +10,12 @@ son plurales y camelCase (`clientes`, `pedidos`, `pedidoLineas`). El esquema rea
 [`Backend/prisma/schema.prisma`](../../Backend/prisma/schema.prisma); esta página documenta
 el mapeo entre el modelo actual del frontend (`Frontend/src/types/index.ts`) y la base.
 
+V4P2: consultar el [diccionario de todas las tablas y campos](DICCIONARIO_DATOS_V4P2.md) y el [guardado, reintentos y conciliación SQL](GUARDADO_Y_CONCILIACION_V4P2.md). El inventario inicial reutiliza conteos y ajustes; no introduce otra tabla de stock.
+
 - `id`: UUID técnico (Prisma `uuid()`), nunca se expone un código visible como PK/FK.
-- Dinero: `numeric(18,2)` (`Decimal` en Prisma; se serializa como cadena decimal en JSON).
+- Dinero: `numeric(18,2)` (`Decimal` en Prisma; los DTO de negocio lo convierten a número para la pantalla).
 - Cantidades: enteros (`Int`).
-- `creadoEn`, `actualizadoEn`, `iniciadoEn`, `finalizadoEn`, `fecha`: `timestamptz`.
+- `creadoEn`, `actualizadoEn`, `iniciadoEn`, `finalizadoEn` y eventos `fecha`: `timestamp(3)` sin zona en las migraciones actuales; los servicios usan UTC y representan instantes ISO en la API.
 - `fechaOperacion`, `fechaNacimiento`, `cierresDia.fecha`: `date` local de `America/Bogota`.
 - No se borran documentos ni auditoría: se usa `activo`, `estado`, `anuladoEn`, `revertidoEn`.
 
@@ -58,9 +60,9 @@ La asignación ocurre dentro de la misma transacción que inserta la entidad
 | `id`, `codigoInterno`, `nombre`, `unidad` | iguales | `codigoInterno` único |
 | `categoria` | `productos.categoriaId` → `categorias` | catálogo sembrado |
 | `precioVenta`, `costoActual` | iguales | `numeric(18,2)` |
-| `stock` | **derivado** | `stockFisico` (autoridad) + `stockReservado` + `stockDisponible` |
+| `stock` | **derivado** | `stockDisponible = stockFisico − stockReservado` |
 | `stockMinimo`, `colorEtiqueta`, `activo` | iguales | — |
-| `imagenUrl` | `archivosAdjuntos` | URL firmada privada, no Data URL |
+| `imagenUrl` | `archivosAdjuntos` | ruta API autenticada al objeto privado, no Data URL |
 
 ### Pedido (`Pedido`)
 
@@ -101,6 +103,7 @@ La asignación ocurre dentro de la misma transacción que inserta la entidad
   Tipos: `inicializacion`, `reserva`, `consumo-pedido`, `liberacion-reserva`,
   `recepcion-compra`, `ajuste-conteo`, `ajuste-manual`, `reversion`.
 - `conteosInventario` + `conteoLineas` (`stockFisico`/`diferencia` nulos hasta contar).
+- Tipo `inicial`: un punto de partida aplicado por instalación; conserva nombre/costo y acumulado del ledger en `conteoLineas`. La confirmación usa los ajustes existentes y no genera gasto ni duplica el stock.
 - `ajustesInventario` + `ajusteLineas` (`conteoId` nulo = ajuste manual; no existe `"manual"`).
 - `cambiosPrecio`: historial de precios.
 
@@ -125,7 +128,8 @@ La asignación ocurre dentro de la misma transacción que inserta la entidad
 - `UNIQUE` en `usuarios.email`, `usuarios.codigo`, `clientes.codigo`,
   `productos.codigoInterno`, `pedidos.numero`, `recepcionesCompra.numero`,
   `facturas.numero`, `cierresDia.fecha`, `consecutivos(tipo, periodo)`.
-- `UNIQUE(pedidoId, productoId)` en `pedidoLineas` y `conteoLineas`.
+- `UNIQUE(pedidoId, productoId)` en `pedidoLineas`; `UNIQUE(conteoId, productoId)` en `conteoLineas`.
+- Un inicio no cancelado y un ajuste por conteo mediante índices parciales; una confirmación por `(usuarioId, clave)` en `escriturasConfirmadas`.
 - `facturas.pedidoId` único: una factura interna por pedido.
 - `CHECK cantidad > 0`, `precioUnitario >= 0`, `monto > 0` en caja/pagos.
-- FKs `RESTRICT` para entidades con historial; no hay borrado en cascada de negocio.
+- FKs protegen las entidades relacionadas; algunas líneas dependientes declaran `CASCADE`. La aplicación no ofrece borrado físico de documentos comerciales.

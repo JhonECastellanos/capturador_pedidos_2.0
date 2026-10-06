@@ -1,11 +1,12 @@
 const assert = require('node:assert/strict');
 const { performance } = require('node:perf_hooks');
+const { randomUUID } = require('node:crypto');
 const base = process.env.BASE_PRUEBAS_API || 'http://localhost:8180/api/v1';
 assert.ok(['http://localhost:3100/api/v1', 'http://localhost:8180/api/v1'].includes(base), 'Solo QA aislado');
 const tiempos = [];
 async function http(ruta, token, metodo = 'GET', datos) {
   const inicio = performance.now();
-  const r = await fetch(base + ruta, { method: metodo, signal: AbortSignal.timeout(30000), headers: { Authorization: `Bearer ${token || ''}`, 'Content-Type': 'application/json' }, body: datos === undefined ? undefined : JSON.stringify(datos) });
+  const r = await fetch(base + ruta, { method: metodo, signal: AbortSignal.timeout(30000), headers: { Authorization: `Bearer ${token || ''}`, 'Content-Type': 'application/json', ...(metodo !== 'GET' ? { 'Idempotency-Key': randomUUID() } : {}) }, body: datos === undefined ? undefined : JSON.stringify(datos) });
   const cuerpo = await r.json();
   return { status: r.status, cuerpo, ms: performance.now() - inicio };
 }

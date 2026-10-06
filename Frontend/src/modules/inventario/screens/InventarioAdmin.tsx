@@ -17,12 +17,14 @@ import { useOperaciones } from "../../../context/operaciones";
 import { lineasContadasDe, resumenConteo } from "../../../dominio/servicios";
 import { formatoMoneda } from "../../../utils/formato";
 import { FormularioProducto } from "../components/FormularioProducto";
+import { InventarioInicial } from "../components/InventarioInicial";
+import type { TipoConteo } from "@ambie/contrato";
 import { usePantallaVoz } from "../../asistente/pantalla-voz";
 import { resolverReferencia } from "../../asistente/intencion";
 
 const campo = "rounded-lg border border-line bg-paper-raised px-3 py-2.5 text-[13px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none";
 
-type VistaInv = "menu" | "general" | "conteo" | "descuadres" | "ajustes";
+type VistaInv = "menu" | "general" | "conteo" | "descuadres" | "ajustes" | "inicial";
 type FiltroEstadoInv = "todos" | "alerta" | "ok";
 
 const motivosAjuste = ["pérdida", "robo", "corrección", "reversión compra", "vencimiento", "donación", "error captura", "otro"] as const;
@@ -47,7 +49,7 @@ export function InventarioAdmin() {
   const [vista, setVista] = useState<VistaInv>("menu");
   const [mostrarProducto, setMostrarProducto] = useState(false);
   const [cantidadAleatoria, setCantidadAleatoria] = useState("5");
-  const [tipoConteo, setTipoConteo] = useState<"general" | "aleatorio">("general");
+  const [tipoConteo, setTipoConteo] = useState<TipoConteo>("general");
   const [turno, setTurno] = useState("mañana");
   const [conteoActivoId, setConteoActivoId] = useState<string | null>(null);
   const [indice, setIndice] = useState(0);
@@ -119,7 +121,7 @@ export function InventarioAdmin() {
     return inventario.filter((p) => !q || p.nombre.toLowerCase().includes(q) || p.codigoInterno.toLowerCase().includes(q));
   }, [busquedaAjuste, inventario]);
 
-  async function handleIniciar(tipo: "general" | "aleatorio") {
+  async function handleIniciar(tipo: TipoConteo) {
     if (conteoEnCurso?.estado === "en-curso") { mostrarAviso("Termina o cancela el conteo en curso antes de iniciar otro.", "info"); return false; }
     if (inventario.length === 0) {
       mostrarAviso("Registra productos antes de iniciar un conteo", "error");
@@ -132,6 +134,7 @@ export function InventarioAdmin() {
     setIndice(0);
     setBorradorConteo({});
     setConteoDetalleId(null);
+    setVista("conteo");
     mostrarAviso(`Conteo ${tipo} iniciado · turno ${turno}`, "exito");
     return true;
   }
@@ -197,7 +200,7 @@ export function InventarioAdmin() {
     return id;
   }
   usePantallaVoz(["iniciar_conteo"], {
-    aplicar: p => { if (conteoEnCurso?.estado === "en-curso") throw new Error("Termina o cancela el conteo en curso antes de iniciar otro."); setVista("conteo"); setConteoActivoId(null); setConteoDetalleId(null); if (p.tipo === "general" || p.tipo === "aleatorio") setTipoConteo(p.tipo); if (typeof p.turno === "string") setTurno(p.turno); if (typeof p.cantidadAleatoria === "number") setCantidadAleatoria(String(p.cantidadAleatoria)); },
+    aplicar: p => { if (conteoEnCurso?.estado === "en-curso") throw new Error("Termina o cancela el conteo en curso antes de iniciar otro."); setVista(p.tipo === "inicial" ? "inicial" : "conteo"); setConteoActivoId(null); setConteoDetalleId(null); if (p.tipo === "general" || p.tipo === "aleatorio" || p.tipo === "inicial") setTipoConteo(p.tipo); if (typeof p.turno === "string") setTurno(p.turno); if (typeof p.cantidadAleatoria === "number") setCantidadAleatoria(String(p.cantidadAleatoria)); },
     leer: () => conteoEnCurso?.estado === "en-curso" ? {} : ({ tipo: tipoConteo, turno, ...(tipoConteo === "aleatorio" ? { cantidadAleatoria: Number(cantidadAleatoria) } : {}) }), confirmar: () => handleIniciar(tipoConteo), cancelar: volverAlMenu,
   });
   usePantallaVoz(["contar_producto"], {
@@ -217,6 +220,14 @@ export function InventarioAdmin() {
   /* ─── Pantalla: menú de procesos ─── */
   if (vista === "menu") {
     const procesos = [
+      {
+        id: "inicial" as VistaInv,
+        titulo: "Inventario inicial",
+        descripcion: "Registrar y comparar el punto de partida",
+        detalle: conteos.some((c) => c.tipo === "inicial" && c.estado !== "cancelado") ? "Consultar registro" : "Contar cantidades y conservar costos",
+        icono: <IconClipboard width={24} height={24} />,
+        tono: "teal" as const,
+      },
       {
         id: "general" as VistaInv,
         titulo: "Stock general",
@@ -300,7 +311,7 @@ export function InventarioAdmin() {
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-accent">Inventario</p>
             <h2 className="font-display text-[17px] font-semibold text-ink">
-              {vista === "general" ? "Stock general" : vista === "conteo" ? "Conteo guiado" : vista === "descuadres" ? "Descuadres" : "Ajuste manual"}
+              {vista === "general" ? "Stock general" : vista === "conteo" ? "Conteo guiado" : vista === "descuadres" ? "Descuadres" : vista === "inicial" ? "Inventario inicial" : "Ajuste manual"}
             </h2>
           </div>
         </div>
@@ -314,6 +325,8 @@ export function InventarioAdmin() {
           </button>
         )}
       </div>
+
+      {vista === "inicial" && <InventarioInicial conteo={conteos.find((c) => c.tipo === "inicial" && c.estado !== "cancelado")} iniciar={() => { void handleIniciar("inicial"); }} abrir={(conteo) => { setVista("conteo"); setConteoActivoId(conteo.id); setConteoDetalleId(conteo.estado === "en-curso" ? null : conteo.id); setIndice(0); setBorradorConteo({}); }} />}
 
       {vista === "general" && (
         <div className="flex flex-1 flex-col min-h-0 mt-2.5">
@@ -490,7 +503,10 @@ export function InventarioAdmin() {
                 </Boton>
               )}
               {conteoDetalle.estado === "confirmado" && !yaAjustado && (
-                <Boton onClick={() => setConfirmarAplicarConteoId(conteoDetalle.id)}>Aplicar ajuste al stock</Boton>
+                <>
+                  <Boton onClick={() => setConfirmarAplicarConteoId(conteoDetalle.id)}>{conteoDetalle.tipo === "inicial" ? "Confirmar inventario inicial" : "Aplicar ajuste al stock"}</Boton>
+                  {conteoDetalle.tipo === "inicial" && <button type="button" className="mt-2 w-full py-2 text-sm text-danger" onClick={() => { setConteoActivoId(conteoDetalle.id); setConfirmarCancelarConteo(true); }}>Cancelar este inicio y volver a contar</button>}
+                </>
               )}
               {conteoDetalle.estado === "confirmado" && yaAjustado && (
                 <div role="status" className="rounded-xl border border-success/30 bg-success-soft py-3 text-center text-[13px] font-semibold text-success">
@@ -859,9 +875,9 @@ export function InventarioAdmin() {
 
       <ConfirmarAccion
         abierto={confirmarAplicarConteoId !== null}
-        titulo="Aplicar ajuste al stock"
-        mensaje="Se llevará el stock al físico contado en este conteo. Queda auditado con turno y usuario."
-        textoConfirmar="Aplicar ajuste"
+        titulo={conteos.find((c) => c.id === confirmarAplicarConteoId)?.tipo === "inicial" ? "Confirmar inventario inicial" : "Aplicar ajuste al stock"}
+        mensaje={conteos.find((c) => c.id === confirmarAplicarConteoId)?.tipo === "inicial" ? "Se aplicarán las cantidades contadas y se conservarán los costos actuales como punto de partida. Una vez confirmado, este inicio no podrá reemplazarse. Los cambios posteriores se registran con ventas, compras y ajustes." : "Se llevará el stock al físico contado en este conteo. Queda auditado con turno y usuario."}
+        textoConfirmar={conteos.find((c) => c.id === confirmarAplicarConteoId)?.tipo === "inicial" ? "Confirmar inicio" : "Aplicar ajuste"}
         tono="ink"
         alCancelar={() => setConfirmarAplicarConteoId(null)}
         alConfirmar={async () => { await aplicarConteo(); }}

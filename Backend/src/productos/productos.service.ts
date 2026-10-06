@@ -88,6 +88,8 @@ export class ProductosService {
     const total = await this.prisma.producto.count();
 
     const producto = await this.prisma.$transaction(async (tx) => {
+      // El catálogo permanece estable mientras se aplica el punto de partida.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('inventario:inicial'))`;
       const codigoInterno = await siguienteCodigo(tx, "PROD");
       const creado = await tx.producto.create({
         data: {

@@ -5,6 +5,7 @@ import { AsistenteModule } from "./asistente/asistente.module";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { AuditoriaModule } from "./auditoria/auditoria.module";
 import { AuditoriaInterceptor } from "./common/auditoria.interceptor";
+import { GuardadoInterceptor } from "./common/guardado.interceptor";
 import { ArchivosModule } from "./archivos/archivos.module";
 import { JwtModule } from "@nestjs/jwt";
 import { PrismaModule } from "./common/prisma.module";
@@ -46,6 +47,6 @@ import { DashboardModule } from "./dashboard/dashboard.module";
     ArchivosModule,
     AsistenteModule,
   ],
-  providers: [{ provide: APP_GUARD, useClass: AuthGuard }, { provide: APP_INTERCEPTOR, useClass: AuditoriaInterceptor }],
+  providers: [{ provide: APP_GUARD, useClass: AuthGuard }, { provide: APP_INTERCEPTOR, useClass: GuardadoInterceptor }, { provide: APP_INTERCEPTOR, useClass: AuditoriaInterceptor }],
 })
 export class AppModule {}

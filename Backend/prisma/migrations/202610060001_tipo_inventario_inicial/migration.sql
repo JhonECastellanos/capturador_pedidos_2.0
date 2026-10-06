@@ -1,0 +1,1 @@
+ALTER TYPE "TipoConteo" ADD VALUE IF NOT EXISTS 'inicial';

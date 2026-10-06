@@ -25,6 +25,7 @@ export interface RequestAutenticado {
   headers?: Record<string, string | string[] | undefined>;
   user?: Usuario;
   sessionId?: string;
+  expiraAccesoEn?: string;
 }
 
 export const UsuarioActual = createParamDecorator((_data: unknown, ctx: ExecutionContext): Usuario => {
@@ -74,6 +75,7 @@ export class AuthGuard implements CanActivate {
 
     request.user = sesion.usuario;
     request.sessionId = sesion.id;
+    request.expiraAccesoEn = new Date(claims.exp * 1000).toISOString();
 
     const roles = this.reflector.getAllAndOverride<RolUsuario[]>(ROLES_KEY, [
       context.getHandler(),

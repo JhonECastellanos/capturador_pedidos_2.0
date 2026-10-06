@@ -389,6 +389,23 @@ export interface LineaConteoDTO {
   stockFisico: number | null;
   diferencia: number | null;
   contadoEn: string | null;
+  nombreInicial?: string | null;
+  costoUnitarioInicial?: number | null;
+}
+
+export interface InventarioInicialDTO {
+  conteoId: string;
+  aplicadoEn: string;
+  productos: number;
+  unidadesIniciales: number;
+  valorInicial: number;
+  unidadesActuales: number;
+  valorActualCostoInicial: number;
+  diferencias: number;
+  pagina: number;
+  porPagina: number;
+  total: number;
+  lineas: Array<{ productoId: string; nombre: string; costoUnitarioInicial: number; stockInicial: number; stockActual: number; movimientoNeto: number; stockEsperado: number; diferencia: number }>;
 }
 
 export interface ConteoInventarioDTO {

@@ -1,13 +1,19 @@
-import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { Usuario, RolUsuario } from "@prisma/client";
 import { InventarioService } from "./inventario.service";
 import { Roles, UsuarioActual } from "../common/guards";
 import { IniciarConteoEsquema, ContarLineaEsquema, AjusteManualEsquema } from "@ambie/contrato";
+import { paginacion } from "../common/paginacion";
 
 @Roles(RolUsuario.ADMINISTRADOR)
 @Controller("inventario")
 export class InventarioController {
   constructor(private readonly inventario: InventarioService) {}
+
+  @Get("inicial")
+  async inicial(@Query("page") page?: string, @Query("q") q?: string) {
+    return { data: await this.inventario.inicial(paginacion(page, "30").pagina, q) };
+  }
 
   @Get("ajustes")
   listarAjustes() { return this.inventario.listarAjustes(); }
@@ -28,8 +34,8 @@ export class InventarioController {
     return {
       data: await this.inventario.iniciarConteo(
         {
-          tipo: datos.tipo as "general" | "aleatorio",
-          cantidadAleatoria: datos.cantidadAleatoria ?? null,
+          tipo: datos.tipo,
+          cantidadAleatoria: datos.cantidadAleatoria,
           turno: datos.turno,
         },
         usuario.id,

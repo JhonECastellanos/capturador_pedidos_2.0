@@ -8,7 +8,7 @@ interface GraficaLineaProps {
   formato: (valor: number) => string;
 }
 
-/** Línea de tiempo de la rentabilidad: lo que queda después de compras y gastos. */
+/** Rentabilidad: ventas menos costo de lo vendido y gastos. */
 export function GraficaLinea({ datos, formato }: GraficaLineaProps) {
   const valores = datos.map((punto) => punto.valor);
   const maximo = Math.max(0, ...valores);
@@ -56,20 +56,18 @@ export function GraficaLinea({ datos, formato }: GraficaLineaProps) {
         />
       </svg>
       {puntos.map((punto, indice) => (
-        <span
+        <button type="button"
           key={`marca-${datos[indice].etiqueta}`}
-          className={`absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full ${datos[indice].valor >= 0 ? "bg-success" : "bg-danger"}`}
+          aria-label={`${datos[indice].etiqueta}: rentabilidad ${formato(datos[indice].valor)}`}
+          className="group absolute z-10 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-teal"
           style={{ left: `${punto.x}%`, top: `${punto.y}%` }}
-        />
-      ))}
-      {puntos.map((punto, indice) => (
-        <span
-          key={`valor-${datos[indice].etiqueta}`}
-          className={`absolute -translate-x-1/2 whitespace-nowrap font-mono text-[9.5px] font-semibold ${datos[indice].valor >= 0 ? "text-success" : "text-danger"}`}
-          style={{ left: `${punto.x}%`, top: `${punto.y}%`, marginTop: datos[indice].valor >= 0 ? "-15px" : "5px" }}
         >
-          {formato(datos[indice].valor)}
-        </span>
+          <span className={`h-2 w-2 rounded-full ${datos[indice].valor >= 0 ? "bg-success" : "bg-danger"}`} />
+          <span role="tooltip" className={`pointer-events-none absolute bottom-full mb-1 hidden w-max rounded-lg border border-line bg-paper-raised p-2 text-[11px] text-ink shadow-lg group-hover:block group-focus-visible:block ${indice === 0 ? "left-0" : indice === datos.length - 1 ? "right-0" : "left-1/2 -translate-x-1/2"}`}>
+            <span className="block font-semibold">{datos[indice].etiqueta}</span>
+            <span className="block">Rentabilidad: {formato(datos[indice].valor)}</span>
+          </span>
+        </button>
       ))}
       {puntos.map((punto, indice) => (
         <span

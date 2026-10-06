@@ -246,7 +246,15 @@ Una instalación nueva arranca vacía, con el acceso técnico system y los catá
 
 - Ver ventas, compras, gastos, utilidad, crédito pendiente y alertas de stock, con filtro por fechas, cliente y vendedor.
 - Consultar la serie diaria y los productos y clientes con más movimiento.
+- Consultar ventas, gastos, compras, compras más gastos y ticket promedio del mes calendario en Inicio. El detalle de los gráficos aparece al pasar el mouse o enfocar un punto.
+- Registrar una sola vez el inventario inicial desde Inventario, usando el conteo guiado y la confirmación existentes; comparar cantidades y costos de partida con el stock y sus movimientos.
 - Administrar pedidos, créditos, inventario, compras, precios, caja, cierre y usuarios.
+
+El [diccionario de datos](docs/info/DICCIONARIO_DATOS_V4P2.md) describe cada tabla y campo. El [flujo de guardado y conciliación](docs/info/GUARDADO_Y_CONCILIACION_V4P2.md) explica los reintentos sin duplicar documentos, las transacciones y las consultas SQL para contrastar la información visible con PostgreSQL.
+
+La [validación de V4P2](docs/info/VALIDACION_CAMBIOS_V4P2.md) reúne los ejercicios realizados, tiempos de confirmación y sincronización, carga concurrente y comprobaciones para repetir el recorrido.
+
+En Configuración, consultar el catálogo comprueba sus modelos y muestra un [icono de estado por modelo](docs/info/ESTADO_MODELOS_ASISTENTE.md): respuesta correcta, cuota/límite, fallo temporal o falta de acceso. Son pruebas breves que consumen cuota; el estado corresponde al momento de la comprobación.
 
 ## Instalación local y traslado al VPS
 

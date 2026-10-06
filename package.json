@@ -40,6 +40,8 @@
     "prueba:cache": "node --test scripts/probar-cache-query.mjs",
     "prueba:carga": "node Backend/scripts/probar-carga.cjs",
     "prueba:persistencia": "node Backend/scripts/probar-persistencia.cjs",
+    "prueba:guardados": "node --test scripts/probar-guardados.mjs && node Backend/scripts/probar-reintento.cjs",
+    "prueba:inventario:inicial": "node Backend/scripts/probar-inventario-inicial.cjs",
     "seguridad:repositorio": "node scripts/verificar-repositorio.mjs",
     "prueba:voz": "node Backend/scripts/integracion-voz.cjs",
     "prueba:voz:audio": "node Backend/scripts/probar-voz-audio-qa.cjs",

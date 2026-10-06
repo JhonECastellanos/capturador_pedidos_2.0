@@ -235,6 +235,36 @@ test('Gemini: guardar conexión antes de seleccionar modelo y conservar clave', 
     assert.equal((await config.publica()).tieneClave, true);
   } finally { await rm(carpeta, { recursive: true, force: true }); }
 });
+
+test('modelos: cuota diaria, límite temporal y falta de acceso se distinguen sin exponer el error remoto', async () => {
+  const red = require('../dist/asistente/red-proveedor');
+  const cuota = (quotaId, quotaValue = '10') => ({ error: { message: 'dato-remoto-privado', details: [{ violations: [{ quotaId, quotaValue }] }] } });
+  assert.equal(red.errorRespuestaProveedor(503, {}).estado, 'temporal');
+  assert.equal(red.errorRespuestaProveedor(403, {}).estado, 'no-disponible');
+  assert.equal(red.errorRespuestaProveedor(404, {}).estado, 'no-disponible');
+  assert.equal(red.errorRespuestaProveedor(429, cuota('GenerateRequestsPerDayPerProjectPerModel-FreeTier')).estado, 'cuota-agotada');
+  assert.match(red.errorRespuestaProveedor(429, cuota('GenerateRequestsPerDayPerProjectPerModel-FreeTier')).message, /Cuota diaria/);
+  assert.equal(red.errorRespuestaProveedor(429, cuota('GenerateRequestsPerMinutePerProjectPerModel-FreeTier')).estado, 'temporal');
+  assert.equal(red.errorRespuestaProveedor(429, cuota('GenerateRequestsPerDayPerProjectPerModel-FreeTier', '0')).estado, 'no-disponible');
+  assert.doesNotMatch(red.errorRespuestaProveedor(429, {}).message, /Cuota diaria/);
+  assert.doesNotThrow(() => red.errorRespuestaProveedor(429, { error: { details: [null, { violations: [null] }] } }));
+  assert.doesNotMatch(red.errorRespuestaProveedor(429, cuota('PerDay')).message, /dato-remoto-privado/);
+  const original = red.pedirProveedor;
+  const servicio = new AsistenteService({ leer: async () => contrato.ConfiguracionAsistenteEsquema.parse({}) });
+  try {
+    red.pedirProveedor = async () => { throw red.errorRespuestaProveedor(503, {}); };
+    const temporal = await servicio.comprobarConexion({ proveedor: 'gemini', clave: 'clave-ficticia', modelo: 'gemini-prueba' });
+    assert.equal(temporal.estado, 'temporal'); assert.equal(temporal.disponible, false); assert.ok(Date.parse(temporal.comprobadoEn));
+    red.pedirProveedor = async () => ({ candidates: [{ content: { parts: [{ text: 'respuesta incompleta' }] } }] });
+    assert.equal((await servicio.comprobarConexion({ proveedor: 'gemini', clave: 'clave-ficticia', modelo: 'gemini-prueba' })).estado, 'temporal');
+    red.pedirProveedor = async (url, headers, cuerpo) => {
+      assert.match(url, /chat\/completions$/); assert.equal(headers.Authorization, 'Bearer clave-ficticia');
+      assert.equal(cuerpo.model, 'modelo-prueba');
+      return { choices: [{ message: { content: '{"disponible":true}' } }] };
+    };
+    assert.equal((await servicio.comprobarConexion({ proveedor: 'groq', clave: 'clave-ficticia', modelo: 'modelo-prueba' })).estado, 'disponible');
+  } finally { red.pedirProveedor = original; }
+});
 test('productos: matriz de expresiones naturales, plural, singular y contexto de sabor', async () => {
   const { resolverProductoVoz, ProductoVozAmbiguo } = await moduloFrontend('intencion.ts');
   const catalogo = [{ id: 'd', nombre: 'Yogur de durazno 200 ml' }, { id: 'f', nombre: 'Yogur de fresa 200 ml' }];

@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
 const { mkdirSync, writeFileSync } = require('node:fs');
 const { performance } = require('node:perf_hooks');
+const { randomUUID } = require('node:crypto');
 async function main() {
   const base = 'http://localhost:8180';
   const browser = await chromium.launch({ headless: true, channel: 'chrome' });
@@ -23,7 +24,7 @@ async function main() {
       await buscador.fill(nombre);
       await page.waitForTimeout(500);
       const inicio = performance.now();
-      const respuesta = await escritor.request.post(base + '/api/v1/productos', { data: { nombre, precioVenta: 2000, costoActual: 800, stock: 5 } });
+      const respuesta = await escritor.request.post(base + '/api/v1/productos', { headers: { 'Idempotency-Key': randomUUID() }, data: { nombre, precioVenta: 2000, costoActual: 800, stock: 5 } });
       assert.equal(respuesta.status(), 201);
       const confirmado = performance.now();
       await page.getByText(nombre, { exact: true }).first().waitFor({ timeout: 15000 });

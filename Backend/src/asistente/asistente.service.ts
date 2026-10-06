@@ -1,9 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import { ConfiguracionAsistenteEsquema, type IntencionAsistente, type RolUsuario } from "@ambie/contrato";
+import { ConfiguracionAsistenteEsquema, type ComprobacionModeloAsistenteDTO, type IntencionAsistente, type RolUsuario } from "@ambie/contrato";
 import { ErrorDominio } from "../common/errores";
 import { ConfiguracionAsistente } from "./configuracion-asistente";
 import { entenderBasico, instruccionesAsistente, validarIntencion, responderCampo, interpretarPedidoCompleto, interpretarNavegacion } from "./intenciones";
-import { pedirProveedor, validarUrlProveedor } from "./red-proveedor";
+import { ErrorProveedor, pedirProveedor, validarUrlProveedor } from "./red-proveedor";
 
 @Injectable()
 export class AsistenteService {
@@ -80,14 +80,29 @@ export class AsistenteService {
     const respuesta = await pedirProveedor(`${base}/models`, config.clave ? { Authorization: `Bearer ${config.clave}` } : {}) as { data?: Array<{ id: string }> };
     return (respuesta.data ?? []).map((m) => m.id).slice(0, 100);
   }
-  async comprobarConexion(entrada: unknown) {
+  async comprobarConexion(entrada: unknown): Promise<ComprobacionModeloAsistenteDTO> {
     const config = await this.conexion(entrada);
-    if (config.proveedor === "basico") return { disponible: true, mensaje: "Modo básico disponible, sin conexión externa." };
-    if (config.proveedor !== "gemini") throw new ErrorDominio("VALIDACION", "Esta comprobación está disponible para Google Gemini.");
-    if (!config.clave || !config.modelo) throw new ErrorDominio("CONFIGURACION", "Indica una clave y selecciona un modelo.");
-    const respuesta = await pedirProveedor(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(config.modelo.replace(/^models\//, ""))}:generateContent`, { "x-goog-api-key": config.clave }, { contents: [{ role: "user", parts: [{ text: 'Responde solo el JSON {"disponible":true}.' }] }], generationConfig: { responseMimeType: "application/json", maxOutputTokens: 1024 } }) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-    const texto = respuesta.candidates?.[0]?.content?.parts?.map(p => p.text ?? "").join("");
-    try { if (JSON.parse(texto ?? "").disponible === true) return { disponible: true, mensaje: "Gemini respondió correctamente. No se guardaron datos del negocio." }; } catch {}
-    throw new ErrorDominio("PROVEEDOR", "El modelo no devolvió el JSON esperado. Prueba otro modelo de texto.", 502);
+    const resultado = (estado: ComprobacionModeloAsistenteDTO["estado"], mensaje: string): ComprobacionModeloAsistenteDTO => ({ modelo: config.modelo.replace(/^models\//, ""), disponible: estado === "disponible", estado, mensaje, comprobadoEn: new Date().toISOString() });
+    if (config.proveedor === "basico") return resultado("disponible", "Modo básico disponible, sin conexión externa.");
+    if ((!config.clave && config.proveedor !== "compatible") || !config.modelo) throw new ErrorDominio("CONFIGURACION", "Indica una clave y selecciona un modelo.");
+    if (this.activos >= 2) throw new ErrorDominio("LIMITE_ASISTENTE", "Espera a que termine la comprobación en curso.", 429);
+    this.activos++;
+    try {
+      const instruccion = 'Responde solo el JSON {"disponible":true}.';
+      let texto: string | undefined;
+      if (config.proveedor === "gemini") {
+        const respuesta = await pedirProveedor(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(config.modelo.replace(/^models\//, ""))}:generateContent`, { "x-goog-api-key": config.clave || "" }, { contents: [{ role: "user", parts: [{ text: instruccion }] }], generationConfig: { responseMimeType: "application/json", maxOutputTokens: 1024 } }) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }> };
+        texto = respuesta.candidates?.[0]?.content?.parts?.filter(p => !p.thought).map(p => p.text ?? "").join("");
+      } else {
+        const base = config.proveedor === "groq" ? "https://api.groq.com/openai/v1" : config.urlBase.replace(/\/$/, "");
+        const respuesta = await pedirProveedor(`${base}/chat/completions`, config.clave ? { Authorization: `Bearer ${config.clave}` } : {}, { model: config.modelo, messages: [{ role: "user", content: instruccion }], response_format: { type: "json_object" }, max_tokens: 128 }) as { choices?: Array<{ message?: { content?: string } }> };
+        texto = respuesta.choices?.[0]?.message?.content;
+      }
+      try { if (JSON.parse(texto ?? "").disponible === true) return resultado("disponible", "Respondió correctamente con esta conexión. No se guardaron datos del negocio."); } catch { /* Una respuesta incompleta no demuestra un fallo definitivo. */ }
+      return resultado("temporal", "La respuesta llegó incompleta o no confirmó la prueba. Vuelve a comprobar este modelo.");
+    } catch (error) {
+      if (error instanceof ErrorProveedor) return resultado(error.estado, error.message);
+      throw error;
+    } finally { this.activos--; }
   }
 }

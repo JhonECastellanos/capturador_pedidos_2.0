@@ -1,5 +1,7 @@
 # Guardado y persistencia — 6 de octubre de 2026
 
+Este documento conserva la primera ejecución de V4P2, anterior a la protección de reintentos y al inventario inicial. Sus tiempos y hallazgos son históricos. La corrección y el funcionamiento actual se explican en [Guardado y conciliación V4P2](GUARDADO_Y_CONCILIACION_V4P2.md); las comprobaciones nuevas se registran en [Validación de los cambios](VALIDACION_CAMBIOS_V4P2.md).
+
 La instalación local de producción se reconstruyó con API, frontend y voz. Antes de renovar los registros comerciales se guardaron dos respaldos privados en `.local/backups/`. La limpieza dejó cero pedidos, productos y clientes; después se cargaron 32 productos, 8 clientes y 8 pedidos ficticios por la API. Se conservaron cuentas, permisos, auditoría, catálogos base y consecutivos. Los archivos antiguos de MinIO y los respaldos se conservan; no se eliminaron volúmenes.
 
 ## Qué significa guardar automáticamente
