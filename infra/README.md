@@ -41,3 +41,5 @@ El target `agente` reutiliza el CLI existente. Corre como usuario no root, con f
 En un VPS se reutiliza `docker compose build cli` y `docker compose run --rm cli --help`. Antes de exponer la aplicación: TLS/proxy inverso, `COOKIE_SECURE=true`, origen CORS exacto, secretos exclusivos por entorno, copias verificadas de PostgreSQL/MinIO y acceso restringido al daemon Docker. El contenedor es una herramienta puntual, no un servicio autónomo permanente.
 
 Consultar [configuración Windows](windows/README.md) para almacenamiento en D: y límites globales WSL.
+
+`docker-compose.produccion.yml` permite desplegar en un servidor de cualquier proveedor junto al Compose principal. Restringe el frontend a loopback, deja la API sin puertos publicados y fija las imágenes de almacenamiento y túnel. No cambia los puertos del entorno local. Para instalar y actualizar el servidor, consultar [despliegue continuo](../docs/info/DESPLIEGUE_CONTINUO.md).

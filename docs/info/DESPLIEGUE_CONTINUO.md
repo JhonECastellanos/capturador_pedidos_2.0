@@ -1,6 +1,6 @@
 # Publicar correcciones desde el repositorio
 
-El desarrollo se entrega en `V3`. Revisa y fusiona sus cambios mediante un pull request a la rama principal configurada en GitHub. No se cambia esa configuración automáticamente: la referencia local actual de `origin/HEAD` es `V1`; comprueba en GitHub cuál quieres conservar como principal. El workflow detecta la rama predeterminada, sin asumir que se llama `main`.
+La versión preparada para producción se trabaja en `V5P3`. Revisa y fusiona sus cambios mediante un pull request a la rama principal configurada en GitHub. Designar `V5P3` como predeterminada requiere confirmación; no se cambia esa configuración automáticamente. El workflow detecta la rama predeterminada, sin asumir que se llama `main`. La instalación puede realizarse en un servidor local o VPS de cualquier proveedor siguiendo los pasos siguientes.
 
 ## Preparación única del servidor
 
