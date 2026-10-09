@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Boton } from "../../components/Boton";
 import { IconPackage } from "../../components/Icons";
-
 export default function NoEncontrado() {
   const navegar = useNavigate();
   return (

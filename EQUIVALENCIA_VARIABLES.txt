@@ -160,7 +160,6 @@ CAMPO                FRONTEND            API (JSON)              BASE DE DATOS  
 ------------------   ------------------  ----------------------  ------------------------  ----------
 id                   id                  id                      Cliente.id               IGUAL
 codigo               (no existe)         codigo                  Cliente.codigo           NUEVO
-                                                                 CLI-0001 (unico)
 nombre               nombre              nombre                  Cliente.nombre           IGUAL
 alias                alias               alias                   Cliente.alias            IGUAL
 identificacion       identificacion:     identificacion:         Cliente.identificacion   IGUAL
@@ -629,7 +628,6 @@ despues, el cierre conserva lo que se conto ese dia.
 
 ENTIDAD      PREFIJO   FORMATO         TABLA (consecutivos)
 ----------   --------   -------------   ------------------------
-Cliente      CLI       CLI-0001        tipo = "CLI",  periodo="global"
 Usuario      USR       USR-0001        tipo = "USR",  periodo="global"
 Producto     PROD      PROD-0001       tipo = "PROD", periodo="global"
 TipoCredito  TC        TC-0001         tipo = "TC",  periodo="global"
@@ -684,7 +682,6 @@ ArchivoAdjunto  (archivosAdjuntos)  - NUEVO, todavia sin endpoint
   Pedido.fechaOperacion       Pedido.fechaOperacion (fecha del negocio)
   (nuevo)                     Pedido.momentoCobro
   (nuevo)                     Pedido.facturaNumero (FAC-0001)
-  (nuevo)                     Cliente.codigo (CLI-0001)
   Usuario.password            Usuario.passwordHash (nunca sale por la API)
   Usuario.id                   Usuario.codigo (USR-0001, unico)
   Conteo.lineasContadas        (derivado: ConteoLinea.contadoEn != null)
@@ -699,13 +696,6 @@ Venta ocasional:
   Pago.clienteId = null         Pago.clienteId = null         pagos.clienteId NULL
   Sin cliente no hay credito   NuevoPedidoEsquema            pedido_ocasional_sin_credito
 
-Asistente de voz:
-  IntencionAsistente            POST /asistente/entender      Borrador sin persistencia
-  ConfiguracionAsistente       /asistente/configuracion      asistente.enc cifrado
-  vozHabilitada                 vozHabilitada                 configuracion cifrada
-  confirmacionVoz               confirmacionVoz               configuracion cifrada
-  responderConVoz               responderConVoz               configuracion cifrada
-  SesionVoz PCM 16 kHz          /asistente/voz WebSocket      Vosk sin guardar audio
 
 Despliegue producción (sin columnas de BD):
   FRONTEND_PORT               Docker frontend               Puerto publicado (8080)
@@ -714,7 +704,6 @@ Despliegue producción (sin columnas de BD):
   API_MEMORY/CPUS             Docker api                    Límites API
   POSTGRES_MEMORY/CPUS        Docker postgres               Límites BD
   MINIO_MEMORY/CPUS           Docker minio                  Límites archivos
-  VOZ_MEMORY/CPUS             Docker voz                    Límites reconocimiento local
   APP_ORIGIN                 CORS_ALLOWED_ORIGIN API       URL pública del frontend
   TRUST_PROXY_HOPS            Fastify trustProxy            1 detrás de Nginx / 0 directo
   CLOUDFLARE_TOKEN_FILE       secret cloudflare_token       Archivo privado, nunca en Git
@@ -732,24 +721,9 @@ Para regenerar la lista de enums verificados: npm run contrato:verificar
   INTERVALO_SINCRONIZACION_MS useSincronizacion             2000 ms, solo pestana visible
   conectado                  Revision autenticada          Indicador de ultima lectura/conexion
   POR_PAGINA=30              pageSize=30                   Limite visual, no modifica totales/FIFO
-  campo de conversacion      pasoConversacion              Solicita solo datos faltantes al terminar el dictado
-  nombres                    POST /asistente/entender      ID/nombre del borrador, maximo 60; no persiste
-  firma                      PantallaVoz.leer              Revision visible antes del guardado; no persiste
-  voz detenida               ambie:voz-detenida            Restaura seleccion manual sin guardar
   BASE_PRUEBAS_UI            prueba:paneles                Solo http://localhost:8180 (QA)
-  productosHablados          intenciones.ts / voz.ts       Cantidades y presentaciones de varias lineas
-  ESPERA_TURNO_VOZ_MS=2200   AgrupadorVoz / SesionVoz       Agrupa finales y reinicia espera con parciales
-  revisar operacion         PantallaVoz.aplicar/leer       Abre revision existente sin escribir; admite edicion manual
   Pedido.facturaNumero      PedidoDTO.facturaNumero       Numero de factura persistido
   DetalleProductosPedido    PedidoDTO.lineas              nombre/cantidad/precioUnitario/subtotal historicos
-  ProductoVozAmbiguo.opciones aclaracionProducto            Candidatos de catalogo, sin elegir presentacion automaticamente
-  aclaracionProducto.indice  orden.payload.lineas          Conserva cantidades al resolver una variedad ambigua
-  temporizadorMensaje       asistente-subtitulo           Aviso de 3500 ms, maximo dos lineas; sin persistencia
-  respuestaHablada          speechSynthesis               Respuesta breve independiente del aviso visual
-  confianza_frase           EventoVoz.confianza           Promedio para nombres; minimo en confirmaciones y cantidades dudosas
-  POST /asistente/modelos   ConfiguracionAsistente        Consulta de borrador sin modelo ni escritura de configuracion
-  POST /asistente/conexion  comprobarConexion             Prueba explicita Gemini sin escrituras de negocio
-  pruebaVoz/dictado          ConfiguracionAsistente        Diagnostico local de 20 s, sin interprete ni proveedor
   DEPLOY_ENABLED             GitHub Actions                Activa despliegue de rama principal
   AMBIE_DEPLOY_PATH           Runner produccion             Carpeta persistente con .env privado
   Idempotency-Key             GuardadoInterceptor           escriturasConfirmadas.(usuarioId,clave)
@@ -769,13 +743,6 @@ Para regenerar la lista de enums verificados: npm run contrato:verificar
   ticketPromedioMes           DashboardResumenDTO           ventas / pedidos no cancelados del mes
   BASE_PRUEBAS inventario     prueba:inventario:inicial      Solo QA 8180/ambie_test; conserva inicio aplicado
 
-  ComprobacionModeloAsistenteDTO: modelo, disponible, estado, mensaje, comprobadoEn
-  POST /asistente/conexion: prueba puntual autenticada; reutiliza conexión y devuelve estado comprobado.
-  estado: disponible / cuota-agotada / temporal / no-disponible; no es un enum de PostgreSQL.
-  Modelo → icono y texto en select/datalist: solo nombre real en el valor enviado a API.
-  resultados/progreso (RAM del panel): no persisten claves, cuotas ni estados en base o almacenamiento web.
-  Cambio de clave/proveedor/URL invalida estados; abortar detiene nuevas pruebas, no deshace una ya enviada.
-  Cuota diaria: únicamente cuando metadatos quotaId/quotaMetric del proveedor identifican PerDay.
   cantidadConsumida/liberada  Estado de ReservaStock        Igual a reservada al consumir/liberar; CHECK y correccion historica V4P2
 ================================================================================
   /auth/me.data.expiraEn       RequestAutenticado.expiraAccesoEn  JWT verificado exp; fecha ISO, sin nuevo campo en BD

@@ -19,8 +19,7 @@ import { construirPago } from "../../../dominio/servicios";
 import { SelectorPago } from "../../clientes-pedido/components/SelectorPago";
 import type { EstadoPedido, LineaPedido, MetodoPago, Pedido } from "../../../types";
 import { formatoMoneda } from "../../../utils/formato";
-import { usePantallaVoz } from "../../asistente/pantalla-voz";
-import { resolverReferencia } from "../../asistente/intencion";
+
 import { DetalleProductosPedido } from "../components/DetalleProductosPedido";
 import { POR_PAGINA } from "../../../utils/paginacion";
 
@@ -61,7 +60,6 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
   const [entrega, setEntrega] = useState<ModoEntrega>("entregado");
   const [metodo, setMetodo] = useState<MetodoPago>("efectivo");
   const [ocasional, setOcasional] = useState(false);
-  const [vozGuiada, setVozGuiada] = useState(false);
   const clienteRutaAplicado = useRef<string | undefined>(undefined);
 
   useEffect(() => {
@@ -71,11 +69,6 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
       setPaso(2);
     }
   }, [clienteIdDeRuta, obtenerCliente, seleccionarClienteActivo]);
-  useEffect(() => {
-    const detener = () => setVozGuiada(false);
-    window.addEventListener("ambie:voz-detenida", detener);
-    return () => window.removeEventListener("ambie:voz-detenida", detener);
-  }, []);
 
   const clienteSeleccionado = ocasional ? { id: null, nombre: "Venta ocasional", alias: "Sin registro de cliente" } : clienteActivo;
 
@@ -153,31 +146,9 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
     if (!pedido) return false;
     setCantidades({});
     if (alConfirmar) alConfirmar(pedido);
-    navegar(vozGuiada ? rutaInicio : rutaCompletado, { state: vozGuiada ? { pedidoConfirmado: pedido.id } : { pedidoId: pedido.id }, replace: true });
+    navegar(rutaCompletado, { state: { pedidoId: pedido.id }, replace: true });
     return true;
   }
-  usePantallaVoz(["crear_pedido"], {
-    aplicar: (p, campo) => {
-      setVozGuiada(true);
-      if (Object.hasOwn(p, "clienteId")) {
-        setOcasional(p.clienteId === null);
-        const id = resolverReferencia(p.clienteId, clientes);
-        seleccionarClienteActivo(id || null);
-      }
-      if (Array.isArray(p.lineas)) {
-        const cantidadesVoz: Record<string, number> = {};
-        p.lineas.forEach((l: Record<string, unknown>) => { const id = resolverReferencia(l.productoId, inventario); if (id && typeof l.cantidad === "number") cantidadesVoz[id] = (cantidadesVoz[id] ?? 0) + l.cantidad; });
-        setCantidades(cantidadesVoz);
-      }
-      if (p.estadoInicial === "pendiente" || p.estadoInicial === "entregado") setEntrega(p.estadoInicial);
-      if (p.metodo === "efectivo" || p.metodo === "billetera" || (p.metodo === "credito" && p.clienteId)) setMetodo(p.metodo);
-      setPaso(campo === "tipoCliente" || campo === "clienteId" ? 1 : campo === "lineas" ? 2 : campo === "estadoInicial" ? 3 : 4);
-    },
-    leer: () => ({ clienteId: ocasional ? null : clienteSeleccionado?.id ?? "", lineas: lineas.map((l) => ({ productoId: l.productoId, cantidad: l.cantidad })), estadoInicial: entrega, metodo, momentoCobro: metodo === "credito" ? "segun-periodicidad" : "inmediato" }),
-    confirmar: confirmarPedido,
-    volver,
-    cancelar: () => { setVozGuiada(false); setCantidades({}); setOcasional(false); seleccionarClienteActivo(null); setPaso(1); },
-  });
 
   function volver() {
     if (paso === 1) {
@@ -220,7 +191,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
             <ul className="space-y-2">
               {clientesFiltrados.slice(0, POR_PAGINA).map((cliente) => (
                 <li key={cliente.id}>
-                  <TarjetaClicable onClick={() => elegirCliente(cliente.id)} ariaLabel={`${cliente.nombre}${clienteActivo?.id === cliente.id ? ", seleccionado" : ""}`} className={`flex items-center gap-3 ${vozGuiada && clienteActivo?.id === cliente.id ? "border-accent bg-accent-soft" : ""}`}>
+                  <TarjetaClicable onClick={() => elegirCliente(cliente.id)} ariaLabel={`${cliente.nombre}${clienteActivo?.id === cliente.id ? ", seleccionado" : ""}`} className="flex items-center gap-3">
                     <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-ink font-display text-[12.5px] font-semibold text-white">
                       {cliente.nombre.slice(0, 2).toUpperCase()}
                     </span>

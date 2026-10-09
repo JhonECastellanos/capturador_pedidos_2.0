@@ -62,7 +62,7 @@ Ese único comando construye las imágenes y deja el sistema completo en marcha:
 
 | Servicio | Qué hace | Dónde queda |
 |---|---|---|
-| `frontend` | SPA compilada y Nginx con proxy a API/voz | `http://localhost:8080` |
+| `frontend` | SPA compilada y Nginx con proxy a API | `http://localhost:8080` |
 | `postgres` | Base de datos | Red interna, puerto 5432 |
 | `redis` | Caché efímera del tablero | Red interna, puerto 6379, sin publicar |
 | `migrate` | Aplica las migraciones y los datos base, y termina | — |
@@ -116,7 +116,6 @@ Vite queda en `http://localhost:5173`. La SPA usa la API existente por defecto; 
 | `docker compose logs --tail 200 migrate` | Últimas 200 líneas de un servicio concreto |
 | `npm run docker:logs` | Seguir los logs de todo el stack |
 | `docker compose restart api` | Reiniciar solo la API (conserva los datos) |
-| `docker compose run --rm cli --help` | Comprobar el CLI sin llamar a IA |
 | `npm run docker:abajo` / `docker compose down` | Detener sin perder datos |
 | `npm run docker:limpiar` / `docker compose down -v` | Detener y borrar los volúmenes |
 
@@ -125,7 +124,6 @@ Los datos viven en los volúmenes `postgres_data` y `minio_data`, así que sobre
 ### Dos detalles que conviene saber
 
 - **MinIO**: la imagen oficial dejó de publicarse, así que el compose usa la última imagen archivada de Bitnami (`bitnamilegacy/minio`). Si tu equipo tiene un registro propio, cambia solo esa línea. Para abrir la consola desde el navegador, descomenta el mapeo de puertos del servicio y entra a `http://localhost:9001`.
-- **CLI con IA**: no está siempre encendido, para no consumir recursos ni una clave cuando nadie lo usa. Se levanta solo cuando se invoca, con el perfil `cli`.
 
 ### Desarrollo local, sin contenedores para API y SPA
 
@@ -158,14 +156,16 @@ Pruebas: `npm run prueba:cache`, `npm run prueba:integracion` y `npm run prueba:
 
 ### Diagnósticos de TypeScript en VS Code
 
-El backend declara `rootDir: ./src`, usa `module/moduleResolution: Node16` y no necesita `baseUrl`. El CLI redefine `rootDir: .` porque también incluye scripts fuera de `src`. TypeScript 6 cambió la inferencia de la raíz y dejó en desuso `baseUrl` y resolución `node10`; se migraron las opciones, sin ocultar avisos con `ignoreDeprecations`. Si VS Code sigue mostrando la configuración antigua, guarda el archivo y ejecuta **TypeScript: Restart TS Server**; si persiste, **Developer: Reload Window**. Comprueba que abriste esta carpeta y no otra copia del proyecto.
+El backend usa `rootDir: ./src` y `module/moduleResolution: Node16`. `Backend/tsconfig.scripts.json` comprueba los scripts fuera de `src`, sin emitir archivos. Si VS Code muestra diagnósticos antiguos, ejecutar **TypeScript: Restart TS Server** y comprobar la carpeta abierta.
+
+### Autenticación
 
 El acceso usa dos tokens:
 
 | Token | Vida | Dónde vive |
 |---|---|---|
-| Acceso | 15 minutos | Cookie `ambie_access` (navegador) o `Authorization: Bearer` (CLI) |
-| Refresco | 7 días | Cookie `ambie_refresh`, o en el archivo del CLI |
+| Acceso | 15 minutos | Cookie `ambie_access` o Bearer para integraciones |
+| Refresco | 7 días | Cookie `ambie_refresh`; registro hasheado en PostgreSQL |
 
 La firma del JWT se verifica localmente; además, cada solicitud consulta sesión y usuario para aplicar revocaciones, actividad y rol actual. El token de refresco es opaco, se almacena hasheado y se rota en cada uso.
 
@@ -174,59 +174,14 @@ Las rutas de administración exigen rol de administrador: usuarios, cierre del d
 ## Probar la API
 
 ```bash
-npm run prueba:humo
+npm run prueba:humo -- --url http://localhost:3100/api/v1
 ```
 
 Recorre el camino completo: entrar, crear cliente, crear producto, registrar pedido, cobrar, contar inventario y previsualizar el cierre. Cada paso dice si pasó y por qué falló si no pasó.
 
 ```bash
-npm run prueba:humo -- --url http://localhost:3000 --email admin@ambie.local --password tu-clave
+npm run prueba:humo -- --url http://localhost:3100/api/v1 --email admin@ambie.local --password tu-clave
 ```
-
-## CLI con IA
-
-El CLI habla con la API en lenguaje natural. El modelo consulta y registra datos mediante herramientas, y tú confirmas antes de que se escriba algo.
-
-```bash
-npm run api:cli -- preguntar "¿cuánto debe María?"
-npm run api:cli -- rutas
-npm run api:cli -- proveedores
-```
-
-Funciona con cualquier proveedor. Los gratuitos ya vienen configurados:
-
-| Proveedor | Clave | Dónde se consigue |
-|---|---|---|
-| `ollama` | No hace falta | Corre en tu equipo, no sale nada a internet |
-| `gemini` | Sí | console.ai.google.dev |
-| `groq` | Sí | console.groq.com/keys |
-| `openai` | Sí, de pago | platform.openai.com |
-| `personalizado` | Según el caso | Cualquier API compatible con OpenAI |
-
-Para usar uno:
-
-```bash
-npm run api:cli -- config proveedor=gemini
-npm run api:cli -- preguntar "muéstrame los pedidos de hoy"
-```
-
-La clave se guarda en `~/.ambie/cli.json`, con permisos solo tuyos. También puedes pasarla por el entorno (`GEMINI_API_KEY`) o de paso (`--clave`), si prefieres no dejarla en el disco.
-
-Si tienes tu propia conexión, se conecta por URL:
-
-```bash
-npm run api:cli -- config api="https://tu-servidor/v1" modelo="tu-modelo" clave_personalizado="tu-clave"
-```
-
-El CLI también genera pruebas:
-
-```bash
-npm run api:cli -- probar --proveedor gemini
-```
-
-Le da al modelo los endpoints reales de la API, este propone casos —casos felices, límites, reglas de negocio y permisos— y los ejecuta de verdad. Lo que no se puede comprobar queda marcado como fallido, sin adornos.
-
-Más detalle en [docs/info/CLI.md](docs/info/CLI.md).
 
 ## Accesos
 
@@ -252,9 +207,10 @@ Una instalación nueva arranca vacía, con el acceso técnico system y los catá
 
 El [diccionario de datos](docs/info/DICCIONARIO_DATOS_V4P2.md) describe cada tabla y campo. El [flujo de guardado y conciliación](docs/info/GUARDADO_Y_CONCILIACION_V4P2.md) explica los reintentos sin duplicar documentos, las transacciones y las consultas SQL para contrastar la información visible con PostgreSQL.
 
+La [guía de validación de formularios](docs/info/VALIDACION_FORMULARIOS_Y_BASE_DATOS.md) permite comprobar los datos digitados, las líneas, pagos, caja, inventario y las tarjetas del mes mediante consultas de lectura.
+
 La [validación de V4P2](docs/info/VALIDACION_CAMBIOS_V4P2.md) reúne los ejercicios realizados, tiempos de confirmación y sincronización, carga concurrente y comprobaciones para repetir el recorrido.
 
-En Configuración, consultar el catálogo comprueba sus modelos y muestra un [icono de estado por modelo](docs/info/ESTADO_MODELOS_ASISTENTE.md): respuesta correcta, cuota/límite, fallo temporal o falta de acceso. Son pruebas breves que consumen cuota; el estado corresponde al momento de la comprobación.
 
 ## Instalación local y traslado al VPS
 
@@ -266,7 +222,7 @@ Desde la raíz, con Docker Desktop iniciado y el `.env` existente:
 powershell -ExecutionPolicy Bypass -File infra/desplegar.ps1
 ```
 
-El script construye las imágenes, respalda PostgreSQL si ya está funcionando, aplica las migraciones existentes y espera la salud de los servicios. No elimina volúmenes ni llama proveedores de IA. Todos quedan en el proyecto `capturador_pedidos_20`: frontend/Nginx, API, PostgreSQL, Redis, MinIO y una sola voz local. CLI y Cloudflare son optativos.
+El script construye las imágenes, respalda PostgreSQL si ya está funcionando, aplica las migraciones existentes y espera la salud de los servicios. No elimina volúmenes y conserva los datos existentes. Todos quedan en el proyecto `capturador_pedidos_20`: frontend/Nginx, API, PostgreSQL, Redis y MinIO. Cloudflare es optativo.
 
 Enlaces para validar:
 
@@ -278,8 +234,6 @@ Enlaces para validar:
 - [Diagnóstico directo de API, solo en este servidor](http://localhost:3000/api/v1/salud)
 
 Usa tus accesos existentes; no se publican contraseñas en esta guía. Los puertos cambian si defines `FRONTEND_PORT` o `PORT`. No hace falta ejecutar Vite para usar esta versión. `npm run front:dev` es solo desarrollo ([localhost:5173](http://localhost:5173/)).
-
-Desde el celular en la **misma red**, abre `http://IP_DEL_PC:8080`. Puedes consultar la IPv4 con `ipconfig`. Si Windows bloquea la conexión, permite TCP 8080 únicamente en la red privada; no desactives el firewall ni publiques PostgreSQL/MinIO. No se abre el firewall automáticamente. Los pedidos funcionan por HTTP local; el micrófono del navegador en el celular necesita HTTPS, salvo excepciones de desarrollo del dispositivo.
 
 En el VPS instala Docker Engine y Compose v2 compatible con `!override` (2.24.4 o posterior), clona el repositorio y crea un `.env` propio desde `.env.example`, con secretos nuevos y direcciones internas Docker. No subas `.env` ni `.local` al repositorio. Ejecuta:
 
@@ -298,7 +252,6 @@ El servicio `cloudflared` está preparado pero no se inicia por defecto. Cuando 
 1. Guarda **solo el token del túnel** en `.local/cloudflare-token`, sin compartirlo ni subirlo a Git. En Linux restringe `.local` a tu usuario (`chmod 700 .local`) y permite lectura del archivo montado al usuario no privilegiado de cloudflared; no pongas el token como argumento visible en la consola.
 2. Publica el hostname elegido con servicio interno `http://frontend:8080`, no `localhost` dentro del contenedor.
 3. En `.env` configura `APP_ORIGIN=https://pedidos.tudominio.com`, `CORS_ALLOWED_ORIGIN=https://pedidos.tudominio.com`, `COOKIE_SECURE=true` y `FRONTEND_BIND=127.0.0.1`. En este modo el acceso es HTTPS por el dominio, no HTTP local con cookies seguras.
-4. Ejecuta `docker compose --profile voz --profile cloudflare up -d --wait`. No abras 3000, 5432 ni 9000 hacia Internet. Verifica sesión, archivos y WebSocket `/api/v1/asistente/voz` por el dominio.
 
 El registro del dominio y la creación del túnel requieren tu cuenta y configuración; no se compró ni publicó nada. Cloudflare ofrece registro para dominios admitidos; comprueba disponibilidad y precio antes de adquirirlo. Referencias: [crear el túnel](https://developers.cloudflare.com/tunnel/get-started/), [parámetros de ejecución](https://developers.cloudflare.com/tunnel/reference/run-parameters/) y [Cloudflare Registrar](https://developers.cloudflare.com/registrar/).
 
@@ -306,7 +259,7 @@ El registro del dominio y la creación del túnel requieren tu cuenta y configur
 
 Redis añade un límite de 128 MB y 0,5 CPU (`REDIS_MEMORY/CPUS`); permite hasta 64 MB de caché con expulsión LRU. PostgreSQL sigue siendo la fuente de verdad.
 
-Frontend: 128 MB/0,5 CPU; API, PostgreSQL y voz: 512 MB/1 CPU por servicio; MinIO: 384 MB/0,5 CPU. Los límites son por contenedor, no reservas de memoria. En un VPS con más capacidad ajústalos en `.env`: `FRONTEND_MEMORY/CPUS`, `API_MEMORY/CPUS`, `POSTGRES_MEMORY/CPUS`, `MINIO_MEMORY/CPUS`, `VOZ_MEMORY/CPUS`; aplica con `docker compose --profile voz up -d`. No hace falta editar el código ni Compose para ampliar recursos. Conserva RAM disponible para el sistema operativo. Los volúmenes utilizan el almacenamiento de Docker: en este PC está trasladado a D:, en Linux configura el disco de Docker antes de importar datos.
+Frontend: 128 MB/0,5 CPU; API y PostgreSQL: 512 MB/1 CPU por servicio; MinIO: 384 MB/0,5 CPU. Los límites son por contenedor, no reservas de memoria. En un servidor con más capacidad ajústalos en `.env`: `FRONTEND_MEMORY/CPUS`, `API_MEMORY/CPUS`, `POSTGRES_MEMORY/CPUS`, `MINIO_MEMORY/CPUS`; aplica con `docker compose up -d`. No hace falta editar el código ni Compose para ampliar recursos. Conserva RAM disponible para el sistema operativo. Los volúmenes utilizan el almacenamiento de Docker: en este PC está trasladado a D:, en Linux configura el disco de Docker antes de importar datos.
 
 ```bash
 npm run verificar
@@ -314,8 +267,6 @@ npm run prueba:cache
 docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml up -d --wait
 npm run prueba:integracion
 ```
-
-La instancia QA usa otro proyecto/volúmenes y puerto [8180](http://localhost:8180/) para el frontend, 3100 para API. Termina con `docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml --profile voz down` **sin `-v`**, incluyendo el servicio opcional de voz. No ejecutes pruebas que escriben contra la base del negocio. La configuración portátil queda lista para el VPS, pero una prueba local no acredita conectividad, firewall, DNS ni HTTPS del servidor remoto.
 
 En Windows, con QA arriba, `node --env-file=.env Backend/scripts/probar-cache-caida.cjs` detiene únicamente Redis de `ambie-integracion`, escribe un gasto QA, verifica los totales y restaura Redis en `finally`. No ejecutes esa prueba contra producción. Al actualizar el frontend, recarga las pestañas abiertas para usar la nueva compilación.
 
@@ -394,7 +345,6 @@ La documentación vive en `docs/` en dos zonas:
 |---|---|
 | [arquitectura-backend.md](docs/info/arquitectura-backend.md) | Diseño original del backend y límites de la v1. |
 | [AUDITORIA_PROFESIONAL.md](docs/info/AUDITORIA_PROFESIONAL.md) | Evidencia ejecutada de las validaciones (con fechas). |
-| [CLI.md](docs/info/CLI.md) | Manual del CLI con IA. |
 | [DESPLIEGUE_CONTINUO.md](docs/info/DESPLIEGUE_CONTINUO.md) | Publicación desde el repositorio hacia el servidor. |
 | [diccionario-contrato-api.md](docs/info/diccionario-contrato-api.md) | Contrato de la API por ruta. |
 | [modelo-datos.md](docs/info/modelo-datos.md) | Mapeo frontend → base de datos. |
@@ -410,56 +360,24 @@ Los paneles conservan los registros y formularios durante el refresco en segundo
 Pruebas de navegador requieren Chrome instalado y las dependencias de desarrollo (`npm install` desde la raíz). En PowerShell usar `npm.cmd`:
 
 ```powershell
-docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml --profile voz up -d --build --wait
+docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml up -d --build --wait
 $env:BASE_PRUEBAS_API='http://localhost:3100/api/v1'
 npm.cmd run prueba:integracion
 npm.cmd run demo:catalogo
-npm.cmd run prueba:asistente:ui
 npm.cmd run prueba:paneles
-npm.cmd run prueba:voz
-docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml --profile voz down
+docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml down
 ```
-
-`prueba:asistente:ui` requiere QA y sus usuarios de integración: usa el frontend compilado real, transcripciones controladas y API/PostgreSQL QA reales. Pedidos prueban interpretación básica real; los otros módulos reciben intenciones simuladas para aislar formularios, confirmación, permisos y persistencia sin consumir proveedores externos. `prueba:paneles` usa Chrome y Nginx/API/PostgreSQL QA reales; verifica todos los módulos, filtros, retroceso, scroll y sincronización a 390×844, 390×320 y 1440×320. Ambos conservan sus registros ficticios y capturas privadas en `.local/pruebas-ui`. No sustituyen micrófono físico, acentos y ruido reales. Ver [flujo de voz y matriz de pruebas](docs/info/FLUJOS_VOZ.md).
 
 `demo:catalogo` carga 32 productos (Coca-Cola, Pepsi, papas, Doritos, De Todito, jugos naturales, sándwiches, entre otros), 8 clientes **ficticios** y pedidos con cantidades, estados y pagos variados. No contactes sus teléfonos ni trates esas ventas como reales. Repetirlo reutiliza nombres/teléfonos y las combinaciones de pedido ya existentes. `--solo-catalogo` omite los pedidos. No borra ejemplos anteriores ni se ejecuta automáticamente. Si se autoriza una instalación local de demostración, desde el host: `BASE_PRUEBAS_API=http://localhost:8080/api/v1` y `npm run demo:catalogo -- --demo-local-autorizado`. No usar en una empresa con datos reales para hacer pruebas.
 
-### Venta abierta y voz local
+### Venta ocasional y detalle del pedido
 
-Consulta la [guía de pruebas de dictado y configuración de Google Gemini](docs/info/PRUEBAS_VOZ_Y_GEMINI.md). El catálogo se puede consultar antes de guardar y sin escribir primero un modelo. El diagnóstico del micrófono permite ver la transcripción local sin crear pedidos.
+La venta ocasional registra un pedido y una factura sin crear un cliente. Solo admite efectivo o billetera; el crédito se bloquea en la API y PostgreSQL.
 
-La venta abierta registra un pedido y una factura sin crear un cliente. Solo admite efectivo o billetera; el crédito se bloquea también en la API y PostgreSQL.
+La pantalla final y el detalle muestran todas las líneas, cantidades, precios unitarios y subtotales guardados. No recalculan facturas históricas con precios nuevos del catálogo. Si falla la lectura posterior al guardado, se reintenta sin registrar otro pedido.
 
-Para activar el reconocimiento de voz en Docker:
-
-```bash
-docker compose --profile voz up -d --build
-```
-
-Todos estos servicios quedan agrupados bajo `capturador_pedidos_20` (nombre fijo en Compose). Solo se necesita una instancia de `voz`; no crear contenedores de reconocimiento independientes con `docker run`. API, BD y archivos permanecen separados dentro del mismo proyecto. Ver [organización y pruebas aisladas](infra/README.md).
-
-El administrador configura el asistente desde **Configuración**. El modo básico funciona sin clave ni consumo externo; también puede elegir proveedor, modelo y su propia clave. Vosk transcribe español localmente, con un límite de 512 MB y un núcleo. El audio no se guarda. La voz de respuesta utiliza una voz española local instalada en el dispositivo; si no existe, se muestra el texto.
-
-Tocar el micrófono activa la escucha; tocarlo de nuevo la detiene. Se mueve arrastrándolo o con las flechas del teclado. El dictado completo se interpreta al terminar; mientras hablas no modifica formularios. Completa los controles y abre la revisión existente, sin formularios ni modal propios del asistente. **Confirma** o **confirmar operación** utiliza el mismo guardado de la pantalla; **cancelar** descarta el borrador. Los sonidos diferencian procesamiento, revisión lista y guardado exitoso. Los cambios de estado respetan las mismas reglas de Pedidos.
-
-Por ejemplo: **crea un pedido para Isabel Rojas de dos Pepsi 400 ml, entrega inmediata, pago en efectivo**. Abre directamente el detalle anterior al guardado cuando todos los datos sean válidos. **Crear pedido**, **hacer pedido** y **crear venta** usan Ventas; Pedidos consulta documentos registrados. Un cliente inexistente o ambiguo exige aclaración. La venta ocasional no admite crédito.
-
-Se admiten plurales y nombres parciales inequívocos, por ejemplo **cinco yogures de durazno y uno de fresa**. Si hay varias presentaciones, pregunta cuál quieres y conserva las cantidades; nunca escoge al azar ni modifica medidas numéricas. Agrupa segmentos y espera 2,2 segundos sin nuevas transcripciones antes de interpretar. **Cambia las dos Pepsi 400 ml por cinco y el pago a transferencia** corrige el borrador y vuelve al mismo detalle. Cantidades inválidas, productos desconocidos o stock insuficiente no reemplazan el formulario visible.
-
-Antes del pago se muestran todas las líneas con cantidad, precio unitario y subtotal en la misma tarjeta del pedido. Las listas de pedidos incluyen una vista breve de productos; al abrir un pedido se ve el detalle completo con sus precios históricos. Los avisos del asistente ocupan como máximo dos líneas, tienen fondo semitransparente, no bloquean controles y desaparecen después de 3,5 segundos.
-
-Si falta algo, lo pregunta y no guarda. **Volver** usa el retroceso del flujo; puedes corregir manualmente y decir **revisar operación** para regresar a su confirmación. Después del guardado por voz vuelve a Ventas con el toast habitual y accesos a pedido, cliente y abono; **Ver factura del pedido confirmado** conserva el detalle. El guardado manual mantiene su pantalla de éxito. V4P1 no implica otra base de datos ni otra instalación del negocio.
-
-La pantalla final y el detalle del pedido muestran todas las líneas, cantidades, precios unitarios y subtotales guardados en PostgreSQL. No recalculan facturas históricas con precios nuevos del catálogo. La venta ocasional también muestra su detalle; si falla la lectura posterior al guardado, permite reintentar sin volver a registrar el pedido.
-
-En VPS se necesita HTTPS y un proxy que permita WebSocket para `/api/v1/asistente/voz`. El contenedor de voz no publica un puerto. En desarrollo sin Docker para la API, `VOZ_STT_URL` debe apuntar al servicio local de voz. La configuración cifrada se conserva en el volumen `asistente_config`; respalda ese volumen y conserva `ASISTENTE_CONFIG_SECRET` (o `JWT_SECRET` si no se configuró otro secreto). El CLI sigue independiente.
-
-```bash
-npm run prueba:asistente
-npm run verificar
-```
+Configuración conserva su ruta administrativa y permite acceder a Usuarios y Auditoría.
 
 - [Equivalencia de variables](EQUIVALENCIA_VARIABLES.txt)
-- [Pruebas aisladas y contenedor CLI/VPS](infra/README.md)
 - [Imágenes de productos](Frontend/public/assets/productos/README.md)
 - [Comprobantes](Frontend/public/assets/comprobantes/README.md)

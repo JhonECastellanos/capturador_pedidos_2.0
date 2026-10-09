@@ -12,7 +12,7 @@ import { formatoFechaHora } from "../../../utils/fechas";
 import { formatoMoneda } from "../../../utils/formato";
 import { TRANSICIONES_PEDIDO } from "@ambie/contrato";
 import { usaApi } from "../../../data/api";
-import { usePantallaVoz } from "../../asistente/pantalla-voz";
+
 import { DetalleProductosPedido } from "../components/DetalleProductosPedido";
 
 interface PedidoDetalleProps {
@@ -30,13 +30,11 @@ interface PedidoDetalleProps {
   /** Permite reactivar un pedido cancelado (reaplica stock, caja y cartera). */
   alReactivar?: () => void;
 }
-
 const estados: Array<{ valor: EstadoPedido; etiqueta: string; clase: string }> = (["pendiente", "en-preparacion", "entregado", "cancelado"] as EstadoPedido[]).map((valor) => ({
   valor,
   etiqueta: ETIQUETAS_ESTADO[valor],
   clase: CLASES_ESTADO[valor],
 }));
-
 /**
  * Detalle de pedido compacto: solo la lista central hace scroll,
  * la cabecera y el pie quedan siempre visibles.
@@ -48,7 +46,6 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
   const [confirmarCobro, setConfirmarCobro] = useState(false);
   const [metodoCobro, setMetodoCobro] = useState<"efectivo" | "billetera">("efectivo");
   const [confirmarReactivar, setConfirmarReactivar] = useState(false);
-
   const cliente = useMemo(() => obtenerCliente(pedido.clienteId), [obtenerCliente, pedido.clienteId]);
   const pagosDelPedido = useMemo(
     () => abonos.filter((abono) => abono.pedidosAfectados.some((p) => p.pedidoId === pedido.id)),
@@ -57,7 +54,6 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
   const pendiente = pedido.pago.saldoPendiente;
   const porPreparar = pedido.estado === "pendiente" || pedido.estado === "en-preparacion";
   const unidades = pedido.lineas.reduce((suma, linea) => suma + linea.cantidad, 0);
-
   async function confirmarCambioEstado() {
     if (!estadoPendiente || soloLectura) return false;
     const etiqueta = estadoPendiente.replace("-", " ");
@@ -66,7 +62,6 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
     mostrarAviso(`Pedido ${pedido.numero} → ${etiqueta}`, "exito");
     return true;
   }
-
   async function cobrarYEntregar() {
     if (pendiente <= 0 || !permitirCobro || soloLectura) return false;
     // El dinero recibido es de este pedido: no se reparte entre otras deudas del cliente.
@@ -82,17 +77,11 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
     mostrarAviso(`Cobrado ${formatoMoneda(pendiente)} · pedido entregado`, "exito");
     return true;
   }
-  usePantallaVoz(["cambiar_estado_pedido"], {
-    aplicar: p => { if (["pendiente", "en-preparacion", "entregado", "cancelado"].includes(String(p.estado))) setEstadoPendiente(p.estado as EstadoPedido); }, leer: () => ({ pedidoId: pedido.id, estado: estadoPendiente }), confirmar: confirmarCambioEstado, cancelar: () => setEstadoPendiente(null),
-  });
-  usePantallaVoz(["cobrar_pedido"], { aplicar: p => { if (typeof p.monto === "number" && p.monto !== pendiente) throw new Error("Esta pantalla cobra el saldo completo del pedido. Para abonar usa Recibir abono."); if (p.metodo === "efectivo" || p.metodo === "billetera") { setMetodoCobro(p.metodo); setConfirmarCobro(true); } }, leer: () => ({ pedidoId: pedido.id, metodo: metodoCobro }), confirmar: cobrarYEntregar, cancelar: () => setConfirmarCobro(false) });
-
   const etiquetaEstado = (
     <span className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-semibold ${porPreparar ? "bg-accent-soft text-accent-dark" : pedido.estado === "cancelado" ? "bg-danger-soft text-danger" : "bg-success-soft text-success"}`}>
       {pedido.estado.replace("-", " ")}
     </span>
   );
-
   return (
     <div className="flex h-full flex-col min-h-0">
       {/* ─── Cabecera ─── */}
@@ -120,7 +109,6 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
           {etiquetaEstado}
         </div>
       )}
-
       {/* ─── Resumen fijo: total, saldo y cliente ─── */}
       <div className="flex-shrink-0 px-5 pt-3 md:px-6">
         <div className="grid grid-cols-2 gap-2.5">
@@ -137,7 +125,6 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
             <p className="truncate text-[11px] text-ink-soft">{cliente?.telefono || "sin teléfono"}</p>
           </div>
         </div>
-
         {/* ─── Estados: gestión o consulta según el módulo ─── */}
         {soloLectura ? (
           <div className="mt-3 rounded-xl border border-line bg-paper-sunken/60 px-3 py-2">
@@ -171,7 +158,6 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
         </div>
         )}
       </div>
-
       {/* ─── Único scroll: líneas e historial ─── */}
       <div className="mt-2.5 flex-1 min-h-0 overflow-y-auto no-scrollbar px-5 pb-2 md:px-6">
         <div className="rounded-2xl border border-line bg-paper-sunken/30 p-2">
@@ -192,7 +178,6 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
               ))}
             </ul>
           </div>
-
           {pagosDelPedido.length > 0 && (
             <div className="mt-2 rounded-xl border border-success/25 bg-success-soft/60 px-3 py-2">
               <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-success">Pagos recibidos</p>
@@ -213,9 +198,7 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
           )}
         </div>
       </div>
-
       <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
-
       {/* ─── Pie fijo ─── */}
       {(!soloLectura || pedido.comprobantePagoUrl || (pedido.estado === "cancelado" && alReactivar)) && (
         <BarraInferior>
@@ -284,7 +267,6 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
           </div>
         </BarraInferior>
       )}
-
       <ConfirmarAccion
         abierto={estadoPendiente !== null}
         titulo="Cambiar estado"
@@ -298,7 +280,6 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
         alCancelar={() => setEstadoPendiente(null)}
         alConfirmar={confirmarCambioEstado}
       />
-
       <ConfirmarAccion
         abierto={confirmarReactivar}
         titulo="Reactivar pedido"
@@ -311,7 +292,6 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
           alReactivar?.();
         }}
       />
-
       <ConfirmarAccion
         abierto={confirmarCobro}
         titulo="Cobrar y entregar"

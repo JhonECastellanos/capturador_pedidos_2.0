@@ -8,8 +8,7 @@ import { useAviso } from "../../../components/useAviso";
 import { useOperaciones } from "../../../context/operaciones";
 import type { NuevoUsuario, UsuarioSistema } from "../../../types";
 import { useAuth } from "../../../context/auth";
-import { usePantallaVoz } from "../../asistente/pantalla-voz";
-import { resolverReferencia } from "../../asistente/intencion";
+
 import { BuscadorInput } from "../../../components/BuscadorInput";
 import { Paginacion } from "../../../components/Paginacion";
 import { POR_PAGINA, paginar } from "../../../utils/paginacion";
@@ -46,10 +45,6 @@ export function UsuariosAdmin() {
     setVista("lista");
     return true;
   }
-  usePantallaVoz(["crear_usuario"], {
-    aplicar: (p, campo) => { setVista("crear"); setPasoCrear(campo ? 1 : 2); setUsuarioNuevo(u => ({ ...u, nombre: typeof p.nombre === "string" ? p.nombre : u.nombre, email: typeof p.email === "string" ? p.email : u.email, rol: p.rol === "administrador" || p.rol === "vendedor" ? p.rol : u.rol })); },
-    leer: () => ({ ...usuarioNuevo }), confirmar: () => guardarUsuario(), cancelar: () => { setUsuarioNuevo({ nombre: "", email: "", rol: "vendedor", password: "" }); setVista("lista"); },
-  });
 
   async function confirmarEstado() {
     if (!confirmarEstadoId || confirmarEstadoId === sesion?.id) return false;
@@ -63,14 +58,7 @@ export function UsuariosAdmin() {
     if (!await cambiarRolUsuario(cambioRol.id, cambioRol.rol)) return false;
     setCambioRol(null); mostrarAviso("Rol actualizado y sesiones cerradas", "exito"); return true;
   }
-  usePantallaVoz(["cambiar_estado_usuario"], {
-    aplicar: p => { setVista("lista"); const id = resolverReferencia(p.usuarioId, usuarios); if (id && id !== sesion?.id) setConfirmarEstadoId(id); },
-    leer: () => ({ usuarioId: confirmarEstadoId }), confirmar: confirmarEstado, cancelar: () => setConfirmarEstadoId(null),
-  });
-  usePantallaVoz(["cambiar_rol_usuario"], {
-    aplicar: p => { setVista("lista"); const id = resolverReferencia(p.usuarioId, usuarios); if (id && id !== sesion?.id && (p.rol === "administrador" || p.rol === "vendedor")) setCambioRol({ id, rol: p.rol }); },
-    leer: () => ({ usuarioId: cambioRol?.id, rol: cambioRol?.rol }), confirmar: confirmarRol, cancelar: () => setCambioRol(null),
-  });
+
   function abrirCrear() {
     setPasoCrear(1);
     setVista("crear");

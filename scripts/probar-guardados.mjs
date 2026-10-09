@@ -12,7 +12,6 @@ test('Un intento dudoso conserva la clave; confirmar o cambiar datos crea otra i
   resolverGuardado(primera);
   assert.notEqual((await claveGuardado('/pedidos', 'POST', datos)).clave, primera.clave);
   assert.equal(await claveGuardado('/auth/login', 'POST', { password: 'no-se-almacena' }), null);
-  assert.equal(await claveGuardado('/asistente/entender', 'POST', {}), null);
   assert.equal(await claveGuardado('/productos', 'GET', undefined), null);
   limpiarGuardados();
 });

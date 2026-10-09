@@ -64,10 +64,10 @@ COPY --from=build /app/Compartido/dist ./Compartido/dist
 COPY --from=prod-deps /app/Compartido/package.json ./Compartido/package.json
 COPY --from=prod-deps /app/Backend/package.json ./package.json
 
-# tsx ejecuta el CLI y los scripts; el CLI de Prisma aplica las migraciones del
+# tsx ejecuta la semilla y los scripts; Prisma aplica las migraciones del
 # servicio `migrate`. Se instalan de forma global porque con NODE_ENV=production
 # npm omite las dependencias de desarrollo y así no alteran el árbol de la API.
-# La versión del CLI se toma del cliente instalado para que no queden
+# La versión de Prisma se toma del cliente instalado para que no queden
 # desalineados, y después se genera el cliente dentro de la imagen.
 RUN TSX_VERSION=$(node -p "require('./package.json').devDependencies.tsx.replace(/^[^0-9]*/, '')") \
  && PRISMA_VERSION=$(node -p "require('./node_modules/@prisma/client/package.json').version") \
@@ -78,13 +78,11 @@ RUN TSX_VERSION=$(node -p "require('./package.json').devDependencies.tsx.replace
 COPY --from=build /app/Backend/dist ./dist
 COPY --from=build /app/Backend/prisma ./prisma
 COPY --from=build /app/Backend/src/common/consecutivos.ts ./src/common/consecutivos.ts
-COPY --from=build /app/Backend/cli ./cli
 COPY --from=build /app/Backend/scripts ./scripts
 RUN prisma generate --schema prisma/schema.prisma
 
 # La API no debería ejecutarse como root.
-RUN addgroup -S ambie && adduser -S ambie -G ambie \
- && mkdir -p /home/ambie/.ambie/config && chown -R ambie:ambie /home/ambie/.ambie
+RUN addgroup -S ambie && adduser -S ambie -G ambie
 USER ambie
 
 EXPOSE 3000
@@ -95,18 +93,6 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/v1/salud').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 CMD ["node", "dist/main.js"]
-
-# El CLI reutiliza exactamente el backend compilado; su estado vive en un
-# volumen propio y no recibe credenciales de PostgreSQL ni MinIO.
-FROM servidor AS agente
-USER root
-COPY --from=build /app/Backend/src ./src
-RUN mkdir -p /home/ambie/.ambie && chown -R ambie:ambie /home/ambie/.ambie
-USER ambie
-ENV AMBIE_CONFIG=/home/ambie/.ambie/cli.json
-HEALTHCHECK NONE
-ENTRYPOINT ["tsx", "cli/index.ts"]
-CMD ["--help"]
 
 # La imagen por defecto sigue siendo la API existente.
 FROM servidor AS runtime

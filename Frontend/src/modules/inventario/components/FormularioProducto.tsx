@@ -2,15 +2,11 @@ import { useState, type FormEvent } from "react";
 import { Boton } from "../../../components/Boton";
 import { categorias } from "../../../data/semilla";
 import type { NuevoProducto } from "../../../types";
-import { usePantallaVoz } from "../../asistente/pantalla-voz";
-
 interface FormularioProductoProps {
   alGuardar: (datos: NuevoProducto, archivo: File | null) => boolean | Promise<boolean>;
   alCancelar: () => void;
 }
-
 const campo = "rounded-lg border border-line bg-paper-raised px-3 py-2.5 text-[13px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none";
-
 const ESTADO_INICIAL = {
   nombre: "",
   categoria: "Abarrotes",
@@ -20,12 +16,10 @@ const ESTADO_INICIAL = {
   stock: "",
   stockMinimo: "20",
 };
-
 /** Alta completa de producto, compartida por el inventario del administrador. */
 export function FormularioProducto({ alGuardar, alCancelar }: FormularioProductoProps) {
   const [producto, setProducto] = useState(ESTADO_INICIAL);
   const [archivo, setArchivo] = useState<File | null>(null);
-
   async function guardar(evento?: FormEvent<HTMLFormElement>) {
     evento?.preventDefault();
     const guardado = await alGuardar(
@@ -45,11 +39,6 @@ export function FormularioProducto({ alGuardar, alCancelar }: FormularioProducto
     setArchivo(null);
     return true;
   }
-  usePantallaVoz(["crear_producto"], {
-    aplicar: p => setProducto(f => Object.fromEntries(Object.entries(f).map(([k, v]) => [k, typeof p[k] === "string" || typeof p[k] === "number" ? String(p[k]) : v])) as typeof producto),
-    leer: () => ({ ...producto, precioVenta: Number(producto.precioVenta), costoActual: Number(producto.costoActual || 0), stock: Number(producto.stock), stockMinimo: Number(producto.stockMinimo || 0) }), confirmar: () => guardar(), cancelar: alCancelar,
-  });
-
   return (
     <form onSubmit={guardar} className="rounded-2xl border border-line bg-paper-raised p-4 max-w-lg">
       <div className="flex items-center justify-between border-b border-line pb-2.5">

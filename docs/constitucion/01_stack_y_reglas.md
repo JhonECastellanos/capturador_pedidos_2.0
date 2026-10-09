@@ -23,10 +23,8 @@ Aplicación para el día a día de un negocio de ventas: clientes, productos, pe
 | Validación | Zod 3 | Esquemas compartidos en `Compartido/src/esquemas.ts`. |
 | Contraseñas | Argon2id | |
 | Contrato | `@ambie/contrato` | Workspace npm con DTO, enums y esquemas. |
-| CLI | tsx | `Backend/cli/`; fuera de `nest build`, se revisa con `tsconfig.cli.json`. |
 | Caché | Redis 7 interno | TTL 5 min, expulsión LRU; sin puerto publicado. |
 | Archivos | MinIO privado | Imágenes y comprobantes con autenticación; máximo 5 MB. |
-| Voz | Vosk local (español) | Un único contenedor interno, sin puerto. |
 | Servidor web | Nginx en el contenedor `frontend` | SPA + proxy de API y WebSocket. |
 | Orquestación | Docker Compose | Proyecto único `capturador_pedidos_20`. |
 | Lint frontend | oxlint | `npm run front:lint`. |
@@ -41,7 +39,6 @@ Aplicación para el día a día de un negocio de ventas: clientes, productos, pe
 4. **Nada se borra**: documentos y auditoría usan `activo`, `estado`, `anuladoEn`, `revertidoEn`. La auditoría guarda **metadatos, nunca cuerpos, contraseñas ni tokens**.
 5. Dinero: `numeric(18,2)` en base, **cadena decimal** en JSON, nunca `float`; cantidades enteras; los saldos son **derivados** de las aplicaciones (no se guardan duplicados).
 6. Fechas: ISO 8601; filtros y cierres con `YYYY-MM-DD` y calendario local `America/Bogota`.
-7. **Consecutivos** (`USR`, `CLI`, `PROD`, `PRV`, `TC`, `PED`, `REC`, `FAC`): globales, sin reinicio anual y sin huecos. SIEMPRE dentro de la transacción, mediante `Backend/src/common/consecutivos.ts`. Si la transacción falla, el número no se consume.
 
 ### 3.2 Transacciones e invariantes
 
@@ -63,7 +60,7 @@ Aplicación para el día a día de un negocio de ventas: clientes, productos, pe
 17. Pruebas que escriben: SOLO contra QA (`ambie-integracion`: frontend 8180, API 3100; `BASE_PRUEBAS_API` limitada a `localhost:3100` o `localhost:8180`). NUNCA contra la base del negocio.
 18. NUNCA `docker:limpiar`, `docker compose down -v`, podas de volúmenes ni restauraciones sobre el negocio sin autorización específica. No borrar respaldos ni datos QA.
 19. `npm run verificar` (contrato + API + frontend) es la puerta de salida de todo cambio de código. Revisión de interfaz a 390×844 y 1440 px; el login también a 320×320 / poca altura.
-20. NUNCA activar proveedores de IA ni Cloudflare por iniciativa propia ni consumir claves. El CLI y el asistente respetan la configuración existente; `--help` y `rutas` no llaman modelos.
+20. NUNCA activar Cloudflare por iniciativa propia.
 21. Distinguir resultados históricos de pruebas actuales. Una prueba concreta no garantiza ausencia de fallos ni capacidad para 100.000 pedidos.
 
 ### 3.5 Contrato, TypeScript y caché

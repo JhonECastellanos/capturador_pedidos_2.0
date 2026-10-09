@@ -61,7 +61,7 @@ export class AuthController {
 
     const emitido = await this.auth.login(datos.data.identifier, datos.data.password);
 
-    // El navegador usa cookies HttpOnly; el CLI y las integraciones leen
+    // El navegador usa cookies HttpOnly; las integraciones leen
     // los tokens del cuerpo y envían `Authorization: Bearer`.
     this.ponerCookies(reply, emitido.accessToken, emitido.refreshToken);
 

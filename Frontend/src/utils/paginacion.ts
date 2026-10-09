@@ -3,7 +3,6 @@
  * Fast Refresh: un archivo que exporta un componente no debe exportar
  * también constantes ni funciones).
  */
-
 export const POR_PAGINA = 30;
 
 export function paginar<T>(
@@ -17,7 +16,6 @@ export function paginar<T>(
   const items = lista.slice(inicio, inicio + porPagina);
   return { items, totalPaginas, inicio: lista.length === 0 ? 0 : inicio + 1, fin: inicio + items.length };
 }
-
 export function totalPaginasDe(total: number, porPagina: number = POR_PAGINA): number {
   return Math.max(1, Math.ceil(total / porPagina));
 }

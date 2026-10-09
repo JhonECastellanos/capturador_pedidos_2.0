@@ -93,8 +93,7 @@ export async function respuestaRed<T>(ruta: string, metodo = "GET", datos?: unkn
 export async function respuestaApi<T>(ruta: string, metodo = "GET", datos?: unknown): Promise<T> {
   if (metodo === "GET" && !ruta.startsWith("/auth/") && ruta !== "/salud") return consultas.fetchQuery({ queryKey: claveConsulta(ruta), queryFn: ({ signal }) => respuestaRed<T>(ruta, "GET", undefined, signal) });
   const respuesta = await respuestaRed<T>(ruta, metodo, datos);
-  // Interpretar una frase o emitir un ticket no modifica los datos del negocio.
-  if (metodo !== "GET" && !ruta.startsWith("/auth/") && !["/asistente/entender", "/asistente/voz/sesion", "/asistente/modelos", "/asistente/conexion"].includes(ruta)) await consultas.invalidateQueries({ queryKey: ["api"] });
+  if (metodo !== "GET" && !ruta.startsWith("/auth/")) await consultas.invalidateQueries({ queryKey: ["api"] });
   return respuesta;
 }
 

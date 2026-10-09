@@ -1,12 +1,18 @@
 // Navegador real y API/BD QA. No escribe en la instalación del negocio.
 const assert = require('node:assert/strict');
-const { mkdir } = require('node:fs/promises');
+const { mkdir, writeFile } = require('node:fs/promises');
+const { execFileSync } = require('node:child_process');
+const { performance } = require('node:perf_hooks');
 const { resolve } = require('node:path');
 const { chromium } = require('playwright');
 
 async function main() {
   const base = process.env.BASE_PRUEBAS_UI || 'http://localhost:8180';
   assert.equal(base, 'http://localhost:8180', 'Solo frontend QA 8180');
+  const compose = ['compose', '-p', 'ambie-integracion', '-f', 'docker-compose.yml', '-f', 'docker-compose.pruebas.yml'];
+  const usuarioBd = execFileSync('docker.exe', [...compose, 'exec', '-T', 'postgres', 'printenv', 'POSTGRES_USER'], { encoding: 'utf8' }).trim();
+  const sql = consulta => JSON.parse(execFileSync('docker.exe', [...compose, 'exec', '-T', 'postgres', 'psql', '-U', usuarioBd, '-d', 'ambie_test', '-At', '-v', 'ON_ERROR_STOP=1', '-c', consulta], { encoding: 'utf8' }));
+  const mediciones = [];
   await mkdir(resolve('.local/pruebas-ui'), { recursive: true });
   const browser = await chromium.launch({ headless: true, channel: 'chrome' });
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
@@ -41,7 +47,7 @@ async function main() {
     assert.equal(despues.documento, anterior.documento, nombre + ': sin recargar documento');
     if (!despues.panelConservado || !despues.listaConservada) await page.screenshot({ path: resolve('.local/pruebas-ui', `fallo-nodos-${nombre.toLowerCase()}.png`) });
     assert.ok(despues.panelConservado && despues.listaConservada, nombre + ': conserva nodos ' + JSON.stringify({ anterior, despues }));
-    assert.ok(Math.abs(despues.scroll - anterior.scroll) <= 1, nombre + ': conserva scroll');
+    assert.ok(Math.abs(despues.scroll - anterior.scroll) <= 1, nombre + ': conserva scroll ' + JSON.stringify({ anterior, despues }));
     console.log(`✓ ${nombre}: tres sincronizaciones sin desmontaje, recarga ni salto de scroll`);
   }
   async function filtro(placeholder, q, visible) {
@@ -154,9 +160,9 @@ async function main() {
     await page.getByRole('combobox').selectOption('pedidos'); await reposo();
     await page.getByRole('combobox').selectOption(''); await reposo();
     await abrir('Configuración', '/admin/configuracion'); await estable('Configuración');
-    await page.getByRole('button', { name: 'Comprobar servicio de voz', exact: true }).click(); await reposo();
-    await page.getByText('Reconocimiento local disponible.', { exact: false }).waitFor();
-    await abrir('Inicio', '/admin'); console.log('✓ Configuración: diagnóstico local y regreso, sin proveedor externo');
+    await page.getByRole('heading', { name: 'Configuración general', exact: true }).waitFor();
+    await page.getByRole('link', { name: 'Administrar usuarios', exact: true }).waitFor();
+    await abrir('Inicio', '/admin'); console.log('✓ Configuración general y regreso');
 
     for (const viewport of [{ width: 390, height: 844 }, { width: 390, height: 320 }, { width: 1440, height: 320 }]) {
       await page.setViewportSize(viewport); await abrir('Precios', '/admin/precios');
@@ -169,6 +175,26 @@ async function main() {
     }
     console.log('✓ 390×844, 390×320 y 1440×320: tarjetas ≥64 px, lista ≥160 px y scroll del panel');
     // Venta exclusivamente QA, desde el formulario real hasta PostgreSQL y la factura.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(base + '/admin/ventas/clientes/nuevo'); await reposo();
+    const nombreCliente = `Validación formulario ${Date.now()}`;
+    await page.getByPlaceholder('Ej. Jaimito el de los pantalones').fill(nombreCliente);
+    await page.getByPlaceholder('300 000 0000').fill('3009999981');
+    await page.getByPlaceholder('Ej. Local 12 · Calle 45 #12-30').fill('Dirección de pruebas');
+    await page.locator('input[type=date]').fill('1990-05-21');
+    const guardadoCliente = page.waitForResponse(r => r.url().endsWith('/api/v1/clientes') && r.request().method() === 'POST');
+    const inicioCliente = performance.now();
+    await page.getByRole('button', { name: 'Guardar cliente', exact: true }).click();
+    const respuestaCliente = await guardadoCliente; assert.equal(respuestaCliente.status(), 201);
+    const confirmadoClienteMs = performance.now() - inicioCliente;
+    const clienteFormulario = (await respuestaCliente.json()).data;
+    assert.match(clienteFormulario.id, /^[a-f0-9-]{36}$/i);
+    const filaCliente = sql(`SELECT row_to_json(c) FROM clientes c WHERE c.id='${clienteFormulario.id}';`);
+    assert.equal(filaCliente.nombre, nombreCliente); assert.equal(filaCliente.telefono, '3009999981');
+    assert.equal(filaCliente.direccion, 'Dirección de pruebas'); assert.equal(filaCliente.fechaNacimiento, '1990-05-21');
+    mediciones.push({ formulario: 'cliente', respuestaConfirmadaMs: +confirmadoClienteMs.toFixed(1), bdObservadaMs: +(performance.now()-inicioCliente).toFixed(1), correcto: true });
+    console.log('✓ Cliente: datos digitados y fecha coinciden con PostgreSQL al responder el guardado');
+
     const marcaFactura = `QA-Factura-${Date.now()}`;
     const productosFactura = [];
     for (const [nombre, precioVenta] of [['Coca-Cola 400 ml', 3500], ['Doritos queso', 5200]]) {
@@ -187,9 +213,17 @@ async function main() {
     await page.getByRole('button', { name: /Entregado ahora/ }).click();
     await page.getByRole('button', { name: /Continuar al pago/ }).click();
     const guardadoFactura = page.waitForResponse(r => r.url().endsWith('/api/v1/pedidos') && r.request().method() === 'POST');
+    const inicioFactura = performance.now();
     await page.getByRole('button', { name: /Confirmar pedido/ }).click();
     const respuestaFactura = await guardadoFactura; assert.equal(respuestaFactura.status(), 201);
+    const confirmadoFacturaMs = performance.now() - inicioFactura;
     const factura = (await respuestaFactura.json()).data;
+    assert.match(factura.id, /^[a-f0-9-]{36}$/i);
+    const filaPedido = sql(`SELECT json_build_object('total', p.total, 'estado', p.estado, 'metodo', p.metodo, 'clienteId', p."clienteId", 'lineas', (SELECT json_agg(json_build_object('productoId', l."productoId", 'cantidad', l.cantidad, 'precioUnitario', l."precioUnitario", 'subtotal', l.subtotal) ORDER BY l.orden) FROM "pedidoLineas" l WHERE l."pedidoId"=p.id), 'pagado', (SELECT COALESCE(SUM(a."montoAplicado"),0) FROM "pagoAplicaciones" a WHERE a."pedidoId"=p.id AND a."revertidoEn" IS NULL), 'caja', (SELECT COALESCE(SUM(CASE WHEN m.tipo='ingreso' THEN m.monto ELSE -m.monto END),0) FROM "movimientosCaja" m WHERE m."pagoId" IN (SELECT a."pagoId" FROM "pagoAplicaciones" a WHERE a."pedidoId"=p.id))) FROM pedidos p WHERE p.id='${factura.id}';`);
+    assert.equal(filaPedido.total, 22600); assert.equal(filaPedido.pagado, 22600); assert.equal(filaPedido.caja, 22600);
+    assert.equal(filaPedido.estado, 'entregado'); assert.equal(filaPedido.metodo, 'efectivo'); assert.equal(filaPedido.clienteId, null);
+    assert.deepEqual(filaPedido.lineas, factura.lineas.map(l => ({ productoId: l.productoId, cantidad: l.cantidad, precioUnitario: l.precioUnitario, subtotal: l.subtotal })));
+    mediciones.push({ formulario: 'pedido', respuestaConfirmadaMs: +confirmadoFacturaMs.toFixed(1), bdObservadaMs: +(performance.now()-inicioFactura).toFixed(1), total: filaPedido.total, cantidades: filaPedido.lineas.map(l=>l.cantidad), correcto: true });
     await page.waitForURL(base + '/admin/ventas/completado');
     const detalleFactura = page.getByRole('region', { name: 'Detalle de productos' });
     await detalleFactura.waitFor(); assert.equal(await detalleFactura.locator('li').count(), 2);
@@ -208,6 +242,13 @@ async function main() {
     assert.ok(!(await detalleFactura.innerText()).includes('9.000'));
     await page.screenshot({ path: resolve('.local/pruebas-ui', 'factura-real-qa.png') });
     console.log('✓ Factura móvil: venta real QA de dos productos, cantidades 2/3, persistencia y precios históricos tras cambio y recarga');
+    const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
+    const resumen = (await (await context.request.get(base + `/api/v1/dashboard/resumen?desde=${hoy}&hasta=${hoy}`)).json()).data;
+    const totalesBd = sql(`SELECT json_build_object('ventas', COALESCE(SUM(total),0), 'pedidos', COUNT(*)) FROM pedidos WHERE "fechaOperacion"='${hoy}'::date AND estado<>'cancelado';`);
+    assert.equal(resumen.ventas, totalesBd.ventas); assert.equal(resumen.pedidos, totalesBd.pedidos);
+    assert.equal(resumen.ticketPromedio, totalesBd.pedidos ? Math.round(totalesBd.ventas / totalesBd.pedidos * 100) / 100 : 0);
+    await writeFile(resolve('.local/pruebas-ui', 'conciliacion-formularios.json'), JSON.stringify({ fecha: new Date().toISOString(), base, mediciones, totalesBd, alcance: 'Click a respuesta confirmada; la observación posterior incluye Docker/psql. No mide por separado el instante interno del commit.' }, null, 2));
+    console.log('✓ Totales: ventas, cantidad de pedidos y ticket promedio coinciden en API y PostgreSQL');
     assert.deepEqual(errores, []);
   } finally { await context.close(); await browser.close(); }
 }

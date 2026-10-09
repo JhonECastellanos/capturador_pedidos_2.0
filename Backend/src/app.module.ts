@@ -1,7 +1,6 @@
 import { Module } from "@nestjs/common";
 import { SincronizacionModule } from "./sincronizacion/sincronizacion.module";
 import { ConfigModule } from "@nestjs/config";
-import { AsistenteModule } from "./asistente/asistente.module";
 import { APP_GUARD, APP_INTERCEPTOR } from "@nestjs/core";
 import { AuditoriaModule } from "./auditoria/auditoria.module";
 import { AuditoriaInterceptor } from "./common/auditoria.interceptor";
@@ -45,7 +44,6 @@ import { DashboardModule } from "./dashboard/dashboard.module";
     DashboardModule,
     AuditoriaModule,
     ArchivosModule,
-    AsistenteModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: AuthGuard }, { provide: APP_INTERCEPTOR, useClass: GuardadoInterceptor }, { provide: APP_INTERCEPTOR, useClass: AuditoriaInterceptor }],
 })

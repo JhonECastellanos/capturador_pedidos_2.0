@@ -16,8 +16,6 @@ import type { AbonoCredito } from "../../../types";
 import { formatoMoneda } from "../../../utils/formato";
 import { BadgeMora } from "../components/BadgeMora";
 import { FormularioAbono } from "../components/FormularioAbono";
-import { usePantallaVoz } from "../../asistente/pantalla-voz";
-import { resolverReferencia } from "../../asistente/intencion";
 
 interface AbonosProps {
   onVolver: () => void;
@@ -97,15 +95,6 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
     }
     return true;
   }
-  usePantallaVoz(["recibir_abono"], {
-    aplicar: (p, campo) => {
-      setConfirmarCobro(!campo);
-      if (p.clienteId) { const id = resolverReferencia(p.clienteId, clientes); if (id) setClienteId(id); else setBusqueda(String(p.clienteId)); }
-      if (typeof p.monto === "number") setMonto(String(p.monto));
-      if (p.metodo === "efectivo" || p.metodo === "billetera") setMetodo(p.metodo);
-      if (typeof p.comentario === "string") setComentario(p.comentario);
-    }, leer: () => ({ clienteId, monto: Number(monto), metodo, comentario }), confirmar: confirmarAbono, cancelar: cerrarDetalle,
-  });
 
   // ─── Detalle de cliente ───
   if (detalle) {

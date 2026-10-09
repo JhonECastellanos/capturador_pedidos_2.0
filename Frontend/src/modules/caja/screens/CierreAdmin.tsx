@@ -11,8 +11,7 @@ import { useOperaciones } from "../../../context/operaciones";
 import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodoFecha, dentroDeRangoFechaStr, esAyer, esMismoDia, fechaLocalStr, type Periodo } from "../../../utils/fechas";
 import { formatoMoneda } from "../../../utils/formato";
 import { fechaOperativa } from "../../../utils/fechas";
-import { usePantallaVoz } from "../../asistente/pantalla-voz";
-import { resolverReferencia } from "../../asistente/intencion";
+
 import { usaApi } from "../../../data/api";
 
 type FiltroPagoCierre = "todos" | "credito" | "efectivo" | "billetera";
@@ -42,7 +41,6 @@ export function CierreAdmin() {
   const [filtroPago, setFiltroPago] = useState<FiltroPagoCierre>("todos");
   const [mostrarPendientes, setMostrarPendientes] = useState(false);
   const [confirmarEliminarId, setConfirmarEliminarId] = useState<string | null>(null);
-  const [trasladoId, setTrasladoId] = useState<string | null>(null);
   const { aviso, mostrarAviso, cerrarAviso } = useAviso();
 
   const hoy = useMemo(() => new Date(), []);
@@ -150,21 +148,13 @@ export function CierreAdmin() {
     setPendientesCancelados(0);
     return true;
   }
-  usePantallaVoz(["registrar_cierre"], {
-    aplicar: (p, campo) => { if (p.fecha && p.fecha !== fechaHoyStr) throw new Error("Esta pantalla registra el cierre de hoy. Revisa la fecha."); if ((Array.isArray(p.cancelar) && p.cancelar.length) || (Array.isArray(p.trasladar) && p.trasladar.length)) throw new Error("Confirma cada cancelación o traslado desde los pedidos pendientes antes de cerrar."); setVista("cierre"); setPasoCierre(campo ? 1 : 2); if (typeof p.conteoEfectivo === "number") setConteoEfectivo(String(p.conteoEfectivo)); if (typeof p.conteoBilletera === "number") setConteoBilletera(String(p.conteoBilletera)); },
-    leer: () => ({ fecha: fechaHoyStr, conteoEfectivo: conteoEfNum ?? undefined, conteoBilletera: conteoBilleteraNum ?? undefined }), confirmar: confirmarCierreFinal, volver: () => { if (pasoCierre === 2) setPasoCierre(1); else setVista("historial"); }, cancelar: () => { setVista("historial"); setConteoEfectivo(""); setConteoBilletera(""); },
-  });
+
   async function trasladar(id: string) {
     const pedido = pendientesHoy.find(p => p.id === id);
     if (!pedido || await trasladarPedidoAHoy(id) === false) return false;
     setPendientesTrasladados(actual => actual + 1);
-    mostrarAviso(`${pedido.numero} ${esAyer(fechaOperativa(pedido), hoy) ? "pasa a hoy" : "se reprogramó para mañana"}`, "exito");
-    setTrasladoId(null); return true;
+    mostrarAviso(`${pedido.numero} ${esAyer(fechaOperativa(pedido), hoy) ? "pasa a hoy" : "se reprogramó para mañana"}`, "exito"); return true;
   }
-  usePantallaVoz(["trasladar_pedido"], {
-    aplicar: p => { setVista("cierre"); setPasoCierre(1); setMostrarPendientes(true); const id = resolverReferencia(p.pedidoId, pendientesHoy.map(p => ({ id: p.id, nombre: p.numero }))); setTrasladoId(id || null); const pedido = pendientesHoy.find(p => p.id === id); setBusquedaPend(pedido?.numero ?? ""); setFiltroPago("todos"); },
-    leer: () => ({ pedidoId: trasladoId }), confirmar: () => trasladoId ? trasladar(trasladoId) : Promise.resolve(false), cancelar: () => { setTrasladoId(null); setBusquedaPend(""); },
-  });
 
   // ══════════════════════════════════════════════════════════════════════════
   // MÓDULO PASO A PASO: CIERRE (Paso 1: Conteo, Paso 2: Resumen)

@@ -3,9 +3,7 @@
  * Todo el almacenamiento usa ISO; los filtros trabajan con fecha local
  * para evitar desfases UTC en los cierres.
  */
-
 export type Periodo = "hoy" | "ayer" | "semana" | "mes" | "anio" | "todo";
-
 export const PERIODOS: Periodo[] = ["hoy", "ayer", "semana", "mes", "anio", "todo"];
 
 /** DATE de la API es un día contable, no un instante UTC que deba desplazarse. */
@@ -22,13 +20,11 @@ export const ETIQUETA_PERIODO: Record<Periodo, string> = {
   anio: "Año",
   todo: "Todo",
 };
-
 export function inicioDelDia(fecha: Date): Date {
   const copia = new Date(fecha);
   copia.setHours(0, 0, 0, 0);
   return copia;
 }
-
 export function esMismoDia(fechaIso: string, referencia: Date): boolean {
   const fecha = new Date(fechaIso);
   return (
@@ -37,13 +33,11 @@ export function esMismoDia(fechaIso: string, referencia: Date): boolean {
     fecha.getDate() === referencia.getDate()
   );
 }
-
 export function esAyer(fechaIso: string, hoy: Date): boolean {
   const ayer = inicioDelDia(hoy);
   ayer.setDate(ayer.getDate() - 1);
   return esMismoDia(fechaIso, ayer);
 }
-
 /** Ventanas móviles de los listados: hoy, ayer, últimos 7/30/365 días o todo. */
 export function dentroDePeriodo(fechaIso: string, periodo: Periodo, hoy: Date): boolean {
   if (periodo === "todo") return true;
@@ -55,7 +49,6 @@ export function dentroDePeriodo(fechaIso: string, periodo: Periodo, hoy: Date): 
   desde.setDate(desde.getDate() - dias);
   return fecha >= desde;
 }
-
 /** Igual que `dentroDePeriodo` pero para fechas `YYYY-MM-DD` del cierre. */
 export function dentroDePeriodoFecha(fechaStr: string, periodo: Periodo, hoy: Date): boolean {
   if (periodo === "todo") return true;
@@ -63,7 +56,6 @@ export function dentroDePeriodoFecha(fechaStr: string, periodo: Periodo, hoy: Da
   const fecha = new Date(y, m - 1, d);
   return dentroDePeriodo(fecha.toISOString(), periodo, hoy);
 }
-
 export function dentroDeRangoFecha(fechaIso: string, desde: string, hasta: string): boolean {
   if (!desde && !hasta) return true;
   const fecha = inicioDelDia(new Date(fechaIso));
@@ -78,18 +70,15 @@ export function dentroDeRangoFecha(fechaIso: string, desde: string, hasta: strin
   }
   return true;
 }
-
 export function dentroDeRangoFechaStr(fechaStr: string, desde: string, hasta: string): boolean {
   if (!desde && !hasta) return true;
   if (desde && fechaStr < desde) return false;
   if (hasta && fechaStr > hasta) return false;
   return true;
 }
-
 export function formatoFechaHora(iso: string): string {
   return new Date(iso).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
 }
-
 /** Fecha local YYYY-MM-DD (sin desfase UTC). */
 export function fechaLocalStr(fecha: Date): string {
   const y = fecha.getFullYear();

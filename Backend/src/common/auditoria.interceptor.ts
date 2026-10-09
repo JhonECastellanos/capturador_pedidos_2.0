@@ -10,8 +10,7 @@ export class AuditoriaInterceptor implements NestInterceptor {
   constructor(private readonly prisma: PrismaService) {}
   intercept(contexto: ExecutionContext, siguiente: CallHandler) {
     const request = contexto.switchToHttp().getRequest<RequestAutenticado & { method: string; url: string; id?: string }>();
-    const rutaSinQuery = request.url.split("?")[0];
-    if (!request.user || !["POST", "PUT", "PATCH", "DELETE"].includes(request.method) || request.url.includes("/auth/") || ["/api/v1/asistente/entender", "/api/v1/asistente/voz/sesion", "/api/v1/asistente/modelos", "/api/v1/asistente/conexion"].includes(rutaSinQuery)) return siguiente.handle();
+    if (!request.user || !["POST", "PUT", "PATCH", "DELETE"].includes(request.method) || request.url.includes("/auth/")) return siguiente.handle();
     return siguiente.handle().pipe(mergeMap(async (resultado: { data?: { id?: string } }) => {
       const ruta = request.url.split("?")[0].replace(/^\/api\/v1\//, "");
       try {

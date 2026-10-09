@@ -24,10 +24,8 @@ Consolidar la rama **V3** como versión estable desplegable (reglas, contrato, c
 - [x] React Query en RAM (30 s / 5 min) + caché Redis versionada por revisión transaccional + sincronización cada 2 s (`ambie:datos-actualizados`).
 - [x] Paginación remota en pantallas principales con `POR_PAGINA=30`; UI validada a 390×844 y 1440 px (y login en poca altura).
 - [x] Frontend compilado con Nginx en Docker (8080); QA aislada `ambie-integracion` (8180/3100) con los 12 paneles aprobados.
-- [x] Voz local (Vosk) con tickets de un solo uso; transporte probado con audio sintético (sin micrófono físico).
-- [x] CLI con proveedores IA opcionales (sin llamadas automáticas ni activación de claves) y generador de pruebas desde controladores.
 - [x] Migración a TypeScript 6 (Node16, `rootDir`, sin `baseUrl`, caché incremental dentro de `dist`).
-- [x] Pruebas vigentes: `verificar`, `prueba:cache`, `prueba:asistente` (8), `prueba:integracion` (18 casos QA), `prueba:voz`, `prueba:carga` (170 pedidos), `prueba:paneles`, `seguridad:repositorio`.
+- [x] Pruebas vigentes: `verificar`, `prueba:cache`, `prueba:integracion` (18 casos QA), `prueba:carga` (170 pedidos), `prueba:paneles`, `seguridad:repositorio`.
 - [x] Catálogo demo **optativo** (`demo:catalogo`, 32 productos / 8 clientes ficticios) separado de la semilla; la semilla no carga datos comerciales.
 - [x] Documentación constitucional (`docs/constitucion/`) y archivo de la documentación anterior en `docs/info/`.
 
@@ -60,7 +58,6 @@ Consolidar la rama **V3** como versión estable desplegable (reglas, contrato, c
 
 ## 5. Pendientes explícitos de la última auditoría (30/09/2026)
 
-- [ ] Micrófono físico y frases acústicas reales (la voz se probó con audio sintético).
 - [ ] VPS/HTTPS real: DNS, túnel y firewall externos (la configuración local no acredita el servidor remoto).
 - [ ] Actualización de dependencias vulnerables (la revisión reportó 7 alertas en Prisma/MinIO; reverificar al abordarlo).
 - [ ] Paginación remota de snapshots heredados: pantallas que aún descargan historial completo hacia el cliente.

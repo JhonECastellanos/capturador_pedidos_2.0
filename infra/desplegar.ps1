@@ -13,7 +13,7 @@ if ($Actualizar) {
   if ($LASTEXITCODE -ne 0) { throw 'No se pudo actualizar el repositorio.' }
 }
 Docker compose config --quiet
-Docker compose --profile voz build api frontend voz
+Docker compose build api frontend
 $postgres = & docker compose ps --status running -q postgres
 if ($LASTEXITCODE -ne 0) { throw 'No se pudo revisar PostgreSQL.' }
 if ($postgres) {
@@ -30,6 +30,6 @@ if ($postgres) {
   if ((Get-Item -LiteralPath $respaldo).Length -eq 0) { throw 'Respaldo vacío.' }
   Write-Host "Respaldo creado: $respaldo"
 }
-Docker compose --profile voz up -d --wait --wait-timeout 180
+Docker compose up -d --wait --wait-timeout 180
 Docker compose ps
 Write-Host 'Abre http://localhost:8080 (o el FRONTEND_PORT configurado).'

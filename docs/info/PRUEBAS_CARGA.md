@@ -28,11 +28,6 @@ La sincronización es consulta de revisión cada dos segundos, más latencia y t
 
 ## Otras verificaciones de esta revisión
 
-- `npm run verificar`: contrato (14 enums), API, CLI/scripts y frontend; sin errores, con avisos React heredados.
 - `npm run prueba:integracion`: 17 casos, incluidos permisos, system, reserva, pagos FIFO, cancelación, cierre, archivos y caché.
 - `npm run prueba:cache`: reutilización, deduplicación, invalidación y separación de sesiones.
-- Ocho pruebas del asistente: permisos, confirmación, interpretación básica, configuración cifrada y PCM a 16 kHz desde 16/44,1/48 kHz.
-- `npm run prueba:voz` por Nginx QA: API→Vosk, audio sintético, tickets de un uso, rechazo de origen y mensajes inválidos.
 - Navegador: login 320×320 con scroll y sin desbordamiento horizontal; administrador móvil 390×844, escritorio 1440×900 y actualización del tablero con ventas remotas.
-
-El transporte sintético y la interpretación de texto no acreditan precisión acústica con voces reales ni micrófono físico del celular. Sigue pendiente validar esos dispositivos sobre HTTPS en el VPS. Permanecen siete avisos de dependencias en la construcción del backend (cuatro moderados, tres altos); no se aplicaron actualizaciones incompatibles a ciegas.

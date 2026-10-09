@@ -3,7 +3,7 @@ import { lazy, Suspense } from "react";
 import { AuthProvider } from "./context/AuthContext";
 import { OperacionesProvider } from "./context/OperacionesContext";
 import { RutaProtegida } from "./components/RutaProtegida";
-import { AsistenteVoz } from "./modules/asistente/BotonMicrofono";
+
 import Acceso from "./screens/Acceso/Acceso";
 import NoEncontrado from "./screens/NoEncontrado/NoEncontrado";
 import CrearCliente from "./screens/ClientesPedido/CrearCliente";
@@ -32,7 +32,7 @@ const ComprasAdmin = lazy(() => import("./modules/compras/screens/ComprasAdmin")
 const PreciosAdmin = lazy(() => import("./modules/precios/screens/PreciosAdmin").then((m) => ({ default: m.PreciosAdmin })));
 const Auditoria = lazy(() => import("./modules/administracion/screens/Auditoria").then((m) => ({ default: m.Auditoria })));
 const Resumen = lazy(() => import("./modules/administracion/screens/Resumen").then((m) => ({ default: m.Resumen })));
-const ConfiguracionAsistente = lazy(() => import("./modules/asistente/ConfiguracionAsistente").then((m) => ({ default: m.ConfiguracionAsistente })));
+const Configuracion = lazy(() => import("./modules/configuracion/Configuracion").then((m) => ({ default: m.Configuracion })));
 
 /** Aplicación: decide si la vista usa el marco móvil o el marco amplio del admin. */
 function Contenido() {
@@ -70,7 +70,7 @@ function Contenido() {
             <Route path="cierre" element={<CierreAdmin />} />
             <Route path="usuarios" element={<UsuariosAdmin />} />
             <Route path="auditoria" element={<Auditoria />} />
-            <Route path="configuracion" element={<ConfiguracionAsistente />} />
+            <Route path="configuracion" element={<Configuracion />} />
           </Route>
 
           {/* ─── Redirecciones de rutas antiguas ─── */}
@@ -82,7 +82,6 @@ function Contenido() {
 
           <Route path="*" element={<NoEncontrado />} />
         </Routes></Suspense>
-        <AsistenteVoz />
       </div>
     </div>
   );

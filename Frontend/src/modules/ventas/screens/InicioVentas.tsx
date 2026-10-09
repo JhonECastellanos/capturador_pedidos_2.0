@@ -18,7 +18,7 @@ import { Paginacion } from "../../../components/Paginacion";
 import { POR_PAGINA, paginar } from "../../../utils/paginacion";
 
 interface InicioVentasProps {
-  /** Asistente para tomar un pedido. */
+  /** Flujo para tomar un pedido. */
   rutaPedido: string;
   rutaCompletado: string;
   /** Pantalla de abonos del rol. */
@@ -33,12 +33,10 @@ interface InicioVentasProps {
   descripcion: string;
   headerGlobal?: boolean;
 }
-
 function esMismoDia(fechaIso: string, referencia: Date): boolean {
   const fecha = new Date(fechaIso);
   return fecha.getFullYear() === referencia.getFullYear() && fecha.getMonth() === referencia.getMonth() && fecha.getDate() === referencia.getDate();
 }
-
 /**
  * Inicio del módulo de ventas, compartido por vendedor y administrador.
  * El administrador también vende: aquí tiene sus métricas, sus accesos
@@ -50,7 +48,6 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
   const { usuario, cerrarSesion } = useAuth();
   const { pedidos, movimientosCaja, obtenerCliente, nombreUsuario } = useOperaciones();
   // `movimientosCaja` se usa indirectamente en el descuadre del dominio.
-
   const estadoInicial = ubicacion.state as { clienteCreado?: string; pedidoConfirmado?: string } | null;
   const { aviso, mostrarAviso, cerrarAviso } = useAviso();
   const pedidoConfirmado = estadoInicial?.pedidoConfirmado;
@@ -60,7 +57,6 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
   const [pagina, setPagina] = useState(1);
 
   const hoy = useMemo(() => new Date(), []);
-
   const pedidosHoy = useMemo(
     () =>
       pedidos
@@ -73,12 +69,9 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
   const porCobrar = pedidos
     .filter((pedido) => pedido.estado !== "cancelado" && pedido.pago.saldoPendiente > 0)
     .reduce((suma, p) => suma + p.pago.saldoPendiente, 0);
-
   const descuadre = descuadreCajaDe(pedidos, movimientosCaja, hoy);
-
   // Con el día vacío evitamos tarjetas con $0: la app se ve "recién instalada".
   const tieneMetricasHoy = pedidosHoy.length > 0 || ventasHoy > 0 || porCobrar > 0 || descuadre !== 0;
-
   const acciones = [
     {
       titulo: "Crear Pedido",
@@ -102,12 +95,10 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
       onClick: () => navegar(rutaNuevoCliente),
     },
   ];
-
   async function salir() {
     if (!await cerrarSesion()) return;
     navegar("/");
   }
-
   return (
     <div className="flex h-full flex-col min-h-0">
       {!headerGlobal && <BarraSuperior
@@ -121,7 +112,6 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
           </button>
         }
       />}
-
       <main className="flex min-h-0 flex-1 flex-col px-5 md:px-6">
         <section className={`${headerGlobal ? "mt-3" : "-mt-4"} flex-shrink-0 rounded-2xl bg-paper-raised p-4 shadow-[0_12px_28px_-16px_rgba(48,77,37,0.35)]`}>
           <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Resumen de la jornada</p>
@@ -153,7 +143,6 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
             </div>
           )}
         </section>
-
         {estadoInicial?.pedidoConfirmado && <button type="button" className="mt-3 min-h-11 shrink-0 rounded-xl border border-line bg-paper-raised px-3 text-sm font-semibold text-ink" onClick={() => navegar(rutaCompletado, { state: { pedidoId: estadoInicial.pedidoConfirmado } })}>Ver factura del pedido confirmado</button>}
         <section className="mt-3 flex-shrink-0">
           <div className="grid grid-cols-3 gap-2">
@@ -173,7 +162,6 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
             ))}
           </div>
         </section>
-
         {/* Historial del día dentro de su propio contenedor con scroll */}
         <section className="mt-3.5 flex min-h-0 flex-1 flex-col pb-4">
           <div className="flex flex-shrink-0 items-center justify-between gap-2">
@@ -232,7 +220,6 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
           <div className="shrink-0"><Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil(pedidosFiltrados.length / POR_PAGINA))} total={pedidosFiltrados.length} porPagina={POR_PAGINA} onChange={setPagina} /></div>
         </section>
       </main>
-
       {clienteCreado && (
         <div className="flex-shrink-0 px-5 pb-3 md:px-6">
           <div role="status" className="flex items-center justify-between gap-3 rounded-xl bg-success px-4 py-2.5 text-[13px] font-semibold text-white shadow-md">

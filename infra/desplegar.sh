@@ -11,7 +11,7 @@ elif [ -n "${1:-}" ]; then
   echo 'Uso: sh infra/desplegar.sh [--actualizar]' >&2; exit 1
 fi
 docker compose config --quiet
-docker compose --profile voz build api frontend voz
+docker compose build api frontend
 # Respaldar antes de aplicar cualquier migración. Fallar si falla el respaldo.
 if [ -n "$(docker compose ps --status running -q postgres)" ]; then
   mkdir -p .local/backups
@@ -20,6 +20,6 @@ if [ -n "$(docker compose ps --status running -q postgres)" ]; then
   test -s "$backup"
   echo "Respaldo creado: $backup"
 fi
-docker compose --profile voz up -d --wait --wait-timeout 180
+docker compose up -d --wait --wait-timeout 180
 docker compose ps
 echo 'Abre http://localhost:8080 (o el FRONTEND_PORT configurado).'

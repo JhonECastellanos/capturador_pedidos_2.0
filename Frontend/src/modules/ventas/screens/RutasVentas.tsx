@@ -6,14 +6,12 @@ import { FlujoVenta } from "./FlujoVenta";
 import { InicioVentas } from "./InicioVentas";
 import { PedidoCompletado } from "./PedidoCompletado";
 import { PedidoDetalle } from "./PedidoDetalle";
-
 /** Detalle de pedido a pantalla completa: aquí se cambia el estado y se cobra. */
 function DetalleDePedido({ rutaInicio }: { rutaInicio: string }) {
   const navegar = useNavigate();
   const { pedidoId } = useParams<{ pedidoId: string }>();
   const { obtenerPedido } = useOperaciones();
   const pedido = pedidoId ? obtenerPedido(pedidoId) : null;
-
   if (!pedido) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
@@ -28,12 +26,9 @@ function DetalleDePedido({ rutaInicio }: { rutaInicio: string }) {
       </div>
     );
   }
-
   return <PedidoDetalle pedido={pedido} onVolver={() => navegar(rutaInicio)} permitirCobro />;
 }
-
 /* ─── Vendedor ───────────────────────────────────────────────────── */
-
 export function VendedorInicio() {
   return (
     <InicioVentas
@@ -47,7 +42,6 @@ export function VendedorInicio() {
     />
   );
 }
-
 export function VendedorPedido() {
   return (
     <FlujoVenta
@@ -57,23 +51,18 @@ export function VendedorPedido() {
     />
   );
 }
-
 export function VendedorPedidoCompletado() {
   return <PedidoCompletado rutaInicio="/vendedor" />;
 }
-
 export function VendedorAbonos() {
   const navegar = useNavigate();
   return <Abonos onVolver={() => navegar("/vendedor")} />;
 }
-
 /** Detalle del pedido seleccionado en la lista de hoy. */
 export function VendedorPedidoDetalle() {
   return <DetalleDePedido rutaInicio="/vendedor" />;
 }
-
 /* ─── Administrador ─────────────────────────────────────────────── */
-
 /** Inicio del módulo de ventas: el administrador también vende y cobra. */
 export function AdminVentas() {
   return (
@@ -89,7 +78,6 @@ export function AdminVentas() {
     />
   );
 }
-
 export function AdminVentasPedido() {
   return (
     <FlujoVenta
@@ -100,20 +88,16 @@ export function AdminVentasPedido() {
     />
   );
 }
-
 export function AdminVentasPedidoDetalle() {
   return <DetalleDePedido rutaInicio="/admin/ventas" />;
 }
-
 export function AdminVentasAbonos() {
   const navegar = useNavigate();
   return <Abonos onVolver={() => navegar("/admin/ventas")} />;
 }
-
 export function AdminVentasCompletado() {
   return <PedidoCompletado rutaInicio="/admin/ventas" />;
 }
-
 export function AdminVentasClienteNuevo() {
   return <CrearCliente rutaInicio="/admin/ventas" rutaTrasGuardar="/admin/ventas" />;
 }

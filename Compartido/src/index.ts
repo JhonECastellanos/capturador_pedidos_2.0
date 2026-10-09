@@ -8,9 +8,7 @@
 export * from "./enums";
 export * from "./tipos";
 export * from "./esquemas";
-export * from "./asistente";
 export * from "./sincronizacion";
-export * from "./voz";
 
 /** Versión del contrato. Súbela cuando cambie la forma de la API. */
 export const VERSION_CONTRATO = "1.0.0";

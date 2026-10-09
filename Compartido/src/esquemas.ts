@@ -1,8 +1,8 @@
 /**
  * Esquemas Zod compartidos.
  *
- * La API los usa para validar cada entrada; el frontend y el CLI los
- * reutilizan para tipar formularios y argumentos sin duplicar reglas.
+ * La API los usa para validar cada entrada; el frontend los
+ * reutiliza para tipar formularios sin duplicar reglas.
  */
 
 import { z } from "zod";

@@ -20,8 +20,6 @@ import { formatoMoneda } from "../../../utils/formato";
 import { BadgeMora } from "../../ventas/components/BadgeMora";
 import { FormularioAbono } from "../../ventas/components/FormularioAbono";
 import { PedidoDetalle } from "../../ventas/screens/PedidoDetalle";
-import { usePantallaVoz } from "../../asistente/pantalla-voz";
-import { resolverReferencia } from "../../asistente/intencion";
 
 type TabCredito = "pendientes" | "historial";
 
@@ -106,11 +104,6 @@ export function CreditosAdmin() {
     }
     return false;
   }
-  usePantallaVoz(["recibir_abono"], {
-    aplicar: (p, campo) => { setConfirmarAbono(!campo); const id = resolverReferencia(p.clienteId, clientes); if (id) setClienteDetalleId(id); if (typeof p.monto === "number") setMontoAbono(String(p.monto)); if (p.metodo === "efectivo" || p.metodo === "billetera") setMetodoAbono(p.metodo); if (typeof p.comentario === "string") setComentarioAbono(p.comentario); },
-    leer: () => ({ clienteId: clienteDetalleId, monto: Number(montoAbono), metodo: metodoAbono, comentario: comentarioAbono }),
-    confirmar: handleRegistrarAbono, cancelar: () => { setClienteDetalleId(null); setMontoAbono(""); setComentarioAbono(""); setConfirmarAbono(false); },
-  });
 
   // Paso: detalle del pedido en crédito (se abre al tocar un pedido que debe).
   if (pedidoDetalleId) {

@@ -14,7 +14,6 @@
 
 | Elemento | Convención | Ejemplo real |
 |---|---|---|
-| Archivos y carpetas (Backend, CLI, utils) | kebab-case | `pedidos.service.ts`, `cliente-api.ts`, `utils/fechas.ts` |
 | Componentes y pantallas | PascalCase `.tsx` | `BuscadorInput.tsx`, `RutasVentas.tsx` |
 | Archivos intermedios de contexto/hooks | guion entre palabras | `auth-context.ts` (Windows no distingue mayúsculas) |
 | Hooks | `useAlgo`, en archivo separado del proveedor | `useSincronizacion`, `useAviso`, `usePaginaApi` |
@@ -22,7 +21,6 @@
 | Esquemas Zod | sufijo `Esquema`/`Schema` | `LoginEsquema`, `NuevoPedidoSchema` |
 | Enums | MAYÚSCULAS en código; `@map` en minúsculas en base | `EstadoPedido.CANCELADO` ↔ `'cancelado'` |
 | Constantes | MAYÚSCULAS | `POR_PAGINA` |
-| Claves y eventos del navegador | prefijo `ambie:` | `ambie:v2:*`, `ambie:datos-actualizados`, `ambie:voz-detenida` |
 | Scripts npm (raíz) | `área:acción` | `prueba:cache`, `api:verificar`, `front:build` |
 
 Ojo con los enums: el cliente Prisma expone `EstadoPedido.CANCELADO`, pero la base guarda `'cancelado'`. En SQL crudo usar el valor `@map`; para traducir rol a `codigo` existe `Backend/src/common/roles.ts` (`codigoDeRol`).
@@ -30,7 +28,6 @@ Ojo con los enums: el cliente Prisma expone `EstadoPedido.CANCELADO`, pero la ba
 ## 3. TypeScript
 
 - **Backend** (`Backend/tsconfig.json`): `strict`, `rootDir ./src`, `module`/`moduleResolution: Node16`, `target ES2022`, sin `baseUrl`. `tsconfig.build.json` deja el `tsBuildInfoFile` **dentro de `dist`** (Nest borra `dist` al compilar; fuera de allí puede parecer que compiló sin emitir).
-- **CLI** (`tsconfig.cli.json`): `rootDir .`, `noEmit`; se revisa con `npm run api:verificar`, no con `nest build`.
 - **Frontend**: TypeScript 6 con `noUnusedLocals`, `noUnusedParameters`, `verbatimModuleSyntax`, `noFallthroughCasesInSwitch`, `moduleResolution: bundler`, `noEmit`.
 - Reglas duras:
   - NUNCA tapar errores con `ignoreDeprecations` ni convertir el proyecto a ESM para resolver una dependencia.
@@ -54,7 +51,6 @@ Ojo con los enums: el cliente Prisma expone `EstadoPedido.CANCELADO`, pero la ba
 | `HTTP_ERROR`, `INTERNAL_ERROR` | Fallback; el 500 es genérico y se registra en el servidor. |
 
 - Mensajes legibles en español; **no filtrar detalles internos** al cliente en errores 5xx.
-- Validación con Zod: esquemas compartidos en `Compartido/src/esquemas.ts` (reutilizados por API, frontend y CLI). En controladores conviven `safeParse` y `parse` puntuales; la unificación es una mejora pendiente (BE-02), no un permiso para agregar variantes nuevas.
 - Frontend: mostrar el mensaje del error; **no cerrar un formulario antes de confirmar la escritura**; si la lectura posterior falla, avisar que ya se guardó (evitar duplicados).
 
 ## 5. Fechas, dinero y cantidades
@@ -85,7 +81,6 @@ Ojo con los enums: el cliente Prisma expone `EstadoPedido.CANCELADO`, pero la ba
 
 - Rama de trabajo: **V4P1**, creada desde el estado consolidado de V3 por solicitud del usuario el 01/10/2026. La entrega hacia la rama principal se hace por pull request; el workflow detecta la rama principal de GitHub (no asumir que se llama `main`).
 - Mensajes descriptivos, sin atribuciones automáticas.
-- Antes de commit: revisar diff, archivos nuevos y secretos; **no versionar** `.env`, tokens, dumps, volúmenes, `.local`, sesiones del CLI ni datos reales. `.env.example` solo con placeholders.
 - `npm run seguridad:repositorio` complementa la revisión (no sanea el historial de Git).
 - No hacer push ni cambiar la rama principal remota sin petición expresa.
 

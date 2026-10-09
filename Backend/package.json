@@ -16,8 +16,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "prisma db seed",
     "bootstrap": "tsx prisma/bootstrap.ts",
-    "cli": "tsx cli/index.ts",
-    "verificar": "tsc -p tsconfig.cli.json",
+    "verificar": "tsc -p tsconfig.scripts.json",
     "prueba:humo": "tsx scripts/humo-api.ts",
     "prueba:integracion": "node --env-file=../.env scripts/integracion-api.ts"
   },
@@ -39,13 +38,11 @@
     "minio": "^8.0.7",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
-    "ws": "^8.21.0",
     "zod": "^3.25.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.10",
     "@types/node": "^24.3.0",
-    "@types/ws": "^8.18.1",
     "prisma": "^6.13.0",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3"

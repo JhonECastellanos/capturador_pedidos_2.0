@@ -17,7 +17,6 @@ import { claveConsulta } from "../../../data/query";
 interface PedidoCompletadoProps {
   rutaInicio: string;
 }
-
 /** Pantalla de éxito compartida tras confirmar un pedido. */
 export function PedidoCompletado({ rutaInicio }: PedidoCompletadoProps) {
   const navegar = useNavigate();
@@ -30,7 +29,6 @@ export function PedidoCompletado({ rutaInicio }: PedidoCompletadoProps) {
     initialData: enContexto ? { data: enContexto } : undefined });
   const pedido = consulta.data?.data ?? enContexto;
   const cliente = pedido ? obtenerCliente(pedido.clienteId) : null;
-
   useEffect(() => {
     if (!pedidoId) navegar(rutaInicio, { replace: true });
   }, [navegar, pedidoId, rutaInicio]);
@@ -40,7 +38,6 @@ export function PedidoCompletado({ rutaInicio }: PedidoCompletadoProps) {
 
   const esCredito = pedido.pago.saldoPendiente > 0;
   const porPreparar = pedido.estado === "pendiente" || pedido.estado === "en-preparacion";
-
   return (
     <div className="flex h-full flex-col min-h-0">
       <BarraSuperior
@@ -48,7 +45,6 @@ export function PedidoCompletado({ rutaInicio }: PedidoCompletadoProps) {
         subtitulo={`${pedido.numero} · ${nombreCliente}`}
         onVolver={() => navegar(rutaInicio)}
       />
-
       <main className="no-scrollbar flex-1 min-h-0 overflow-y-auto px-5 pb-4 pt-5 text-center md:px-6">
         <div className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full ${esCredito ? "bg-accent-soft text-accent-dark" : "bg-success-soft text-success"}`}>
           <IconCheckCircle width={32} height={32} />
@@ -64,7 +60,6 @@ export function PedidoCompletado({ rutaInicio }: PedidoCompletadoProps) {
             {porPreparar ? "Por preparar" : "Entregado"}
           </span>
         </div>
-
         <div className="mx-auto mt-5 w-full max-w-sm rounded-2xl border border-line bg-paper-raised p-4 text-left">
           <p className="mb-3 text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">{pedido.facturaNumero ? `Factura ${pedido.facturaNumero}` : "Resumen del pedido"}</p>
           <DetalleProductosPedido lineas={pedido.lineas} />
@@ -89,7 +84,6 @@ export function PedidoCompletado({ rutaInicio }: PedidoCompletadoProps) {
             </>
           )}
         </div>
-
         {porPreparar && (
           <div className="mx-auto mt-4 flex w-full max-w-sm items-start gap-2 rounded-2xl border border-accent/30 bg-accent-soft p-3 text-left">
             <span className="mt-0.5 text-accent-dark">⏳</span>
@@ -102,7 +96,6 @@ export function PedidoCompletado({ rutaInicio }: PedidoCompletadoProps) {
           </div>
         )}
       </main>
-
       <BarraInferior>
         <div className="space-y-2">
           <Boton

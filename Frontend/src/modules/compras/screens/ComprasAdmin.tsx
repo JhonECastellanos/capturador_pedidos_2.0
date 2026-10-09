@@ -19,8 +19,6 @@ import { construirLineaRecepcion } from "../../../dominio/servicios";
 import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodo, type Periodo } from "../../../utils/fechas";
 import { formatoMoneda } from "../../../utils/formato";
 import { FormularioGasto } from "../components/FormularioGasto";
-import { usePantallaVoz } from "../../asistente/pantalla-voz";
-import { resolverReferencia } from "../../asistente/intencion";
 
 type TabCompras = "compras" | "gastos";
 type Vista = "historial" | "recepcion" | "detalle";
@@ -204,16 +202,6 @@ export function ComprasAdmin() {
     mostrarToast("Recepción registrada ✓ stock y costos actualizados", "exito");
     return true;
   }
-  usePantallaVoz(["registrar_compra"], {
-    aplicar: (p, campo) => {
-      setVista("recepcion"); setPaso(campo === "proveedorId" ? 1 : campo === "lineas" || campo.startsWith("lineas.") ? 2 : 3);
-      if (p.proveedorId) { const id = resolverReferencia(p.proveedorId, proveedores); if (id) setProveedorId(id); else setBusquedaProveedor(String(p.proveedorId)); }
-      if (typeof p.descontarCaja === "boolean") setDescontarCaja(p.descontarCaja);
-      if (Array.isArray(p.lineas)) setLineas(p.lineas.flatMap((l: Record<string, unknown>) => { const producto = inventario.find(i => i.id === resolverReferencia(l.productoId, inventario)); return producto ? [construirLineaRecepcion(producto, Number(l.cantidad) || 0, Number(l.costoUnitario) || 0)] : []; }));
-    }, leer: () => ({ proveedorId, lineas: lineas.map(l => ({ productoId: l.productoId, cantidad: l.cantidad, costoUnitario: l.costoUnitario })), descontarCaja }), confirmar: confirmarRecepcion, cancelar: cancelarRecepcion, volver: volverWizard,
-  });
-  usePantallaVoz(["crear_proveedor"], { aplicar: p => { setVista("recepcion"); setPaso(1); setMostrarCrearProv(true); if (typeof p.nombre === "string") setNombreProvNuevo(p.nombre); if (typeof p.telefono === "string") setTelProvNuevo(p.telefono); }, leer: () => ({ nombre: nombreProvNuevo, telefono: telProvNuevo }), confirmar: () => crearProveedorInline(), cancelar: () => { setNombreProvNuevo(""); setTelProvNuevo(""); setMostrarCrearProv(false); } });
-  usePantallaVoz(["registrar_gasto"], { aplicar: () => { setVista("historial"); setTab("gastos"); }, leer: () => ({}), confirmar: async () => false, cancelar: () => setTab("compras") });
 
   async function guardarProductoInline(e: FormEvent) {
     e.preventDefault();

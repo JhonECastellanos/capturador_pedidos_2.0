@@ -6,7 +6,7 @@ El [diccionario completo](DICCIONARIO_DATOS_V4P2.md) explica las 38 tablas y sus
 
 ## Del formulario a la base
 
-1. La persona captura o corrige los datos en la pantalla. El borrador no es una venta ni un movimiento de caja. La confirmación manual o por voz utiliza el guardado normal del formulario.
+1. La persona captura o corrige los datos en la pantalla. El borrador no es una venta ni un movimiento de caja. La confirmación manual utiliza el guardado normal del formulario.
 2. `Frontend/src/data/api.ts` envía la operación con cookie de sesión y `Idempotency-Key`. `guardados.ts` crea un UUID por intención de guardado. Si no se conoce el resultado por timeout, pérdida de conexión, respuesta ilegible o error 5xx, conserva esa clave para el siguiente envío de los mismos datos.
 3. Solo se guardan la huella SHA-256 y el UUID pendientes en `sessionStorage`, nunca el formulario ni la respuesta. En un origen seguro (HTTPS o localhost), esa clave sobrevive a recargar la misma pestaña. Si el navegador bloquea ese almacenamiento o no ofrece Web Crypto en un origen HTTP inseguro, la protección del cliente permanece en RAM hasta cerrar/recargar. Login, logout y expiración limpian los intentos de la sesión anterior.
 4. El guard de autenticación y los roles se comprueban antes del guardado y también antes de devolver una confirmación repetida. Renovar la sesión y volver a enviar no cambia la clave del intento.
@@ -15,9 +15,7 @@ El [diccionario completo](DICCIONARIO_DATOS_V4P2.md) explica las 38 tablas y sus
 7. Si es un intento nuevo, se validan y guardan documento, líneas, dinero, reservas, stock, auditoría y `escriturasConfirmadas` según corresponda. El servidor responde **después del commit**. Un error revierte la operación y no consume la clave ni el consecutivo.
 8. La pantalla invalida sus lecturas y espera la confirmación antes de cerrar. Si la lectura posterior falla, avisa que el documento ya fue guardado. Después de una confirmación conocida se retira la clave pendiente: otra venta legítima con los mismos productos recibe otra clave.
 
-La protección cubre las escrituras de clientes, productos, pedidos y sus cobros, abonos, proveedores, recepciones, gastos, caja, inventario y cierres. Autenticación, configuración del asistente, usuarios y archivos conservan sus flujos actuales; no se almacenan sus respuestas ni credenciales en la tabla de confirmaciones. La carga de objetos en MinIO tiene un paso externo a PostgreSQL y no se presenta como una transacción distribuida.
-
-Los clientes directos, CLI o integraciones que no envíen la cabecera conservan compatibilidad, pero **no obtienen protección de reintento**. Deben generar y conservar un UUID antes del primer envío y reutilizarlo solo para esa intención. No basta con desactivar un botón ni con comparar nombres, cantidades o precios: dos ventas legítimas pueden ser idénticas. La API no reenviará automáticamente una operación por iniciativa propia.
+La protección cubre las escrituras de clientes, productos, pedidos y sus cobros, abonos, proveedores, recepciones, gastos, caja, inventario y cierres. Autenticación, usuarios y archivos conservan sus flujos actuales; no se almacenan sus respuestas ni credenciales en la tabla de confirmaciones. La carga de objetos en MinIO tiene un paso externo a PostgreSQL y no se presenta como una transacción distribuida.
 
 La confirmación técnica no es otra venta: la PK `(usuarioId, clave)` permite un único resultado. Su JSON es un comprobante privado del intento, separado de las tablas contables; nunca debe sumarse en informes. No tiene expiración automática que permita duplicar un reintento antiguo. Forma parte del respaldo y puede aumentar el espacio ocupado, por lo que cualquier política de archivo futura debe conservar la identidad de las operaciones confirmadas.
 

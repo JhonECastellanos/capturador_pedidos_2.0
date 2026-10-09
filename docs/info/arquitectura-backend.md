@@ -33,7 +33,6 @@ cp .env.example .env
 # Edita .env: POSTGRES_PASSWORD, SESSION_SECRET, MINIO_*, BOOTSTRAP_*
 
 docker compose up -d --build          # postgres + migrate (migraciones y seed) + api + minio
-docker compose exec api node dist/../node_modules/tsx/dist/cli.mjs prisma/bootstrap.ts
 # o, desde el host con el backend instalado:
 cd Backend && npm run bootstrap
 ```

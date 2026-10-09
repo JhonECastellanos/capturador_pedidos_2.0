@@ -26,12 +26,7 @@ Pruebas realizadas el 6 de octubre de 2026 sobre la instalación aislada `ambie-
 | Etiquetas de gráficos | Hover, salida del mouse y foco de teclado | Visibles solo durante la interacción |
 | Recorrido de paneles | Doce módulos, tres actualizaciones por módulo, filtros, borradores y retroceso | Conserva los nodos de las pantallas y el scroll; sin errores de ejecución |
 | Factura móvil | Venta real QA de dos productos, cantidades 2/3, total $22.600; cambio posterior de precios y recarga | Conserva líneas y precios de la venta original |
-| Navegación y confirmación por voz | Transcripciones controladas; formularios, API y base reales | Quince casos correctos; pedido y abono sin doble escritura al repetir la confirmación |
 | Diccionario del modelo | Nombres de tablas, columnas y nulabilidad del esquema comparados con PostgreSQL | 38 tablas y 335 columnas coinciden |
-
-La apertura y aplicación completa del inicio se probaron antes de conservarlo para las repeticiones de esta jornada. Las repeticiones posteriores no eliminan ese registro. El abono del recorrido por voz usa interpretación controlada; el pedido utiliza la interpretación básica local. Esto no prueba un micrófono físico ni el reconocimiento acústico de frases.
-
-También pasan los 19 casos de integración de negocio, las 20 pruebas de reglas del asistente y las dos pruebas de caché y de claves de guardado. La compilación de contrato, enums, API, CLI, scripts y frontend, y la revisión de tipos y lint, pasan. Lint conserva advertencias ya existentes.
 
 ## Tiempo de confirmación y actualización
 
@@ -72,7 +67,7 @@ Chrome verificó las cinco tarjetas mensuales y **Contar inventario inicial** en
 ## Repetir las comprobaciones
 
 ```powershell
-docker.exe compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml --profile voz up -d --wait
+docker.exe compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml up -d --wait
 npm.cmd run verificar
 npm.cmd run prueba:guardados
 npm.cmd run prueba:inventario:inicial

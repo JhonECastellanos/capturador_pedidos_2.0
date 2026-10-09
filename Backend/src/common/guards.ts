@@ -89,10 +89,10 @@ export class AuthGuard implements CanActivate {
   }
 
   /**
-   * Acepta el token de dos formas para servir al navegador y al CLI
+   * Acepta el token de dos formas para servir al navegador y a las integraciones
    * con el mismo backend:
    * - cookie `ambie_access` (web, HttpOnly, no accesible desde JavaScript)
-   * - cabecera `Authorization: Bearer <token>` (CLI e integraciones)
+   * - cabecera `Authorization: Bearer <token>` (integraciones)
    */
   private extraerToken(request: RequestAutenticado): string | null {
     const autorizacion = request.headers?.authorization;

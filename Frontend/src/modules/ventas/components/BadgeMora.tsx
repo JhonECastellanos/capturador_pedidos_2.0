@@ -2,7 +2,6 @@ interface BadgeMoraProps {
   dias: number;
   compacta?: boolean;
 }
-
 /** Días de mora de un cliente, con color según severidad. */
 export function BadgeMora({ dias, compacta = false }: BadgeMoraProps) {
   const clase = dias >= 8 ? "bg-danger-soft text-danger" : "bg-paper-sunken text-ink-soft";

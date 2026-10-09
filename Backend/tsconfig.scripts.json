@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "declaration": false,
+    "incremental": false,
+    "rootDir": ".",
+    "types": ["node"],
+    "lib": ["ES2023"]
+  },
+  "include": ["scripts/**/*", "src/**/*"]
+}

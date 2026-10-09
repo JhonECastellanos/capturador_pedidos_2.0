@@ -24,7 +24,6 @@ V4P2: consultar el [diccionario de todas las tablas y campos](DICCIONARIO_DATOS_
 | Entidad | Campo | Formato |
 |---|---|---|
 | Usuario | `codigo` | `USR-0001` |
-| Cliente | `codigo` | `CLI-0001` |
 | Producto | `codigoInterno` | `PROD-0001` |
 | Proveedor | `codigo` | `PRV-0001` |
 | Tipo de crédito | `codigo` | `TC-0001` |
@@ -43,7 +42,6 @@ La asignación ocurre dentro de la misma transacción que inserta la entidad
 | Frontend | Base | Notas |
 |---|---|---|
 | `id` | `clientes.id` | UUID |
-| — | `clientes.codigo` | `CLI-0001`, único |
 | `nombre`, `alias`, `telefono`, `ciudad`, `direccion` | iguales | textos |
 | `identificacion` | `clientes.identificacion` | nullable; única cuando tiene valor |
 | `fechaNacimiento` | `clientes.fechaNacimiento` | `date` |

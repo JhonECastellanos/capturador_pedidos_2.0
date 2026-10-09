@@ -1,7 +1,6 @@
 import { SegmentoControl } from "../../../components/SegmentoControl";
 import type { AbonoCredito } from "../../../types";
 import { formatoMoneda } from "../../../utils/formato";
-
 interface FormularioAbonoProps {
   total: number;
   monto: string;
@@ -11,7 +10,6 @@ interface FormularioAbonoProps {
   onMetodoChange: (metodo: AbonoCredito["metodo"]) => void;
   onComentarioChange: (comentario: string) => void;
 }
-
 /** Campos del abono, compartidos por la pantalla de Abonos y el módulo de Créditos. */
 export function FormularioAbono({
   total,
@@ -24,7 +22,6 @@ export function FormularioAbono({
 }: FormularioAbonoProps) {
   const valor = Number(monto) || 0;
   const saldoTrasAbono = Math.max(0, total - valor);
-
   return (
     <>
       <SegmentoControl
@@ -35,7 +32,6 @@ export function FormularioAbono({
           { valor: "billetera", etiqueta: "Billetera" },
         ]}
       />
-
       <input
         type="number"
         min={1}
@@ -45,7 +41,6 @@ export function FormularioAbono({
         placeholder={`Monto (debe ${formatoMoneda(total)})`}
         className="mt-2 w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 font-mono text-[15px] font-semibold text-ink focus:border-ink focus:outline-none"
       />
-
       <div className="mt-1.5 flex flex-wrap gap-1.5">
         <button
           type="button"
@@ -62,14 +57,12 @@ export function FormularioAbono({
           Mitad
         </button>
       </div>
-
       <input
         value={comentario}
         onChange={(evento) => onComentarioChange(evento.target.value)}
         placeholder="Comentario (opcional)"
         className="mt-2 w-full rounded-xl border border-line bg-paper px-3.5 py-2.5 text-[12.5px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
       />
-
       {valor > 0 && (
         <p className={`mt-1.5 text-[11.5px] font-semibold ${saldoTrasAbono === 0 ? "text-success" : "text-ink-soft"}`}>
           {saldoTrasAbono === 0 ? "✓ Liquida el crédito completo (se marca como pagado)" : `Quedará debiendo ${formatoMoneda(saldoTrasAbono)}`}

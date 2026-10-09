@@ -76,7 +76,7 @@ export interface UsuarioDTO {
 }
 
 export interface SesionDTO {
-  /** Solo cuando el cliente no usa cookies (CLI o integraciones). */
+  /** Solo cuando una integración no usa cookies. */
   accessToken?: string;
   refreshToken?: string;
   expiraEn?: string;

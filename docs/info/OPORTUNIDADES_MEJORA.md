@@ -187,8 +187,6 @@ Cada oportunidad tiene el mismo formato:
 
 **Solución:** `validate()` con Zod al arranque (`DATABASE_URL`, `JWT_SECRET>=32`, `CORS_ALLOWED_ORIGIN` requerido en prod, `MINIO_*`, `CACHE_REDIS_URL` opcional) con fail-fast; `@fastify/helmet`; rate-limit por ruta en `login/refresh` (p. ej. 10/min/IP); helper único `validar(schema, body)` con `safeParse` → `ErrorDominio VALIDACION`.
 
-**Integración sin romper:** primero agregar validación en modo "aviso" (log si falta algo en dev), luego fail-fast solo cuando `NODE_ENV=production`. CORS: fijar `CORS_ALLOWED_ORIGIN` explícito en `.env` antes de endurecer el default. Probar login CLI + web + voz en QA.
-
 ## BE-03 — Sin request-id ni logger estructurado · Severidad: MEDIA-ALTA
 
 **Por qué:** `auditoria.interceptor.ts:12` lee `request.id` pero **ningún middleware lo asigna** → `requestId: undefined` siempre en BD (`schema.prisma:205`). Errores usan `console.error` (`errores.ts:46`, `main.ts:34`), que no es JSON consultable en Docker. Sin `request-id` no se correlaciona log ↔ auditoría ↔ frontend.
@@ -210,8 +208,6 @@ Cada oportunidad tiene el mismo formato:
 **Por qué:** `auth.service.ts:131-144` busca por `nombre contains` + alias `system`: facilita enumerar usuarios y entrar como `system` sin email.
 
 **Solución:** login solo por `email | codigo` exactos (más `system` por nombre exacto, documentado). Rate-limit estricto en `login` (BE-02).
-
-**Integración sin romper:** mantener compatibilidad una versión avisando en el mensaje de error genérico (sin revelar si el usuario existe). Actualizar CLI si usa identificador parcial.
 
 ## BE-06 — N+1 y operaciones fila por fila dentro de transacciones largas · Severidad: MEDIA-ALTA
 
@@ -251,8 +247,6 @@ Cada oportunidad tiene el mismo formato:
 
 ## BE-10 — Salud mínima + sin métricas · Severidad: MEDIA
 
-**Por qué:** `catalogos/salud.controller.ts:16-37` (`GET /salud`) hace `SELECT 1` pero no chequea Redis/MinIO/Voz, no distingue liveness/readiness y no hay métricas. El orquestador cree que la API está sana con Redis/MinIO caídos; sin histogramas no se ve el p95 de `dashboard/pedidos`.
-
 **Solución:** `/salud` (liveness, sin DB) + `/salud/listo` (DB+Redis+MinIO `bucketExists` con timeout) + `/metricas` Prometheus (`http_duration`, `db_errors`, `cache_hit`).
 
 **Integración sin romper:** agregar endpoints nuevos sin tocar `/salud` (el Compose y `desplegar.*` dependen de él). Cambiar `depends_on` a `listo` solo después (INF-05).
@@ -277,13 +271,7 @@ Cada oportunidad tiene el mismo formato:
 
 **Integración sin romper:** cambio interno del servicio; el contrato de respuesta no cambia. Probar borrando la fila en QA y confirmando degradado a PostgreSQL.
 
-## BE-13 — WebSocket/voz: sockets colgados, estado solo en memoria · Severidad: MEDIA
-
-**Por qué:** `asistente/voz.service.ts:48` hace `return` silencioso para upgrades de otras rutas sin destruir el socket; el límite global de 2 conexiones vive en memoria (impide escalar horizontalmente); `disponible()` abre un WS real al STT como probe (amplificación); el STT no tiene auth interna.
-
-**Solución:** `socket.destroy()` explícito para rutas no-voz; tickets/conexiones en Redis o sticky sessions; probe STT por TCP/timeout, no WS completo; token interno o mTLS hacia el STT.
-
-**Integración sin romper:** primero el `destroy()` (cierra una fuga, no cambia protocolo); Redis para tickets solo cuando se necesite segunda instancia de API. Probar `prueba:voz` en QA después de cada paso.
+**Integración sin romper:** primero el `destroy()` (cierra una fuga, no cambia protocolo); Redis para tickets solo cuando se necesite segunda instancia de API. Probar en QA después de cada paso.
 
 ## BE-14 — Cero tests unitarios (solo scripts manuales QA) · Severidad: ALTA
 
@@ -307,19 +295,13 @@ Cada oportunidad tiene el mismo formato:
 
 ## API-01 — Sin idempotencia en escrituras: el doble-clic crea duplicados · Severidad: ALTA
 
-**Por qué:** grep `Idempotency|idempotencia` = 0 fuera de reintentos del CLI. `POST /pedidos`, `/clientes/:id/abonos`, `/pedidos/:id/pagos`, `/cierres/:fecha` no deduplican: un reintento de red o doble-clic crea `PED-xxx` duplicados con números distintos (el consecutivo no se consume en rollback, pero tampoco deduplica). Solo `aplicar-ajuste` tiene guard `AJUSTE_DUPLICADO`. Existe `Pago.idempotencyKey unique` (`schema.prisma:446`) pero sin uso sistemático.
-
 **Solución:** tabla `clavesIdempotencia(key, metodo, ruta, status, respuesta, expiraEn)` + header `Idempotency-Key` en POST críticos; el frontend genera `key` por formulario (`crypto.randomUUID()`); ante clave repetida se devuelve la respuesta guardada.
 
 **Integración sin romper:** hacerlo optativo primero (si no hay header, comportamiento actual) y obligatorio por endpoint de forma gradual, empezando por `POST /pedidos`. TTL de claves (p. ej. 24 h) para no crecer sin límite. Es prerrequisito de FE-06 y NEG-15.
 
 ## API-02 — Sin OpenAPI/Swagger · Severidad: MEDIA
 
-**Por qué:** grep `swagger|DocumentBuilder` = 0. El frontend está acoplado a rutas exactas sin documentación generada; el CLI "descubre endpoints desde controladores" con un generador propio que puede divergir.
-
 **Solución:** `@nestjs/swagger` solo en no-producción, generado desde los mismos DTO/Zod del contrato.
-
-**Integración sin romper:** aditivo y apagado en prod. Sirve además para generar pruebas del CLI y detectar envelopes inconsistentes (API-03).
 
 ## API-03 — Envelopes y `meta` inconsistentes · Severidad: MEDIA-BAJA
 
@@ -332,8 +314,6 @@ Cada oportunidad tiene el mismo formato:
 ## API-04 — Rate-limit global único, sin protección por ruta sensible · Severidad: MEDIA
 
 **Por qué:** `main.ts:16-19` aplica `RATE_LIMIT_MAX ?? 300/min` global. `login/refresh` admiten el mismo caudal que una lectura, y QA usa `10000` (`docker-compose.pruebas.yml`), por lo que QA nunca ve los `429` de producción.
-
-**Solución:** límites por ruta (`login/refresh`: p. ej. 10/min/IP; voz: el throttle actual de 3 s está bien), y en CI un `curl` con `RATE_LIMIT_MAX=5` temporal para probar el `429` (INF-09).
 
 **Integración sin romper:** configurar por ruta sin cambiar el global; avisar en UI ante `429` con reintento (hoy `429 = rechazada, no guardada`, documentado en `PRUEBAS_CARGA.md`).
 
@@ -432,8 +412,6 @@ Contexto: `Backend/prisma/schema.prisma` (763 líneas), 37 modelos, 14 enums, 7 
 
 # 5. Docker e infraestructura
 
-Contexto: proyecto `capturador_pedidos_20` (264 líneas de Compose): frontend/Nginx, API, PostgreSQL 17, Redis 7, MinIO archivado, voz Vosk optativa, CLI optativo, Cloudflare optativo. Orden de arranque por `depends_on` + salud. Bien aislado (API en `127.0.0.1:3000`, BD/Redis/MinIO/voz sin puertos).
-
 ## INF-01 — `cloudflared:latest` sin pin · Severidad: MEDIA
 
 **Por qué:** `docker-compose.yml:43` usa `latest` mientras el resto está pineado. Un major puede romper el túnel sin cambio de código.
@@ -451,8 +429,6 @@ Contexto: proyecto `capturador_pedidos_20` (264 líneas de Compose): frontend/Ng
 **Integración sin romper:** cambio de una línea con rollback inmediato (tag anterior). Evaluar a mediano plazo reemplazo por GarageFS/MinIO community mantenido, con migración de buckets espejada.
 
 ## INF-03 — `api` y `postgres` sin el endurecimiento que sí tienen los demás · Severidad: MEDIA
-
-**Por qué:** `frontend/redis/voz/cli` tienen `read_only:true + tmpfs + cap_drop:[ALL] + no-new-privileges + pids_limit`; `api:99-141` y `postgres:61-77`, no. La API es la superficie expuesta y la BD el dato crítico.
 
 **Solución:** en QA añadir a `api`: `read_only:true + tmpfs [/tmp,/home/ambie/.cache] + cap_drop + pids_limit 256`, validando `migrate + uploads 5MB + MinIO`. A `postgres` NO `read_only` (necesita escribir PGDATA), solo `cap_drop + no-new-privileges + pids_limit`.
 
@@ -482,33 +458,19 @@ Contexto: proyecto `capturador_pedidos_20` (264 líneas de Compose): frontend/Ng
 
 **Integración sin romper:** probar `migrate deploy + seed` en QA tras el cambio; comparar tamaño de imagen.
 
-## INF-07 — Voz: `python:3.12-slim` flotante + modelo sin checksum · Severidad: BAJA-MEDIA
-
-**Por qué:** `infra/voz/Dockerfile:1,5-6` usa tag flotante y descarga `vosk-model-small-es-0.42.zip` sin `SHA256`. Build no reproducible, riesgo supply-chain.
-
-**Solución:** fijar `python:3.12.X-slim` + verificar `sha256sum` del zip antes de `unzip`. Mantener `USER voz`, `OMP_NUM_THREADS=1`, `max_size 8192`.
-
-**Integración sin romper:** solo build; probar `prueba:voz` en QA. El modelo (~50 MB) queda igual en la capa.
+**Integración sin romper:** solo build; probar en QA. El modelo (~50 MB) queda igual en la capa.
 
 ## INF-08 — Nginx sin gzip/CSP/HSTS/rate-limit y con timeout excesivo · Severidad: MEDIA
 
 **Por qué:** `Frontend/nginx.conf:1-54` tiene lo esencial (`server_tokens off`, `client_max_body_size 8m`, `nosniff/DENY/same-origin`, proxy WS, assets `1y immutable`, `/api/ no-store`), pero sin `gzip`, sin `Content-Security-Policy/HSTS/Permissions-Policy`, sin `limit_req`, y con `proxy_read_timeout 660s`.
 
-**Solución:** `gzip on` (js/css/svg/json) + CSP en modo `Report-Only` primero en QA + `limit_req` a `/api/v1/auth/*`. No bajar los 660 s sin probar voz real (el micrófono necesita WS largo).
-
 **Integración sin romper:** validar `/api/ no-store`, `/assets/ immutable` y `try_files $uri =404` tras el cambio; CSP en enforcing solo cuando el reporte lleve una semana limpio.
 
 ## INF-09 — CI verifica pero no construye imágenes ni prueba integración · Severidad: MEDIA
 
-**Por qué:** `.github/workflows/verificar-desplegar.yml:9-25` corre `verificar, prueba:cache, prueba:asistente`, pero no `docker build`, ni `prueba:integracion/voz/carga`, ni `trivy/npm audit`. Un `Dockerfile` o `nginx.conf` roto solo se detecta en despliegue.
-
-**Solución:** job nuevo: `docker build api/frontend/voz + nginx -t` sin push; job QA con `prueba:integracion`; `npm audit --omit=dev` informativo (la auditoría reporta 7 alertas en Prisma/MinIO). Sin tocar el job `desplegar` (`DEPLOY_ENABLED`, concurrency).
-
 **Integración sin romper:** jobs aditivos en el workflow; no cambian el despliegue desactivado.
 
 ## INF-10 — Respaldo solo PostgreSQL, sin MinIO/config, sin retención · Severidad: ALTA
-
-**Por qué:** `infra/desplegar.ps1:19-31` y `desplegar.sh:16-22` hacen `pg_dump -Fc` antes de migrar (bien), pero `minio_data` (imágenes/comprobantes) y `asistente_config/cli_data` quedan fuera; `README.md:284` lo deja como paso manual; `.local/backups/` crece sin límite; `docker:limpiar` (`down -v`) seguiría siendo fatal.
 
 **Solución:** script aparte `infra/respaldar.ps1/.sh`: `pg_dump -Fc` + `mc mirror`/copia de `minio_data` + `tar` de configs + retención 7/30 días (`find -mtime +30 -delete`) + `pg_restore --list` de verificación. No automatizar `restore` sobre el negocio (prohibido por docs).
 
@@ -540,17 +502,11 @@ Contexto: proyecto `capturador_pedidos_20` (264 líneas de Compose): frontend/Ng
 
 ## INF-14 — Escalado vertical sí, horizontal no · Severidad: BAJA (informativa)
 
-**Por qué:** los límites por `.env` (`API/POSTGRES 512 MB/1 CPU`, etc.) permiten escalar vertical sin editar código (`README.md:301`), pero no hay réplicas: `RepeatableRead + versionesCache`, sesiones/voz en memoria y snapshots del frontend limitan. `docs/PRUEBAS_CARGA.md:21`: 170 concurrentes OK, no multi-instancia.
-
-**Solución:** seguir escalando vertical vía `.env`; para horizontal se requerirá Nginx `ip_hash`/sticky + Redis compartido (tickets/voz, BE-13) + `prueba:carga` en QA. No activar réplicas aún.
-
 **Integración sin romper:** ninguna acción hoy; registrar la decisión para no prometer horizontal sin trabajo previo.
 
 ---
 
 # 6. Modelo de negocio
-
-Contexto: hoy es un **ERP ligero de ventas a crédito** sólido en su núcleo (pedido transaccional + reserva/consumo + FIFO + caja reversible + cierre + dashboard SQL + auditoría + voz + CLI). Declaradamente NO es: POS fiscal, contable, logístico ni offline (`docs/arquitectura-backend.md:82`, `EQUIVALENCIA_VARIABLES.txt:400`: "factura INTERNA, no DIAN"). Las brechas siguientes están verificadas con `grep` (ausencia real, no suposición) y ordenadas por valor para el negocio.
 
 ## NEG-01 — Impresión de tickets/facturas (80 mm) · AUSENTE · Prioridad 1
 
@@ -596,13 +552,11 @@ Contexto: hoy es un **ERP ligero de ventas a crédito** sólido en su núcleo (p
 
 **Por qué:** existe `recordatorioWhatsApp:boolean` + tabla `RecordatorioCredito`, pero `grep twilio|nodemailer|send.*message` = 0: es flag, no envío. El cobro depende de la memoria del vendedor y la mora crece.
 
-**Solución:** `notificaciones{canal,mensaje,estado,intentos}` + interfaz `ProveedorNotificacion`. Fase 1 sin costo: botón que abre `wa.me` con texto prearmado; fase 2: Twilio/SMTP con claves en `asistente_config` cifrada (igual que `ASISTENTE_CONFIG_SECRET`). Encolar post-commit, nunca dentro de la transacción del pedido. Respetar `recordatorioWhatsApp`.
-
 **Integración sin romper:** fase 1 es solo frontend (deep link); fase 2 es módulo lateral async que no bloquea ventas.
 
 ## NEG-07 — Comisiones de vendedores · AUSENTE · Prioridad 3
 
-**Por qué:** `grep comision` = 0 (solo ruido de proveedor IA). `Pedido.vendedorId` existe pero sin regla de liquidación: las comisiones se pagan a mano y son disputables.
+**Por qué:** `grep comision` = 0. `Pedido.vendedorId` existe pero sin regla de liquidación: las comisiones se pagan a mano y son disputables.
 
 **Solución:** `reglasComision{vendedorId?,categoriaId?,porcentaje}` + vista agregada SQL por `fechaOperacion` sobre `entregado+pagado` (nunca `pendiente/cancelado`), visible solo admin en `Resumen`.
 

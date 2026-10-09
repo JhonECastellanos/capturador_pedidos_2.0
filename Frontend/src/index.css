@@ -1,46 +1,5 @@
 @import "tailwindcss";
 
-.asistente-subtitulo {
-  position: fixed;
-  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
-  left: 50%;
-  z-index: 74;
-  width: min(360px, calc(100% - 32px));
-  transform: translateX(-50%);
-  pointer-events: none;
-  border-radius: 12px;
-  padding: 8px 12px;
-  background: color-mix(in srgb, var(--color-paper-raised) 65%, transparent);
-  color: var(--color-ink);
-  font-size: 12px;
-  line-height: 16px;
-}
-
-.microfono-flotante {
-  position: fixed;
-  z-index: 75;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 52px;
-  border: 1px solid var(--color-line);
-  border-radius: 50%;
-  background: var(--color-ink);
-  color: var(--color-paper-raised);
-  box-shadow: 0 4px 16px #304d2530;
-  cursor: grab;
-  user-select: none;
-}
-.microfono-flotante:active { cursor: grabbing; }
-.microfono-flotante:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 4px; }
-.microfono-ondas { position: absolute; inset: -3px; pointer-events: none; }
-.microfono-ondas i { position: absolute; inset: 0; border: 1px solid var(--color-accent); border-radius: 50%; opacity: 0; }
-.microfono-activo .microfono-ondas i { animation: onda-microfono 1.4s ease-out infinite; border-width: calc(1px + var(--nivel-voz, 0) * 2px); }
-.microfono-activo .microfono-ondas i:nth-child(2) { animation-delay: .45s; }
-.microfono-activo .microfono-ondas i:nth-child(3) { animation-delay: .9s; }
-@keyframes onda-microfono { from { transform: scale(1); opacity: .75; } to { transform: scale(calc(1.2 + var(--nivel-voz, 0) * .25)); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .microfono-activo .microfono-ondas i { animation: none; opacity: .7; } }
 
 /*
  * Paleta de marca AMBIÉ (café & antojos):

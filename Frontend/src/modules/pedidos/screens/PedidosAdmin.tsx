@@ -17,8 +17,6 @@ import { EtiquetaPago } from "../../administracion/components/EtiquetaPago";
 import { PedidoDetalle } from "../../ventas/screens/PedidoDetalle";
 import { usaApi, baseApi } from "../../../data/api";
 import { fechaOperativa } from "../../../utils/fechas";
-import { usePantallaVoz } from "../../asistente/pantalla-voz";
-import { resolverReferencia } from "../../asistente/intencion";
 
 type Segmento = "hoy" | "historial";
 type FiltroEstado = "todos" | EstadoPedido;
@@ -52,10 +50,6 @@ export function PedidosAdmin() {
   if (hasta) consulta.set("hasta", hasta);
   const remoto = usePaginaApi<Pedido>(`/pedidos?${consulta.toString()}`);
   const pedidosVisibles = usaApi ? remoto.items.map((p) => ({ ...p, comprobantePagoUrl: p.comprobantePagoAdjuntoId ? `${baseApi}/archivos/${p.comprobantePagoAdjuntoId}` : undefined })) : pedidos;
-  usePantallaVoz(["cambiar_estado_pedido", "cobrar_pedido"], {
-    aplicar: p => { const id = resolverReferencia(p.pedidoId, pedidosVisibles.map(p => ({ id: p.id, nombre: p.numero }))); if (id) setDetalleId(id); else { setSegmento("historial"); setBusqueda(typeof p.pedidoId === "string" ? p.pedidoId : ""); } },
-    leer: () => ({}), confirmar: async () => false, cancelar: () => setDetalleId(null),
-  });
 
   const hoy = useMemo(() => new Date(), []);
 

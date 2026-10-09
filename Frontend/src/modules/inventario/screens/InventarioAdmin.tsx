@@ -19,8 +19,6 @@ import { formatoMoneda } from "../../../utils/formato";
 import { FormularioProducto } from "../components/FormularioProducto";
 import { InventarioInicial } from "../components/InventarioInicial";
 import type { TipoConteo } from "@ambie/contrato";
-import { usePantallaVoz } from "../../asistente/pantalla-voz";
-import { resolverReferencia } from "../../asistente/intencion";
 
 const campo = "rounded-lg border border-line bg-paper-raised px-3 py-2.5 text-[13px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none";
 
@@ -154,11 +152,6 @@ export function InventarioAdmin() {
     setPasoAjuste(1);
     return true;
   }
-  usePantallaVoz(["crear_producto"], { aplicar: () => { setVista("general"); setMostrarProducto(true); }, leer: () => ({}), confirmar: async () => false, cancelar: () => setMostrarProducto(false) });
-  usePantallaVoz(["ajustar_inventario"], {
-    aplicar: (p, campo) => { setVista("ajustes"); setMostrarAjusteManual(true); setPasoAjuste(campo === "productoId" ? 1 : 2); if (p.productoId) { const id = resolverReferencia(p.productoId, inventario); if (id) setProductoAjusteId(id); else setBusquedaAjuste(String(p.productoId)); } if (typeof p.stockFisico === "number") setStockFisicoAjuste(String(p.stockFisico)); if (typeof p.motivo === "string") setMotivoAjuste(p.motivo); if (typeof p.comentario === "string") setComentarioAjuste(p.comentario); },
-    leer: () => ({ productoId: productoAjusteId, stockFisico: stockFisicoAjuste === "" ? undefined : Number(stockFisicoAjuste), motivo: motivoAjuste, comentario: comentarioAjuste }), confirmar: handleAjusteManual, cancelar: volverAlMenu, volver: () => { if (pasoAjuste === 2) setPasoAjuste(1); else volverAlMenu(); },
-  });
 
   const productoAjuste = productoAjusteId ? inventario.find((p) => p.id === productoAjusteId) : null;
   const lineaActual = conteoEnCurso ? conteoEnCurso.lineas[indice] : null;
@@ -192,24 +185,6 @@ export function InventarioAdmin() {
     if (!confirmarAplicarConteoId || await aplicarAjusteDeConteo(confirmarAplicarConteoId) === false) return false;
     setConfirmarAplicarConteoId(null); mostrarAviso("Ajuste de conteo aplicado al stock", "exito"); return true;
   }
-  function seleccionarConteo(p: Record<string, unknown>, detalle = false) {
-    setVista("conteo");
-    const id = resolverReferencia(p.conteoId, conteos.map(c => ({ id: c.id, nombre: `${c.tipo} · ${c.turno} · ${c.estado}` })));
-    if (!id) return "";
-    if (detalle) setConteoDetalleId(id); else { setConteoActivoId(id); setConteoDetalleId(null); }
-    return id;
-  }
-  usePantallaVoz(["iniciar_conteo"], {
-    aplicar: p => { if (conteoEnCurso?.estado === "en-curso") throw new Error("Termina o cancela el conteo en curso antes de iniciar otro."); setVista(p.tipo === "inicial" ? "inicial" : "conteo"); setConteoActivoId(null); setConteoDetalleId(null); if (p.tipo === "general" || p.tipo === "aleatorio" || p.tipo === "inicial") setTipoConteo(p.tipo); if (typeof p.turno === "string") setTurno(p.turno); if (typeof p.cantidadAleatoria === "number") setCantidadAleatoria(String(p.cantidadAleatoria)); },
-    leer: () => conteoEnCurso?.estado === "en-curso" ? {} : ({ tipo: tipoConteo, turno, ...(tipoConteo === "aleatorio" ? { cantidadAleatoria: Number(cantidadAleatoria) } : {}) }), confirmar: () => handleIniciar(tipoConteo), cancelar: volverAlMenu,
-  });
-  usePantallaVoz(["contar_producto"], {
-    aplicar: p => { const id = seleccionarConteo(p); const c = conteos.find(c => c.id === id); const productoId = resolverReferencia(p.productoId, inventario); const i = c?.lineas.findIndex(l => l.productoId === productoId) ?? -1; if (i >= 0) { setIndice(i); if (typeof p.stockFisico === "number") setBorradorConteo(b => ({ ...b, [productoId]: String(p.stockFisico) })); } },
-    leer: () => ({ conteoId: conteoEnCurso?.id, productoId: lineaActual?.productoId, stockFisico: textoFisico === "" ? undefined : Number(textoFisico) }), confirmar: guardarCantidad, cancelar: volverAlMenu,
-  });
-  usePantallaVoz(["finalizar_conteo"], { aplicar: p => { seleccionarConteo(p); }, leer: () => ({ conteoId: conteoCompleto ? conteoEnCurso?.id : undefined }), confirmar: finalizarConteo, cancelar: volverAlMenu });
-  usePantallaVoz(["cancelar_conteo"], { aplicar: p => { if (seleccionarConteo(p)) setConfirmarCancelarConteo(true); }, leer: () => ({ conteoId: confirmarCancelarConteo ? conteoEnCurso?.id : undefined }), confirmar: cancelarConteo, cancelar: () => setConfirmarCancelarConteo(false) });
-  usePantallaVoz(["aplicar_conteo"], { aplicar: p => { const id = seleccionarConteo(p, true); if (id) setConfirmarAplicarConteoId(id); }, leer: () => ({ conteoId: confirmarAplicarConteoId }), confirmar: aplicarConteo, cancelar: () => setConfirmarAplicarConteoId(null) });
 
   function volverAlMenu() {
     setMostrarProducto(false);

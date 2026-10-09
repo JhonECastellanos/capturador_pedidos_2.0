@@ -8,7 +8,7 @@ import { formatoMoneda } from "../../../utils/formato";
 import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodo, type Periodo } from "../../../utils/fechas";
 import { MetricaFiltro } from "../../administracion/components/MetricaFiltro";
 import { TarjetaMetrica } from "../../administracion/components/TarjetaMetrica";
-import { usePantallaVoz } from "../../asistente/pantalla-voz";
+
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
 
@@ -32,10 +32,7 @@ export function CajaAdmin() {
       setNuevoEgreso(false); setConceptoEgreso(""); setMontoEgreso(""); mostrarAviso("Egreso registrado", "exito"); return true;
     } finally { setGuardandoEgreso(false); }
   }
-  usePantallaVoz(["registrar_egreso"], {
-    aplicar: p => { setNuevoEgreso(true); if (typeof p.concepto === "string") setConceptoEgreso(p.concepto); if (typeof p.monto === "number") setMontoEgreso(String(p.monto)); if (p.metodo === "efectivo" || p.metodo === "billetera") setMetodoEgreso(p.metodo); },
-    leer: () => ({ concepto: conceptoEgreso, monto: Number(montoEgreso), metodo: metodoEgreso }), confirmar: guardarEgreso, cancelar: () => { setNuevoEgreso(false); setConceptoEgreso(""); setMontoEgreso(""); },
-  });
+
   const [periodo, setPeriodo] = useState<Periodo>("hoy");
   const [vistaCaja, setVistaCaja] = useState<VistaCaja>("movimientos");
   const [busqueda, setBusqueda] = useState("");

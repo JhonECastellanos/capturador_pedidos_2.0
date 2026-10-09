@@ -18,10 +18,8 @@ Los límites del Compose son por contenedor, no una cuota global por proyecto:
 | PostgreSQL | 512 MB | 1 |
 | API | 512 MB | 1 |
 | MinIO | 384 MB | 0,5 |
-| Voz local | 512 MB | 1 |
 | Migración puntual | 768 MB | 1 |
 | Bootstrap puntual | 256 MB | 0,5 |
-| CLI puntual | 512 MB | 0,5 |
 
 No se permite swap adicional a estos contenedores. El límite global de WSL
 también incluye construcciones y otros proyectos. Cada proyecto nuevo debe

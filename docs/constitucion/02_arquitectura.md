@@ -9,9 +9,7 @@
 ```text
 Capturador_pedidos_2.0/
 ├── Frontend/    SPA React + Vite (workspace `capturador-pedido`)
-├── Backend/     API NestJS (workspace `ambie-backend`) + CLI + Prisma + scripts
 ├── Compartido/  Contrato (workspace `@ambie/contrato`): enums, DTO y esquemas
-├── infra/       Despliegue (desplegar.ps1/.sh), voz (Vosk), guía Windows
 ├── scripts/     Verificadores: contrato, repositorio (seguridad), caché
 ├── docs/        constitucion/ (normas) + info/ (documentación técnica e histórica)
 └── .github/     Workflow de verificación y despliegue continuo
@@ -26,7 +24,7 @@ pantalla → contexto/fachada → dominio → repositorios/API
 ```
 
 - Las **pantallas no llevan reglas de negocio**. Si una regla afecta pedidos, stock, caja o créditos, pasa por el dominio.
-- `Frontend/src/modules/<área>/screens/` — pantallas por módulo (`ventas`, `pedidos`, `inventario`, `caja`, `compras`, `precios`, `créditos`, `usuarios`, `administracion`, `asistente`…).
+- `Frontend/src/modules/<área>/screens/` — pantallas por módulo (`ventas`, `pedidos`, `inventario`, `caja`, `compras`, `precios`, `créditos`, `usuarios`, `administracion`…).
 - `Frontend/src/components/` — componentes reutilizables. Revisar antes de crear uno nuevo.
 - `Frontend/src/context/` — fachada de operaciones: `OperacionesContext.tsx` (modo local) y `OperacionesApiContext.tsx` (fachada remota). Los hooks y los proveedores viven en archivos separados (Fast Refresh).
 - `Frontend/src/dominio/` — reglas puras (`servicios.ts`): construir pedidos, distribuir abonos, etc.
@@ -45,7 +43,7 @@ Cada módulo tiene **controlador** (valida con Zod y responde), **servicio** (l�
 | `*.service.ts` | Lógica de negocio, transacciones, bloqueos, consecutivos. |
 | `*.module.ts` | Registro Nest del módulo. |
 
-Módulos actuales: `archivos`, `asistente`, `auditoria`, `auth`, `caja`, `catalogos`, `cierres`, `clientes`, `compras`, `dashboard`, `inventario`, `pagos`, `pedidos`, `productos`, `sincronizacion`, `usuarios`.
+Módulos actuales: `archivos`, `auditoria`, `auth`, `caja`, `catalogos`, `cierres`, `clientes`, `compras`, `dashboard`, `inventario`, `pagos`, `pedidos`, `productos`, `sincronizacion`, `usuarios`.
 
 ### `Backend/src/common/` (transversal)
 
@@ -70,8 +68,7 @@ El tablero, las series y los tops se calculan con **SQL parametrizado / `Prisma.
 |---|---|
 | `enums.ts` | Enums que viajan por las tres capas (hoy 14 en `schema.prisma`). |
 | `tipos.ts` | DTO compartidos. |
-| `esquemas.ts` | Esquemas Zod (API, frontend y CLI comparten reglas). |
-| `asistente.ts`, `sincronizacion.ts` | Contratos de asistente y revisión de datos. |
+| `sincronizacion.ts` | Contrato de revisión de datos. |
 | `index.ts` | Reexporta todo y declara `VERSION_CONTRATO`. |
 
 Flujo obligatorio de un enum nuevo o modificado: `schema.prisma` → `enums.ts` → `npm run contrato:verificar` → `EQUIVALENCIA_VARIABLES.txt`.
@@ -80,7 +77,6 @@ Flujo obligatorio de un enum nuevo o modificado: `schema.prisma` → `enums.ts` 
 
 - Fuente de verdad: `Backend/prisma/schema.prisma` (37 modelos, 14 enums al 30/09/2026) y migraciones versionadas en `Backend/prisma/migrations/`.
 - Nombres **camelCase** en las tres capas; tablas plurales (`pedidos`, `pedidoLineas`); `id` es UUID interno y no se expone como código visible.
-- Códigos visibles por consecutivo: `USR`, `CLI`, `PROD`, `PRV`, `TC`, `PED`, `REC`, `FAC`.
 - No se borra información: `activo`, `estado`, `anuladoEn`, `revertidoEn`; la auditoría es append-only.
 - Triggers diferidos actualizan `versionesCache.dashboard` y la revisión de sincronización **al confirmar** la transacción; un rollback no invalida caché.
 - **Tabla operativa nueva → sumarla a los triggers de invalidación** (dashboard y sincronización) en la misma migración.
@@ -92,7 +88,6 @@ Flujo obligatorio de un enum nuevo o modificado: `schema.prisma` → `enums.ts` 
 - **Redis** interno (TTL 5 min): la clave incluye la revisión de `versionesCache`; los resultados antiguos caducan solos, sin `FLUSHALL`. Fallos de Redis → PostgreSQL.
 - **Sincronización**: `GET /api/v1/sincronizacion/revision` (autenticado, sin caché HTTP) cada 2 segundos con la pestaña visible; sin solicitudes superpuestas; reconexión y visibilidad reanudan. Un cambio confirmado dispara `ambie:datos-actualizados`.
 - Una actualización **mantiene el snapshot de la misma sesión**, sin desmontar pantallas ni perder scroll/borradores. Los placeholders de consultas paginadas solo pertenecen a la misma sesión y recurso.
-- Interpretar voz y emitir tickets **no** son escrituras de negocio: no auditan ni invalidan consultas.
 
 ## 7. Paginación y límites visuales
 
@@ -105,34 +100,18 @@ Flujo obligatorio de un enum nuevo o modificado: `schema.prisma` → `enums.ts` 
 
 | Servicio | Función | Exposición |
 |---|---|---|
-| `frontend` | SPA compilada + Nginx (proxy API/WebSocket) | 8080 |
+| `frontend` | SPA compilada + Nginx (proxy API) | 8080 |
 | `api` | API NestJS | 127.0.0.1:3000 |
 | `postgres` | Base de datos | Red interna (5432) |
 | `redis` | Caché | Red interna, sin publicar |
 | `minio` | Imágenes y comprobantes | Red interna (9000) |
 | `migrate` | Migraciones + semilla; **termina con código 0** | — |
-| `voz` | Vosk local (perfil `voz`) | Interno, sin puerto |
-| `cli`, `cloudflared` | Optativos (perfiles) | — |
 
-- Orden de arranque con `depends_on` y salud (`migrate` → `api` → `frontend`). No levantar servicios a mano ni duplicar contenedores de voz.
 - Recursos por límites `*_MEMORY`/`*_CPUS` en `.env`; escalar es vertical, sin editar Compose. La API no migra al arrancar.
 - QA aislada: proyecto `ambie-integracion` con `docker-compose.pruebas.yml` (8180/3100, volúmenes separados). Al terminar, `down` **sin `-v`**.
 - MinIO usa la última imagen archivada de Bitnami (la oficial dejó de publicarse); ver README antes de cambiar esa línea.
 - Cloudflare está preparado pero desactivado: token privado en `.local/cloudflare-token`, origen interno `http://frontend:8080`, cookies seguras. No activarlo por iniciativa propia.
 
-## 9. CLI (`Backend/cli/`)
-
-- Corre con `tsx`; fuera de `nest build` (tipos con `tsconfig.cli.json`).
-- Los proveedores implementan `ProveedorIA` y se registran sin duplicar el bucle de conversación.
-- Las herramientas se declaran una vez en `herramientas.ts` con esquema Zod; las escrituras piden confirmación (salvo `--si`, solo para pruebas).
-- El generador de pruebas descubre endpoints leyendo los controladores; no hay lista paralela que mantener.
-
-## 10. Voz
-
-- Un único servicio local (Vosk, español) dentro de la agrupación; el audio no se guarda.
-- WebSocket `/api/v1/asistente/voz` con tickets de un solo uso; permiso y origen verificados.
-- Separación estricta: transcripción → interpretación → confirmación → escritura.
-- El dictado no modifica formularios mientras se habla. Al finalizar, la intención completa rellena el flujo existente y abre su revisión; si faltan datos, solicita únicamente esos datos. No hay formulario ni modal alternativo del asistente. «Confirma»/«confirmar operación» invocan el guardado normal después de revisar; «Volver» conserva el borrador y «cancelar» lo descarta. Una corrección manual requiere revisar otra vez antes de confirmar por voz. Un cliente o producto ambiguo nunca se elige al azar. El micrófono detenido restaura la navegación manual.
 
 ## 11. Dónde va cada cosa nueva
 
@@ -147,7 +126,6 @@ Flujo obligatorio de un enum nuevo o modificado: `schema.prisma` → `enums.ts` 
 | Enum o DTO | `Backend/prisma/schema.prisma` → `Compartido/src/enums.ts`/`tipos.ts` → `contrato:verificar` |
 | Script de prueba | `Backend/scripts/` o `scripts/`; solo contra QA |
 | Migración | `Backend/prisma/migrations/`; aditiva y probada en QA |
-| Voz | `infra/voz/` + `Backend/src/asistente/` (un solo contenedor de voz) |
 
 ## 12. Referencias
 
