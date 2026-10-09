@@ -61,8 +61,9 @@ SELECT p.numero, p.total,
             ELSE GREATEST(p.total - COALESCE(a.pagado, 0), 0) END AS saldo
 FROM pedidos p
 LEFT JOIN LATERAL (
-  SELECT SUM("montoAplicado") AS pagado FROM "pagoAplicaciones"
-  WHERE "pedidoId" = p.id AND "revertidoEn" IS NULL
+  SELECT SUM(pa."montoAplicado") AS pagado FROM "pagoAplicaciones" pa
+  JOIN pagos pago ON pago.id = pa."pagoId"
+  WHERE pa."pedidoId" = p.id AND pa."revertidoEn" IS NULL AND pago.estado = 'activo'
 ) a ON true
 WHERE p.numero = 'PED-000001';
 
@@ -138,4 +139,25 @@ Los ejercicios del navegador usan formularios reales y PostgreSQL QA. `npm.cmd r
 
 Los 18 casos de integración QA aprobaron permisos, sesiones, transacciones, reserva de stock, concurrencia, pagos FIFO, cancelación, compras, gastos, cierre y precios históricos. Los reintentos secuenciales y simultáneos conservaron un solo pedido y cobro por clave; los rechazos y rollback no dejaron documentos parciales. Aprobaron también dos pruebas de caché, dos de claves de guardado y seis de renovación de sesión.
 
+El navegador recorrió Inicio, Ventas, Pedidos, Créditos, Inventario, Compras, Precios, Caja, Cierre, Usuarios, Auditoría y Configuración. Comprobó filtros, regreso, conservación de borradores y scroll durante sincronización, además de tamaños 390×844, 390×320 y 1440×320. Configuración conserva los accesos generales a Usuarios y Auditoría.
+
+| Formulario real QA | Confirmación desde el clic | Observación directa en PostgreSQL |
+|---|---|---|
+| Cliente: nombre, teléfono, dirección y nacimiento | 252 ms | 592 ms; los cuatro campos coinciden |
+| Venta ocasional: 2 Coca-Colas de $3.500 y 3 Doritos de $5.200 | 231 ms | 566 ms; total, pago aplicado y caja de $22.600 |
+
+Son mediciones de una ejecución local, con tiempos redondeados; la observación SQL incluye lanzar psql mediante Docker. La factura continuó mostrando sus precios originales al cambiar el catálogo a $9.000 y recargarla. Ventas, número de pedidos y ticket del día también coincidieron entre API y PostgreSQL QA. El recorrido espera el regreso normal del formulario antes de empezar el siguiente ejercicio; no interrumpe una confirmación pendiente con otra navegación.
+
 En la instalación del negocio se ejecutaron los cinco bloques de consulta de esta guía en transacciones de lectura. Las nueve ventas del mes suman $121.600 y su ticket promedio es $13.511,11; compras y gastos son cero. No se encontraron diferencias entre subtotales y cantidades por precio, entre totales y suma de líneas, ni entre stock reservado y reservas activas. La caja neta es $39.900: ventas y caja representan conceptos distintos y no deben igualarse sin revisar pagos y crédito. Se conservaron 8 clientes, 32 productos, 9 pedidos, 4 pagos y 4 movimientos de caja, sin escribir operaciones comerciales en producción.
+
+Las cinco tarjetas mensuales se contrastaron en Chrome con la API y SQL. No hubo errores de ejecución; el Inicio móvil no desborda horizontalmente y el ingreso funciona con scroll a 320×320. La instalación local quedó con cinco servicios saludables, migración finalizada con código 0 y rutas `/`, `/salud` y `/api/v1/salud` con respuesta 200. Antes de actualizar se creó un respaldo PostgreSQL de 147.657 bytes y se leyó completamente con `pg_restore`; no se restauró sobre el negocio. Estas comprobaciones son locales, sin despliegue externo ni validación de DNS/HTTPS en otro servidor.
+
+## Ejercicios adicionales para repetir en QA
+
+1. Registrar una venta en billetera y contrastar importe, método y movimiento de caja.
+2. Crear un pedido a crédito, aplicar un abono parcial y comprobar saldo y distribución FIFO sin sumar dos veces el pago.
+3. Cancelar un pedido abierto y comprobar liberación de reserva y reversos; un pedido entregado debe rechazar esa cancelación.
+4. Recibir una compra con y sin descuento de caja, verificando físico, costo, total y la diferencia legítima de caja.
+5. Hacer un conteo parcial y aplicar su ajuste: solo deben cambiar los productos digitados. No registrar un inventario inicial ficticio en el negocio.
+
+Para validar producción, recargar la pestaña y consultar los datos existentes con los mismos filtros de la pantalla. No se necesita borrar información ni cargar el catálogo QA.

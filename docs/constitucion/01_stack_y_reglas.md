@@ -25,7 +25,7 @@ Aplicación para el día a día de un negocio de ventas: clientes, productos, pe
 | Contrato | `@ambie/contrato` | Workspace npm con DTO, enums y esquemas. |
 | Caché | Redis 7 interno | TTL 5 min, expulsión LRU; sin puerto publicado. |
 | Archivos | MinIO privado | Imágenes y comprobantes con autenticación; máximo 5 MB. |
-| Servidor web | Nginx en el contenedor `frontend` | SPA + proxy de API y WebSocket. |
+| Servidor web | Nginx en el contenedor `frontend` | SPA + proxy de API. |
 | Orquestación | Docker Compose | Proyecto único `capturador_pedidos_20`. |
 | Lint frontend | oxlint | `npm run front:lint`. |
 

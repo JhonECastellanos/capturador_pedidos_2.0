@@ -21,11 +21,14 @@ async function main() {
   page.on('request', r => { if (r.method() === 'GET' && r.url().includes('/api/v1/') && !r.url().includes('/sincronizacion/')) lecturas.add(r); });
   const terminar = r => lecturas.delete(r);
   page.on('requestfinished', terminar); page.on('requestfailed', terminar);
+  // Al reemplazar el documento, las solicitudes de la pantalla anterior
+  // dejan de pertenecer al recorrido; se comprueban las del documento nuevo.
+  page.on('framenavigated', frame => { if (frame === page.mainFrame()) lecturas.clear(); });
   await page.addInitScript(() => { window.__documentoPrueba = Math.random(); });
   async function reposo() {
     await page.waitForTimeout(100);
     for (let i = 0; lecturas.size && i < 200; i++) await page.waitForTimeout(100);
-    assert.equal(lecturas.size, 0, 'Las lecturas deben terminar');
+    assert.equal(lecturas.size, 0, 'Las lecturas deben terminar: ' + [...lecturas].map(r => r.url()).join(', '));
     await page.waitForTimeout(50);
     assert.deepEqual(errores, []);
   }
@@ -194,6 +197,8 @@ async function main() {
     assert.equal(filaCliente.direccion, 'Dirección de pruebas'); assert.equal(filaCliente.fechaNacimiento, '1990-05-21');
     mediciones.push({ formulario: 'cliente', respuestaConfirmadaMs: +confirmadoClienteMs.toFixed(1), bdObservadaMs: +(performance.now()-inicioCliente).toFixed(1), correcto: true });
     console.log('✓ Cliente: datos digitados y fecha coinciden con PostgreSQL al responder el guardado');
+    await page.waitForURL(base + '/admin/ventas');
+    await reposo();
 
     const marcaFactura = `QA-Factura-${Date.now()}`;
     const productosFactura = [];
