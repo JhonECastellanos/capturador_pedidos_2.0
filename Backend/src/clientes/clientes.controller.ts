@@ -15,6 +15,9 @@ export class ClientesController {
     return this.clientes.listar(q, p.pagina, p.porPagina);
   }
 
+  @Get("cartera/resumen")
+  listarCartera(@Query("page") page?:string, @Query("pageSize") pageSize?:string, @Query("q") q?:string, @Query("clienteId") clienteId?:string, @Query("orden") orden?:string) { const p=paginacion(page,pageSize); return this.clientes.listarCartera(p.pagina,p.porPagina,q,clienteId,orden); }
+
   @Get(":clienteId")
   async obtener(@Param("clienteId") clienteId: string) {
     return { data: await this.clientes.obtener(clienteId) };

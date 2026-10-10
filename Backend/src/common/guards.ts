@@ -15,6 +15,8 @@ import { TokensService } from "./tokens";
 
 export const IS_PUBLIC_KEY = "isPublic";
 export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
+/** La consulta de sesión puede responder sin usuario cuando no hay token. */
+export const SesionOpcional = () => SetMetadata("sesionOpcional", true);
 
 export const ROLES_KEY = "roles";
 /** Restringe una ruta a ciertos roles: `@Roles(RolUsuario.ADMINISTRADOR)`. */
@@ -55,6 +57,7 @@ export class AuthGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<RequestAutenticado>();
     const token = this.extraerToken(request);
+    if (!token && this.reflector.getAllAndOverride<boolean>("sesionOpcional", [context.getHandler(), context.getClass()])) return true;
     if (!token) throw new UnauthorizedException("No autenticado");
 
     // El token de acceso es un JWT firmado: se valida sin tocar la base.

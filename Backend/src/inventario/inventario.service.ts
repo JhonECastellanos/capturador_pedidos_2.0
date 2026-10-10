@@ -2,8 +2,9 @@ import { Injectable } from "@nestjs/common";
 import { z } from "zod";
 import { PrismaService } from "../common/prisma.module";
 import { ErrorDominio } from "../common/errores";
-import { IniciarConteoEsquema, type InventarioInicialDTO } from "@ambie/contrato";
+import { seleccionarConteoDiario, IniciarConteoEsquema, type InventarioInicialDTO } from "@ambie/contrato";
 import { numero } from "../common/consecutivos";
+import { hoyLocal } from "../common/crypto";
 import { EstadoConteo, TipoConteo, TipoMovimientoInventario, Prisma } from "@prisma/client";
 
 const IniciarConteoSchema = IniciarConteoEsquema;
@@ -14,6 +15,14 @@ export class InventarioService {
 
   async iniciarConteo(datos: z.infer<typeof IniciarConteoSchema>, usuarioId: string) {
     return this.prisma.$transaction(async (tx) => {
+      const fechaDiaria = datos.tipo === "aleatorio" ? hoyLocal() : null;
+      if (fechaDiaria) {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('inventario:diario'))`;
+        const existente = await tx.conteoInventario.findFirst({ where: { fechaDiaria, estado: { not: EstadoConteo.CANCELADO } }, include: { usuario: {select:{nombre:true}}, lineas: { include: { producto: true } }, ajustes: { select: { id: true } } } });
+        if (existente) return this.dtoConteo(existente);
+        const pendiente = await tx.conteoInventario.findFirst({ where: { tipo: TipoConteo.ALEATORIO, fechaDiaria: { not: null }, estado: EstadoConteo.EN_CURSO }, include: { usuario: {select:{nombre:true}}, lineas: { include: { producto: true } }, ajustes: { select: { id: true } } } });
+        if (pendiente) return this.dtoConteo(pendiente);
+      }
       if (datos.tipo === "inicial") {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('inventario:inicial'))`;
         if (await tx.conteoInventario.findFirst({ where: { tipo: TipoConteo.INICIAL, estado: { not: EstadoConteo.CANCELADO } } })) throw new ErrorDominio("INVENTARIO_INICIAL_EXISTENTE", "Ya existe un inventario inicial. Continúa o revisa el registro existente", 409);
@@ -22,37 +31,47 @@ export class InventarioService {
       if (!productos.length) throw new ErrorDominio("SIN_PRODUCTOS", "Registra productos antes de iniciar el conteo");
 
       let seleccion = productos;
-      if (datos.tipo === "aleatorio" && datos.cantidadAleatoria) {
-        const mezclados = [...productos].sort(() => Math.random() - 0.5);
-        seleccion = mezclados.slice(0, Math.min(datos.cantidadAleatoria, productos.length));
+      const ciclos = new Map<string, number>();
+      if (fechaDiaria) {
+        const ultima = await tx.conteoLinea.aggregate({ where: { conteo: { estado: EstadoConteo.CONFIRMADO }, cicloDiario: { not: null } }, _max: { cicloDiario: true } });
+        const ciclo = ultima._max.cicloDiario ?? 1;
+        const cubiertas = await tx.conteoLinea.findMany({ where: { cicloDiario: ciclo, conteo: { estado: EstadoConteo.CONFIRMADO } }, select: { productoId: true } });
+        const contados = new Set(cubiertas.map(l => l.productoId));
+        const diario = seleccionarConteoDiario(productos, ciclo, contados);
+        seleccion = diario.map(l => l.producto);
+        for (const linea of diario) ciclos.set(linea.producto.id, linea.ciclo);
+
       }
 
       const conteo = await tx.conteoInventario.create({
         data: {
           tipo: datos.tipo === "inicial" ? TipoConteo.INICIAL : datos.tipo === "general" ? TipoConteo.GENERAL : TipoConteo.ALEATORIO,
           usuarioId,
+          fechaDiaria,
           turno: datos.turno,
           lineas: {
             create: seleccion.map((p) => ({
               productoId: p.id,
               stockTeorico: p.stockFisico,
+              cicloDiario: ciclos.get(p.id) ?? null,
             })),
           },
         },
-        include: { lineas: true },
+        include: { usuario: {select:{nombre:true}}, lineas: { include: { producto: true } }, ajustes: { select: { id: true } } },
       });
 
       return this.dtoConteo(conteo);
     });
   }
 
-  async actualizarLinea(conteoId: string, productoId: string, stockFisico: number) {
+  async actualizarLinea(conteoId: string, productoId: string, stockFisico: number, usuarioId: string, devolverDetalle = true) {
     await this.prisma.$transaction(async (tx) => {
       await this.validarEnCurso(conteoId, tx);
       const linea = await tx.conteoLinea.findUnique({
         where: { conteoId_productoId: { conteoId, productoId } },
       });
       if (!linea) throw new ErrorDominio("NO_ENCONTRADO", "Línea de conteo no encontrada", 404);
+      const producto = await tx.producto.findUniqueOrThrow({ where: { id: productoId }, select: { costoActual: true } });
 
       await tx.conteoLinea.update({
         where: { id: linea.id },
@@ -60,17 +79,19 @@ export class InventarioService {
           stockFisico,
           diferencia: stockFisico - linea.stockTeorico,
           contadoEn: new Date(),
+          contadoPorId: usuarioId,
+          costoUnitarioConteo: producto.costoActual,
         },
       });
     });
 
-    return this.obtener(conteoId);
+    return devolverDetalle ? this.obtener(conteoId) : null;
   }
 
   async finalizar(conteoId: string) {
     await this.prisma.$transaction(async (tx) => {
       const conteo = await this.validarEnCurso(conteoId, tx);
-      if (conteo.tipo === TipoConteo.INICIAL && await tx.conteoLinea.count({ where: { conteoId, stockFisico: null } })) throw new ErrorDominio("CONTEO_INCOMPLETO", "Cuenta todos los productos antes de confirmar el inventario inicial");
+      if ((conteo.tipo === TipoConteo.INICIAL || conteo.fechaDiaria) && await tx.conteoLinea.count({ where: { conteoId, stockFisico: null } })) throw new ErrorDominio("CONTEO_INCOMPLETO", "Cuenta todos los productos antes de confirmar este inventario");
       await tx.conteoInventario.update({
         where: { id: conteoId },
         data: { estado: EstadoConteo.CONFIRMADO, finalizadoEn: new Date() },
@@ -96,10 +117,12 @@ export class InventarioService {
 
   async aplicarAjuste(conteoId: string, usuarioId: string) {
     await this.prisma.$transaction(async (tx) => {
+      const tipo = await tx.conteoInventario.findUnique({ where: { id: conteoId }, select: { tipo: true } });
+      if (tipo?.tipo === TipoConteo.INICIAL) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('inventario:inicial'))`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`conteo:${conteoId}`}))`;
       const conteo = await tx.conteoInventario.findUnique({
         where: { id: conteoId },
-        include: { lineas: true },
+        include: { usuario: {select:{nombre:true}}, lineas: { include: { producto: true } }, ajustes: { select: { id: true } } },
       });
       if (!conteo) throw new ErrorDominio("NO_ENCONTRADO", "Conteo no encontrado", 404);
       if (conteo.estado !== EstadoConteo.CONFIRMADO) throw new ErrorDominio("CONTEO_NO_CONFIRMADO", "El conteo debe estar confirmado");
@@ -110,7 +133,6 @@ export class InventarioService {
       const contadas = conteo.lineas.filter((l) => l.stockFisico !== null);
 
       const inicial = conteo.tipo === TipoConteo.INICIAL;
-      if (inicial) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('inventario:inicial'))`;
       const ids = contadas.map((l) => l.productoId).sort();
       if (ids.length) await tx.$queryRaw(Prisma.sql`SELECT id FROM productos WHERE id IN (${Prisma.join(ids)}) ORDER BY id FOR UPDATE`);
       if (inicial) {
@@ -133,6 +155,7 @@ export class InventarioService {
             stockTeorico: linea.stockTeorico,
             stockFisico: linea.stockFisico as number,
             diferencia: linea.diferencia ?? 0,
+            costoUnitario: linea.costoUnitarioConteo,
           },
         });
         await tx.producto.update({
@@ -180,6 +203,7 @@ export class InventarioService {
           stockTeorico: producto.stockFisico,
           stockFisico,
           diferencia: stockFisico - producto.stockFisico,
+          costoUnitario: producto.costoActual,
         },
       });
       await tx.producto.update({
@@ -207,15 +231,18 @@ export class InventarioService {
     return { productoId, stockFisico, motivo };
   }
 
-  async listarConteos() {
+  async listarConteos(pagina = 1, porPagina = 20, actuales = false) {
+    const where: Prisma.ConteoInventarioWhereInput = actuales ? { OR: [{ estado: EstadoConteo.EN_CURSO }, { tipo: TipoConteo.INICIAL }] } : {};
+    const total = await this.prisma.conteoInventario.count({ where });
+    const actual = Math.min(pagina, Math.max(1, Math.ceil(total / porPagina)));
     const conteos = await this.prisma.conteoInventario.findMany({
-      orderBy: { iniciadoEn: "desc" },
-      include: { lineas: true },
+      where, orderBy: [{ iniciadoEn: "desc" }, { id: "desc" }], skip: (actual - 1) * porPagina, take: porPagina,
+      include: { usuario: {select:{nombre:true}}, lineas: { include: { producto: true } }, ajustes: { select: { id: true } } },
     });
-    return { data: conteos.map((c) => this.dtoConteo(c)) };
+    return { data: conteos.map((c) => this.dtoConteo(c)), meta: { total, pagina: actual, porPagina } };
   }
 
-  async inicial(pagina = 1, busqueda = ""): Promise<InventarioInicialDTO | null> {
+  async inicial(pagina = 1, busqueda = "", porPagina = 30): Promise<InventarioInicialDTO | null> {
     return this.prisma.$transaction(async (tx) => {
       const conteo = await tx.conteoInventario.findFirst({ where: { tipo: TipoConteo.INICIAL, estado: EstadoConteo.CONFIRMADO } });
       if (!conteo) return null;
@@ -239,22 +266,35 @@ export class InventarioService {
         SELECT COUNT(*) AS productos, COALESCE(SUM("stockInicial"),0) AS "unidadesIniciales", COALESCE(SUM("stockInicial" * "costoUnitarioInicial"),0) AS "valorInicial",
           COALESCE(SUM("stockActual"),0) AS "unidadesActuales", COALESCE(SUM("stockActual" * "costoUnitarioInicial"),0) AS "valorActualCostoInicial",
           COUNT(*) FILTER (WHERE "stockActual" <> "stockEsperado") AS diferencias, COUNT(*) FILTER (WHERE nombre ILIKE ${filtro}) AS total FROM inicial`);
+      const actual = Math.min(pagina, Math.max(1, Math.ceil(Number(totales.total) / porPagina)));
       const filas = await tx.$queryRaw<Array<{ productoId: string; nombre: string; costoUnitarioInicial: Prisma.Decimal; stockInicial: number; stockActual: number; movimientoNeto: bigint; stockEsperado: bigint }>>(Prisma.sql`${base}
-        SELECT * FROM inicial WHERE nombre ILIKE ${filtro} ORDER BY nombre, "productoId" LIMIT 30 OFFSET ${(pagina - 1) * 30}`);
-      return { conteoId: conteo.id, aplicadoEn: ajuste.creadoEn.toISOString(), productos: Number(totales.productos), unidadesIniciales: Number(totales.unidadesIniciales), valorInicial: numero(totales.valorInicial), unidadesActuales: Number(totales.unidadesActuales), valorActualCostoInicial: numero(totales.valorActualCostoInicial), diferencias: Number(totales.diferencias), pagina, porPagina: 30, total: Number(totales.total),
+        SELECT * FROM inicial WHERE nombre ILIKE ${filtro} ORDER BY nombre, "productoId" LIMIT ${porPagina} OFFSET ${(actual - 1) * porPagina}`);
+      return { conteoId: conteo.id, aplicadoEn: ajuste.creadoEn.toISOString(), productos: Number(totales.productos), unidadesIniciales: Number(totales.unidadesIniciales), valorInicial: numero(totales.valorInicial), unidadesActuales: Number(totales.unidadesActuales), valorActualCostoInicial: numero(totales.valorActualCostoInicial), diferencias: Number(totales.diferencias), pagina:actual, porPagina, total: Number(totales.total),
         lineas: filas.map((l) => ({ ...l, costoUnitarioInicial: numero(l.costoUnitarioInicial), movimientoNeto: Number(l.movimientoNeto), stockEsperado: Number(l.stockEsperado), diferencia: l.stockActual - Number(l.stockEsperado) })) };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
   }
 
-  async listarAjustes() {
-    const ajustes = await this.prisma.ajusteInventario.findMany({ orderBy: { creadoEn: "desc" }, include: { lineas: { include: { producto: true } } } });
-    return { data: ajustes.map((a) => ({ ...a, lineas: a.lineas.map((l) => ({ productoId: l.productoId, nombre: l.producto.nombre, stockTeorico: l.stockTeorico, stockFisico: l.stockFisico, diferencia: l.diferencia })) })) };
+  async listarAjustes(pagina = 1, porPagina = 20, q = "") {
+    const where: Prisma.AjusteInventarioWhereInput = q ? { OR: [{ motivo: { contains: q, mode: "insensitive" } }, { comentario: { contains: q, mode: "insensitive" } }, { lineas: { some: { producto: { nombre: { contains: q, mode: "insensitive" } } } } }] } : {};
+    const total = await this.prisma.ajusteInventario.count({ where });
+    const actual = Math.min(pagina, Math.max(1, Math.ceil(total / porPagina)));
+    const ajustes = await this.prisma.ajusteInventario.findMany({ where, orderBy: [{ creadoEn: "desc" }, { id: "desc" }], skip: (actual - 1) * porPagina, take: porPagina, include: { usuario:{select:{nombre:true}}, lineas: { include: { producto: true } } } });
+    return { data: ajustes.map((a) => ({ ...a, usuario:a.usuario.nombre, lineas: a.lineas.map((l) => ({ id: l.id, productoId: l.productoId, nombre: l.producto.nombre, stockTeorico: l.stockTeorico, stockFisico: l.stockFisico, diferencia: l.diferencia, costoUnitario: l.costoUnitario === null ? null : numero(l.costoUnitario) })) })), meta: { total, pagina: actual, porPagina } };
+  }
+
+  async listarDescuadres(pagina = 1, porPagina = 20, q = "") {
+    const where: Prisma.ConteoLineaWhereInput = { diferencia: { not: 0 }, stockFisico: { not: null }, conteo: { estado: EstadoConteo.CONFIRMADO }, ...(q ? { OR: [{ producto: { nombre: { contains: q, mode: "insensitive" } } }, { conteo: { turno: { contains: q, mode: "insensitive" } } }] } : {}) };
+    const total = await this.prisma.conteoLinea.count({ where });
+    const pendientes = await this.prisma.conteoLinea.count({where:{...where,conteo:{estado:EstadoConteo.CONFIRMADO,ajustes:{none:{}}}}});
+    const actual = Math.min(pagina, Math.max(1, Math.ceil(total / porPagina)));
+    const lineas = await this.prisma.conteoLinea.findMany({ where, skip: (actual - 1) * porPagina, take: porPagina, orderBy: [{ conteo: { finalizadoEn: "desc" } }, { id: "desc" }], include: { producto: true, conteo: { include: { usuario:{select:{nombre:true}}, ajustes: { select: { id: true } } } } } });
+    return { data: lineas.map(l => ({ id: l.id, conteoId: l.conteoId, productoId: l.productoId, nombre: l.producto.nombre, stockTeorico: l.stockTeorico, stockFisico: l.stockFisico, diferencia: l.diferencia, turno: l.conteo.turno, usuarioId: l.conteo.usuarioId, usuario:l.conteo.usuario.nombre, finalizadoEn: l.conteo.finalizadoEn, yaAjustado: l.conteo.ajustes.length > 0 })), meta: { total, pendientes, pagina: actual, porPagina } };
   }
 
   async obtener(conteoId: string) {
     const conteo = await this.prisma.conteoInventario.findUnique({
       where: { id: conteoId },
-      include: { lineas: true },
+      include: { usuario: {select:{nombre:true}}, lineas: { include: { producto: true } }, ajustes: { select: { id: true } } },
     });
     if (!conteo) throw new ErrorDominio("NO_ENCONTRADO", "Conteo no encontrado", 404);
     return this.dtoConteo(conteo);
@@ -272,10 +312,13 @@ export class InventarioService {
     id: string;
     tipo: TipoConteo;
     usuarioId: string;
+    usuario?: {nombre:string};
     turno: string;
     iniciadoEn: Date;
     finalizadoEn: Date | null;
     estado: EstadoConteo;
+    fechaDiaria: Date | null;
+    ajustes?: Array<{ id: string }>;
     lineas: Array<{
       id: string;
       productoId: string;
@@ -283,6 +326,10 @@ export class InventarioService {
       stockFisico: number | null;
       diferencia: number | null;
       contadoEn: Date | null;
+      contadoPorId: string | null;
+      costoUnitarioConteo: Prisma.Decimal | null;
+      cicloDiario: number | null;
+      producto?: { nombre: string };
       nombreInicial: string | null;
       costoUnitarioInicial: Prisma.Decimal | null;
     }>;
@@ -292,18 +339,26 @@ export class InventarioService {
       id: c.id,
       tipo: c.tipo.toLowerCase(),
       usuarioId: c.usuarioId,
+      usuario: c.usuario?.nombre,
       turno: c.turno,
       iniciadoEn: c.iniciadoEn,
       finalizadoEn: c.finalizadoEn,
       estado: c.estado.toLowerCase().replaceAll("_", "-"),
-      lineas: c.lineas.map((l) => ({
+      fechaDiaria: c.fechaDiaria?.toISOString().slice(0, 10) ?? null,
+      aplicado: (c.ajustes?.length ?? 0) > 0,
+      // Mantener el producto del paso actual al guardar y volver a leer el conteo.
+      lineas: [...c.lineas].sort((a, b) => a.id.localeCompare(b.id)).map((l) => ({
         id: l.id,
         conteoId: c.id,
         productoId: l.productoId,
+        nombre: l.producto?.nombre ?? l.nombreInicial ?? "Producto",
         stockTeorico: l.stockTeorico,
         stockFisico: l.stockFisico,
         diferencia: l.diferencia,
         contadoEn: l.contadoEn?.toISOString() ?? null,
+        contadoPorId: l.contadoPorId,
+        costoUnitarioConteo: l.costoUnitarioConteo === null ? null : numero(l.costoUnitarioConteo),
+        cicloDiario: l.cicloDiario,
         nombreInicial: l.nombreInicial,
         costoUnitarioInicial: l.costoUnitarioInicial === null ? null : numero(l.costoUnitarioInicial),
       })),

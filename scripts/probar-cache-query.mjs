@@ -4,14 +4,14 @@ import { consultas, claveConsulta, limpiarConsultas } from '../Frontend/src/data
 import { replaceEqualDeep } from '@tanstack/react-query';
 import { paginar, POR_PAGINA } from '../Frontend/src/utils/paginacion.ts';
 
-test('snapshots idénticos conservan referencias y páginas muestran máximo 30 registros', () => {
+test('snapshots idénticos conservan referencias y páginas muestran máximo 15 registros', () => {
   const antes = { clientes: [{ id: 'isabel', nombre: 'Isabel Rojas' }], productos: [{ id: 'pepsi', precio: 3000 }] };
   assert.equal(replaceEqualDeep(antes, structuredClone(antes)), antes);
   const despues = replaceEqualDeep(antes, { ...antes, productos: [{ id: 'pepsi', precio: 3500 }] });
   assert.equal(despues.clientes, antes.clientes); assert.notEqual(despues.productos, antes.productos);
-  assert.equal(POR_PAGINA, 30);
+  assert.equal(POR_PAGINA, 15);
   const filas = Array.from({ length: 65 }, (_, i) => i);
-  assert.equal(paginar(filas, 1).items.length, 30); assert.equal(paginar(filas, 2).items.length, 30); assert.equal(paginar(filas, 3).items.length, 5);
+  assert.equal(paginar(filas, 1).items.length, 15); assert.equal(paginar(filas, 2).items.length, 15); assert.equal(paginar(filas, 5).items.length, 5);
 });
 
 test('React Query reutiliza lecturas, deduplica, invalida y aísla sesiones', async () => {

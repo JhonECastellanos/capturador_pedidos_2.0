@@ -4,7 +4,7 @@ import { GuiaAyuda } from "../../../components/GuiaAyuda";
 import { IconArrowLeft, IconCheck, IconChevronRight, IconLock } from "../../../components/Icons";
 import { Paginacion } from "../../../components/Paginacion";
 import { SegmentoControl } from "../../../components/SegmentoControl";
-import { POR_PAGINA, paginar } from "../../../utils/paginacion";
+import { useTamanoPagina, paginar } from "../../../utils/paginacion";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
 import { useOperaciones } from "../../../context/operaciones";
@@ -12,11 +12,14 @@ import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodoFecha, dentroDeRangoFechaStr
 import { formatoMoneda } from "../../../utils/formato";
 import { fechaOperativa } from "../../../utils/fechas";
 
+import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
+import type { Pedido, CierreDia } from "../../../types";
 import { usaApi } from "../../../data/api";
 
 type FiltroPagoCierre = "todos" | "credito" | "efectivo" | "billetera";
 
 export function CierreAdmin() {
+  const POR_PAGINA = useTamanoPagina();
   const { movimientosCaja, pedidos, cierres, registrarCierre, obtenerCliente, actualizarEstadoPedido, trasladarPedidoAHoy, nombreUsuario } = useOperaciones();
 
   // Vistas y pasos: "historial" (por defecto) o "cierre" (paso 1: conteo, paso 2: resumen)
@@ -46,31 +49,38 @@ export function CierreAdmin() {
   const hoy = useMemo(() => new Date(), []);
   const fechaHoyStr = fechaLocalStr(hoy);
 
+  const [paginaPendientes,setPaginaPendientes]=useState(1);
+  const ayerStr=fechaLocalStr(new Date(hoy.getTime()-86400000));
+  const historialRemoto=usePaginaApi<CierreDia>(`/cierres?page=${pagina}&pageSize=${POR_PAGINA}&periodo=${periodo}&desde=${fechaDesde}&hasta=${fechaHasta}`, vista === "historial");
+  const resumenRemoto=useRegistroApi<{totalVentas:number;pedidosCount:number;totalIngresos:number;totalEgresos:number;efectivoEsperado:number;billeteraEsperado:number;ventasEfectivo:number;ventasBilletera:number;ventasCredito:number;pedidosEfectivo:number;pedidosBilletera:number;pedidosCredito:number;pendientesCount:number;pendientesAyerCount:number;yaCerrado:boolean}>(`/cierres/${fechaHoyStr}/previsualizacion`,true);
+  const pendientesRemotos=usePaginaApi<Pedido>(`/pedidos?estado=abiertos&desde=${ayerStr}&hasta=${fechaHoyStr}&page=${paginaPendientes}&pageSize=${POR_PAGINA}&q=${encodeURIComponent(busquedaPend)}&metodo=${filtroPago === "efectivo" || filtroPago === "billetera" ? filtroPago : ""}&saldoPendiente=${filtroPago === "credito" ? "true" : ""}`,vista === "cierre" && mostrarPendientes);
+  useEffect(()=>setPaginaPendientes(1),[busquedaPend,filtroPago]);
+
   // Cálculos de la jornada de hoy
   const movsHoy = useMemo(() => movimientosCaja.filter((m) => esMismoDia(fechaOperativa(m), hoy)), [hoy, movimientosCaja]);
-  const ingresosHoy = movsHoy.filter((m) => m.tipo === "ingreso").reduce((s, m) => s + m.monto, 0);
-  const egresosHoy = movsHoy.filter((m) => m.tipo === "egreso").reduce((s, m) => s + m.monto, 0);
+  const ingresosHoy = usaApi ? (resumenRemoto.data?.totalIngresos ?? 0) : movsHoy.filter((m) => m.tipo === "ingreso").reduce((s, m) => s + m.monto, 0);
+  const egresosHoy = usaApi ? (resumenRemoto.data?.totalEgresos ?? 0) : movsHoy.filter((m) => m.tipo === "egreso").reduce((s, m) => s + m.monto, 0);
   // Esperado por método: lo ingresado menos lo reversado en ese mismo método.
-  const efectivoEsperado = movsHoy
+  const efectivoEsperado = usaApi ? (resumenRemoto.data?.efectivoEsperado ?? 0) : movsHoy
     .filter((m) => m.metodo === "efectivo")
     .reduce((s, m) => s + (m.tipo === "ingreso" ? m.monto : -m.monto), 0);
-  const billeteraEsperado = movsHoy
+  const billeteraEsperado = usaApi ? (resumenRemoto.data?.billeteraEsperado ?? 0) : movsHoy
     .filter((m) => m.metodo === "billetera")
     .reduce((s, m) => s + (m.tipo === "ingreso" ? m.monto : -m.monto), 0);
   const balanceHoy = ingresosHoy - egresosHoy;
 
   const pedidosHoy = useMemo(() => pedidos.filter((p) => esMismoDia(fechaOperativa(p), hoy) && p.estado !== "cancelado"), [hoy, pedidos]);
-  const ventasHoy = pedidosHoy.reduce((s, p) => s + p.total, 0);
+  const ventasHoy = usaApi ? (resumenRemoto.data?.totalVentas ?? 0) : pedidosHoy.reduce((s, p) => s + p.total, 0);
 
   // Ventas discriminadas por forma de pago
   const pedidosEfectivoHoy = useMemo(() => pedidosHoy.filter((p) => p.pago.metodo === "efectivo" && p.pago.saldoPendiente === 0), [pedidosHoy]);
-  const ventasEfectivoHoy = pedidosEfectivoHoy.reduce((s, p) => s + p.total, 0);
+  const ventasEfectivoHoy = usaApi ? (resumenRemoto.data?.ventasEfectivo ?? 0) : pedidosEfectivoHoy.reduce((s, p) => s + p.total, 0);
 
   const pedidosBilleteraHoy = useMemo(() => pedidosHoy.filter((p) => p.pago.metodo === "billetera" && p.pago.saldoPendiente === 0), [pedidosHoy]);
-  const ventasBilleteraHoy = pedidosBilleteraHoy.reduce((s, p) => s + p.total, 0);
+  const ventasBilleteraHoy = usaApi ? (resumenRemoto.data?.ventasBilletera ?? 0) : pedidosBilleteraHoy.reduce((s, p) => s + p.total, 0);
 
   const pedidosCreditoHoy = useMemo(() => pedidosHoy.filter((p) => p.pago.saldoPendiente > 0), [pedidosHoy]);
-  const ventasCreditoHoy = pedidosCreditoHoy.reduce((s, p) => s + p.pago.saldoPendiente, 0);
+  const ventasCreditoHoy = usaApi ? (resumenRemoto.data?.ventasCredito ?? 0) : pedidosCreditoHoy.reduce((s, p) => s + p.pago.saldoPendiente, 0);
 
   // Pendientes de hoy y ayer
   const pendientesHoy = useMemo(
@@ -84,11 +94,11 @@ export function CierreAdmin() {
   const difEfectivo = conteoEfNum === null ? null : conteoEfNum - efectivoEsperado;
   const difBilletera = conteoBilleteraNum === null ? null : conteoBilleteraNum - billeteraEsperado;
 
-  const yaCerradoHoy = cierres.some((c) => c.fecha === fechaHoyStr);
+  const yaCerradoHoy = usaApi ? !!resumenRemoto.data?.yaCerrado : cierres.some((c) => c.fecha === fechaHoyStr);
 
   const cierresFiltrados = useMemo(
     () =>
-      cierres
+      usaApi ? historialRemoto.items.map(c=>({...c,fecha:c.fecha.slice(0,10)})) : cierres
         .filter((c) => {
           if (periodo === "hoy" && !(c.fecha === fechaHoyStr || esMismoDia(c.creadoEn, hoy))) return false;
           if (periodo !== "hoy" && !dentroDePeriodoFecha(c.fecha, periodo, hoy)) return false;
@@ -96,12 +106,13 @@ export function CierreAdmin() {
           return true;
         })
         .sort((a, b) => (b.fecha < a.fecha ? -1 : b.fecha > a.fecha ? 1 : b.creadoEn < a.creadoEn ? -1 : 1)),
-    [cierres, fechaDesde, fechaHasta, fechaHoyStr, hoy, periodo],
+    [cierres, fechaDesde, fechaHasta, fechaHoyStr, hoy, periodo, historialRemoto.items],
   );
 
   useEffect(() => { setPagina(1); }, [periodo, fechaDesde, fechaHasta]);
 
   const pendientesFiltrados = useMemo(() => {
+    if (usaApi) return pendientesRemotos.items;
     const q = busquedaPend.trim().toLowerCase();
     return pendientesHoy.filter((pedido) => {
       if (filtroPago === "credito" && !(pedido.pago.saldoPendiente > 0)) return false;
@@ -115,7 +126,7 @@ export function CierreAdmin() {
         cliente?.alias.toLowerCase().includes(q)
       );
     });
-  }, [busquedaPend, filtroPago, obtenerCliente, pendientesHoy]);
+  }, [busquedaPend, filtroPago, obtenerCliente, pendientesHoy, pendientesRemotos.items]);
 
   function iniciarNuevoCierre() {
     setPasoCierre(1);
@@ -129,7 +140,7 @@ export function CierreAdmin() {
       totalVentas: ventasHoy,
       totalIngresos: ingresosHoy,
       totalEgresos: egresosHoy,
-      pedidosCount: pedidosHoy.length,
+      pedidosCount: (usaApi ? resumenRemoto.data?.pedidosCount ?? 0 : pedidosHoy.length),
       pendientesTrasladados,
       pendientesCancelados,
       conteoEfectivo: conteoEfNum ?? undefined,
@@ -150,7 +161,7 @@ export function CierreAdmin() {
   }
 
   async function trasladar(id: string) {
-    const pedido = pendientesHoy.find(p => p.id === id);
+    const pedido = (usaApi ? pendientesRemotos.items : pendientesHoy).find(p => p.id === id);
     if (!pedido || await trasladarPedidoAHoy(id) === false) return false;
     setPendientesTrasladados(actual => actual + 1);
     mostrarAviso(`${pedido.numero} ${esAyer(fechaOperativa(pedido), hoy) ? "pasa a hoy" : "se reprogramó para mañana"}`, "exito"); return true;
@@ -197,7 +208,7 @@ export function CierreAdmin() {
             <div className="rounded-2xl bg-ink p-4 text-white">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] uppercase tracking-wide text-white/70">Fecha: {fechaHoyStr}</span>
-                <span className="font-mono text-[12px] text-accent">{pedidosHoy.length} pedidos hoy</span>
+                <span className="font-mono text-[12px] text-accent">{(usaApi ? resumenRemoto.data?.pedidosCount ?? 0 : pedidosHoy.length)} pedidos hoy</span>
               </div>
               <p className="mt-1 font-mono text-2xl font-bold">{formatoMoneda(balanceHoy)}</p>
               <p className="text-[11.5px] text-white/70">Balance esperado en caja (Ingresos {formatoMoneda(ingresosHoy)} − Egresos {formatoMoneda(egresosHoy)})</p>
@@ -272,7 +283,7 @@ export function CierreAdmin() {
             </div>
 
             {/* Pendientes (opcional colapsable para no cansar la pantalla) */}
-            {pendientesHoy.length > 0 && (
+            {(usaApi ? resumenRemoto.data?.pendientesCount ?? 0 : pendientesHoy.length) > 0 && (
               <div className="rounded-2xl border border-line bg-paper-raised p-3.5">
                 <button
                   type="button"
@@ -284,7 +295,7 @@ export function CierreAdmin() {
                       Pendientes por resolver
                     </p>
                     <p className="text-[11px] text-ink-soft">
-                      {pendientesAyer.length > 0 ? `${pendientesAyer.length} de ayer pendientes de traslado` : "Todos son de hoy"}
+                      {(usaApi ? resumenRemoto.data?.pendientesAyerCount ?? 0 : pendientesAyer.length) > 0 ? `${(usaApi ? resumenRemoto.data?.pendientesAyerCount ?? 0 : pendientesAyer.length)} de ayer pendientes de traslado` : "Todos son de hoy"}
                     </p>
                   </div>
                   <span className="rounded-lg bg-paper-sunken px-2.5 py-1 text-[11px] font-semibold text-ink">
@@ -315,6 +326,7 @@ export function CierreAdmin() {
                       ))}
                     </div>
 
+                    <Paginacion pagina={paginaPendientes} totalPaginas={Math.max(1,Math.ceil((usaApi ? pendientesRemotos.total : pendientesFiltrados.length)/POR_PAGINA))} total={usaApi ? pendientesRemotos.total : pendientesFiltrados.length} porPagina={POR_PAGINA} onChange={setPaginaPendientes} />
                     <div className="overflow-hidden rounded-xl border border-line bg-paper-sunken/40">
                       <div className="flex items-center justify-between border-b border-line bg-paper-raised px-3 py-1.5">
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-faint">
@@ -328,8 +340,8 @@ export function CierreAdmin() {
                           Sin pendientes para este filtro.
                         </li>
                       )}
-                      {pendientesFiltrados.length > POR_PAGINA && <li className="p-2 text-[11px] text-ink-soft">Se muestran {POR_PAGINA} pendientes. Usa el buscador para encontrar los demás.</li>}
-                      {pendientesFiltrados.slice(0, POR_PAGINA).map((pedido) => {
+
+                      {(usaApi ? pendientesFiltrados : paginar(pendientesFiltrados,paginaPendientes,POR_PAGINA).items).map((pedido) => {
                         const cliente = obtenerCliente(pedido.clienteId);
                         const deAyer = esAyer(fechaOperativa(pedido), hoy);
                         const esCred = pedido.pago.saldoPendiente > 0;
@@ -392,7 +404,7 @@ export function CierreAdmin() {
               <h3 className="mt-1 font-display text-[18px] font-bold text-ink">
                 Total ventas: {formatoMoneda(ventasHoy)}
               </h3>
-              <p className="text-[12px] text-ink-soft">{pedidosHoy.length} pedidos registrados hoy</p>
+              <p className="text-[12px] text-ink-soft">{(usaApi ? resumenRemoto.data?.pedidosCount ?? 0 : pedidosHoy.length)} pedidos registrados hoy</p>
 
               {/* Desglose: efectivo, billetera, crédito */}
               <div className="mt-3.5 grid gap-2.5">
@@ -403,7 +415,7 @@ export function CierreAdmin() {
                     </span>
                     <div>
                       <p className="text-[13px] font-semibold text-ink">Ventas en Efectivo</p>
-                      <p className="text-[11px] text-ink-soft">{pedidosEfectivoHoy.length} pedidos cobrados</p>
+                      <p className="text-[11px] text-ink-soft">{(usaApi ? resumenRemoto.data?.pedidosEfectivo ?? 0 : pedidosEfectivoHoy.length)} pedidos cobrados</p>
                     </div>
                   </div>
                   <span className="font-mono text-[16px] font-bold text-success">
@@ -418,7 +430,7 @@ export function CierreAdmin() {
                     </span>
                     <div>
                       <p className="text-[13px] font-semibold text-ink">Ventas en Billetera</p>
-                      <p className="text-[11px] text-ink-soft">{pedidosBilleteraHoy.length} transferencias</p>
+                      <p className="text-[11px] text-ink-soft">{(usaApi ? resumenRemoto.data?.pedidosBilletera ?? 0 : pedidosBilleteraHoy.length)} transferencias</p>
                     </div>
                   </div>
                   <span className="font-mono text-[16px] font-bold text-teal">
@@ -438,7 +450,7 @@ export function CierreAdmin() {
                     <div>
                       <p className="text-[13px] font-semibold text-ink">Ventas a Crédito</p>
                       <p className="text-[11px] text-ink-soft">
-                        {pedidosCreditoHoy.length > 0 ? `${pedidosCreditoHoy.length} pedidos con saldo pendiente` : "Sin créditos hoy"}
+                        {(usaApi ? resumenRemoto.data?.pedidosCredito ?? 0 : pedidosCreditoHoy.length) > 0 ? `${(usaApi ? resumenRemoto.data?.pedidosCredito ?? 0 : pedidosCreditoHoy.length)} pedidos con saldo pendiente` : "Sin créditos hoy"}
                       </p>
                     </div>
                   </div>
@@ -508,13 +520,13 @@ export function CierreAdmin() {
         <ConfirmarAccion
           abierto={confirmarEliminarId !== null}
           titulo="Cancelar pedido pendiente"
-          mensaje={`Se cancelará ${pendientesHoy.find((p) => p.id === confirmarEliminarId)?.numero ?? "el pedido"}. La cancelación revierte stock, cartera y caja; queda auditada.`}
+          mensaje={`Se cancelará ${(usaApi ? pendientesRemotos.items : pendientesHoy).find((p) => p.id === confirmarEliminarId)?.numero ?? "el pedido"}. La cancelación revierte stock, cartera y caja; queda auditada.`}
           textoConfirmar="Sí, cancelar pedido"
           tono="peligro"
           alCancelar={() => setConfirmarEliminarId(null)}
           alConfirmar={async () => {
             if (confirmarEliminarId) {
-              const numero = pendientesHoy.find((p) => p.id === confirmarEliminarId)?.numero ?? "";
+              const numero = (usaApi ? pendientesRemotos.items : pendientesHoy).find((p) => p.id === confirmarEliminarId)?.numero ?? "";
               if (await actualizarEstadoPedido(confirmarEliminarId, "cancelado") === false) return;
               setPendientesCancelados((actual) => actual + 1);
               setConfirmarEliminarId(null);
@@ -615,6 +627,14 @@ export function CierreAdmin() {
         </div>
       )}
 
+      <Paginacion
+          pagina={pagina}
+          totalPaginas={Math.max(1, Math.ceil((usaApi ? historialRemoto.total : cierresFiltrados.length) / POR_PAGINA))}
+          total={usaApi ? historialRemoto.total : cierresFiltrados.length}
+          porPagina={POR_PAGINA}
+          onChange={setPagina}
+        />
+
       {/* ─── Lista con scroll propio ─── */}
       <div className="flex min-h-0 flex-1 flex-col px-0 py-2.5">
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
@@ -624,7 +644,7 @@ export function CierreAdmin() {
             </p>
             <span className="text-[11px] text-ink-soft">Recientes primero</span>
           </div>
-          <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
+          <div inert={usaApi && (historialRemoto.actualizando)} className="lista-datos no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
             <div className="space-y-2.5">
         {cierresFiltrados.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-line bg-paper-raised px-4 py-12 text-center">
@@ -641,7 +661,7 @@ export function CierreAdmin() {
             </button>
           </div>
         ) : (
-          paginar(cierresFiltrados, pagina, POR_PAGINA).items.map((c) => (
+          (usaApi ? cierresFiltrados : paginar(cierresFiltrados, pagina, POR_PAGINA).items).map((c) => (
             <article
               key={c.id}
               className="rounded-xl border border-line bg-paper-raised p-3.5 shadow-sm transition-shadow hover:shadow"
@@ -660,7 +680,7 @@ export function CierreAdmin() {
                   <p className="text-[12px] text-ink-soft">
                     Ingresos {formatoMoneda(c.totalIngresos)} − Egresos {formatoMoneda(c.totalEgresos)}
                   </p>
-                  <p className="text-[11px] text-ink-faint">Cerró {nombreUsuario(c.usuarioId)}</p>
+                  <p className="text-[11px] text-ink-faint">Cerró {((c as typeof c & {usuario?:string}).usuario ?? nombreUsuario(c.usuarioId))}</p>
                 </div>
                 <div className="text-right">
                   <p className="font-mono text-[14px] font-bold text-ink">
@@ -695,15 +715,7 @@ export function CierreAdmin() {
       </div>
 
       {/* ─── Paginación fija al pie ─── */}
-      <div className="flex-shrink-0 mt-2">
-        <Paginacion
-          pagina={pagina}
-          totalPaginas={Math.max(1, Math.ceil(cierresFiltrados.length / POR_PAGINA))}
-          total={cierresFiltrados.length}
-          porPagina={POR_PAGINA}
-          onChange={setPagina}
-        />
-      </div>
+
     </div>
   );
 }

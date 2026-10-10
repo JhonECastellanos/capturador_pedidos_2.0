@@ -8,13 +8,15 @@ import { Boton } from "../../../components/Boton";
 import { BuscadorInput } from "../../../components/BuscadorInput";
 import { Paginacion } from "../../../components/Paginacion";
 import { formatoMoneda } from "../../../utils/formato";
+import { useTamanoPagina } from "../../../utils/paginacion";
 
 export function InventarioInicial({ conteo, iniciar, abrir }: { conteo?: ConteoInventario; iniciar: () => void; abrir: (conteo: ConteoInventario) => void }) {
+  const porPagina = useTamanoPagina();
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
-  const ruta = `/inventario/inicial?page=${pagina}&q=${encodeURIComponent(busqueda)}`;
+  const ruta = `/inventario/inicial?page=${pagina}&pageSize=${porPagina}&q=${encodeURIComponent(busqueda)}`;
   const clave = claveConsulta(ruta);
-  const consulta = useQuery({ queryKey: clave, queryFn: async ({ signal }) => (await respuestaRed<Envelope<InventarioInicialDTO | null>>(ruta, "GET", undefined, signal)).data, enabled: usaApi, refetchInterval: 30_000,
+  const consulta = useQuery({ queryKey: clave, queryFn: ({ signal }) => respuestaRed<Envelope<InventarioInicialDTO | null>>(ruta, "GET", undefined, signal), select: (respuesta) => respuesta.data, enabled: usaApi, refetchInterval: 30_000,
     placeholderData: (anterior, previa) => previa?.queryKey[1] === clave[1] && String(previa.queryKey[2]).startsWith("/inventario/inicial?") ? anterior : undefined });
   const inicial = consulta.data;
   return <div className="mt-3 min-h-0 flex-1 overflow-y-auto space-y-3 pb-3">
@@ -37,13 +39,14 @@ export function InventarioInicial({ conteo, iniciar, abrir }: { conteo?: ConteoI
       <p role="status" className={`text-[13px] font-semibold ${inicial.diferencias ? "text-danger" : "text-success"}`}>{inicial.diferencias ? `${inicial.diferencias} productos no coinciden con sus movimientos. Revisa el historial antes de ajustar.` : "El stock coincide con el inicio y los movimientos registrados."}</p>
       <p className="max-w-3xl text-[12px] text-ink-soft">Esperado = cantidad inicial + entradas − salidas posteriores. El valor actual usa el costo inicial para comparar las mismas cantidades; no es utilidad ni valoración al costo actual.</p>
       <div className="max-w-3xl"><BuscadorInput value={busqueda} onChange={(valor) => { setBusqueda(valor); setPagina(1); }} placeholder="Buscar producto del inventario inicial" /></div>
+      <fieldset disabled={consulta.isPlaceholderData} className="max-w-3xl"><Paginacion pagina={inicial.pagina} totalPaginas={Math.max(1, Math.ceil(inicial.total / porPagina))} total={inicial.total} porPagina={porPagina} onChange={setPagina} /></fieldset>
       <ul className="max-w-3xl space-y-2">{inicial.lineas.map((linea) => <li key={linea.productoId} className="rounded-xl border border-line bg-paper-raised p-3 text-[12px]">
         <p className="font-semibold text-ink">{linea.nombre}</p>
         <p className="mt-1 text-ink-soft">Inicial {linea.stockInicial} · movimiento neto {linea.movimientoNeto > 0 ? "+" : ""}{linea.movimientoNeto} · esperado {linea.stockEsperado} · actual {linea.stockActual}</p>
         <p className={linea.diferencia ? "text-danger" : "text-success"}>Diferencia {linea.diferencia} · costo inicial {formatoMoneda(linea.costoUnitarioInicial)}</p>
       </li>)}</ul>
       {!inicial.lineas.length && <p className="text-sm text-ink-soft">No hay productos que coincidan con la búsqueda.</p>}
-      <fieldset disabled={consulta.isPlaceholderData} className="max-w-3xl"><Paginacion pagina={inicial.pagina} totalPaginas={Math.max(1, Math.ceil(inicial.total / 30))} total={inicial.total} porPagina={30} onChange={setPagina} /></fieldset>
+
     </>}
   </div>;
 }

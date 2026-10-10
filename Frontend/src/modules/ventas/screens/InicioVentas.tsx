@@ -12,10 +12,12 @@ import { descuadreCajaDe } from "../../../dominio/servicios";
 import { formatoMoneda } from "../../../utils/formato";
 import { EtiquetaEstado } from "../../administracion/components/EtiquetaEstado";
 import { EtiquetaPago } from "../../administracion/components/EtiquetaPago";
+import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
+import type { Pedido } from "../../../types";
 import { usaApi } from "../../../data/api";
 import { BuscadorInput } from "../../../components/BuscadorInput";
 import { Paginacion } from "../../../components/Paginacion";
-import { POR_PAGINA, paginar } from "../../../utils/paginacion";
+import { useTamanoPagina, paginar } from "../../../utils/paginacion";
 
 interface InicioVentasProps {
   /** Flujo para tomar un pedido. */
@@ -43,6 +45,7 @@ function esMismoDia(fechaIso: string, referencia: Date): boolean {
  * directos y la lista de pedidos del día para gestionarlos.
  */
 export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevoCliente, rutaDetalle, etiquetaRol, descripcion, headerGlobal = false }: InicioVentasProps) {
+  const POR_PAGINA = useTamanoPagina();
   const navegar = useNavigate();
   const ubicacion = useLocation();
   const { usuario, cerrarSesion } = useAuth();
@@ -64,14 +67,17 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
         .sort((a, b) => (b.creadoEn < a.creadoEn ? -1 : b.creadoEn > a.creadoEn ? 1 : 0)),
     [pedidos, hoy],
   );
-  const ventasHoy = pedidosHoy.reduce((total, pedido) => total + pedido.total, 0);
-  const pedidosFiltrados = pedidosHoy.filter((p) => !busqueda.trim() || `${p.numero} ${obtenerCliente(p.clienteId)?.nombre ?? "Venta ocasional"} ${nombreUsuario(p.vendedorId)}`.toLowerCase().includes(busqueda.trim().toLowerCase()));
-  const porCobrar = pedidos
+  const remotos=usePaginaApi<Pedido>(`/pedidos?segmento=hoy&estado=activos&page=${pagina}&pageSize=${POR_PAGINA}&q=${encodeURIComponent(busqueda)}`);
+  const resumen=useRegistroApi<{pedidosHoy:number;ventasHoy:number;porCobrar:number;descuadre:number|null}>("/pedidos/resumen-ventas",true);
+  const cantidadHoy=usaApi ? resumen.data?.pedidosHoy ?? 0 : pedidosHoy.length;
+  const ventasHoy = usaApi ? resumen.data?.ventasHoy ?? 0 : pedidosHoy.reduce((total, pedido) => total + pedido.total, 0);
+  const pedidosFiltrados = usaApi ? remotos.items : pedidosHoy.filter((p) => !busqueda.trim() || `${p.numero} ${obtenerCliente(p.clienteId)?.nombre ?? "Venta ocasional"} ${nombreUsuario(p.vendedorId)}`.toLowerCase().includes(busqueda.trim().toLowerCase()));
+  const porCobrar = usaApi ? resumen.data?.porCobrar ?? 0 : pedidos
     .filter((pedido) => pedido.estado !== "cancelado" && pedido.pago.saldoPendiente > 0)
     .reduce((suma, p) => suma + p.pago.saldoPendiente, 0);
-  const descuadre = descuadreCajaDe(pedidos, movimientosCaja, hoy);
+  const descuadre = usaApi ? resumen.data?.descuadre ?? 0 : descuadreCajaDe(pedidos, movimientosCaja, hoy);
   // Con el día vacío evitamos tarjetas con $0: la app se ve "recién instalada".
-  const tieneMetricasHoy = pedidosHoy.length > 0 || ventasHoy > 0 || porCobrar > 0 || descuadre !== 0;
+  const tieneMetricasHoy = cantidadHoy > 0 || ventasHoy > 0 || porCobrar > 0 || descuadre !== 0;
   const acciones = [
     {
       titulo: "Crear Pedido",
@@ -118,7 +124,7 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
           {tieneMetricasHoy ? (
             <div className="mt-3 grid grid-cols-2 gap-3">
               <div>
-                <p className="font-mono text-[16px] font-semibold text-ink">{pedidosHoy.length}</p>
+                <p className="font-mono text-[16px] font-semibold text-ink">{cantidadHoy}</p>
                 <p className="text-[12px] text-ink-soft">Pedidos hoy</p>
               </div>
               <div>
@@ -172,7 +178,9 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
           </div>
 
           <div className="mt-2 shrink-0"><BuscadorInput value={busqueda} onChange={(q) => { setBusqueda(q); setPagina(1); }} placeholder="Buscar pedido, cliente o vendedor" /></div>
-          <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
+          <Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil((usaApi ? remotos.total : pedidosFiltrados.length) / POR_PAGINA))} total={usaApi ? remotos.total : pedidosFiltrados.length} porPagina={POR_PAGINA} onChange={setPagina} />
+
+      <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
             <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
               {pedidosFiltrados.length === 0 ? (
                 <ListaVacia
@@ -183,7 +191,7 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
                 />
               ) : (
                 <ul className="space-y-2">
-                  {paginar(pedidosFiltrados, pagina).items.map((pedido) => {
+                  {(usaApi ? pedidosFiltrados : paginar(pedidosFiltrados, pagina, POR_PAGINA).items).map((pedido) => {
                     const cliente = obtenerCliente(pedido.clienteId);
                     const porCobrarPedido = pedido.pago.saldoPendiente > 0;
                     return (
@@ -201,8 +209,7 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
                               <span className="truncate font-mono text-[12.5px] font-bold text-ink">{pedido.numero}</span>
                               <EtiquetaEstado estado={pedido.estado} compacta />
                             </span>
-                            <span className="mt-0.5 block truncate text-[12px] text-ink-soft">{cliente?.nombre ?? "Venta ocasional"}</span>
-                            <span className="block truncate text-[11px] text-ink-soft">{pedido.lineas.map(l => `${l.cantidad} × ${l.nombre}`).join(" · ")}</span>
+                            <span className="mt-0.5 block truncate text-[12px] text-ink-soft">{cliente?.nombre ?? pedido.clienteNombre ?? "Venta ocasional"}</span>
                           </span>
                           <span className="flex flex-shrink-0 flex-col items-end gap-1">
                             <span className="font-mono text-[13px] font-semibold text-ink">{formatoMoneda(pedido.total)}</span>
@@ -217,7 +224,7 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
               )}
             </div>
           </div>
-          <div className="shrink-0"><Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil(pedidosFiltrados.length / POR_PAGINA))} total={pedidosFiltrados.length} porPagina={POR_PAGINA} onChange={setPagina} /></div>
+
         </section>
       </main>
       {clienteCreado && (

@@ -76,7 +76,11 @@ export async function respuestaRed<T>(ruta: string, metodo = "GET", datos?: unkn
       if (respuesta.status === 401) expirarSesion();
     }
   }
-  const cuerpo = await respuesta.json().catch(() => null);
+  let cuerpo = await respuesta.json().catch(() => null);
+  if (ruta === "/auth/me" && respuesta.ok && cuerpo?.data === null && cuerpo.renovable && await renovarAcceso()) {
+    respuesta = await enviar(ruta, metodo, datos, signal, guardado?.clave);
+    cuerpo = await respuesta.json().catch(() => null);
+  }
   if (protegida && respuesta.ok && sesionInicial !== claveConsulta(ruta)[1]) throw new DOMException("La sesión cambió durante la solicitud.", "AbortError");
   if (!respuesta.ok) {
     if (respuesta.status >= 400 && respuesta.status < 500 && respuesta.status !== 408) resolverGuardado(guardado);

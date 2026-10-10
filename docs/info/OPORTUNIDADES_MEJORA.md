@@ -1,10 +1,30 @@
 # Oportunidades de mejora — AMBIÉ · Capturador de pedidos
 
+## Estado actualizado — conteos y listas, 09/10/2026
+
+Se resolvieron páginas remotas de las listas y selectores, conservación del carrito entre páginas, lectura individual de documentos y agregados SQL de cartera/caja/jornada/cierre. Los conteos diarios tienen cobertura por ciclo, responsable, fecha de captura y aplicación explícita; la comparación del inicio conserva cantidades y costos históricos. La lista completa deja de renderizarse en cada pantalla. Los criterios y evidencias actuales están en [validación](VALIDACION_FORMULARIOS_Y_BASE_DATOS.md); las oportunidades siguientes son una revisión histórica, no una lista automática de fallos vigentes.
+
+Antes de instalar en otro negocio falta ensayar la restauración de PostgreSQL y archivos en un entorno separado, establecer respaldo periódico y probar desde un teléfono físico en la red real. Para acceso externo estable falta dominio/túnel con nombre; el enlace temporal puede desaparecer. Revisar dependencias y la distribución archivada de MinIO con una auditoría actual, y medir concurrencia y volumen propios del negocio. No se ha acreditado capacidad máxima ni operación comercial sin conexión. La instalación sigue perteneciendo a una sola empresa.
+
 **Fecha:** 30 de septiembre de 2026
 **Alcance:** revisión completa del proyecto (frontend, backend, API, base de datos, Docker/infraestructura y modelo de negocio).
 **Objetivo:** escalar el producto a algo mucho más robusto, manteniendo su naturaleza uniempresa (una instalación = una empresa, sin tenants).
 
 ## Cómo leer este documento
+
+### Estado actualizado: pruebas móviles del 9 de octubre de 2026
+
+Las propuestas del 30 de septiembre son una revisión histórica, no una lista de defectos todavía presentes. Ya existen idempotencia de escrituras, inventario inicial, tarjetas mensuales, transacciones y pruebas de conciliación; revisar su implementación antes de proponer otra solución.
+
+Para entregar una instalación a un negocio, los próximos puntos concretos son:
+
+1. **Respaldos recuperables:** programar copias de PostgreSQL, archivos de MinIO y configuración fuera del equipo; ensayar una restauración completa en otra instalación. Leer un dump no equivale a probar esa recuperación.
+2. **Dependencias:** la auditoría actual sin dependencias de desarrollo informa siete paquetes afectados: tres de severidad alta y cuatro moderada, en las cadenas de Prisma y MinIO. Revisar versiones compatibles y repetir integración antes de actualizar; no aplicar automáticamente las degradaciones de versión sugeridas por la herramienta.
+3. **Acceso desde celulares:** en la red privada, reservar una IP para el equipo y configurar `APP_ORIGIN`/`CORS_ALLOWED_ORIGIN` para la dirección que realmente usarán los teléfonos. El perfil HTTPS del túnel utiliza `COOKIE_SECURE=true`; esas cookies no funcionan en una IP LAN con HTTP. Elegir HTTPS también en LAN o volver al perfil local sin túnel, configurado para HTTP privado. No abrir PostgreSQL, Redis ni MinIO al teléfono.
+4. **Acceso externo estable:** el enlace temporal de Cloudflare sirve para pruebas y puede caducar. Para uso habitual se necesita un túnel con nombre y un dominio fijo, con arranque y supervisión documentados. Validar ingreso, renovación de sesión y carga de archivos desde un dispositivo físico antes de darlo por terminado.
+5. **Operación diaria:** comprobar arranque después de reiniciar el equipo, Docker disponible, ahorro de energía desactivado durante la jornada, espacio de disco y permisos de los usuarios del negocio. Un equipo apagado o suspendido no puede atender los celulares. Mantener `system` para administración técnica y crear cuentas personales.
+
+La interfaz permite probar formularios y gráficos móviles en QA; no existe trabajo operativo sin conexión al servidor. Las medidas y el alcance actual de las pruebas se registran en [validación de formularios y base de datos](VALIDACION_FORMULARIOS_Y_BASE_DATOS.md). La prueba con un teléfono físico corresponde al siguiente ejercicio del negocio y no se sustituye por la emulación de Chrome.
 
 Cada oportunidad tiene el mismo formato:
 

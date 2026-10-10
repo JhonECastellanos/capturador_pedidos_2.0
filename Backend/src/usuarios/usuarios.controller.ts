@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
+import { paginacion } from "../common/paginacion";
 import { RolUsuario, Usuario } from "@prisma/client";
 import { UsuariosService } from "./usuarios.service";
 import { Roles, UsuarioActual } from "../common/guards";
@@ -11,8 +12,9 @@ export class UsuariosController {
   constructor(private readonly usuarios: UsuariosService) {}
 
   @Get()
-  listar() {
-    return this.usuarios.listar();
+  listar(@Query("page") page?: string, @Query("pageSize") pageSize?: string, @Query("q") q?: string) {
+    const p = paginacion(page, pageSize);
+    return this.usuarios.listar(p.pagina, p.porPagina, q);
   }
 
   @Post()

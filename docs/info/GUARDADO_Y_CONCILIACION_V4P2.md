@@ -165,6 +165,51 @@ Los textos con placeholders son para sustituirlos localmente; no publicar tokens
 
 ## Confirmación inmediata y actualización visual
 
+### Conteo diario y general en V5P3
+
+El diario selecciona hasta cinco productos activos, conserva el mismo documento durante el día de Bogotá y retoma uno anterior que siga abierto. Cada línea conserva el ciclo al que pertenece. Solo finalizar un conteo diario completo aporta cobertura al ciclo; cancelarlo no la aporta. El general reutiliza las mismas capturas, revisión y ajustes del inventario inicial, sin crear otra tabla de existencias. La compatibilidad API con conteos generales parciales se conserva: al aplicar, solo cambian las líneas digitadas.
+
+El stock físico y la diferencia permanecen nulos hasta capturarlos. Digitar cero guarda cero, su diferencia, el usuario autenticado y el instante de captura. Finalizar guarda el historial; aplicar el ajuste es una confirmación posterior que modifica stock y ledger dentro de una transacción. La combinación de bloqueo de documento y unicidad de `ajustesInventario.conteoId` impide aplicar dos veces el mismo conteo. La restricción única del diario no incluye cancelados.
+
+Para contrastar el detalle del frontend, sustituye únicamente el identificador:
+
+```sql
+BEGIN READ ONLY;
+SELECT c.id, c.tipo, c.estado, c."fechaDiaria", c.turno,
+       p.nombre, l."stockTeorico", l."stockFisico", l.diferencia,
+       l."cicloDiario", l."contadoEn", u.nombre AS responsable,
+       EXISTS (SELECT 1 FROM "ajustesInventario" a WHERE a."conteoId"=c.id) AS aplicado
+FROM "conteosInventario" c
+JOIN "conteoLineas" l ON l."conteoId"=c.id
+JOIN productos p ON p.id=l."productoId"
+LEFT JOIN usuarios u ON u.id=l."contadoPorId"
+WHERE c.id='ID_DEL_CONTEO'
+ORDER BY p.nombre, p.id;
+
+-- Esperado: cero filas; una captura debe tener diferencia y responsable.
+-- Los registros anteriores a esta migración pueden no tener contadoPorId.
+SELECT l.id FROM "conteoLineas" l JOIN "conteosInventario" c ON c.id=l."conteoId"
+WHERE c."fechaDiaria" IS NOT NULL AND l."stockFisico" IS NOT NULL
+  AND (l.diferencia IS DISTINCT FROM l."stockFisico"-l."stockTeorico"
+       OR l."contadoEn" IS NULL OR l."contadoPorId" IS NULL);
+
+-- Esperado: cero filas; cada producto aparece una sola vez por ciclo confirmado.
+SELECT l."cicloDiario", l."productoId", COUNT(*)
+FROM "conteoLineas" l JOIN "conteosInventario" c ON c.id=l."conteoId"
+WHERE c.estado='confirmado' AND l."cicloDiario" IS NOT NULL
+GROUP BY l."cicloDiario", l."productoId" HAVING COUNT(*)>1;
+
+-- Comparar el ajuste con el ledger, sin sumar stock por segunda vez.
+SELECT a.id, a."conteoId", al."productoId", al."stockTeorico", al."stockFisico",
+       al.diferencia, m."deltaStockFisico", m."stockFisicoAntes", m."stockFisicoDespues"
+FROM "ajustesInventario" a JOIN "ajusteLineas" al ON al."ajusteInventarioId"=a.id
+LEFT JOIN "movimientosInventario" m ON m."conteoId"=a."conteoId" AND m."productoId"=al."productoId"
+WHERE a."conteoId"='ID_DEL_CONTEO';
+COMMIT;
+```
+
+Los totales de cartera, caja y jornada se calculan en SQL antes de paginar. Los registros visibles usan `page` y `pageSize`: cinco en móvil/tablet y quince en escritorio con puntero fino. Cambiar página no recorta líneas de factura, un abono FIFO ni el total de un documento. Los productos del carrito permanecen en memoria al filtrar o paginar; el servidor vuelve a validar precio, disponibilidad y permisos al confirmar. La exportación completa consulta el conjunto filtrado solo al solicitarla.
+
 La respuesta correcta implica transacción confirmada, no trabajo pendiente de persistencia. El tiempo HTTP incluye validación, espera de bloqueos y commit; medir con `performance.now()` alrededor del POST. Una consulta posterior con Docker/psql agrega el tiempo de esos clientes y no mide el instante exacto del commit.
 
 La otra pestaña recibe la modificación mediante revisión cada dos segundos más latencia; hay un refresco de respaldo. No es entrega instantánea garantizada. Redis almacena lecturas del tablero, no escrituras ni el único comprobante de una operación. Reiniciar Redis no debe perder pedidos. La interfaz no ofrece guardado de negocio sin conexión.
@@ -183,3 +228,59 @@ node Backend/scripts/probar-guardado-ui.cjs
 ```
 
 `prueba:guardados` comprueba conservación de clave, reenvíos secuenciales/simultáneos, otra intención, conflicto y rollback; consulta pedidos, pagos y stock directamente. `prueba:inventario:inicial` comprueba unicidad, conteo completo, stock que cambió, rechazo sin escritura parcial, cancelación antes de aplicar, costos conservados, compra repetida y paginación sin recortar totales. Si QA ya tiene un inicio aplicado, lo conserva y valida la comparación; no borra la base para repetir el recorrido.
+
+## Catálogo CSV desde Precios
+
+Precios ofrece Exportar CSV, Plantilla CSV e Importar CSV. La exportación incluye el catálogo completo, aunque la pantalla esté paginada o filtrada. Columnas: codigoInterno,nombre,categoria,unidad,precioVenta,costoActual,cantidadInicial,stockMinimo. Nombre y precioVenta son obligatorios; las demás columnas son opcionales. Máximo 200 filas y 2 MB por carga. Admite coma o punto y coma, texto entre comillas dobles, comillas escapadas y saltos dentro de celdas. Los números no llevan separador de miles; las cantidades son enteros no negativos.
+
+Deja codigoInterno vacío para nuevos productos. Se busca primero por nombre normalizado (mayúsculas/espacios); si ya existe, se conserva su identidad. Si varios productos comparten nombre, exige el código. Un código desconocido se rechaza, nunca se inventa ni se reutiliza. Los productos nuevos reciben el consecutivo central PROD dentro de la transacción. Se rechazan filas repetidas y nombres que renombren un código sobre otro producto.
+
+Al importar se muestra una revisión antes de Confirmar importación. La API valida el administrador, reutiliza ProductosService.crear y actualizarPrecio y las operaciones de InventarioService. El lote entero comparte la transacción existente y su clave de reintento: producto, precio, movimiento inicial, conteo, líneas y confirmación quedan juntos. Un error revierte el lote y los consecutivos. Importaciones simultáneas del mismo nombre comparten el bloqueo del catálogo inicial. No hay tablas nuevas para el CSV.
+
+Con Preparar inventario inicial marcado, crea o completa el borrador inicial. cantidadInicial se guarda como cantidad contada, con responsable y fecha. El stock de productos anteriores cambia solo al revisar, confirmar y aplicar ese inventario con el mecanismo habitual. Las líneas no incluidas permanecen pendientes de conteo. El catálogo activo se incorpora al borrador sin borrar conteos existentes.
+
+Si el inicio ya está confirmado, se rechaza la preparación inicial sin guardar ninguna fila; desmarca esa opción para actualizar catálogo/precios. En ese modo, se conservan las existencias de productos anteriores, aunque el CSV traiga otra cantidad; los nuevos se crean con su cantidad y el movimiento inicial existente. Las comparaciones del inicio conservan nombres/costos históricos y no incluyen automáticamente productos creados después de ese inicio. No uses un CSV de precios para reemplazar el stock diario: utiliza conteos, compras o ajustes.
+
+Persistencia: productos y categorias identifican el catálogo; cambiosPrecio registra precio anterior/nuevo y usuario; movimientosInventario conserva la creación; conteosInventario y conteoLineas contienen la preparación inicial; ajustesInventario, ajusteLineas y el ledger registran su aplicación. No modifica facturas, pedidos ni precios de ventas ya guardadas. La invalidación y la revisión de sincronización existentes actualizan las otras pantallas tras el commit.
+
+### Archivo de ejemplo y campos
+
+El [CSV completo de ejemplo](../ejemplos/catalogo-inicial.csv) contiene tres productos ficticios identificados con el prefijo Ejemplo CSV. Se carga en QA desde Precios → Importar CSV → revisar → Confirmar importación. No cargarlo en un negocio real salvo que se desee registrar esos productos. Para comenzar un negocio, reemplaza sus nombres y valores por tu catálogo y conserva el encabezado.
+
+| Campo | Qué escribir | Ejemplo | Cómo se guarda |
+|---|---|---|---|
+| codigoInterno | Vacío para un producto nuevo; código exportado para actualizar uno existente | vacío / PROD-0044 | productos.codigoInterno; el consecutivo nuevo lo asigna la API |
+| nombre | Nombre completo; obligatorio | Ejemplo CSV Arepa de queso | productos.nombre; busca coincidencia ignorando mayúsculas y espacios repetidos |
+| categoria | Categoría del producto | Preparados | categorias.nombre y productos.categoriaId |
+| unidad | Unidad de venta | unidad / botella | productos.unidad |
+| precioVenta | Precio unitario, sin símbolo de moneda ni miles; obligatorio | 4500 | productos.precioVenta; cambiosPrecio conserva modificaciones |
+| costoActual | Costo unitario de compra/preparación | 2100 | productos.costoActual; no es el valor total del lote |
+| cantidadInicial | Unidades físicas enteras y no negativas | 20 | stock de producto nuevo y cantidad contada del inventario inicial, si se prepara |
+| stockMinimo | Umbral para avisar de pocas existencias | 5 | productos.stockMinimo |
+
+En el ejemplo se esperan 47 unidades: arepa 20, empanada 15 y bebida 12; valor de inventario al costo 79.500 (42.000 + 19.500 + 18.000). El valor a precio de venta sería 165.000 y no debe confundirse con el costo. Se revisa y aplica el inventario inicial desde Inventario; importarlo no sustituye esa confirmación.
+
+### Inventario, compras, gastos y descuadres
+
+El [archivo de consultas de lectura](../ejemplos/validar-inventario-compras-gastos.sql) permite contrastar catálogo/stock, movimientos, conteos y responsable, costo guardado, compras y gastos. Se ejecuta contra la instalación elegida con parámetros desde y hasta, sin modificar datos:
+
+```powershell
+$usuarioBd = (docker.exe compose exec -T postgres printenv POSTGRES_USER).Trim()
+$nombreBd = (docker.exe compose exec -T postgres printenv POSTGRES_DB).Trim()
+Get-Content -Raw -Encoding UTF8 docs/ejemplos/validar-inventario-compras-gastos.sql |
+  docker.exe compose exec -T postgres psql -U $usuarioBd -d $nombreBd -v desde=2026-10-01 -v hasta=2026-10-31
+```
+
+En QA agrega -p ambie-integracion y los archivos Compose de pruebas a todos los comandos Docker; el nombre de su base es ambie_test. Nunca restaures ni borres una base para consultar. En un cliente SQL reemplaza :'desde' y :'hasta' por fechas entre comillas y omite las instrucciones que empiezan con barra invertida, propias de psql.
+
+Las tablas necesarias ya existen: productos/categorias como maestros; movimientosInventario como libro de cambios; conteosInventario/conteoLineas para conteos diarios y generales; ajustesInventario/ajusteLineas para su aplicación o correcciones manuales; proveedores/recepcionesCompra/recepcionLineas para compras; gastos y movimientosCaja para desembolsos. La migración de valoración agrega únicamente dos columnas de costo y los índices/triggers requeridos. No crea tablas de resumen ni otra copia del inventario.
+
+Inicio → Descuadres de inventario permite agrupar por día, semana de lunes a domingo, mes y año. Muestra últimos 7 días, 8 semanas, 6 meses o 5 años, como los gráficos existentes. Usa el día de confirmación en America/Bogota, o el del ajuste manual; el período actual llega hasta su fin calendario. Faltantes = unidades negativas × costo guardado (importe positivo); sobrantes = unidades positivas × costo guardado; neto = sobrantes − faltantes. No compensa ambos para ocultar faltantes ni modifica automáticamente caja, gastos o utilidad.
+
+Solo entran conteos confirmados no iniciales y ajustes manuales aplicados. Un conteo aplicado se cuenta una vez desde su documento, no otra desde el ajuste. Borradores, cancelados, líneas sin contar e inventario inicial quedan fuera. La misma fórmula aplica al conteo diario y al general. Si se confirma otro conteo sobre un descuadre aún no resuelto, es otra observación y se registra como tal: revisa/aplica el anterior antes de interpretar el acumulado como pérdida física única.
+
+conteoLineas.costoUnitarioConteo captura el costo al guardar la cantidad; ajusteLineas.costoUnitario lo conserva al aplicar, y en un ajuste manual captura el costo de ese momento. Cambios de precio/costo posteriores no revalorizan registros anteriores. Los registros previos a esta migración permanecen con NULL: el tablero indica cuántas diferencias carecen de costo y no las valora con el catálogo de hoy. Costo cero explícito es un valor conocido de cero, distinto de NULL.
+
+El stockTeorico de un conteo corresponde a su apertura. Si hay ventas/compras mientras se cuenta, la diferencia observada puede diferir del delta aplicado al stock; movimientosInventario conserva el antes/después real de la aplicación. El costo de descuadres representa diferencias observadas, no un egreso de caja ni una medición de pérdida contable certificada.
+
+La caché del tablero usa formato v2 y revisión transaccional también para cabeceras/líneas de conteo y ajuste. Confirmar o aplicar invalida automáticamente; rollback no publica una revisión. La actualización entre pantallas conserva el mecanismo de sincronización existente.

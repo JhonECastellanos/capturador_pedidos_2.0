@@ -1,9 +1,23 @@
 import type { Pedido } from "../types";
+import type { ProductoDTO } from "@ambie/contrato";
 
 function escaparCSV(valor: string): string {
   const necesitaComillas = valor.includes(",") || valor.includes('"') || valor.includes("\n");
   const escapado = valor.replace(/"/g, '""');
   return necesitaComillas ? `"${escapado}"` : escapado;
+}
+
+export function descargarCSV(encabezados: string[], filas: string[][], archivo: string): void {
+  const blob = new Blob(["\uFEFF" + [encabezados, ...filas].map(fila => fila.map(escaparCSV).join(",")).join("\n")], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = archivo;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+
+export const COLUMNAS_PRODUCTOS_CSV = ["codigoInterno", "nombre", "categoria", "unidad", "precioVenta", "costoActual", "cantidadInicial", "stockMinimo"];
+export function exportarProductosCSV(productos: ProductoDTO[]): void {
+  descargarCSV(COLUMNAS_PRODUCTOS_CSV, productos.map(p => [p.codigoInterno, p.nombre, p.categoria, p.unidad, String(p.precioVenta), String(p.costoActual), String(p.stockFisico ?? p.stock), String(p.stockMinimo)]), "productos.csv");
 }
 
 export function exportarPedidosCSV(pedidos: Pedido[], nombreCliente: (clienteId: string) => string): void {
@@ -21,16 +35,7 @@ export function exportarPedidosCSV(pedidos: Pedido[], nombreCliente: (clienteId:
       String(pedido.pago.saldoPendiente),
       lineas,
       pedido.vendedorId,
-    ].map(escaparCSV).join(",");
+    ];
   });
-  const csv = [encabezados.join(","), ...filas].join("\n");
-  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `pedidos-${new Date().toISOString().slice(0, 10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  descargarCSV(encabezados, filas, `pedidos-${new Date().toISOString().slice(0, 10)}.csv`);
 }

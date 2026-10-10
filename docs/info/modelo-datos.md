@@ -1,7 +1,7 @@
 # Modelo de datos — AMBIÉ (PostgreSQL)
 
 Base de datos PostgreSQL que reemplaza a `localStorage` como fuente de verdad.
-Una sola empresa. Base nueva vacía (no se migran datos comerciales de `ambie:v1:*`).
+Una sola empresa por instalación. Las instalaciones nuevas empiezan sin operaciones comerciales; las existentes se actualizan mediante migraciones que conservan datos e historial. No se importan datos de `ambie:v1:*` automáticamente.
 
 ## Convenciones de nombres
 
@@ -10,7 +10,7 @@ son plurales y camelCase (`clientes`, `pedidos`, `pedidoLineas`). El esquema rea
 [`Backend/prisma/schema.prisma`](../../Backend/prisma/schema.prisma); esta página documenta
 el mapeo entre el modelo actual del frontend (`Frontend/src/types/index.ts`) y la base.
 
-V4P2: consultar el [diccionario de todas las tablas y campos](DICCIONARIO_DATOS_V4P2.md) y el [guardado, reintentos y conciliación SQL](GUARDADO_Y_CONCILIACION_V4P2.md). El inventario inicial reutiliza conteos y ajustes; no introduce otra tabla de stock.
+V5P3: consultar el [diccionario de todas las tablas y campos](DICCIONARIO_DATOS_V4P2.md) y el [guardado, reintentos y conciliación SQL](GUARDADO_Y_CONCILIACION_V4P2.md). El inventario inicial reutiliza conteos y ajustes; no introduce otra tabla de stock.
 
 - `id`: UUID técnico (Prisma `uuid()`), nunca se expone un código visible como PK/FK.
 - Dinero: `numeric(18,2)` (`Decimal` en Prisma; los DTO de negocio lo convierten a número para la pantalla).
@@ -49,7 +49,7 @@ La asignación ocurre dentro de la misma transacción que inserta la entidad
 | `estadoCuenta`, `saldoPendiente` | **derivados** | se calculan desde pedidos y aplicaciones |
 | `frecuenciaCreditoDias` | derivado de `tiposCredito.frecuenciaCreditoDias` | 1/7/15/30 |
 | `ultimoAbonoCreditoEn` | derivado del último `pagos` aplicado | — |
-| `ultimoRecordatorioCreditoEn` | `recordatoriosCredito` (si aplica) | — |
+| `ultimoRecordatorioCreditoEn` | No se captura en los flujos actuales | No hay registro de envío de mensajes en la API |
 
 ### Producto (`Producto`)
 
@@ -100,7 +100,11 @@ La asignación ocurre dentro de la misma transacción que inserta la entidad
 - `movimientosInventario`: ledger append-only con saldos antes/después.
   Tipos: `inicializacion`, `reserva`, `consumo-pedido`, `liberacion-reserva`,
   `recepcion-compra`, `ajuste-conteo`, `ajuste-manual`, `reversion`.
-- `conteosInventario` + `conteoLineas` (`stockFisico`/`diferencia` nulos hasta contar).
+- `conteosInventario` + `conteoLineas` (`stockFisico`/`diferencia` nulos hasta contar). Un cero digitado sí cuenta como capturado.
+- Conteo aleatorio diario: `fechaDiaria` identifica el día de Bogotá; cada línea guarda `cicloDiario`, `contadoPorId` y `contadoEn`. Se eligen cinco productos activos distintos, o todo el catálogo cuando tiene menos de cinco. La cobertura avanza al finalizar, sin aplicar ajustes automáticamente. Al completar un ciclo dentro de una jornada, las líneas restantes comienzan el siguiente ciclo sin repetir un producto ese día.
+- Una reapertura del diario conserva el mismo documento; un diario de una jornada anterior sin terminar se retoma antes de comenzar otro. Los conteos cancelados no completan cobertura.
+- Inventario general: usa el mismo documento, captura por producto, revisión y aplicación que el inicial; mantiene compatibilidad con los conteos parciales existentes. El diario y el inicial requieren todas sus líneas capturadas antes de finalizar.
+- `aplicado` se deriva de la existencia de un ajuste; no es otra columna de estado ni una segunda copia del stock.
 - Tipo `inicial`: un punto de partida aplicado por instalación; conserva nombre/costo y acumulado del ledger en `conteoLineas`. La confirmación usa los ajustes existentes y no genera gasto ni duplica el stock.
 - `ajustesInventario` + `ajusteLineas` (`conteoId` nulo = ajuste manual; no existe `"manual"`).
 - `cambiosPrecio`: historial de precios.
@@ -109,7 +113,7 @@ La asignación ocurre dentro de la misma transacción que inserta la entidad
 
 - `recepcionesCompra` + `recepcionLineas`; incrementan stock físico y actualizan `costoActual`.
 - `gastos`; genera egreso de caja.
-- `cierresDia` (único por `fecha`) + `cierreMedios`, `cierrePedidos`, `cierreMovimientos`, `cierreAcciones`.
+- `cierresDia` (único por `fecha`) + `cierreMedios`, `cierreAcciones`.
 
 ## Reglas de stock
 
@@ -127,7 +131,16 @@ La asignación ocurre dentro de la misma transacción que inserta la entidad
   `productos.codigoInterno`, `pedidos.numero`, `recepcionesCompra.numero`,
   `facturas.numero`, `cierresDia.fecha`, `consecutivos(tipo, periodo)`.
 - `UNIQUE(pedidoId, productoId)` en `pedidoLineas`; `UNIQUE(conteoId, productoId)` en `conteoLineas`.
-- Un inicio no cancelado y un ajuste por conteo mediante índices parciales; una confirmación por `(usuarioId, clave)` en `escriturasConfirmadas`.
+- Un inicio no cancelado mediante índice parcial; un ajuste por conteo mediante clave única nullable y FK; una confirmación por `(usuarioId, clave)` en `escriturasConfirmadas`.
 - `facturas.pedidoId` único: una factura interna por pedido.
 - `CHECK cantidad > 0`, `precioUnitario >= 0`, `monto > 0` en caja/pagos.
 - FKs protegen las entidades relacionadas; algunas líneas dependientes declaran `CASCADE`. La aplicación no ofrece borrado físico de documentos comerciales.
+
+## Organización de tablas vigente
+
+- Maestros: usuarios, roles, permisos, rolPermisos, clientes, tiposCredito, productos, categorias y proveedores.
+- Documentos y líneas: pedidos, pedidoLineas, pedidoEstadoHistorial, facturas, pagos, pagoAplicaciones, recepcionesCompra, recepcionLineas, gastos, conteosInventario, conteoLineas, ajustesInventario, ajusteLineas, cambiosPrecio, cierresDia, cierreMedios y cierreAcciones.
+- Movimientos y reservas: movimientosInventario, reservasStock y movimientosCaja. Conservan trazabilidad; no reemplazarlos por saldos duplicados.
+- Soporte: sesiones, archivosAdjuntos, auditoriaEventos, consecutivos, escriturasConfirmadas y versionesCache. La tabla _prisma_migrations registra migraciones. Total después de actualizar: 36 tablas.
+
+La migración 202610100003 retira recordatoriosCredito, cierrePedidos y cierreMovimientos: estaban vacías tanto en negocio como en QA y no tienen lecturas ni escrituras en los servicios actuales. Conserva cierresDia, cierreMedios y cierreAcciones, que sí guardan los cierres y sus decisiones. Si alguna instalación tiene registros en las tablas retiradas, la migración se detiene sin eliminarlos. No se borra ni se restablece información comercial. La migración 202610100002 retira solo un índice redundante; la unicidad de ajuste por conteo permanece protegida por Prisma y PostgreSQL.

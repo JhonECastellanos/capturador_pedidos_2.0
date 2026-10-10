@@ -37,8 +37,8 @@ export class PagosController {
   }
 
   @Get("abonos")
-  async historial(@Query("clienteId") clienteId?: string, @Query("page") page?: string, @Query("pageSize") pageSize?: string) {
+  async historial(@Query("clienteId") clienteId?: string, @Query("page") page?: string, @Query("pageSize") pageSize?: string, @Query("q") q?:string, @Query("periodo") periodo?:string, @Query("pedidoId") pedidoId?:string) {
     const p = paginacion(page, pageSize);
-    return this.pagos.historial(clienteId, p.pagina, p.porPagina);
+    return this.pagos.historial(clienteId, p.pagina, p.porPagina, q, periodo, pedidoId);
   }
 }

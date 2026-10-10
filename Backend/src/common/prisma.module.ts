@@ -26,6 +26,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async enTransaccion<T>(trabajo: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+    const actual = this.transaccion.getStore();
+    if (actual) return trabajo(actual);
     return super.$transaction((tx) => this.transaccion.run(tx, () => trabajo(tx)), { maxWait: 10_000, timeout: 20_000 });
   }
 

@@ -32,8 +32,8 @@ export class CierresController {
   }
 
   @Get()
-  historial(@Query("page") page?: string, @Query("pageSize") pageSize?: string) {
+  historial(@Query("page") page?: string, @Query("pageSize") pageSize?: string, @Query("periodo") periodo?:string, @Query("desde") desde?:string, @Query("hasta") hasta?:string) {
     const p = paginacion(page, pageSize);
-    return this.cierres.historial(p.pagina, p.porPagina);
+    return this.cierres.historial(p.pagina, p.porPagina, periodo, desde, hasta);
   }
 }

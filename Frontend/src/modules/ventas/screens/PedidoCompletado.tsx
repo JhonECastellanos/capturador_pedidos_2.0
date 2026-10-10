@@ -10,7 +10,8 @@ import { formatoFechaHora } from "../../../utils/fechas";
 import { DetalleProductosPedido } from "../components/DetalleProductosPedido";
 import { useQuery } from "@tanstack/react-query";
 import type { Envelope } from "@ambie/contrato";
-import type { Pedido } from "../../../types";
+import { useRegistroApi } from "../../../data/usePaginaApi";
+import type { Pedido, Cliente } from "../../../types";
 import { respuestaRed, usaApi } from "../../../data/api";
 import { claveConsulta } from "../../../data/query";
 
@@ -28,7 +29,8 @@ export function PedidoCompletado({ rutaInicio }: PedidoCompletadoProps) {
   const consulta = useQuery({ queryKey: claveConsulta(rutaPedido), queryFn: ({ signal }) => respuestaRed<Envelope<Pedido>>(rutaPedido, "GET", undefined, signal), enabled: usaApi && !!pedidoId,
     initialData: enContexto ? { data: enContexto } : undefined });
   const pedido = consulta.data?.data ?? enContexto;
-  const cliente = pedido ? obtenerCliente(pedido.clienteId) : null;
+  const clienteRemoto=useRegistroApi<Cliente>(`/clientes/${pedido?.clienteId}`,!!pedido?.clienteId);
+  const cliente = clienteRemoto.data ?? (pedido ? obtenerCliente(pedido.clienteId) : null);
   useEffect(() => {
     if (!pedidoId) navegar(rutaInicio, { replace: true });
   }, [navegar, pedidoId, rutaInicio]);

@@ -8,12 +8,15 @@ import { useAviso } from "../../../components/useAviso";
 import { useOperaciones } from "../../../context/operaciones";
 import type { NuevoUsuario, UsuarioSistema } from "../../../types";
 import { useAuth } from "../../../context/auth";
+import { usaApi } from "../../../data/api";
+import { usePaginaApi } from "../../../data/usePaginaApi";
 
 import { BuscadorInput } from "../../../components/BuscadorInput";
 import { Paginacion } from "../../../components/Paginacion";
-import { POR_PAGINA, paginar } from "../../../utils/paginacion";
+import { useTamanoPagina, paginar } from "../../../utils/paginacion";
 
 export function UsuariosAdmin() {
+  const POR_PAGINA = useTamanoPagina();
   const { usuarios, crearUsuario, cambiarEstadoUsuario, cambiarRolUsuario } = useOperaciones();
   const { usuario: sesion } = useAuth();
   const [cambioRol, setCambioRol] = useState<{ id: string; rol: UsuarioSistema["rol"] } | null>(null);
@@ -24,15 +27,16 @@ export function UsuariosAdmin() {
   const { aviso, mostrarAviso, cerrarAviso } = useAviso();
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
+  const remoto = usePaginaApi<UsuarioSistema>(`/usuarios?page=${pagina}&pageSize=${POR_PAGINA}&q=${encodeURIComponent(busqueda)}`, vista === "lista");
 
   const usuariosOrdenados = useMemo(() =>
-    usuarios.filter((u) => !busqueda.trim() || `${u.nombre} ${u.email} ${u.rol}`.toLowerCase().includes(busqueda.trim().toLowerCase())).sort((a, b) => {
+    usaApi ? remoto.items : usuarios.filter((u) => !busqueda.trim() || `${u.nombre} ${u.email} ${u.rol}`.toLowerCase().includes(busqueda.trim().toLowerCase())).sort((a, b) => {
       const rolOrden = a.rol === "administrador" ? 0 : 1;
       const bRolOrden = b.rol === "administrador" ? 0 : 1;
       if (rolOrden !== bRolOrden) return rolOrden - bRolOrden;
       return a.nombre.localeCompare(b.nombre);
     }),
-    [usuarios, busqueda]
+    [usuarios, busqueda, remoto.items]
   );
 
   async function guardarUsuario(evento?: FormEvent<HTMLFormElement>) {
@@ -209,9 +213,11 @@ export function UsuariosAdmin() {
       </div>
 
       <div className="flex-shrink-0 pt-2 text-[12px] text-ink-soft">
-        {usuariosOrdenados.length} usuarios registrados en el sistema
+        {usaApi ? remoto.total : usuariosOrdenados.length} usuarios registrados en el sistema
       </div>
-      <div className="shrink-0 mt-2 max-w-xl"><BuscadorInput value={busqueda} onChange={(q) => { setBusqueda(q); setPagina(1); }} placeholder="Buscar usuario, correo o rol" /></div>
+      <div className="shrink-0 mt-2 max-w-xl"><BuscadorInput value={busqueda} onChange={(q) => { setBusqueda(q); setPagina(1); }} placeholder="Buscar usuario, correo o rol" /><Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil((usaApi ? remoto.total : usuariosOrdenados.length) / POR_PAGINA))} total={usaApi ? remoto.total : usuariosOrdenados.length} porPagina={POR_PAGINA} onChange={setPagina} /></div>
+
+
 
       {/* Lista con scroll propio */}
       <div className="flex min-h-0 flex-1 flex-col px-0 py-2.5">
@@ -222,9 +228,9 @@ export function UsuariosAdmin() {
             </p>
             <span className="text-[11px] text-ink-soft">Admin primero</span>
           </div>
-          <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
+          <div inert={usaApi && (remoto.actualizando)} className="lista-datos no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
             <div className="space-y-2.5">
-        {paginar(usuariosOrdenados, pagina).items.map((item: UsuarioSistema) => (
+        {(usaApi ? usuariosOrdenados : paginar(usuariosOrdenados, pagina, POR_PAGINA).items).map((item: UsuarioSistema) => (
           <article key={item.id} className="rounded-xl border border-line bg-paper-raised p-3.5 shadow-sm">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
@@ -257,7 +263,7 @@ export function UsuariosAdmin() {
           </div>
         </div>
       </div>
-      <div className="shrink-0 max-w-xl"><Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil(usuariosOrdenados.length / POR_PAGINA))} total={usuariosOrdenados.length} porPagina={POR_PAGINA} onChange={setPagina} /></div>
+
 
       <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
 

@@ -30,7 +30,7 @@ export class DashboardService {
     if (normalizados.desde > normalizados.hasta || (!normalizados.soloTops && (Date.parse(normalizados.hasta) - Date.parse(normalizados.desde)) / 86400000 > 2000)) throw new ErrorDominio("RANGO_INVALIDO", "Selecciona un rango de hasta 2000 días", 400);
     const hash = createHash("sha256").update(JSON.stringify([normalizados.desde, normalizados.hasta, normalizados.clienteId ?? null, normalizados.vendedorId ?? null, !!normalizados.soloTops])).digest("hex");
     const revision = await this.version();
-    const clave = `v1:${revision}:${hash}`;
+    const clave = `v2:${revision}:${hash}`;
     const previo = await this.cache?.obtener<Awaited<ReturnType<DashboardService["calcular"]>>>(clave);
     if (previo) return { ...previo, cache: { estado: "hit", version: revision } };
     const pendiente = this.pendientes.get(clave);
@@ -41,7 +41,7 @@ export class DashboardService {
       const data = await servicio.calcular(normalizados);
       return { data, version };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead, timeout: 20_000 }).then(async ({ data, version }) => {
-      await this.cache?.guardar(`v1:${version}:${hash}`, data);
+      await this.cache?.guardar(`v2:${version}:${hash}`, data);
       return { ...data, cache: { estado: "miss", version } };
     }).finally(() => this.pendientes.delete(clave));
     this.pendientes.set(clave, calculo);
@@ -76,11 +76,12 @@ export class DashboardService {
       this.prisma.recepcionCompra.aggregate({ where: { fechaOperacion: this.filtroFecha(desde, hasta) }, _sum: { total: true } }),
     ]);
 
-    const [serie, topProductos, topClientes, porMetodo] = await Promise.all([
+    const [serie, topProductos, topClientes, porMetodo, descuadres] = await Promise.all([
       filtros.soloTops ? Promise.resolve([]) : this.serieDiaria(desde, hasta, filtros),
       this.topProductos(desde, hasta, filtros),
       this.topClientes(desde, hasta, filtros),
       this.ventasPorMetodo(where),
+      filtros.soloTops ? Promise.resolve({ faltantes: 0, sobrantes: 0, neto: 0, lineasSinCosto: 0, serie: [] }) : this.descuadres(desde, hasta),
     ]);
 
     const ventas = numero(agregado._sum?.total ?? 0);
@@ -98,6 +99,7 @@ export class DashboardService {
       ticketPromedio: pedidos > 0 ? Math.round((ventas / pedidos) * 100) / 100 : 0,
       gastos: numero(gastos._sum?.monto ?? 0),
       compras: totalCompras,
+      descuadres,
       utilidad: Math.round((ventas - Number(costos.costo) - numero(gastos._sum?.monto ?? 0)) * 100) / 100,
       creditoPendiente: credito,
       creditoPendienteGlobal: await this.creditoPendiente("1900-01-01", "9999-12-31", filtros),
@@ -147,6 +149,34 @@ export class DashboardService {
   }
 
   // ─── Agregaciones ───────────────────────────────────────────────
+
+  private async descuadres(desde: string, hasta: string) {
+    const inicio = new Date(`${desde}T00:00:00-05:00`);
+    const fin = new Date(new Date(`${hasta}T00:00:00-05:00`).getTime() + 86400000);
+    const filas = await this.prisma.$queryRaw<Array<{ dia: Date; faltantes: number; sobrantes: number; lineasSinCosto: bigint }>>(Prisma.sql`
+      WITH diferencias AS (
+        SELECT (c."finalizadoEn" AT TIME ZONE 'UTC' AT TIME ZONE 'America/Bogota')::date AS dia,
+          l.diferencia, l."costoUnitarioConteo" AS costo
+        FROM "conteosInventario" c JOIN "conteoLineas" l ON l."conteoId" = c.id
+        WHERE c.estado = 'confirmado' AND c.tipo <> 'inicial' AND l."stockFisico" IS NOT NULL
+          AND l.diferencia <> 0 AND c."finalizadoEn" >= ${inicio} AND c."finalizadoEn" < ${fin}
+        UNION ALL
+        SELECT (a."creadoEn" AT TIME ZONE 'UTC' AT TIME ZONE 'America/Bogota')::date,
+          l.diferencia, l."costoUnitario"
+        FROM "ajustesInventario" a JOIN "ajusteLineas" l ON l."ajusteInventarioId" = a.id
+        WHERE a."conteoId" IS NULL AND a.estado = 'aplicado' AND l.diferencia <> 0
+          AND a."creadoEn" >= ${inicio} AND a."creadoEn" < ${fin}
+      )
+      SELECT dia, COALESCE(SUM(GREATEST(-diferencia, 0) * costo), 0)::float8 AS faltantes,
+        COALESCE(SUM(GREATEST(diferencia, 0) * costo), 0)::float8 AS sobrantes,
+        COUNT(*) FILTER (WHERE costo IS NULL) AS "lineasSinCosto"
+      FROM diferencias GROUP BY dia ORDER BY dia
+    `);
+    const serie = filas.map(f => ({ dia: this.aISO(f.dia), faltantes: Number(f.faltantes), sobrantes: Number(f.sobrantes), lineasSinCosto: Number(f.lineasSinCosto) }));
+    const faltantes = Math.round(serie.reduce((s, f) => s + f.faltantes, 0) * 100) / 100;
+    const sobrantes = Math.round(serie.reduce((s, f) => s + f.sobrantes, 0) * 100) / 100;
+    return { faltantes, sobrantes, neto: Math.round((sobrantes - faltantes) * 100) / 100, lineasSinCosto: serie.reduce((s, f) => s + f.lineasSinCosto, 0), serie };
+  }
 
   /**
    * Ventas agrupadas por día.

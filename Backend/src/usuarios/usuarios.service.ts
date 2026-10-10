@@ -14,8 +14,11 @@ const CrearUsuarioSchema = CrearUsuarioEsquema;
 export class UsuariosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listar() {
-    const usuarios = await this.prisma.usuario.findMany({ orderBy: { creadoEn: "desc" } });
+  async listar(pagina = 1, porPagina = 20, q = "") {
+    const where = q ? { OR: [{ nombre: { contains: q, mode: "insensitive" as const } }, { email: { contains: q, mode: "insensitive" as const } }, ...(q === "administrador" ? [{ rol: RolUsuario.ADMINISTRADOR }] : q === "vendedor" ? [{ rol: RolUsuario.VENDEDOR }] : [])] } : {};
+    const total = await this.prisma.usuario.count({ where });
+    const actual = Math.min(pagina, Math.max(1, Math.ceil(total / porPagina)));
+    const usuarios = await this.prisma.usuario.findMany({ where, orderBy: [{ rol: "asc" }, { nombre: "asc" }, { id: "asc" }], take: porPagina, skip: (actual - 1) * porPagina });
     const data = await Promise.all(
       usuarios.map(async (u) => {
         const permisos = await this.permisosDe(u.id);
@@ -32,7 +35,7 @@ export class UsuariosService {
         };
       }),
     );
-    return { data };
+    return { data, meta: { total, pagina: actual, porPagina } };
   }
 
   async crear(datos: z.infer<typeof CrearUsuarioSchema>) {

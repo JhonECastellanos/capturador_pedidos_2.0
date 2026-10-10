@@ -51,7 +51,7 @@ async function main() {
   const actor = sesion.usuario;
   assert.equal(actor.rol, "administrador");
 
-  const existentes = await pedir<UsuarioDTO[]>("/usuarios");
+  const existentes = await todos<UsuarioDTO>("/usuarios");
   await caso("system único, autenticado, con permisos completos y protegido", async () => {
     const sistemas = existentes.filter((u) => u.esSistema);
     assert.equal(sistemas.length, 1); assert.equal(sistemas[0].nombre, "system");

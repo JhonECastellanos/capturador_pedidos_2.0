@@ -70,9 +70,13 @@ async function main() {
     const productosDemo = (await (await context.request.get(base + '/api/v1/productos?q=Pepsi%20400')).json()).data;
     const clienteDemo = clientesDemo.find(c => c.nombre === 'Isabel Rojas'), productoDemo = productosDemo.find(p => p.nombre === 'Pepsi 400 ml');
     assert.ok(clienteDemo && productoDemo, 'Preparar demo:catalogo en QA');
+    if (productoDemo.stock < 3) {
+      const reposicion = await context.request.post(base + '/api/v1/inventario/ajustes', {data:{productoId:productoDemo.id,stockFisico:productoDemo.stockReservado+10,motivo:'Preparación del catálogo de pruebas'}});
+      assert.equal(reposicion.status(),201,'Reponer solo el producto ficticio QA');
+    }
     for (let i = 0; i < 3; i++) {
       const pedidoHoy = await context.request.post(base + '/api/v1/pedidos', { data: { clienteId: clienteDemo.id, lineas: [{ productoId: productoDemo.id, cantidad: 1 }], estadoInicial: 'entregado', metodo: 'efectivo', momentoCobro: 'inmediato' } });
-      assert.equal(pedidoHoy.status(), 201, 'Pedidos ficticios de hoy para validar tarjetas y filtros');
+      assert.equal(pedidoHoy.status(), 201, 'Pedidos ficticios de hoy: '+JSON.stringify(await pedidoHoy.json()));
     }
     await page.goto(base + '/admin'); await reposo();
     assert.equal(await page.getByRole('button', { name: 'Actualizar', exact: true }).count(), 0);
@@ -92,7 +96,7 @@ async function main() {
 
     await abrir('Pedidos', '/admin/pedidos'); await estable('Pedidos');
     await filtro('Buscar por cliente o consecutivo', 'Isabel', 'Isabel Rojas');
-    const primerPedido = page.locator('.admin-pantalla .overflow-y-auto button').filter({ hasText: 'Ver detalle informativo' }).first();
+    const primerPedido = page.locator('.admin-pantalla .lista-pedidos button').first();
     await primerPedido.click(); await page.getByRole('button', { name: 'Volver', exact: true }).click(); await reposo();
     console.log('✓ Pedidos: búsqueda y detalle → listado');
 
@@ -103,7 +107,7 @@ async function main() {
 
     await abrir('Inventario', '/admin/inventario'); await estable('Inventario');
     await page.getByRole('button', { name: /Stock general/ }).click(); await reposo();
-    const productos = page.locator('.admin-pantalla .overflow-y-auto article'); assert.equal(await productos.count(), 30);
+    const productos = page.locator('.admin-pantalla .overflow-y-auto article'); assert.equal(await productos.count(), 15);
     await page.getByPlaceholder('Buscar por nombre, código o categoría').fill('Pepsi'); await reposo();
     assert.equal(await productos.count(), 2);
     await page.getByPlaceholder('Buscar por nombre, código o categoría').fill(''); await reposo();
@@ -112,7 +116,7 @@ async function main() {
       await page.getByRole('button', { name: new RegExp(nombre) }).first().click(); await reposo();
       await page.getByRole('button', { name: 'Volver al menú de inventario' }).click(); await reposo();
     }
-    console.log('✓ Inventario: límite 30, filtros y regreso de stock/conteo/descuadres/ajustes');
+    console.log('✓ Inventario: límite 15, filtros y regreso de stock/conteo/descuadres/ajustes');
 
     await abrir('Compras', '/admin/compras'); await estable('Compras');
     await page.getByRole('button', { name: /Nueva (compra|recepción)/i }).click(); await reposo();
@@ -177,6 +181,82 @@ async function main() {
       await page.screenshot({ path: resolve('.local/pruebas-ui', `precios-${viewport.width}x${viewport.height}.png`) });
     }
     console.log('✓ 390×844, 390×320 y 1440×320: tarjetas ≥64 px, lista ≥160 px y scroll del panel');
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(base + '/admin'); await reposo();
+    for (const nombre of [/: ventas .*compras y gastos/, /: rentabilidad/]) {
+      const punto = page.getByRole('button', { name: nombre }).first();
+      await punto.hover();
+      assert.ok(await punto.getByRole('tooltip').isVisible(), 'Escritorio conserva etiquetas al pasar el ratón');
+    }
+    const movil = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    await movil.addCookies(await context.cookies());
+    const tactil = await movil.newPage();
+    try {
+      await tactil.goto(base + '/admin');
+      const barras = tactil.getByRole('button', { name: /: ventas .*compras y gastos/ }).first();
+      const linea = tactil.getByRole('button', { name: /: rentabilidad/ }).first();
+      for (const punto of [barras, linea]) {
+        await punto.tap();
+        assert.equal(await punto.getAttribute('aria-expanded'), 'true');
+        assert.ok(await punto.getByRole('tooltip').isVisible(), 'El toque muestra el detalle');
+        await punto.tap();
+        assert.equal(await punto.getAttribute('aria-expanded'), 'false');
+        assert.ok(!await punto.getByRole('tooltip').isVisible(), 'El segundo toque oculta el detalle');
+      }
+      await barras.evaluate(el => el.parentElement.parentElement.scrollIntoView({ block: 'center' }));
+      await barras.tap();
+      await tactil.screenshot({ path: resolve('.local/pruebas-ui', 'grafica-toque.png') });
+      console.log('✓ Gráficos: toque muestra y segundo toque oculta las etiquetas en móvil');
+      for (const ruta of ['pedidos', 'creditos', 'inventario', 'compras', 'precios', 'caja', 'cierre']) {
+        await tactil.goto(base + '/admin/' + ruta);
+        if (ruta === 'inventario') await tactil.getByRole('button', { name: /Stock general/ }).click();
+        const lista = tactil.locator('.lista-datos').first();
+        await lista.waitFor();
+        const tamano = await lista.evaluate(el => {
+          const contenedor = el.classList.contains('space-y-2.5') ? el : el.firstElementChild;
+          const filas = [...(contenedor?.children ?? [])].slice(0, 5);
+          const caja = el.getBoundingClientRect();
+          return { alto: el.clientHeight, filas: filas.length, cinco: filas.every(f => f.getBoundingClientRect().bottom <= caja.bottom), horizontal: document.documentElement.scrollWidth <= innerWidth };
+        });
+        assert.ok(tamano.alto > 0, ruta + ": la lista tiene altura de contenido: " + JSON.stringify(tamano));
+        assert.ok(tamano.filas <= 5, ruta + ": máximo cinco registros móviles: " + JSON.stringify(tamano));
+        assert.ok(tamano.horizontal, ruta + ': sin desborde horizontal');
+      }
+      await tactil.goto(base + '/admin/ventas/pedido');
+      await tactil.getByText('Venta abierta · cliente ocasional', { exact: true }).click();
+      const productos = tactil.locator('.lista-productos');
+      await productos.waitFor();
+      await tactil.getByRole('button', {name:/^Agregar /}).first().waitFor();
+      const capacidad = await productos.evaluate(el => {
+        const tarjetas = [...el.querySelectorAll('button[aria-label^="Agregar "]')].map(b => b.parentElement);
+        const caja = el.getBoundingClientRect();
+        return { filas: tarjetas.length, cinco: tarjetas.slice(0, 5).every(t => t.getBoundingClientRect().bottom <= caja.bottom), alto: el.clientHeight };
+      });
+      assert.equal(capacidad.filas, 5, 'La página móvil ofrece cinco productos: ' + JSON.stringify(capacidad));
+      const caja = await productos.boundingBox();
+      const continuar = await tactil.getByRole('button', { name: /Continuar a entrega/ }).boundingBox();
+      assert.ok(continuar.y >= caja.y + caja.height, 'Continuar queda debajo del contenedor');
+      await tactil.screenshot({ path: resolve('.local/pruebas-ui', 'productos-movil.png') });
+      console.log('✓ Listas administrativas estables y cinco productos con continuación debajo');
+    } finally { await movil.close(); }
+    const vendedor = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    try {
+      const acceso = await vendedor.request.post(base + '/api/v1/auth/login', { data: { identifier: 'qa-vendedor@pruebas.invalid', password: 'SoloPruebas2026!' } });
+      assert.equal(acceso.status(), 200, 'Cuenta ficticia de vendedor QA');
+      const venta = await vendedor.newPage();
+      await venta.goto(base + '/vendedor/pedido');
+      await venta.getByText('Venta abierta · cliente ocasional', { exact: true }).click();
+      const lista = venta.locator('.lista-productos');
+      await lista.waitFor();
+      await venta.getByRole('button', {name:/^Agregar /}).first().waitFor();
+      assert.equal(await venta.getByRole("button", { name: /^Agregar / }).count(), 5);
+      await venta.getByRole('button', { name: /^Agregar / }).first().tap();
+      const continuar = venta.getByRole('button', { name: /Continuar a entrega/ });
+      assert.ok((await continuar.boundingBox()).y >= (await lista.boundingBox()).y + (await lista.boundingBox()).height);
+      await continuar.tap();
+      await venta.getByRole('button', { name: /Entregado ahora/ }).waitFor();
+      console.log('✓ Vendedor móvil: selección y continuación con el mismo flujo, sin guardar operación');
+    } finally { await vendedor.close(); }
     // Venta exclusivamente QA, desde el formulario real hasta PostgreSQL y la factura.
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(base + '/admin/ventas/clientes/nuevo'); await reposo();
@@ -227,7 +307,8 @@ async function main() {
     const filaPedido = sql(`SELECT json_build_object('total', p.total, 'estado', p.estado, 'metodo', p.metodo, 'clienteId', p."clienteId", 'lineas', (SELECT json_agg(json_build_object('productoId', l."productoId", 'cantidad', l.cantidad, 'precioUnitario', l."precioUnitario", 'subtotal', l.subtotal) ORDER BY l.orden) FROM "pedidoLineas" l WHERE l."pedidoId"=p.id), 'pagado', (SELECT COALESCE(SUM(a."montoAplicado"),0) FROM "pagoAplicaciones" a WHERE a."pedidoId"=p.id AND a."revertidoEn" IS NULL), 'caja', (SELECT COALESCE(SUM(CASE WHEN m.tipo='ingreso' THEN m.monto ELSE -m.monto END),0) FROM "movimientosCaja" m WHERE m."pagoId" IN (SELECT a."pagoId" FROM "pagoAplicaciones" a WHERE a."pedidoId"=p.id))) FROM pedidos p WHERE p.id='${factura.id}';`);
     assert.equal(filaPedido.total, 22600); assert.equal(filaPedido.pagado, 22600); assert.equal(filaPedido.caja, 22600);
     assert.equal(filaPedido.estado, 'entregado'); assert.equal(filaPedido.metodo, 'efectivo'); assert.equal(filaPedido.clienteId, null);
-    assert.deepEqual(filaPedido.lineas, factura.lineas.map(l => ({ productoId: l.productoId, cantidad: l.cantidad, precioUnitario: l.precioUnitario, subtotal: l.subtotal })));
+    const ordenarLineas = lineas => [...lineas].sort((a, b) => a.productoId.localeCompare(b.productoId));
+    assert.deepEqual(ordenarLineas(filaPedido.lineas), ordenarLineas(factura.lineas.map(l => ({ productoId: l.productoId, cantidad: l.cantidad, precioUnitario: l.precioUnitario, subtotal: l.subtotal }))));
     mediciones.push({ formulario: 'pedido', respuestaConfirmadaMs: +confirmadoFacturaMs.toFixed(1), bdObservadaMs: +(performance.now()-inicioFactura).toFixed(1), total: filaPedido.total, cantidades: filaPedido.lineas.map(l=>l.cantidad), correcto: true });
     await page.waitForURL(base + '/admin/ventas/completado');
     const detalleFactura = page.getByRole('region', { name: 'Detalle de productos' });
@@ -242,7 +323,7 @@ async function main() {
     }
     const lecturaFactura = await context.request.get(base + `/api/v1/pedidos/${factura.id}`);
     assert.equal(lecturaFactura.status(), 200);
-    assert.deepEqual((await lecturaFactura.json()).data.lineas, factura.lineas);
+    assert.deepEqual(ordenarLineas((await lecturaFactura.json()).data.lineas), ordenarLineas(factura.lineas));
     await page.reload(); await detalleFactura.waitFor();
     assert.ok(!(await detalleFactura.innerText()).includes('9.000'));
     await page.screenshot({ path: resolve('.local/pruebas-ui', 'factura-real-qa.png') });

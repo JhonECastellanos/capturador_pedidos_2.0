@@ -7,12 +7,15 @@ import { ConfirmarAccion } from "../../../components/ConfirmarAccion";
 import { ListaVacia } from "../../../components/ListaVacia";
 import { Paginacion } from "../../../components/Paginacion";
 import { TarjetaClicable } from "../../../components/TarjetaClicable";
-import { POR_PAGINA, paginar } from "../../../utils/paginacion";
+import { useTamanoPagina, paginar } from "../../../utils/paginacion";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
 import { useOperaciones } from "../../../context/operaciones";
 import { diasEntre, gruposCartera } from "../../../dominio/servicios";
-import type { AbonoCredito } from "../../../types";
+import { usaApi } from "../../../data/api";
+import { usePaginaApi } from "../../../data/usePaginaApi";
+import type { GrupoCartera } from "../../../dominio/servicios";
+import type { AbonoCredito, Pedido } from "../../../types";
 import { formatoMoneda } from "../../../utils/formato";
 import { BadgeMora } from "../components/BadgeMora";
 import { FormularioAbono } from "../components/FormularioAbono";
@@ -28,6 +31,7 @@ interface AbonosProps {
  * Al liquidar el total, el pedido y la cartera del cliente se actualizan solos.
  */
 export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
+  const POR_PAGINA = useTamanoPagina();
   const { clientes, pedidos, registrarAbono } = useOperaciones();
   const { aviso, mostrarAviso, cerrarAviso } = useAviso();
 
@@ -42,9 +46,14 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
 
   const hoy = useMemo(() => new Date(), []);
 
-  const grupos = useMemo(() => gruposCartera(pedidos, clientes, hoy, "mora"), [clientes, hoy, pedidos]);
+  const [paginaPedidos,setPaginaPedidos]=useState(1);
+  const remotos=usePaginaApi<GrupoCartera & {cantidadPedidos:number}>(`/clientes/cartera/resumen?page=${pagina}&pageSize=${POR_PAGINA}&q=${encodeURIComponent(busqueda)}&orden=mora`);
+  const clienteRemoto=usePaginaApi<GrupoCartera>(`/clientes/cartera/resumen?clienteId=${clienteId}&pageSize=5`,!!clienteId);
+  const pendientesRemotos=usePaginaApi<Pedido>(`/pedidos?clienteId=${clienteId}&saldoPendiente=true&page=${paginaPedidos}&pageSize=${POR_PAGINA}&q=${encodeURIComponent(busquedaPedidos)}`,!!clienteId);
+  const grupos = useMemo(() => usaApi ? remotos.items : gruposCartera(pedidos, clientes, hoy, "mora"), [clientes, hoy, pedidos,remotos.items]);
 
   const gruposFiltrados = useMemo(() => {
+    if(usaApi) return grupos;
     const q = busqueda.trim().toLowerCase();
     if (!q) return grupos;
     return grupos.filter(
@@ -56,13 +65,14 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
     );
   }, [busqueda, grupos]);
 
-  const totalPendiente = grupos.reduce((suma, g) => suma + g.total, 0);
-  const detalle = grupos.find((g) => g.clienteId === clienteId) ?? null;
-  const pedidosDetalle = (detalle?.pedidos ?? []).filter((p) => p.numero.toLowerCase().includes(busquedaPedidos.trim().toLowerCase()));
+  const totalPendiente = usaApi ? Number(remotos.meta?.saldoTotal ?? 0) : grupos.reduce((suma, g) => suma + g.total, 0);
+  const detalle = (usaApi ? clienteRemoto.items[0] : undefined) ?? grupos.find(g=>g.clienteId === clienteId) ?? null;
+  const pedidosDetalle = usaApi ? pendientesRemotos.items : (detalle?.pedidos ?? []).filter((p) => p.numero.toLowerCase().includes(busquedaPedidos.trim().toLowerCase()));
 
   function abrirCliente(id: string) {
     const grupo = grupos.find((g) => g.clienteId === id);
     setClienteId(id);
+    setPaginaPedidos(1);
     setBusquedaPedidos("");
     setMonto(grupo ? String(grupo.total) : "");
     setComentario("");
@@ -121,10 +131,11 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
             <p className="text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
               Pedidos pendientes
             </p>
-            <BuscadorInput value={busquedaPedidos} onChange={setBusquedaPedidos} placeholder="Buscar pedido pendiente por consecutivo" />
+            <BuscadorInput value={busquedaPedidos} onChange={q=>{setBusquedaPedidos(q);setPaginaPedidos(1);}} placeholder="Buscar pedido pendiente por consecutivo" />
+            <Paginacion pagina={paginaPedidos} totalPaginas={Math.max(1,Math.ceil((usaApi ? pendientesRemotos.total : pedidosDetalle.length)/POR_PAGINA))} total={usaApi ? pendientesRemotos.total : pedidosDetalle.length} porPagina={POR_PAGINA} onChange={setPaginaPedidos}/>
             {pedidosDetalle.length > POR_PAGINA && <p className="mt-1 text-[11px] text-ink-soft">Se muestran {POR_PAGINA} pedidos. Filtra por consecutivo para encontrar otro.</p>}
             <ul className="mt-1.5 divide-y divide-line/60">
-              {pedidosDetalle.slice(0, POR_PAGINA).map((p) => (
+              {(usaApi ? pedidosDetalle : paginar(pedidosDetalle,paginaPedidos,POR_PAGINA).items).map((p) => (
                 <li key={p.id} className="flex items-center justify-between gap-2 py-2">
                   <div className="min-w-0">
                     <p className="truncate text-[12.5px] font-medium text-ink">
@@ -197,11 +208,19 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
         />
       </div>
 
+      <Paginacion
+          pagina={pagina}
+          totalPaginas={Math.max(1, Math.ceil((usaApi ? remotos.total : gruposFiltrados.length) / POR_PAGINA))}
+          total={usaApi ? remotos.total : gruposFiltrados.length}
+          porPagina={POR_PAGINA}
+          onChange={setPagina}
+        />
+
       <div className="mx-5 mt-2.5 flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-2 rounded-2xl border border-line bg-paper-sunken/30 p-2 md:mx-6">
         {gruposFiltrados.length === 0 ? (
           <ListaVacia titulo="Sin créditos pendientes" texto="Todo al día ✓" />
         ) : (
-          paginar(gruposFiltrados, pagina, POR_PAGINA).items.map((grupo) => (
+          (usaApi ? gruposFiltrados : paginar(gruposFiltrados, pagina, POR_PAGINA).items).map((grupo) => (
             <TarjetaClicable key={grupo.clienteId} onClick={() => abrirCliente(grupo.clienteId)} className="flex items-center gap-3">
               <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-danger-soft font-display text-[12.5px] font-bold text-danger">
                 {grupo.diasMora}d
@@ -209,7 +228,7 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13.5px] font-semibold text-ink">{grupo.cliente?.nombre ?? "Cliente"}</span>
                 <span className="block truncate text-[11.5px] text-ink-soft">
-                  {grupo.pedidos.length} pedido(s) · {grupo.cliente?.telefono || "sin teléfono"}
+                  {("cantidadPedidos" in grupo ? Number(grupo.cantidadPedidos) : grupo.pedidos.length)} pedido(s) · {grupo.cliente?.telefono || "sin teléfono"}
                 </span>
               </span>
               <span className="flex-shrink-0 font-mono text-[13px] font-bold text-danger">{formatoMoneda(grupo.total)}</span>
@@ -218,15 +237,7 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
         )}
       </div>
 
-      <div className="flex-shrink-0 mt-2 px-5 md:px-6">
-        <Paginacion
-          pagina={pagina}
-          totalPaginas={Math.max(1, Math.ceil(gruposFiltrados.length / POR_PAGINA))}
-          total={gruposFiltrados.length}
-          porPagina={POR_PAGINA}
-          onChange={setPagina}
-        />
-      </div>
+
 
       <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
     </div>

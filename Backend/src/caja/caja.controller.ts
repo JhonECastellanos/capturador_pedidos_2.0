@@ -17,14 +17,19 @@ const EgresoSchema = z.object({
 export class CajaController {
   constructor(private readonly caja: CajaService) {}
 
+  @Get("resumen-periodos")
+  async resumenPeriodos() {return {data:await this.caja.resumenPeriodos()};}
+
   @Get("movimientos")
   listar(
+    @Query("q") q?:string,
+    @Query("periodo") periodo?:string,
     @Query("tipo") tipo?: string,
     @Query("metodo") metodo?: string,
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
   ) {
-    return this.caja.listar({ tipo, metodo, ...paginacion(page, pageSize) });
+    return this.caja.listar({ tipo, metodo, q, periodo, ...paginacion(page, pageSize) });
   }
 
   @Roles(RolUsuario.ADMINISTRADOR)

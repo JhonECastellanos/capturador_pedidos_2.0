@@ -1,3 +1,4 @@
+import { seleccionarConteoDiario } from "@ambie/contrato";
 import type {
   AbonoCredito,
   AbonoCreditoParcial,
@@ -462,27 +463,29 @@ export function egresoCajaDeGasto(gasto: Gasto, id: string): MovimientoCaja {
 export function construirConteo(
   tipo: ConteoInventario["tipo"],
   productos: Producto[],
-  cantidadAleatoria: number | null,
+  _cantidadAleatoria: number | null,
   usuarioId: string,
   turno: string,
   id: string,
   iniciadoEn: string,
+  historial: ConteoInventario[] = [],
 ): ConteoInventario {
-  let lista = productos;
-  if (tipo === "aleatorio" && cantidadAleatoria) {
-    const mezclados = [...productos].sort(() => Math.random() - 0.5);
-    lista = mezclados.slice(0, Math.min(cantidadAleatoria, productos.length));
-  }
+  const activos = productos.filter(p => p.activo);
+  const anteriores = historial.filter(c => c.estado === "confirmado").flatMap(c => c.lineas).filter(l => l.cicloDiario !== null && l.cicloDiario !== undefined);
+  const ciclo = Math.max(1, ...anteriores.map(l => l.cicloDiario!));
+  const seleccion = tipo === "aleatorio" ? seleccionarConteoDiario(activos, ciclo, new Set(anteriores.filter(l => l.cicloDiario === ciclo).map(l => l.productoId))) : activos.map(producto => ({producto,ciclo:undefined}));
+  const fechaDiaria = tipo === "aleatorio" ? new Intl.DateTimeFormat("en-CA", {timeZone:"America/Bogota",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(iniciadoEn)) : undefined;
   // Al abrir el conteo las líneas quedan sin contar: el físico solo existe
   // cuando alguien lo digita, así un conteo a medias nunca pisa el stock.
-  const lineas: LineaConteo[] = lista.map((producto) => ({
+  const lineas: LineaConteo[] = seleccion.map(({producto,ciclo}) => ({
+    cicloDiario:ciclo,
     productoId: producto.id,
     nombre: producto.nombre,
     stockTeorico: producto.stock,
     stockFisico: 0,
     diferencia: 0,
   }));
-  return { id, tipo, usuarioId, turno, iniciadoEn, lineas, lineasContadas: [], estado: "en-curso" };
+  return { id, tipo, usuarioId, turno, iniciadoEn, fechaDiaria, lineas, lineasContadas: [], estado: "en-curso" };
 }
 
 export function actualizarLineaConteo(

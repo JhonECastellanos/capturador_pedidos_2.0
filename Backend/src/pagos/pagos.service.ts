@@ -3,9 +3,10 @@ import { z } from "zod";
 import { PrismaService } from "../common/prisma.module";
 import { ErrorDominio } from "../common/errores";
 import { numero } from "../common/consecutivos";
+import { rangoPeriodo } from "../common/periodo";
 import { hoyLocal } from "../common/crypto";
 import { aplicadoPorPedido } from "../dominio/cartera";
-import { EstadoPedido, MetodoPago, TipoMovimientoCaja } from "@prisma/client";
+import { EstadoPedido, MetodoPago, TipoMovimientoCaja, Prisma } from "@prisma/client";
 
 const AbonoSchema = z.object({
   monto: z.number().positive(),
@@ -179,8 +180,9 @@ export class PagosService {
     };
   }
 
-  async historial(clienteId?: string, pagina = 1, porPagina = 20) {
-    const where = clienteId ? { clienteId, tipo: "ABONO" as const } : { tipo: "ABONO" as const };
+  async historial(clienteId?: string, pagina = 1, porPagina = 20, q = "", periodo = "todo", pedidoId?: string) {
+    const where: Prisma.PagoWhereInput = {tipo:"ABONO", ...(clienteId?{clienteId}:{}), ...(pedidoId ? {aplicaciones:{some:{pedidoId}}} : {}),creadoEn:rangoPeriodo(periodo), ...(q?{OR:[{cliente:{nombre:{contains:q,mode:"insensitive"}}},{cliente:{alias:{contains:q,mode:"insensitive"}}},{aplicaciones:{some:{pedido:{numero:{contains:q,mode:"insensitive"}}}}}]}:{}) };
+    const suma=await this.prisma.pago.aggregate({where,_sum:{monto:true}});
     const [total, pagos] = await this.prisma.$transaction([
       this.prisma.pago.count({ where }),
       this.prisma.pago.findMany({
@@ -188,7 +190,7 @@ export class PagosService {
         orderBy: { creadoEn: "desc" },
         skip: (pagina - 1) * porPagina,
         take: porPagina,
-        include: { aplicaciones: true, cliente: true, usuario: true },
+        include: { aplicaciones: {include:{pedido:{select:{numero:true}}}}, cliente: true, usuario: true },
       }),
     ]);
 
@@ -204,11 +206,11 @@ export class PagosService {
         comentario: pago.comentario,
         creadoEn: pago.creadoEn,
         pedidosAfectados: pago.aplicaciones.map((a) => ({
-          pedidoId: a.pedidoId,
+          pedidoId: a.pedidoId, numero:a.pedido.numero,
           montoAplicado: numero(a.montoAplicado),
         })),
       })),
-      meta: { pagina, porPagina, total },
+      meta: { pagina, porPagina, total, montoTotal:numero(suma._sum.monto) },
     };
   }
 }

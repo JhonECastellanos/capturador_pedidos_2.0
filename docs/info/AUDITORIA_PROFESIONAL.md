@@ -1,6 +1,22 @@
 # Auditoría de integración y preparación operativa
 
+## Revisión vigente de conteos y paginación — 09/10/2026
+
+La API pagina las listas y selectores administrativos; aplica búsqueda, orden y filtros antes de LIMIT. Cartera, caja, jornada y cierre usan agregados SQL completos. La fachada global ya no descarga clientes, productos, pedidos, pagos, adjuntos, proveedores ni cambios de precio completos. Conserva los documentos de inventario en curso y el inicio histórico necesarios para continuar operaciones; un documento individual conserva todas sus líneas. La exportación completa de pedidos se consulta únicamente al solicitarla.
+
+Conteos reutiliza cabeceras, líneas, ajustes y movimientos existentes. Las migraciones añaden fecha diaria, ciclo y responsable; fortalecen la relación única entre conteo y ajuste y retiran tres tablas sin uso solo cuando están vacías. No reinician datos comerciales. No se introducen saldos duplicados, tablas de resumen por pantalla ni empresas adicionales.
+
+Las comprobaciones actuales y su alcance están en [validación de formularios y criterios](VALIDACION_FORMULARIOS_Y_BASE_DATOS.md). Las cifras, servicios y pendientes de las secciones siguientes pertenecen a sus fechas históricas. Las comprobaciones de este cambio no acreditan carga de 100.000 pedidos, un celular físico, una instalación externa ni restauración ensayada.
+
 Validación del 30/09/2026. Se reutilizó la API NestJS/Prisma existente y el `.env` raíz. No se reiniciaron datos comerciales ni se importó automáticamente el contenido local del navegador.
+
+## Actualización de interfaz móvil — 09/10/2026
+
+El detalle de los gráficos ahora se puede consultar y cerrar con un toque, manteniendo el hover de escritorio. El paso de productos compartido por administrador y vendedor presenta cinco tarjetas en un contenedor con scroll propio y deja Continuar debajo. Las listas administrativas principales tienen altura estable, scroll interno y desplazamiento exterior. No se cambiaron reglas comerciales, tablas ni endpoints.
+
+Aprobaron compilación/contrato/tipos, caché, los recorridos reales de paneles QA y los 18 casos de integración. Se comprobó cliente y venta contra PostgreSQL, pago, caja y precios históricos. La versión actual se construyó y activó en localhost:8080; el túnel temporal HTTPS responde y sirve los mismos recursos. Se preservaron los datos y un respaldo previo. Detalles, tiempos y límites de estas comprobaciones: [validación de formularios y base de datos](VALIDACION_FORMULARIOS_Y_BASE_DATOS.md).
+
+El acceso autenticado por el enlace público y la prueba en teléfono físico todavía requieren comprobación; no se presentan como realizados. La auditoría de dependencias actual informa siete paquetes afectados (tres altos y cuatro moderados). Para instalar de forma habitual, completar restauración integral, copias externas programadas, perfil LAN/HTTPS, dirección externa estable y validación de arranque del equipo. Se consolidaron estos pendientes en [oportunidades de mejora](OPORTUNIDADES_MEJORA.md), sin crear otra guía.
 
 ## Cambios implementados
 

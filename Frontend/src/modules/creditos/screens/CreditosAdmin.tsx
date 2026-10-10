@@ -9,12 +9,15 @@ import { ListaVacia } from "../../../components/ListaVacia";
 import { Paginacion } from "../../../components/Paginacion";
 import { SegmentoControl } from "../../../components/SegmentoControl";
 import { TarjetaClicable } from "../../../components/TarjetaClicable";
-import { POR_PAGINA, paginar } from "../../../utils/paginacion";
+import { useTamanoPagina, paginar } from "../../../utils/paginacion";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
 import { useOperaciones } from "../../../context/operaciones";
 import { diasEntre, gruposCartera } from "../../../dominio/servicios";
-import type { AbonoCredito } from "../../../types";
+import { usaApi } from "../../../data/api";
+import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
+import type { GrupoCartera } from "../../../dominio/servicios";
+import type { Pedido, AbonoCredito } from "../../../types";
 import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodo, type Periodo } from "../../../utils/fechas";
 import { formatoMoneda } from "../../../utils/formato";
 import { BadgeMora } from "../../ventas/components/BadgeMora";
@@ -24,6 +27,7 @@ import { PedidoDetalle } from "../../ventas/screens/PedidoDetalle";
 type TabCredito = "pendientes" | "historial";
 
 export function CreditosAdmin() {
+  const POR_PAGINA = useTamanoPagina();
   const {
     clientes,
     pedidos,
@@ -48,9 +52,16 @@ export function CreditosAdmin() {
 
   useEffect(() => { setPagina(1); }, [tab, busqueda, periodo]);
 
-  const grupos = useMemo(() => gruposCartera(pedidos, clientes, hoy, "total"), [clientes, hoy, pedidos]);
+  const gruposRemotos = usePaginaApi<GrupoCartera & {cantidadPedidos:number}>(`/clientes/cartera/resumen?page=${pagina}&pageSize=${POR_PAGINA}&q=${encodeURIComponent(busqueda)}`, tab === "pendientes");
+  const abonosRemotos = usePaginaApi<AbonoCredito>(`/abonos?page=${pagina}&pageSize=${POR_PAGINA}&q=${encodeURIComponent(busqueda)}&periodo=${periodo}`, tab === "historial");
+  const clienteRemoto = usePaginaApi<GrupoCartera & {cantidadPedidos:number}>(`/clientes/cartera/resumen?clienteId=${clienteDetalleId}&pageSize=5`, !!clienteDetalleId);
+  const pedidosRemotos = usePaginaApi<Pedido>(`/pedidos?clienteId=${clienteDetalleId}&saldoPendiente=true&page=${pagina}&pageSize=${POR_PAGINA}&q=${encodeURIComponent(busquedaPedidos)}`, !!clienteDetalleId);
+  const pedidoRemoto = useRegistroApi<Pedido>(`/pedidos/${pedidoDetalleId}`, !!pedidoDetalleId);
+
+  const grupos = useMemo(() => usaApi ? gruposRemotos.items : gruposCartera(pedidos, clientes, hoy, "total"), [clientes, hoy, pedidos, gruposRemotos.items]);
 
   const gruposFiltrados = useMemo(() => {
+    if (usaApi) return grupos;
     const q = busqueda.trim().toLowerCase();
     if (!q) return grupos;
     return grupos.filter((g) => {
@@ -65,6 +76,7 @@ export function CreditosAdmin() {
   }, [busqueda, grupos]);
 
   const abonosFiltrados = useMemo(() => {
+    if (usaApi) return abonosRemotos.items;
     const q = busqueda.trim().toLowerCase();
     return abonos
       .filter((a) => {
@@ -78,17 +90,17 @@ export function CreditosAdmin() {
         );
       })
       .sort((a, b) => (b.creadoEn < a.creadoEn ? -1 : b.creadoEn > a.creadoEn ? 1 : 0));
-  }, [abonos, busqueda, hoy, obtenerCliente, periodo]);
+  }, [abonos, busqueda, hoy, obtenerCliente, periodo, abonosRemotos.items]);
 
   /** Total efectivamente abonado a facturas a crédito en el periodo filtrado. */
   const totalAbonadoPeriodo = useMemo(
-    () => abonosFiltrados.reduce((suma, a) => suma + a.monto, 0),
-    [abonosFiltrados],
+    () => usaApi ? Number(abonosRemotos.meta?.montoTotal ?? 0) : abonosFiltrados.reduce((suma, a) => suma + a.monto, 0),
+    [abonosFiltrados, abonosRemotos.meta],
   );
 
-  const totalPendiente = grupos.reduce((s, g) => s + g.total, 0);
-  const clienteDetalle = grupos.find((g) => g.clienteId === clienteDetalleId) ?? null;
-  const pedidosDetalle = (clienteDetalle?.pedidos ?? []).filter((p) => p.numero.toLowerCase().includes(busquedaPedidos.trim().toLowerCase()));
+  const totalPendiente = usaApi ? Number(gruposRemotos.meta?.saldoTotal ?? 0) : grupos.reduce((s, g) => s + g.total, 0);
+  const clienteDetalle = usaApi ? clienteRemoto.items[0] ?? null : grupos.find((g) => g.clienteId === clienteDetalleId) ?? null;
+  const pedidosDetalle = (usaApi ? pedidosRemotos.items : clienteDetalle?.pedidos ?? []).filter((p) => p.numero.toLowerCase().includes(busquedaPedidos.trim().toLowerCase()));
 
   async function handleRegistrarAbono() {
     if (!clienteDetalle) return false;
@@ -107,7 +119,7 @@ export function CreditosAdmin() {
 
   // Paso: detalle del pedido en crédito (se abre al tocar un pedido que debe).
   if (pedidoDetalleId) {
-    const pedido = pedidos.find((p) => p.id === pedidoDetalleId);
+    const pedido = usaApi ? pedidoRemoto.data : pedidos.find((p) => p.id === pedidoDetalleId);
     if (pedido) {
       return (
         <PedidoDetalle
@@ -157,7 +169,7 @@ export function CreditosAdmin() {
               <p className="text-[10px] font-semibold uppercase tracking-wide text-danger/80">Saldo pendiente</p>
               <p className="font-mono text-[21px] font-bold leading-tight text-danger">{formatoMoneda(clienteDetalle.total)}</p>
               <p className="mt-0.5 truncate text-[11px] text-ink-soft">
-                {clienteDetalle.pedidos.length} pedido(s) · hace {clienteDetalle.diasMora} día(s) · {c?.telefono || "sin teléfono"}
+                {(usaApi ? (clienteDetalle as GrupoCartera & {cantidadPedidos:number}).cantidadPedidos : clienteDetalle.pedidos.length)} pedido(s) · hace {clienteDetalle.diasMora} día(s) · {c?.telefono || "sin teléfono"}
               </p>
             </div>
 
@@ -183,9 +195,9 @@ export function CreditosAdmin() {
                 Pedidos que debe
               </p>
               <BuscadorInput value={busquedaPedidos} onChange={setBusquedaPedidos} placeholder="Buscar pedido pendiente por consecutivo" />
-              {pedidosDetalle.length > POR_PAGINA && <p className="p-1 text-[11px] text-ink-soft">Se muestran {POR_PAGINA} pedidos. Filtra por consecutivo para encontrar otro.</p>}
+              <Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil((usaApi ? pedidosRemotos.total : pedidosDetalle.length)/POR_PAGINA))} total={usaApi ? pedidosRemotos.total : pedidosDetalle.length} porPagina={POR_PAGINA} onChange={setPagina} />
               <ul className="space-y-1.5">
-                {pedidosDetalle.slice(0, POR_PAGINA).map((p) => (
+                {(usaApi ? pedidosDetalle : paginar(pedidosDetalle, pagina, POR_PAGINA).items).map((p) => (
                   <li key={p.id}>
                     <button
                       type="button"
@@ -285,6 +297,14 @@ export function CreditosAdmin() {
         />
       </div>
 
+      <Paginacion
+          pagina={pagina}
+          totalPaginas={Math.max(1, Math.ceil((usaApi ? (tab === "pendientes" ? gruposRemotos.total : abonosRemotos.total) : (tab === "pendientes" ? gruposFiltrados.length : abonosFiltrados.length)) / POR_PAGINA))}
+          total={usaApi ? (tab === "pendientes" ? gruposRemotos.total : abonosRemotos.total) : (tab === "pendientes" ? gruposFiltrados.length : abonosFiltrados.length)}
+          porPagina={POR_PAGINA}
+          onChange={setPagina}
+        />
+
       {/* Lista con scroll propio */}
       <div className="flex min-h-0 flex-1 flex-col px-0 py-2.5">
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
@@ -296,18 +316,18 @@ export function CreditosAdmin() {
               {tab === "pendientes" ? "Toca para cobrar" : "Cada abono muestra sus facturas"}
             </span>
           </div>
-          <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
+          <div inert={usaApi && (gruposRemotos.actualizando || abonosRemotos.actualizando || pedidosRemotos.actualizando)} className="lista-datos no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
             <div className="space-y-2.5">
         {tab === "pendientes" ? (
           gruposFiltrados.length === 0 ? (
             <ListaVacia titulo="Sin créditos pendientes. Todo al día ✓" texto="Los clientes con saldo aparecerán aquí." />
           ) : (
-            paginar(gruposFiltrados, pagina, POR_PAGINA).items.map((g) => (
-              <TarjetaClicable key={g.clienteId} onClick={() => { setBusquedaPedidos(""); setClienteDetalleId(g.clienteId); }} className="p-3.5">
+            (usaApi ? gruposFiltrados : paginar(gruposFiltrados, pagina, POR_PAGINA).items).map((g) => (
+              <TarjetaClicable key={g.clienteId} onClick={() => { setBusquedaPedidos(""); setPagina(1); setClienteDetalleId(g.clienteId); }} className="p-3.5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-[14px] font-semibold text-ink">{g.cliente?.nombre ?? "Cliente"} {g.cliente?.alias ? `“${g.cliente.alias}”` : ""}</p>
-                    <p className="text-[12px] text-ink-soft">{g.pedidos.length} pedido(s) · desde {new Date(g.masAntiguo).toLocaleDateString("es-CO")} · hace {g.diasMora} día(s)</p>
+                    <p className="text-[12px] text-ink-soft">{(usaApi ? (g as GrupoCartera & {cantidadPedidos:number}).cantidadPedidos : g.pedidos.length)} pedido(s) · desde {new Date(g.masAntiguo).toLocaleDateString("es-CO")} · hace {g.diasMora} día(s)</p>
                   </div>
                   <span className="flex-shrink-0 font-mono text-[13px] font-semibold text-danger">{formatoMoneda(g.total)}</span>
                 </div>
@@ -321,13 +341,13 @@ export function CreditosAdmin() {
         ) : abonosFiltrados.length === 0 ? (
           <ListaVacia titulo="Sin abonos para este filtro." texto="Cambia el periodo o la búsqueda." />
         ) : (
-          paginar(abonosFiltrados, pagina, POR_PAGINA).items.map((a) => {
+          (usaApi ? abonosFiltrados : paginar(abonosFiltrados, pagina, POR_PAGINA).items).map((a) => {
             const cliente = obtenerCliente(a.clienteId);
             return (
               <article key={a.id} className="rounded-xl border border-line bg-paper-raised p-3.5 shadow-sm">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-[13.5px] font-semibold text-ink">{cliente?.nombre ?? "Cliente"}</p>
+                    <p className="truncate text-[13.5px] font-semibold text-ink">{cliente?.nombre ?? (a as AbonoCredito & {cliente?:string}).cliente ?? "Cliente"}</p>
                     <p className="truncate text-[11.5px] text-ink-soft">
                       {new Date(a.creadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })} · {a.metodo} · recibió {nombreUsuario(a.usuarioId)}
                     </p>
@@ -366,15 +386,7 @@ export function CreditosAdmin() {
       </div>
 
       {/* Paginación fija */}
-      <div className="flex-shrink-0 mt-2">
-        <Paginacion
-          pagina={pagina}
-          totalPaginas={Math.max(1, Math.ceil((tab === "pendientes" ? gruposFiltrados.length : abonosFiltrados.length) / POR_PAGINA))}
-          total={tab === "pendientes" ? gruposFiltrados.length : abonosFiltrados.length}
-          porPagina={POR_PAGINA}
-          onChange={setPagina}
-        />
-      </div>
+
     </div>
   );
 }

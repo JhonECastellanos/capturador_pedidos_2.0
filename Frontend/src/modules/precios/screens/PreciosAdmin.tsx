@@ -7,20 +7,26 @@ import { GuiaAyuda } from "../../../components/GuiaAyuda";
 import { ListaVacia } from "../../../components/ListaVacia";
 import { Paginacion } from "../../../components/Paginacion";
 import { PantallaCompletaAdmin } from "../../../components/PantallaCompletaAdmin";
-import { POR_PAGINA, paginar } from "../../../utils/paginacion";
+import { useTamanoPagina, paginar } from "../../../utils/paginacion";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
 import { useOperaciones } from "../../../context/operaciones";
 import { calcularMargen } from "../../../dominio/servicios";
 import { formatoMoneda } from "../../../utils/formato";
+import type { Producto, CambioPrecio } from "../../../types";
+import { usaApi } from "../../../data/api";
+import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
+import { IntercambioProductosCSV } from "../components/IntercambioProductosCSV";
 
 /** Paso 1: nuevo precio · Paso 2: confirmar */
 type Paso = 1 | 2;
 
 export function PreciosAdmin() {
+  const POR_PAGINA = useTamanoPagina();
   const { inventario, cambiosPrecio, actualizarPrecioProducto, nombreUsuario } = useOperaciones();
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
+  const remoto = usePaginaApi<Producto>(`/productos?page=${pagina}&pageSize=${POR_PAGINA}&orden=nombre&q=${encodeURIComponent(busqueda)}`);
   const [productoId, setProductoId] = useState<string | null>(null);
   const [paso, setPaso] = useState<Paso>(1);
   const [precio, setPrecio] = useState("");
@@ -30,15 +36,18 @@ export function PreciosAdmin() {
 
   const filtrados = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
+    if (usaApi) return remoto.items;
     return inventario
       .filter((p) => !q || p.nombre.toLowerCase().includes(q) || p.codigoInterno.toLowerCase().includes(q) || p.categoria.toLowerCase().includes(q))
       .sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }, [busqueda, inventario]);
+  }, [busqueda, inventario, remoto.items]);
 
-  const producto = productoId ? inventario.find((p) => p.id === productoId) ?? null : null;
+  const detalleRemoto=useRegistroApi<Producto>(`/productos/${productoId}`,!!productoId);
+  const historialRemoto = useRegistroApi<Array<CambioPrecio & { usuario: { nombre: string } }>>(`/productos/${productoId}/precios?limite=3`,!!productoId);
+  const producto = productoId ? detalleRemoto.data ?? (usaApi ? remoto.items : inventario).find((p) => p.id === productoId) ?? null : null;
 
   function abrirProducto(id: string) {
-    const p = inventario.find((x) => x.id === id);
+    const p = (usaApi ? remoto.items : inventario).find((x) => x.id === id);
     setProductoId(id);
     setPrecio(p ? String(p.precioVenta) : "");
     setPaso(1);
@@ -65,7 +74,7 @@ export function PreciosAdmin() {
     const margenAntes = calcularMargen(producto.precioVenta, producto.costoActual);
     const margenDespues = calcularMargen(nuevo, producto.costoActual);
     const cambia = nuevo !== producto.precioVenta;
-    const historial = cambiosPrecio.filter((c) => c.productoId === producto.id).slice(0, 3);
+    const historial = usaApi ? historialRemoto.data ?? [] : cambiosPrecio.filter((c) => c.productoId === producto.id).slice(0, 3);
 
     return (
       <PantallaCompletaAdmin>
@@ -133,7 +142,7 @@ export function PreciosAdmin() {
                     <ul className="mt-1.5 space-y-1">
                       {historial.map((cambio) => (
                         <li key={cambio.id} className="text-[11.5px] text-ink-soft">
-                          {formatoMoneda(cambio.valorAnterior)} → <strong className="font-mono text-ink">{formatoMoneda(cambio.valorNuevo)}</strong> · {new Date(cambio.fecha).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })} · {nombreUsuario(cambio.usuarioId)}
+                          {formatoMoneda(cambio.valorAnterior)} → <strong className="font-mono text-ink">{formatoMoneda(cambio.valorNuevo)}</strong> · {new Date(cambio.fecha).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })} · {("usuario" in cambio ? (cambio.usuario as {nombre:string}).nombre : nombreUsuario(cambio.usuarioId))}
                         </li>
                       ))}
                     </ul>
@@ -220,18 +229,21 @@ export function PreciosAdmin() {
       </div>
 
       <div className="flex-shrink-0 pt-2.5">
+        {usaApi && <IntercambioProductosCSV />}
         <BuscadorInput value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre, código o categoría" />
       </div>
 
+      <Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil((usaApi ? remoto.total : filtrados.length) / POR_PAGINA))} total={usaApi ? remoto.total : filtrados.length} porPagina={POR_PAGINA} onChange={setPagina} />
+
       {/* Lista con scroll propio */}
-      <div className="mt-2.5 flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-2.5 rounded-2xl border border-line bg-paper-sunken/30 p-2 sm:p-3">
+      <div inert={usaApi && (remoto.actualizando)} className="lista-datos mt-2.5 flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-2.5 rounded-2xl border border-line bg-paper-sunken/30 p-2 sm:p-3">
         {filtrados.length === 0 ? (
           <ListaVacia
-            titulo={inventario.length === 0 ? "Aún no hay productos." : "No se encontraron productos para esta búsqueda."}
-            texto={inventario.length === 0 ? "Créalos desde Inventario para poder cambiar sus precios." : undefined}
+            titulo={busqueda ? "No se encontraron productos para esta búsqueda." : "Aún no hay productos."}
+            texto={!busqueda ? "Créalos desde Inventario para poder cambiar sus precios." : undefined}
           />
         ) : (
-          paginar(filtrados, pagina, POR_PAGINA).items.map((p) => {
+          (usaApi ? filtrados : paginar(filtrados, pagina, POR_PAGINA).items).map((p) => {
             const margen = calcularMargen(p.precioVenta, p.costoActual);
             return (
               <button
@@ -259,9 +271,7 @@ export function PreciosAdmin() {
 
       <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
 
-      <div className="flex-shrink-0 mt-2">
-        <Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil(filtrados.length / POR_PAGINA))} total={filtrados.length} porPagina={POR_PAGINA} onChange={setPagina} />
-      </div>
+
     </div>
   );
 }

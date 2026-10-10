@@ -3,6 +3,7 @@ import { z } from "zod";
 import { PrismaService } from "../common/prisma.module";
 import { ErrorDominio } from "../common/errores";
 import { siguienteCodigo, numero } from "../common/consecutivos";
+import { rangoPeriodo } from "../common/periodo";
 import { hoyLocal } from "../common/crypto";
 import { MetodoPago, TipoMovimientoCaja, TipoMovimientoInventario, Prisma } from "@prisma/client";
 
@@ -24,8 +25,19 @@ const GastoSchema = z.object({
 export class ComprasService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listarProveedores() {
-    return { data: await this.prisma.proveedor.findMany({ orderBy: { creadoEn: "desc" } }) };
+  async listarProveedores(pagina = 1, porPagina = 20, q = "") {
+    const where: Prisma.ProveedorWhereInput = q ? {OR:[{nombre:{contains:q,mode:"insensitive"}},{telefono:{contains:q,mode:"insensitive"}}]} : {};
+    return this.prisma.$transaction(async tx => {
+      const total=await tx.proveedor.count({where}),actual=Math.min(pagina,Math.max(1,Math.ceil(total/porPagina)));
+      const data=await tx.proveedor.findMany({where,orderBy:[{creadoEn:"desc"},{id:"desc"}],skip:(actual-1)*porPagina,take:porPagina});
+      return {data,meta:{pagina:actual,porPagina,total}};
+    },{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead});
+  }
+
+  async obtenerProveedor(id:string) {
+    const proveedor=await this.prisma.proveedor.findUnique({where:{id}});
+    if(!proveedor) throw new ErrorDominio("NO_ENCONTRADO","Proveedor no encontrado",404);
+    return proveedor;
   }
 
   async crearProveedor(nombre: string, telefono?: string) {
@@ -36,11 +48,12 @@ export class ComprasService {
     return proveedor;
   }
 
-  async listarRecepciones(pagina = 1, porPagina = 20) {
+  async listarRecepciones(pagina = 1, porPagina = 20, q = "", periodo = "todo") {
+    const where: Prisma.RecepcionCompraWhereInput = { creadoEn: rangoPeriodo(periodo), ...(q ? { OR: [{numero:{contains:q,mode:"insensitive"}},{proveedor:{nombre:{contains:q,mode:"insensitive"}}}] } : {}) };
     const [total, recepciones] = await this.prisma.$transaction([
-      this.prisma.recepcionCompra.count(),
+      this.prisma.recepcionCompra.count({where}),
       this.prisma.recepcionCompra.findMany({
-        orderBy: { creadoEn: "desc" },
+        where, orderBy: [{ creadoEn: "desc" }, {id:"desc"}],
         skip: (pagina - 1) * porPagina,
         take: porPagina,
         include: { proveedor: true, lineas: true },
@@ -68,12 +81,12 @@ export class ComprasService {
     };
   }
 
-  async listarGastos(filtros: { desde?: string; hasta?: string; pagina?: number; porPagina?: number } = {}) {
+  async listarGastos(filtros: { desde?: string; hasta?: string; pagina?: number; porPagina?: number; q?: string; periodo?: string } = {}) {
     const pagina = filtros.pagina ?? 1;
     const porPagina = filtros.porPagina ?? 20;
     // El rango se filtra por fechaOperacion (el día real del gasto), no por
     // creadoEn: así el cierre del día cuadra con lo registrado ese mismo día.
-    const where: Record<string, unknown> = {};
+    const where: Prisma.GastoWhereInput = { creadoEn:rangoPeriodo(filtros.periodo), ...(filtros.q ? {concepto:{contains:filtros.q,mode:"insensitive"}} : {}) };
     if (filtros.desde || filtros.hasta) {
       where.fechaOperacion = {
         ...(filtros.desde ? { gte: new Date(`${filtros.desde}T00:00:00.000Z`) } : {}),

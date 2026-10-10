@@ -3,8 +3,9 @@ import { z } from "zod";
 import { PrismaService } from "../common/prisma.module";
 import { ErrorDominio } from "../common/errores";
 import { siguienteCodigo, numero, Tx } from "../common/consecutivos";
+import { rangoPeriodo } from "../common/periodo";
 import { hoyLocal } from "../common/crypto";
-import { aplicadoPorPedido } from "../dominio/cartera";
+import { pedidosConSaldoSql, aplicadoPorPedido } from "../dominio/cartera";
 import { NuevoPedidoEsquema, LineaPedidoEsquema } from "@ambie/contrato";
 import {
   EstadoPedido,
@@ -42,6 +43,10 @@ export class PedidosService {
   constructor(private readonly prisma: PrismaService) {}
 
   async listar(filtros: {
+    metodo?: string;
+    periodo?: string;
+    clienteId?: string;
+    saldoPendiente?: string;
     segmento?: string;
     estado?: string;
     q?: string;
@@ -51,8 +56,13 @@ export class PedidosService {
     porPagina?: number;
   }) {
     const where: Prisma.PedidoWhereInput[] = [];
+    if (filtros.periodo) where.push({creadoEn:rangoPeriodo(filtros.periodo)});
 
-    if (filtros.estado && filtros.estado !== "todos") {
+    if (filtros.clienteId) where.push({clienteId:filtros.clienteId});
+    if(filtros.metodo && MAP_METODO[filtros.metodo]) where.push({metodo:MAP_METODO[filtros.metodo]});
+    if(filtros.estado === "abiertos") where.push({estado:{in:[EstadoPedido.PENDIENTE,EstadoPedido.EN_PREPARACION]}});
+    if (filtros.estado === "activos") where.push({ estado: { not: EstadoPedido.CANCELADO } });
+    if (filtros.estado && filtros.estado !== "todos" && filtros.estado !== "abiertos" && filtros.estado !== "activos") {
       const estadoMapeado = ESTADOS_VALIDOS[filtros.estado];
       if (!estadoMapeado) throw new ErrorDominio("VALIDACION", "Estado inválido");
       where.push({ estado: estadoMapeado });
@@ -72,12 +82,34 @@ export class PedidosService {
         { numero: { contains: q, mode: "insensitive" } },
         { cliente: { nombre: { contains: q, mode: "insensitive" } } },
         { cliente: { alias: { contains: q, mode: "insensitive" } } },
+        { vendedor: { nombre: { contains: q, mode: "insensitive" } } },
       ];
       if ("venta ocasional".includes(q.toLowerCase())) alternativas.push({ clienteId: null });
       where.push({ OR: alternativas });
     }
     const pagina = filtros.pagina ?? 1;
     const porPagina = filtros.porPagina ?? 20;
+    if (filtros.saldoPendiente === "true") {
+      const periodo = rangoPeriodo(filtros.periodo);
+      const condicion = Prisma.sql`FROM saldos p LEFT JOIN clientes c ON c.id=p."clienteId" LEFT JOIN usuarios u ON u.id=p."vendedorId" WHERE p.saldo>0
+        ${filtros.clienteId ? Prisma.sql`AND p."clienteId"=${filtros.clienteId}` : Prisma.empty}
+        ${periodo ? Prisma.sql`AND p."creadoEn">=${periodo.gte}` : Prisma.empty}
+        ${periodo?.lt ? Prisma.sql`AND p."creadoEn"<${periodo.lt}` : Prisma.empty}
+        ${filtros.segmento === "hoy" ? Prisma.sql`AND p."fechaOperacion"=${this.hoy()}` : Prisma.empty}
+        ${filtros.desde ? Prisma.sql`AND p."fechaOperacion">=${new Date(filtros.desde+'T00:00:00Z')}` : Prisma.empty}
+        ${filtros.hasta ? Prisma.sql`AND p."fechaOperacion"<=${new Date(filtros.hasta+'T00:00:00Z')}` : Prisma.empty}
+        ${filtros.metodo && MAP_METODO[filtros.metodo] ? Prisma.sql`AND p.metodo::text=${filtros.metodo}` : Prisma.empty}
+        ${filtros.estado === "abiertos" ? Prisma.sql`AND p.estado IN ('pendiente','en-preparacion')` : filtros.estado && ESTADOS_VALIDOS[filtros.estado] ? Prisma.sql`AND p.estado::text=${filtros.estado}` : Prisma.empty}
+        ${q ? Prisma.sql`AND (p.numero ILIKE ${'%'+q+'%'} OR c.nombre ILIKE ${'%'+q+'%'} OR c.alias ILIKE ${'%'+q+'%'} OR u.nombre ILIKE ${'%'+q+'%'} OR (p."clienteId" IS NULL AND ${'venta ocasional'.includes(q.toLowerCase())}))` : Prisma.empty}`;
+      return this.prisma.$transaction(async tx => {
+        const [cuenta] = await tx.$queryRaw<Array<{total:bigint}>>(Prisma.sql`${pedidosConSaldoSql} SELECT COUNT(*) AS total ${condicion}`);
+        const total=Number(cuenta.total), actual=Math.min(pagina,Math.max(1,Math.ceil(total/porPagina)));
+        const filas=await tx.$queryRaw<Array<{id:string}>>(Prisma.sql`${pedidosConSaldoSql} SELECT p.id ${condicion} ORDER BY p."creadoEn" DESC,p.id DESC LIMIT ${porPagina} OFFSET ${(actual-1)*porPagina}`);
+        const pedidos=await tx.pedido.findMany({where:{id:{in:filas.map(p=>p.id)}},orderBy:[{creadoEn:"desc"},{id:"desc"}],include:{lineas:true,historial:{include:{usuario:{select:{nombre:true}}}},vendedor:{select:{nombre:true}},cliente:true,factura:true}});
+        const aplicados=await aplicadoPorPedido(tx,pedidos.map(p=>p.id));
+        return {data:pedidos.map(p=>this.dto(p,aplicados)),meta:{pagina:actual,porPagina,total}};
+      }, {isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead});
+    }
     const condicion: Prisma.PedidoWhereInput = { AND: where };
     const [total, pedidos] = await this.prisma.$transaction([
       this.prisma.pedido.count({ where: condicion }),
@@ -86,7 +118,7 @@ export class PedidosService {
         orderBy: [{ creadoEn: "desc" }, { id: "desc" }],
         skip: (pagina - 1) * porPagina,
         take: porPagina,
-        include: { lineas: true, historial: true, cliente: true, factura: true },
+        include: { lineas: true, historial: { include: { usuario: {select:{nombre:true}} } }, vendedor: {select:{nombre:true}}, cliente: true, factura: true },
       }),
     ], { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
 
@@ -101,10 +133,30 @@ export class PedidosService {
     };
   }
 
+  async resumenVentas(administrador: boolean) {
+    const hoy = this.hoy(), rango = rangoPeriodo("hoy")!;
+    return this.prisma.$transaction(async tx => {
+      const [fila] = await tx.$queryRaw<Array<{cantidad:bigint;ventas:Prisma.Decimal;porCobrar:Prisma.Decimal;cobrado:Prisma.Decimal}>>(Prisma.sql`${pedidosConSaldoSql}
+        SELECT COUNT(*) FILTER(WHERE "fechaOperacion"=${hoy}) AS cantidad,
+          COALESCE(SUM(total) FILTER(WHERE "fechaOperacion"=${hoy}),0) AS ventas,
+          COALESCE(SUM(saldo),0) AS "porCobrar",
+          COALESCE(SUM(total-saldo) FILTER(WHERE metodo<>'credito' AND "creadoEn">=${rango.gte} AND "creadoEn"<${rango.lt}),0) AS cobrado FROM saldos`);
+      let ingresos = 0;
+      if (administrador) {
+        const [caja] = await tx.$queryRaw<Array<{total:Prisma.Decimal}>>(Prisma.sql`SELECT COALESCE(SUM(pa."montoAplicado"),0) AS total FROM "pagoAplicaciones" pa JOIN pagos pago ON pago.id=pa."pagoId" JOIN pedidos p ON p.id=pa."pedidoId"
+          WHERE pago.estado='activo' AND pa."revertidoEn" IS NULL AND p.estado<>'cancelado' AND p.metodo<>'credito'
+          AND p."creadoEn">=${rango.gte} AND p."creadoEn"<${rango.lt}
+          AND EXISTS(SELECT 1 FROM "movimientosCaja" m WHERE m."pagoId"=pago.id AND m.tipo='ingreso' AND m."creadoEn">=${rango.gte} AND m."creadoEn"<${rango.lt})`);
+        ingresos = numero(caja.total);
+      }
+      return {pedidosHoy:Number(fila.cantidad),ventasHoy:numero(fila.ventas),porCobrar:numero(fila.porCobrar),descuadre:administrador ? numero(fila.cobrado)-ingresos : null};
+    }, {isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead});
+  }
+
   async obtener(pedidoId: string) {
     const pedido = await this.prisma.pedido.findUnique({
       where: { id: pedidoId },
-      include: { lineas: true, historial: true, cliente: true, factura: true },
+      include: { lineas: true, historial: { include: { usuario: {select:{nombre:true}} } }, vendedor: {select:{nombre:true}}, cliente: true, factura: true },
     });
     if (!pedido) throw new ErrorDominio("NO_ENCONTRADO", "Pedido no encontrado", 404);
     const aplicados = await aplicadoPorPedido(this.prisma, [pedido.id]);
@@ -486,9 +538,10 @@ export class PedidosService {
         costoUnitario: import("@prisma/client").Prisma.Decimal;
         subtotal: import("@prisma/client").Prisma.Decimal;
       }>;
-      historial: Array<{ estado: EstadoPedido; usuarioId: string; fecha: Date }>;
+      historial: Array<{ estado: EstadoPedido; usuarioId: string; fecha: Date; usuario?: {nombre:string} }>;
       factura: { numero: string } | null;
       cliente?: { nombre: string } | null;
+      vendedor?: {nombre:string};
       comprobantePagoAdjuntoId?: string | null;
     },
     aplicados: Map<string, number>,
@@ -503,6 +556,7 @@ export class PedidosService {
       clienteNombre: p.cliente?.nombre ?? "Venta ocasional",
       comprobantePagoAdjuntoId: p.comprobantePagoAdjuntoId ?? null,
       vendedorId: p.vendedorId,
+      vendedorNombre:p.vendedor?.nombre,
       lineas: p.lineas.map((l) => ({
         productoId: l.productoId,
         nombre: l.nombre,
@@ -527,6 +581,7 @@ export class PedidosService {
       historialEstados: p.historial.map((h) => ({
         estado: h.estado.toLowerCase().replaceAll("_", "-"),
         usuarioId: h.usuarioId,
+        usuarioNombre:h.usuario?.nombre,
         fecha: h.fecha,
       })),
     };

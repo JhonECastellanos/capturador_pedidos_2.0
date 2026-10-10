@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let vigente = true;
     const expirar = () => { limpiarConsultas(); setUsuario(null); };
     window.addEventListener("ambie:sesion-expirada", expirar);
-    void api<UsuarioSistema>("/auth/me").then((u) => { if (vigente) setUsuario(u); })
+    void api<UsuarioSistema | null>("/auth/me").then((u) => { if (vigente) setUsuario(u); })
       .catch(() => {}).finally(() => { if (vigente) setCargando(false); });
     return () => { vigente = false; window.removeEventListener("ambie:sesion-expirada", expirar); };
   }, []);

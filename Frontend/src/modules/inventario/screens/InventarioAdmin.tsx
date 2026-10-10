@@ -9,7 +9,7 @@ import { ListaVacia } from "../../../components/ListaVacia";
 import { SegmentoControl } from "../../../components/SegmentoControl";
 import { TarjetaAccion } from "../../../components/TarjetaAccion";
 import { Paginacion } from "../../../components/Paginacion";
-import { POR_PAGINA, paginar } from "../../../utils/paginacion";
+import { useTamanoPagina, paginar } from "../../../utils/paginacion";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
 import { VistaImagenProducto } from "../../../components/VistaImagenProducto";
@@ -18,7 +18,11 @@ import { lineasContadasDe, resumenConteo } from "../../../dominio/servicios";
 import { formatoMoneda } from "../../../utils/formato";
 import { FormularioProducto } from "../components/FormularioProducto";
 import { InventarioInicial } from "../components/InventarioInicial";
-import type { TipoConteo } from "@ambie/contrato";
+import type { TipoConteo, ConteoInventarioDTO } from "@ambie/contrato";
+import type { Producto, AjusteInventario, LineaConteo } from "../../../types";
+import { usaApi } from "../../../data/api";
+import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
+import { normalizarConteo } from "../../../utils/inventario";
 
 const campo = "rounded-lg border border-line bg-paper-raised px-3 py-2.5 text-[13px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none";
 
@@ -28,10 +32,11 @@ type FiltroEstadoInv = "todos" | "alerta" | "ok";
 const motivosAjuste = ["pérdida", "robo", "corrección", "reversión compra", "vencimiento", "donación", "error captura", "otro"] as const;
 
 export function InventarioAdmin() {
+  const POR_PAGINA = useTamanoPagina();
   const {
-    inventario,
-    conteos,
-    ajustes,
+    inventario: inventarioLocal,
+    conteos: conteosActuales,
+    ajustes: ajustesLocales,
     actualizarImagenProducto,
     crearProducto,
     iniciarConteo,
@@ -46,7 +51,6 @@ export function InventarioAdmin() {
   // Cada proceso empresarial en su propia pantalla (sin scroll de página)
   const [vista, setVista] = useState<VistaInv>("menu");
   const [mostrarProducto, setMostrarProducto] = useState(false);
-  const [cantidadAleatoria, setCantidadAleatoria] = useState("5");
   const [tipoConteo, setTipoConteo] = useState<TipoConteo>("general");
   const [turno, setTurno] = useState("mañana");
   const [conteoActivoId, setConteoActivoId] = useState<string | null>(null);
@@ -73,30 +77,47 @@ export function InventarioAdmin() {
   const [confirmarAjusteManual, setConfirmarAjusteManual] = useState(false);
   const { aviso, mostrarAviso, cerrarAviso } = useAviso();
 
+  const productosRemotos = usePaginaApi<Producto>(`/productos?page=${pagina}&pageSize=${POR_PAGINA}&orden=alertas&q=${encodeURIComponent(mostrarAjusteManual ? busquedaAjuste : vista === "general" ? busquedaGeneral : "")}&stockEstado=${vista === "general" ? filtroEstado : "todos"}`);
+  const historialRemoto = usePaginaApi<ConteoInventarioDTO>(`/inventario/conteos?page=${paginaConteos}&pageSize=${POR_PAGINA}`, vista === "conteo");
+  const ajustesRemotos = usePaginaApi<AjusteInventario>(`/inventario/ajustes?page=${pagina}&pageSize=${POR_PAGINA}&q=${encodeURIComponent(vista === "menu" ? "" : busquedaHistorial)}`, vista === "ajustes" || vista === "menu");
+  const diferenciasRemotas = usePaginaApi<LineaConteo & { conteoId: string; turno: string; usuarioId: string; finalizadoEn: string; yaAjustado: boolean }>(`/inventario/descuadres?page=${pagina}&pageSize=${POR_PAGINA}&q=${encodeURIComponent(vista === "menu" ? "" : busquedaHistorial)}`, vista === "descuadres" || vista === "menu");
+  const detalleRemoto = useRegistroApi<ConteoInventarioDTO>(`/inventario/conteos/${conteoDetalleId}`, !!conteoDetalleId);
+  const inventario = usaApi ? productosRemotos.items : inventarioLocal;
+  const ajustes = usaApi ? ajustesRemotos.items : ajustesLocales;
+  const conteosPagina = useMemo(() => usaApi ? historialRemoto.items.map(normalizarConteo) : conteosActuales, [historialRemoto.items, conteosActuales]);
+  const conteos = useMemo(() => {
+    const registros = new Map([...conteosActuales, ...conteosPagina].map(c => [c.id, c]));
+    if (detalleRemoto.data) registros.set(detalleRemoto.data.id, normalizarConteo(detalleRemoto.data));
+    return [...registros.values()];
+  }, [conteosActuales, conteosPagina, detalleRemoto.data]);
+  const errorLectura = productosRemotos.error || historialRemoto.error || ajustesRemotos.error || diferenciasRemotas.error || detalleRemoto.error?.message;
+
   useEffect(() => { setPagina(1); }, [busquedaGeneral, filtroEstado, vista]);
 
-  const conteoEnCurso = useMemo(() => conteos.find((c) => c.id === conteoActivoId) ?? conteos.find((c) => c.estado === "en-curso") ?? null, [conteoActivoId, conteos]);
+  const conteoEnCurso = useMemo(() => conteos.find((c) => c.id === conteoActivoId && c.estado === "en-curso") ?? conteos.find((c) => c.estado === "en-curso") ?? null, [conteoActivoId, conteos]);
   const conteoDetalle = useMemo(() => conteos.find((c) => c.id === conteoDetalleId) ?? null, [conteoDetalleId, conteos]);
   const conteosOrdenados = useMemo(
-    () => [...conteos].sort((a, b) => (b.iniciadoEn < a.iniciadoEn ? -1 : b.iniciadoEn > a.iniciadoEn ? 1 : 0)),
-    [conteos],
+    () => [...conteosPagina].sort((a, b) => (b.iniciadoEn < a.iniciadoEn ? -1 : b.iniciadoEn > a.iniciadoEn ? 1 : 0)),
+    [conteosPagina],
   );
   const lineasConDiferencia = useMemo(() => {
+    if (usaApi) return diferenciasRemotas.items;
     const confirmados = conteos.filter((c) => c.estado === "confirmado");
     return confirmados.flatMap((conteo) =>
       lineasContadasDe(conteo)
         .filter((l) => l.diferencia !== 0)
-        .map((l) => ({ ...l, conteoId: conteo.id, turno: conteo.turno, usuarioId: conteo.usuarioId, finalizadoEn: conteo.finalizadoEn ?? conteo.iniciadoEn })),
+        .map((l) => ({ ...l, conteoId: conteo.id, turno: conteo.turno, usuarioId: conteo.usuarioId, finalizadoEn: conteo.finalizadoEn ?? conteo.iniciadoEn, yaAjustado: ajustes.some(a => a.conteoId === conteo.id) })),
     );
-  }, [conteos]);
+  }, [conteos, diferenciasRemotas.items, ajustes]);
 
-  const alertasStock = inventario.filter((p) => p.stock <= p.stockMinimo).length;
+  const alertasStock = usaApi ? Number(productosRemotos.meta?.alertas ?? 0) : inventario.filter((p) => p.stock <= p.stockMinimo).length;
   const qHistorial = busquedaHistorial.trim().toLowerCase();
   const diferenciasFiltradas = lineasConDiferencia.filter((l) => !qHistorial || `${l.nombre} ${l.turno}`.toLowerCase().includes(qHistorial));
   const ajustesFiltrados = ajustes.filter((a) => !qHistorial || `${a.motivo ?? ""} ${a.comentario ?? ""} ${a.lineas.map((l) => l.nombre).join(" ")}`.toLowerCase().includes(qHistorial));
   const conteosEnCurso = conteos.filter((c) => c.estado === "en-curso").length;
 
   const inventarioFiltradoGeneral = useMemo(() => {
+    if (usaApi) return inventario;
     const q = busquedaGeneral.trim().toLowerCase();
     return inventario
       .filter((p) => {
@@ -125,13 +146,13 @@ export function InventarioAdmin() {
       mostrarAviso("Registra productos antes de iniciar un conteo", "error");
       return false;
     }
-    const cantidad = tipo === "aleatorio" ? Number(cantidadAleatoria) || 5 : null;
+    const cantidad = tipo === "aleatorio" ? 5 : null;
     const conteo = await iniciarConteo(tipo, cantidad, turno);
     if (!conteo) return false;
     setConteoActivoId(conteo.id);
     setIndice(0);
     setBorradorConteo({});
-    setConteoDetalleId(null);
+    setConteoDetalleId(conteo.estado === "en-curso" ? null : conteo.id);
     setVista("conteo");
     mostrarAviso(`Conteo ${tipo} iniciado · turno ${turno}`, "exito");
     return true;
@@ -153,7 +174,8 @@ export function InventarioAdmin() {
     return true;
   }
 
-  const productoAjuste = productoAjusteId ? inventario.find((p) => p.id === productoAjusteId) : null;
+  const ajusteProductoRemoto=useRegistroApi<Producto>(`/productos/${productoAjusteId}`,!!productoAjusteId);
+  const productoAjuste = ajusteProductoRemoto.data ?? (productoAjusteId ? inventario.find(p=>p.id === productoAjusteId) : null);
   const lineaActual = conteoEnCurso ? conteoEnCurso.lineas[indice] : null;
   // Un conteo viejo sin marcas se considera contado completo.
   const idsContados = useMemo(() => {
@@ -207,7 +229,7 @@ export function InventarioAdmin() {
         id: "general" as VistaInv,
         titulo: "Stock general",
         descripcion: "Niveles, alertas y crear productos",
-        detalle: `${alertasStock} alerta(s) · ${inventario.length} productos`,
+        detalle: `${alertasStock} alerta(s) · ${usaApi ? productosRemotos.total : inventario.length} productos`,
         icono: <IconPackage width={24} height={24} />,
         tono: "teal" as const,
       },
@@ -223,7 +245,7 @@ export function InventarioAdmin() {
         id: "descuadres" as VistaInv,
         titulo: "Descuadres",
         descripcion: "Faltantes y sobrantes por aplicar",
-        detalle: `${lineasConDiferencia.filter((l) => !ajustes.some((a) => a.conteoId === l.conteoId)).length} por resolver`,
+        detalle: `${usaApi ? Number(diferenciasRemotas.meta?.pendientes ?? 0) : lineasConDiferencia.filter(l => !l.yaAjustado).length} por resolver`,
         icono: <IconChartBar width={24} height={24} />,
         tono: "danger" as const,
       },
@@ -231,7 +253,7 @@ export function InventarioAdmin() {
         id: "ajustes" as VistaInv,
         titulo: "Ajuste manual",
         descripcion: "Corregir stock con motivo auditado",
-        detalle: `${ajustes.length} ajuste(s)`,
+        detalle: `${usaApi ? ajustesRemotos.total : ajustes.length} ajuste(s)`,
         icono: <IconPlus width={24} height={24} />,
         tono: "ink" as const,
       },
@@ -266,7 +288,8 @@ export function InventarioAdmin() {
             ))}
           </ul>
         </div>
-        <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
+        {errorLectura && <p role="alert" className="p-3 text-danger">{errorLectura}</p>}
+      <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
       </div>
     );
   }
@@ -335,10 +358,11 @@ export function InventarioAdmin() {
                       ]}
                     />
                   </div>
-                  <p className="text-[11px] text-ink-faint flex-shrink-0">{inventarioFiltradoGeneral.length} productos</p>
+                  <p className="text-[11px] text-ink-faint flex-shrink-0">{usaApi ? productosRemotos.total : inventarioFiltradoGeneral.length} productos</p>
                 </div>
               </div>
 
+              <Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil((usaApi ? productosRemotos.total : inventarioFiltradoGeneral.length) / POR_PAGINA))} total={usaApi ? productosRemotos.total : inventarioFiltradoGeneral.length} porPagina={POR_PAGINA} onChange={setPagina} />
               {/* Lista con scroll propio */}
               <div className="flex min-h-0 flex-1 flex-col py-2.5">
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
@@ -348,9 +372,9 @@ export function InventarioAdmin() {
                     </p>
                     <span className="text-[11px] text-ink-soft">Alertas primero</span>
                   </div>
-                  <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
+                  <div inert={usaApi && (productosRemotos.actualizando || historialRemoto.actualizando || ajustesRemotos.actualizando || diferenciasRemotas.actualizando)} className="lista-datos no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
                     <div className="space-y-2.5 lg:grid lg:grid-cols-2 lg:space-y-0 lg:gap-2.5">
-                {paginar(inventarioFiltradoGeneral, pagina, POR_PAGINA).items.map((producto) => (
+                {(usaApi ? inventarioFiltradoGeneral : paginar(inventarioFiltradoGeneral, pagina, POR_PAGINA).items).map((producto) => (
                   <article key={producto.id} className="flex items-center gap-3 rounded-xl border border-line bg-paper-raised p-3 shadow-sm lg:col-span-1">
                     <VistaImagenProducto producto={producto} tamano="sm" clickable productos={inventarioFiltradoGeneral} />
                     <div className="min-w-0 flex-1">
@@ -384,9 +408,7 @@ export function InventarioAdmin() {
                   </div>
                 </div>
               </div>
-              <div className="flex-shrink-0 mt-2">
-                <Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil(inventarioFiltradoGeneral.length / POR_PAGINA))} total={inventarioFiltradoGeneral.length} porPagina={POR_PAGINA} onChange={setPagina} />
-              </div>
+
             </>
           )}
         </div>
@@ -395,7 +417,7 @@ export function InventarioAdmin() {
       {/* ─── Conteo: detalle de un conteo del historial ─── */}
       {vista === "conteo" && conteoDetalle && (() => {
         const resumen = resumenConteo(conteoDetalle);
-        const yaAjustado = ajustes.some((a) => a.conteoId === conteoDetalle.id);
+        const yaAjustado = conteoDetalle.aplicado ?? ajustes.some((a) => a.conteoId === conteoDetalle.id);
         const lineasDetalle = lineasContadasDe(conteoDetalle);
         return (
           <div className="mt-2.5 flex min-h-0 flex-1 flex-col">
@@ -420,7 +442,7 @@ export function InventarioAdmin() {
                       Inició {new Date(conteoDetalle.iniciadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}
                       {conteoDetalle.finalizadoEn ? ` · cerró ${new Date(conteoDetalle.finalizadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}` : ""}
                     </p>
-                    <p className="text-[11.5px] text-ink-faint">Contó {nombreUsuario(conteoDetalle.usuarioId)}</p>
+                    <p className="text-[11.5px] text-ink-faint">Contó {((conteoDetalle as typeof conteoDetalle & {usuario?:string}).usuario ?? nombreUsuario(conteoDetalle.usuarioId))}</p>
                   </div>
                   <span className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-semibold capitalize ${
                     conteoDetalle.estado === "confirmado" ? "bg-success-soft text-success" : conteoDetalle.estado === "cancelado" ? "bg-danger-soft text-danger" : "bg-accent-soft text-accent-dark"
@@ -569,30 +591,31 @@ export function InventarioAdmin() {
                 <option value="tarde">Turno tarde</option>
                 <option value="noche">Turno noche</option>
               </select>
-              <input type="number" min={1} max={inventario.length} value={cantidadAleatoria} onChange={(e) => setCantidadAleatoria(e.target.value)} placeholder="N aleatorio" className={campo} />
+              <p className="text-[12px] text-ink-soft">El conteo diario selecciona hasta cinco productos pendientes del ciclo.</p>
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <button type="button" aria-pressed={tipoConteo === "general"} disabled={inventario.length === 0} onClick={() => { setTipoConteo("general"); void handleIniciar("general"); }} className="rounded-xl bg-ink py-3 text-[13px] font-semibold text-white active:bg-ink/90 disabled:opacity-40">General</button>
-              <button type="button" aria-pressed={tipoConteo === "aleatorio"} disabled={inventario.length === 0} onClick={() => { setTipoConteo("aleatorio"); void handleIniciar("aleatorio"); }} className="rounded-xl border border-line bg-paper py-3 text-[13px] font-semibold text-ink active:bg-paper-sunken disabled:opacity-40">Aleatorio</button>
+              <button type="button" aria-pressed={tipoConteo === "general"} disabled={inventario.length === 0} onClick={() => { setTipoConteo("general"); void handleIniciar("general"); }} className="rounded-xl bg-ink py-3 text-[13px] font-semibold text-white active:bg-ink/90 disabled:opacity-40">Inventario general</button>
+              <button type="button" aria-pressed={tipoConteo === "aleatorio"} disabled={inventario.length === 0} onClick={() => { setTipoConteo("aleatorio"); void handleIniciar("aleatorio"); }} className="rounded-xl border border-line bg-paper py-3 text-[13px] font-semibold text-ink active:bg-paper-sunken disabled:opacity-40">Conteo aleatorio diario</button>
             </div>
             {inventario.length === 0 && (
               <p className="mt-2 text-[11.5px] text-ink-faint">Primero registra productos en Stock general para poder contarlos.</p>
             )}
           </div>
 
+          <Paginacion pagina={paginaConteos} totalPaginas={Math.max(1, Math.ceil((usaApi ? historialRemoto.total : conteos.length) / POR_PAGINA))} total={usaApi ? historialRemoto.total : conteos.length} porPagina={POR_PAGINA} onChange={setPaginaConteos} />
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
             <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
               <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Historial de conteos</p>
               <span className="text-[11px] text-ink-soft">Toca para ver el detalle</span>
             </div>
-            <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
+            <div inert={usaApi && (productosRemotos.actualizando || historialRemoto.actualizando || ajustesRemotos.actualizando || diferenciasRemotas.actualizando)} className="lista-datos no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
               {conteos.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-line bg-paper-raised px-4 py-8 text-center text-[13px] text-ink-soft">
                   Aún no hay conteos registrados.
                 </div>
               ) : (
                 <ul className="space-y-2">
-                  {paginar(conteosOrdenados, paginaConteos, POR_PAGINA).items.map((conteo) => {
+                  {(usaApi ? conteosOrdenados : paginar(conteosOrdenados, paginaConteos, POR_PAGINA).items).map((conteo) => {
                     const resumen = resumenConteo(conteo);
                     return (
                       <li key={conteo.id}>
@@ -622,11 +645,7 @@ export function InventarioAdmin() {
                 </ul>
               )}
             </div>
-            {conteos.length > POR_PAGINA && (
-              <div className="flex-shrink-0 border-t border-line bg-paper-raised px-3 py-2">
-                <Paginacion pagina={paginaConteos} totalPaginas={Math.max(1, Math.ceil(conteos.length / POR_PAGINA))} total={conteos.length} porPagina={POR_PAGINA} onChange={setPaginaConteos} />
-              </div>
-            )}
+
           </div>
         </div>
       ))}
@@ -634,6 +653,7 @@ export function InventarioAdmin() {
       {vista === "descuadres" && (
         <div className="flex min-h-0 flex-1 flex-col py-2.5">
           <div className="mb-2 shrink-0"><BuscadorInput value={busquedaHistorial} onChange={(q) => { setBusquedaHistorial(q); setPagina(1); }} placeholder="Buscar producto o turno" /></div>
+          <Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil((usaApi ? diferenciasRemotas.total : diferenciasFiltradas.length) / POR_PAGINA))} total={usaApi ? diferenciasRemotas.total : diferenciasFiltradas.length} porPagina={POR_PAGINA} onChange={setPagina} />
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
             <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
               <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">
@@ -641,13 +661,13 @@ export function InventarioAdmin() {
               </p>
               <span className="text-[11px] text-ink-soft">Falta / sobra</span>
             </div>
-            <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
+            <div inert={usaApi && (productosRemotos.actualizando || historialRemoto.actualizando || ajustesRemotos.actualizando || diferenciasRemotas.actualizando)} className="lista-datos no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
               <div className="space-y-2.5">
           {lineasConDiferencia.length === 0 ? (
             <div className="rounded-xl border border-dashed border-line bg-paper-raised p-8 text-center text-[13px] text-ink-soft">Sin descuadres confirmados. Inicia un conteo y registra faltantes/sobrantes.</div>
           ) : (
-            paginar(diferenciasFiltradas, pagina).items.map((linea) => {
-              const yaAjustado = ajustes.some((a) => a.conteoId === linea.conteoId);
+            (usaApi ? diferenciasFiltradas : paginar(diferenciasFiltradas, pagina, POR_PAGINA).items).map((linea) => {
+              const yaAjustado = linea.yaAjustado;
               const conteo = conteos.find((c) => c.id === linea.conteoId);
               return (
                 <article key={`${linea.conteoId}-${linea.productoId}`} className="rounded-xl border border-line bg-paper-raised p-3.5 shadow-sm">
@@ -657,9 +677,9 @@ export function InventarioAdmin() {
                       {linea.diferencia > 0 ? `+${linea.diferencia} sobra` : `${linea.diferencia} falta`}
                     </span>
                   </div>
-                  <p className="mt-1 text-[12px] text-ink-soft">Teórico {linea.stockTeorico} · Físico {linea.stockFisico} · {linea.turno} · {nombreUsuario(linea.usuarioId)}</p>
+                  <p className="mt-1 text-[12px] text-ink-soft">Teórico {linea.stockTeorico} · Físico {linea.stockFisico} · {linea.turno} · {((linea as typeof linea & {usuario?:string}).usuario ?? nombreUsuario(linea.usuarioId))}</p>
                   <p className="text-[11.5px] text-ink-faint">{conteo?.finalizadoEn ? new Date(conteo.finalizadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" }) : ""}</p>
-                  {!yaAjustado && conteo?.estado === "confirmado" && (
+                  {!yaAjustado && (usaApi || conteo?.estado === "confirmado") && (
                     <button type="button" onClick={() => setConfirmarAplicarConteoId(linea.conteoId)} className="mt-3 w-full rounded-lg bg-ink py-2.5 text-[12px] font-semibold text-white active:bg-ink/90">Revisar y aplicar al stock</button>
                   )}
                   {yaAjustado && <p className="mt-2 text-[11.5px] font-semibold text-success">✓ Ajuste aplicado</p>}
@@ -670,15 +690,18 @@ export function InventarioAdmin() {
               </div>
             </div>
           </div>
-          <div className="shrink-0"><Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil(diferenciasFiltradas.length / POR_PAGINA))} total={diferenciasFiltradas.length} porPagina={POR_PAGINA} onChange={setPagina} /></div>
+
         </div>
       )}
 
       {vista === "ajustes" && (
         <div className="flex flex-1 flex-col min-h-0 mt-3">
           {!mostrarAjusteManual ? (
-            <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-3">
+            <>
+
+            <div inert={usaApi && (productosRemotos.actualizando || historialRemoto.actualizando || ajustesRemotos.actualizando || diferenciasRemotas.actualizando)} className="lista-datos flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-3">
               <BuscadorInput value={busquedaHistorial} onChange={(q) => { setBusquedaHistorial(q); setPagina(1); }} placeholder="Buscar producto, motivo o comentario" />
+              <Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil((usaApi ? ajustesRemotos.total : ajustesFiltrados.length) / POR_PAGINA))} total={usaApi ? ajustesRemotos.total : ajustesFiltrados.length} porPagina={POR_PAGINA} onChange={setPagina} />
               <button
                 type="button"
                 onClick={() => {
@@ -697,9 +720,9 @@ export function InventarioAdmin() {
                 {ajustes.length === 0 ? (
                   <p className="rounded-xl border border-dashed border-line bg-paper-raised p-8 text-center text-[13px] text-ink-soft">Sin ajustes registrados.</p>
                 ) : (
-                  paginar(ajustesFiltrados, pagina).items.map((ajuste) => (
+                  (usaApi ? ajustesFiltrados : paginar(ajustesFiltrados, pagina, POR_PAGINA).items).map((ajuste) => (
                     <article key={ajuste.id} className="rounded-xl border border-line bg-paper-raised p-3.5 shadow-sm">
-                      <p className="text-[12px] font-semibold text-ink-faint">{new Date(ajuste.creadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })} · {nombreUsuario(ajuste.usuarioId)} {ajuste.motivo ? `· ${ajuste.motivo}` : ""} {ajuste.conteoId === "manual" ? "· manual" : ""}</p>
+                      <p className="text-[12px] font-semibold text-ink-faint">{new Date(ajuste.creadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })} · {((ajuste as typeof ajuste & {usuario?:string}).usuario ?? nombreUsuario(ajuste.usuarioId))} {ajuste.motivo ? `· ${ajuste.motivo}` : ""} {ajuste.conteoId === "manual" ? "· manual" : ""}</p>
                       {ajuste.comentario && <p className="mt-1 text-[12px] italic text-ink-soft">“{ajuste.comentario}”</p>}
                       <ul className="mt-2 divide-y divide-line rounded-lg border border-line">
                         {ajuste.lineas.map((l) => (
@@ -713,8 +736,9 @@ export function InventarioAdmin() {
                   ))
                 )}
               </div>
-              <Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil(ajustesFiltrados.length / POR_PAGINA))} total={ajustesFiltrados.length} porPagina={POR_PAGINA} onChange={setPagina} />
+
             </div>
+            </>
           ) : (
             <>
               {pasoAjuste === 1 && (
@@ -727,14 +751,15 @@ export function InventarioAdmin() {
                     <input
                       autoFocus
                       value={busquedaAjuste}
-                      onChange={(e) => setBusquedaAjuste(e.target.value)}
+                      onChange={(e) => { setBusquedaAjuste(e.target.value); setPagina(1); }}
                       placeholder="Buscar producto por nombre o código"
                       className="w-full rounded-xl border border-line bg-paper-raised px-3.5 py-2.5 text-[13.5px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
                     />
                   </div>
-                  <div className="mt-2.5 flex-1 min-h-0 overflow-y-auto no-scrollbar rounded-2xl border border-line bg-paper-sunken/30 p-2">
+                  <Paginacion pagina={pagina} totalPaginas={Math.max(1,Math.ceil((usaApi ? productosRemotos.total : productosFiltradosAjuste.length)/POR_PAGINA))} total={usaApi ? productosRemotos.total : productosFiltradosAjuste.length} porPagina={POR_PAGINA} onChange={setPagina} />
+                  <div inert={usaApi && (productosRemotos.actualizando || historialRemoto.actualizando || ajustesRemotos.actualizando || diferenciasRemotas.actualizando)} className="lista-datos mt-2.5 flex-1 min-h-0 overflow-y-auto no-scrollbar rounded-2xl border border-line bg-paper-sunken/30 p-2">
                     <ul className="space-y-1.5">
-                      {productosFiltradosAjuste.slice(0, POR_PAGINA).map((p) => (
+                      {(usaApi ? productosFiltradosAjuste : paginar(productosFiltradosAjuste,pagina,POR_PAGINA).items).map((p) => (
                         <li key={p.id}>
                           <button
                             type="button"
@@ -836,6 +861,7 @@ export function InventarioAdmin() {
         </div>
       )}
 
+      {errorLectura && <p role="alert" className="p-3 text-danger">{errorLectura}</p>}
       <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
 
       <ConfirmarAccion

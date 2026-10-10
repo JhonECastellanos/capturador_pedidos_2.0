@@ -87,6 +87,7 @@ export interface DashboardResumenDTO {
   rango: { desde: string; hasta: string };
   ventas: number; pedidos: number; ticketPromedio: number;
   gastos: number; compras: number; utilidad: number;
+  descuadres: { faltantes: number; sobrantes: number; neto: number; lineasSinCosto: number; serie: Array<{ dia: string; faltantes: number; sobrantes: number; lineasSinCosto: number }> };
   creditoPendiente: number; creditoPendienteGlobal: number; alertasStock: number;
   serie: Array<{ dia: string; ventas: number; pedidos: number; gastos: number; compras: number; costo: number }>;
   topProductos: Array<{ productoId: string; nombre: string; unidades: number; venta: number; ganancia: number }>;
@@ -218,6 +219,7 @@ export interface PagoPedidoDTO {
 }
 
 export interface HistorialEstadoDTO {
+  usuarioNombre?: string;
   estado: string;
   usuarioId: string;
   usuario?: string;
@@ -248,6 +250,7 @@ export interface PedidoDTO {
   clienteId: string | null;
   clienteNombre?: string;
   vendedorId: string;
+  vendedorNombre?: string;
   vendedor?: string;
   metodo: MetodoPago;
   momentoCobro: MomentoCobro;
@@ -380,6 +383,7 @@ export interface GastoDTO {
 // ─── Inventario ───────────────────────────────────────────────────
 
 export interface LineaConteoDTO {
+  costoUnitarioConteo?: number | null;
   id: string;
   conteoId: string;
   productoId: string;
@@ -389,6 +393,8 @@ export interface LineaConteoDTO {
   stockFisico: number | null;
   diferencia: number | null;
   contadoEn: string | null;
+  contadoPorId?: string | null;
+  cicloDiario?: number | null;
   nombreInicial?: string | null;
   costoUnitarioInicial?: number | null;
 }
@@ -417,6 +423,8 @@ export interface ConteoInventarioDTO {
   iniciadoEn: string;
   finalizadoEn: string | null;
   estado: EstadoConteo;
+  fechaDiaria?: string | null;
+  aplicado?: boolean;
   lineas: LineaConteoDTO[];
   resumen?: ResumenConteoDTO;
 }
@@ -429,6 +437,7 @@ export interface ResumenConteoDTO {
 }
 
 export interface LineaAjusteDTO {
+  costoUnitario?: number | null;
   id: string;
   productoId: string;
   nombre?: string;
@@ -592,4 +601,10 @@ export interface SaludDTO {
   version: string;
   baseDatos: boolean;
   hora: string;
+}
+
+export interface ResultadoImportacionProductosDTO {
+  creados: number;
+  actualizados: number;
+  conteoInicialId: string | null;
 }

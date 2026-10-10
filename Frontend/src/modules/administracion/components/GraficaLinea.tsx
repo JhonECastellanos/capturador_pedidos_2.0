@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 interface PuntoLinea {
   etiqueta: string;
   valor: number;
@@ -10,6 +12,7 @@ interface GraficaLineaProps {
 
 /** Rentabilidad: ventas menos costo de lo vendido y gastos. */
 export function GraficaLinea({ datos, formato }: GraficaLineaProps) {
+  const [seleccionado, setSeleccionado] = useState<string | null>(null);
   const valores = datos.map((punto) => punto.valor);
   const maximo = Math.max(0, ...valores);
   const minimo = Math.min(0, ...valores);
@@ -59,11 +62,15 @@ export function GraficaLinea({ datos, formato }: GraficaLineaProps) {
         <button type="button"
           key={`marca-${datos[indice].etiqueta}`}
           aria-label={`${datos[indice].etiqueta}: rentabilidad ${formato(datos[indice].valor)}`}
-          className="group absolute z-10 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-teal"
+          aria-expanded={seleccionado === datos[indice].etiqueta}
+          onPointerUp={(evento) => { if (evento.pointerType !== "mouse") setSeleccionado((actual) => actual === datos[indice].etiqueta ? null : datos[indice].etiqueta); }}
+          onBlur={() => setSeleccionado(null)}
+          onKeyDown={(evento) => { if (evento.key === "Escape") { setSeleccionado(null); evento.currentTarget.blur(); } }}
+          className="group absolute z-10 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-teal"
           style={{ left: `${punto.x}%`, top: `${punto.y}%` }}
         >
           <span className={`h-2 w-2 rounded-full ${datos[indice].valor >= 0 ? "bg-success" : "bg-danger"}`} />
-          <span role="tooltip" className={`pointer-events-none absolute bottom-full mb-1 hidden w-max rounded-lg border border-line bg-paper-raised p-2 text-[11px] text-ink shadow-lg group-hover:block group-focus-visible:block ${indice === 0 ? "left-0" : indice === datos.length - 1 ? "right-0" : "left-1/2 -translate-x-1/2"}`}>
+          <span role="tooltip" className={`pointer-events-none absolute bottom-full mb-1 ${seleccionado === datos[indice].etiqueta ? "block" : "hidden"} w-max rounded-lg border border-line bg-paper-raised p-2 text-[11px] text-ink shadow-lg [@media(hover:hover)]:group-hover:block group-focus-visible:block ${indice === 0 ? "left-0" : indice === datos.length - 1 ? "right-0" : "left-1/2 -translate-x-1/2"}`}>
             <span className="block font-semibold">{datos[indice].etiqueta}</span>
             <span className="block">Rentabilidad: {formato(datos[indice].valor)}</span>
           </span>

@@ -1,4 +1,15 @@
 import { Tx, numero } from "../common/consecutivos";
+import { Prisma } from "@prisma/client";
+
+/** Lecturas de cartera y caja comparten la misma definición de pago activo. */
+export const pedidosConSaldoSql = Prisma.sql`WITH saldos AS (
+  SELECT p.*, GREATEST(0, p.total - COALESCE(a.aplicado, 0)) AS saldo
+  FROM pedidos p LEFT JOIN LATERAL (
+    SELECT SUM(pa."montoAplicado") AS aplicado FROM "pagoAplicaciones" pa
+    JOIN pagos pago ON pago.id = pa."pagoId"
+    WHERE pa."pedidoId" = p.id AND pa."revertidoEn" IS NULL AND pago.estado = 'activo'
+  ) a ON true WHERE p.estado <> 'cancelado'
+)`;
 
 /** Suma de aplicaciones activas por pedido (excluye revertidas). */
 export async function aplicadoPorPedido(tx: Tx, pedidoIds: string[]): Promise<Map<string, number>> {

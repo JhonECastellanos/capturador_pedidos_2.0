@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { GuiaAyuda } from "../../../components/GuiaAyuda";
 import { Paginacion } from "../../../components/Paginacion";
 import { SegmentoControl } from "../../../components/SegmentoControl";
-import { POR_PAGINA, paginar } from "../../../utils/paginacion";
+import { useTamanoPagina, paginar } from "../../../utils/paginacion";
+import { usaApi } from "../../../data/api";
+import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
+import type { Pedido, MovimientoCaja } from "../../../types";
 import { useOperaciones } from "../../../context/operaciones";
 import { formatoMoneda } from "../../../utils/formato";
 import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodo, type Periodo } from "../../../utils/fechas";
@@ -16,6 +19,7 @@ type FiltroMedio = "ingresos" | "egresos" | "efectivo" | "billetera" | "credito"
 type VistaCaja = "movimientos" | "ganancias";
 
 export function CajaAdmin() {
+  const POR_PAGINA = useTamanoPagina();
   const { movimientosCaja, pedidos, abonos, obtenerCliente, nombreUsuario, registrarEgresoCaja } = useOperaciones();
   const [nuevoEgreso, setNuevoEgreso] = useState(false);
   const [conceptoEgreso, setConceptoEgreso] = useState("");
@@ -42,6 +46,10 @@ export function CajaAdmin() {
 
   useEffect(() => { setPagina(1); }, [periodo, busqueda, filtroMedio, vistaCaja]);
 
+  const movimientosRemotos=usePaginaApi<MovimientoCaja>(`/caja/movimientos?page=${pagina}&pageSize=${POR_PAGINA}&periodo=${periodo}&q=${encodeURIComponent(busqueda)}&tipo=${filtroMedio === "egresos" ? "egreso" : filtroMedio && filtroMedio !== "credito" ? "ingreso" : ""}&metodo=${filtroMedio === "efectivo" || filtroMedio === "billetera" ? filtroMedio : ""}`, vistaCaja === "movimientos");
+  const creditoRemoto=usePaginaApi<Pedido>(`/pedidos?saldoPendiente=true&page=${pagina}&pageSize=${POR_PAGINA}&periodo=${periodo}&q=${encodeURIComponent(busqueda)}`, filtroMedio === "credito");
+  const gananciasRemotas=useRegistroApi<Array<{periodo:Periodo;ingresos:number;egresos:number;neto:number}>>("/caja/resumen-periodos", vistaCaja === "ganancias");
+
   // Base del periodo (las tarjetas no cambian al filtrar por medio)
   const movimientosPeriodo = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -66,11 +74,12 @@ export function CajaAdmin() {
       .sort((a, b) => (b.creadoEn < a.creadoEn ? -1 : b.creadoEn > a.creadoEn ? 1 : 0));
   }, [abonos, busqueda, hoy, movimientosCaja, obtenerCliente, pedidos, periodo]);
 
-  const ingresos = movimientosPeriodo.filter((m) => m.tipo === "ingreso").reduce((s, m) => s + m.monto, 0);
-  const egresos = movimientosPeriodo.filter((m) => m.tipo === "egreso").reduce((s, m) => s + m.monto, 0);
-  const efectivo = movimientosPeriodo.filter((m) => m.tipo === "ingreso" && m.metodo === "efectivo").reduce((s, m) => s + m.monto, 0);
-  const billetera = movimientosPeriodo.filter((m) => m.tipo === "ingreso" && m.metodo === "billetera").reduce((s, m) => s + m.monto, 0);
+  const ingresos = usaApi ? Number(movimientosRemotos.meta?.ingresos ?? 0) : movimientosPeriodo.filter((m) => m.tipo === "ingreso").reduce((s, m) => s + m.monto, 0);
+  const egresos = usaApi ? Number(movimientosRemotos.meta?.egresos ?? 0) : movimientosPeriodo.filter((m) => m.tipo === "egreso").reduce((s, m) => s + m.monto, 0);
+  const efectivo = usaApi ? Number(movimientosRemotos.meta?.efectivo ?? 0) : movimientosPeriodo.filter((m) => m.tipo === "ingreso" && m.metodo === "efectivo").reduce((s, m) => s + m.monto, 0);
+  const billetera = usaApi ? Number(movimientosRemotos.meta?.billetera ?? 0) : movimientosPeriodo.filter((m) => m.tipo === "ingreso" && m.metodo === "billetera").reduce((s, m) => s + m.monto, 0);
   const pedidosCreditoPeriodo = useMemo(() => {
+    if (usaApi) return creditoRemoto.items;
     const q = busqueda.trim().toLowerCase();
     return pedidos.filter((p) => {
       if (p.estado === "cancelado" || p.pago.saldoPendiente <= 0) return false;
@@ -83,33 +92,35 @@ export function CajaAdmin() {
         cliente?.alias.toLowerCase().includes(q)
       );
     });
-  }, [busqueda, hoy, obtenerCliente, pedidos, periodo]);
-  const creditoPendiente = pedidosCreditoPeriodo.reduce((s, p) => s + p.pago.saldoPendiente, 0);
+  }, [busqueda, hoy, obtenerCliente, pedidos, periodo, creditoRemoto.items]);
+  const creditoPendiente = usaApi ? Number(movimientosRemotos.meta?.creditoPendiente ?? 0) : pedidosCreditoPeriodo.reduce((s, p) => s + p.pago.saldoPendiente, 0);
 
   const movimientosVista = useMemo(() => {
+    if (usaApi) return movimientosRemotos.items;
     if (filtroMedio === "ingresos") return movimientosPeriodo.filter((m) => m.tipo === "ingreso");
     if (filtroMedio === "egresos") return movimientosPeriodo.filter((m) => m.tipo === "egreso");
     if (filtroMedio === "efectivo") return movimientosPeriodo.filter((m) => m.tipo === "ingreso" && m.metodo === "efectivo");
     if (filtroMedio === "billetera") return movimientosPeriodo.filter((m) => m.tipo === "ingreso" && m.metodo === "billetera");
     return movimientosPeriodo;
-  }, [filtroMedio, movimientosPeriodo]);
+  }, [filtroMedio, movimientosPeriodo, movimientosRemotos.items]);
 
   const balance = ingresos - egresos;
   const esVistaCredito = filtroMedio === "credito";
 
   // Ganancias por periodo: lo cobrado menos compras y gastos, sin el filtro de búsqueda.
   const resumenPorPeriodo = useMemo(() => {
+    if (usaApi) return gananciasRemotas.data ?? [];
     return PERIODOS.map((p) => {
       const movs = movimientosCaja.filter((m) => dentroDePeriodo(m.creadoEn, p, hoy));
       const entra = movs.filter((m) => m.tipo === "ingreso").reduce((s, m) => s + m.monto, 0);
       const sale = movs.filter((m) => m.tipo === "egreso").reduce((s, m) => s + m.monto, 0);
       return { periodo: p, ingresos: entra, egresos: sale, neto: entra - sale };
     });
-  }, [hoy, movimientosCaja]);
+  }, [hoy, movimientosCaja, gananciasRemotas.data]);
   const gananciaPeriodo = resumenPorPeriodo.find((fila) => fila.periodo === periodo) ?? { periodo, ingresos: 0, egresos: 0, neto: 0 };
-  const totalVista = esVistaCredito ? pedidosCreditoPeriodo.length : movimientosVista.length;
-  const { items: paginaMovs, totalPaginas: paginasMovs } = useMemo(() => paginar(movimientosVista, pagina, POR_PAGINA), [movimientosVista, pagina]);
-  const { items: paginaCred, totalPaginas: paginasCred } = useMemo(() => paginar(pedidosCreditoPeriodo, pagina, POR_PAGINA), [pedidosCreditoPeriodo, pagina]);
+  const totalVista = usaApi ? (esVistaCredito ? creditoRemoto.total : movimientosRemotos.total) : esVistaCredito ? pedidosCreditoPeriodo.length : movimientosVista.length;
+  const { items: paginaMovs, totalPaginas: paginasMovs } = useMemo(() => usaApi ? {items:movimientosVista,totalPaginas:Math.max(1,Math.ceil(movimientosRemotos.total/POR_PAGINA))} : paginar(movimientosVista, pagina, POR_PAGINA), [movimientosVista, pagina, POR_PAGINA, movimientosRemotos.total]);
+  const { items: paginaCred, totalPaginas: paginasCred } = useMemo(() => usaApi ? {items:pedidosCreditoPeriodo,totalPaginas:Math.max(1,Math.ceil(creditoRemoto.total/POR_PAGINA))} : paginar(pedidosCreditoPeriodo, pagina, POR_PAGINA), [pedidosCreditoPeriodo, pagina, POR_PAGINA, creditoRemoto.total]);
   const totalPaginas = esVistaCredito ? paginasCred : paginasMovs;
 
   function alternarFiltro(medio: Exclude<FiltroMedio, null>) {
@@ -234,7 +245,7 @@ export function CajaAdmin() {
               <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Historial de ganancias</p>
               <span className="text-[11px] text-ink-soft">Toca un periodo</span>
             </div>
-            <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
+            <div inert={usaApi && (movimientosRemotos.actualizando || creditoRemoto.actualizando)} className="lista-datos no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
               <ul className="space-y-2">
                 {resumenPorPeriodo.map((fila) => (
                   <li key={fila.periodo}>
@@ -267,6 +278,7 @@ export function CajaAdmin() {
       {/* Lista con scroll propio */}
       {vistaCaja === "movimientos" && (
         <>
+      <Paginacion pagina={pagina} totalPaginas={totalPaginas} total={totalVista} porPagina={POR_PAGINA} onChange={setPagina} />
       <div className="flex min-h-0 flex-1 flex-col px-0 py-2.5">
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
           <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
@@ -275,7 +287,7 @@ export function CajaAdmin() {
             </p>
             <span className="text-[11px] text-ink-soft">Recientes primero</span>
           </div>
-          <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
+          <div inert={usaApi && (movimientosRemotos.actualizando || creditoRemoto.actualizando)} className="lista-datos no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
             <div className="space-y-2">
         {esVistaCredito ? (
           paginaCred.length === 0 ? (
@@ -327,7 +339,7 @@ export function CajaAdmin() {
                   }`}>
                     {movimiento.tipo === "egreso" ? "Egreso" : esBilletera ? "Billetera" : esEfectivo ? "Efectivo" : movimiento.metodo ?? movimiento.tipo}
                   </span>
-                  <p className="mt-0.5 text-[10.5px] text-ink-faint">Registró {nombreUsuario(movimiento.usuarioId)}</p>
+                  <p className="mt-0.5 text-[10.5px] text-ink-faint">Registró {((movimiento as typeof movimiento & {usuario?:string}).usuario ?? nombreUsuario(movimiento.usuarioId))}</p>
                 </div>
                 <p className={`flex-shrink-0 font-mono text-[13.5px] font-bold ${
                   movimiento.tipo === "ingreso" ? (esBilletera ? "text-teal" : "text-success") : "text-danger"
@@ -343,9 +355,7 @@ export function CajaAdmin() {
         </div>
       </div>
 
-      <div className="flex-shrink-0 mt-2">
-        <Paginacion pagina={pagina} totalPaginas={totalPaginas} total={totalVista} porPagina={POR_PAGINA} onChange={setPagina} />
-      </div>
+
         </>
       )}
     </div>

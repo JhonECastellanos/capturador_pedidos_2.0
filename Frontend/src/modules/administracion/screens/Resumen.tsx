@@ -36,11 +36,19 @@ export function Resumen() {
   const { pedidos, inventario, recepciones, gastos, obtenerCliente } = useOperaciones();
   const [granBarras, setGranBarras] = useState<Granularidad>("dia");
   const [granLinea, setGranLinea] = useState<Granularidad>("dia");
+  const [granDescuadres, setGranDescuadres] = useState<Granularidad>("dia");
   const [periodoTops, setPeriodoTops] = useState<PeriodoLista>("todo");
   const hoy = useMemo(() => new Date(), []);
   const ayer = new Date(hoy); ayer.setDate(ayer.getDate() - 1);
   const tramosBarras = tramosDe(granBarras, hoy), tramosLinea = tramosDe(granLinea, hoy);
   const rangoBarras = rangoTramos(tramosBarras), rangoLinea = rangoTramos(tramosLinea);
+  const tramosDescuadres = tramosDe(granDescuadres, hoy);
+  const remotoDescuadres = useResumenApi(...rangoTramos(tramosDescuadres));
+  const serieDescuadres = tramosDescuadres.map(tramo => {
+    const desde = diaTablero(tramo.inicio), hasta = diaTablero(tramo.fin);
+    const filas = remotoDescuadres.data?.descuadres.serie.filter(f => f.dia >= desde && f.dia < hasta) ?? [];
+    return { etiqueta: tramo.etiqueta, ventas: filas.reduce((s, f) => s + f.sobrantes, 0), egresos: filas.reduce((s, f) => s + f.faltantes, 0) };
+  });
   const inicioTops = new Date(hoy);
   inicioTops.setDate(inicioTops.getDate() - (periodoTops === "dia" ? 0 : periodoTops === "semana" ? 7 : periodoTops === "mes" ? 30 : 365));
   const remotoHoy = useResumenApi(diaTablero(hoy), diaTablero(hoy));
@@ -106,14 +114,14 @@ export function Resumen() {
   const topClientes = usaApi ? (remotoTops.data?.topClientes ?? []).map((fila) => ({ ...fila, cliente: { nombre: fila.nombre } })) : topClientesDe(pedidosPeriodo, inventario).map((fila) => ({ ...fila, cliente: obtenerCliente(fila.clienteId) }));
 
   if (usaApi) {
-    const consultas = [remotoHoy, remotoMes, remotoAyer, remotoBarras, remotoLinea, remotoTops];
+    const consultas = [remotoHoy, remotoMes, remotoAyer, remotoBarras, remotoLinea, remotoTops, remotoDescuadres];
     const error = consultas.find((c) => c.error)?.error;
     if (consultas.some((c) => !c.data)) return <div className="p-4"><p role={error ? "alert" : "status"}>{error?.message ?? "Cargando tablero…"}</p>{error && <button className="mt-3 min-h-11 rounded-xl border border-line px-4" onClick={() => { consultas.forEach((c) => { void c.refetch(); }); }}>Reintentar</button>}</div>;
   }
 
   return (
     <div className="flex h-full flex-col min-h-0">
-      {usaApi && [remotoHoy, remotoMes, remotoAyer, remotoBarras, remotoLinea, remotoTops].some((c) => c.error) && <p role="alert" className="shrink-0 rounded-xl bg-danger-soft p-3 text-sm text-danger">No se pudo actualizar el tablero. Se muestra la última lectura. <button type="button" onClick={() => [remotoHoy, remotoMes, remotoAyer, remotoBarras, remotoLinea, remotoTops].forEach((c) => { void c.refetch(); })}>Reintentar</button></p>}
+      {usaApi && [remotoHoy, remotoMes, remotoAyer, remotoBarras, remotoLinea, remotoTops, remotoDescuadres].some((c) => c.error) && <p role="alert" className="shrink-0 rounded-xl bg-danger-soft p-3 text-sm text-danger">No se pudo actualizar el tablero. Se muestra la última lectura. <button type="button" onClick={() => [remotoHoy, remotoMes, remotoAyer, remotoBarras, remotoLinea, remotoTops, remotoDescuadres].forEach((c) => { void c.refetch(); })}>Reintentar</button></p>}
       <div className="flex-shrink-0 flex items-center justify-between border-b border-line pb-2.5">
         <div className="flex items-center gap-2">
           <h2 className="font-display text-[18px] font-semibold text-ink">Inicio</h2>
@@ -188,6 +196,19 @@ export function Resumen() {
       )}
 
       {/* Gráfica 2: rentabilidad en el tiempo */}
+      {usaApi && <section aria-label="Descuadres de inventario" className="max-w-3xl rounded-2xl border border-line bg-paper-raised p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-display text-[14px] font-semibold text-ink">Descuadres de inventario</h3>
+          <SegmentoControl opciones={GRANULARIDADES} valor={granDescuadres} onChange={setGranDescuadres} />
+        </div>
+        <p className="mt-1 text-[11px] text-ink-soft">Conteos confirmados y ajustes manuales, valorados al costo guardado. No incluye el inventario inicial.</p>
+        <GraficaBarrasDobles datos={serieDescuadres} formato={formatoMoneda} etiquetas={["Sobrantes", "Faltantes"]} />
+        {remotoDescuadres.isPlaceholderData && <p role="status" className="text-xs text-ink-soft">Actualizando periodo; se conserva la gráfica anterior…</p>}
+        <p className="mt-2 text-[11px] text-ink-soft">Faltantes {formatoMoneda(remotoDescuadres.data?.descuadres.faltantes ?? 0)} · sobrantes {formatoMoneda(remotoDescuadres.data?.descuadres.sobrantes ?? 0)} · neto {formatoMoneda(remotoDescuadres.data?.descuadres.neto ?? 0)}</p>
+        {!!remotoDescuadres.data?.descuadres.lineasSinCosto && <p role="status" className="mt-1 text-[11px] text-danger">{remotoDescuadres.data.descuadres.lineasSinCosto} diferencias históricas sin costo guardado; sus importes no están incluidos.</p>}
+        <p className="mt-1 text-[11px] text-ink-faint">El neto es sobrantes menos faltantes. Aplicar el ajuste de un conteo no vuelve a sumar su diferencia. No modifica caja ni utilidad.</p>
+      </section>}
+
       {tieneGraficaLinea && (
         <div className="mt-4 max-w-3xl rounded-2xl border border-line bg-paper-raised p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">

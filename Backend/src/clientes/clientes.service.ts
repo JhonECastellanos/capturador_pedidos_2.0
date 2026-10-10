@@ -3,7 +3,7 @@ import { z } from "zod";
 import { PrismaService } from "../common/prisma.module";
 import { ErrorDominio } from "../common/errores";
 import { siguienteCodigo, numero } from "../common/consecutivos";
-import { aplicadoPorPedido } from "../dominio/cartera";
+import { pedidosConSaldoSql, aplicadoPorPedido } from "../dominio/cartera";
 import { EstadoPedido, Prisma } from "@prisma/client";
 
 export const NuevoClienteSchema = z.object({
@@ -29,6 +29,7 @@ export class ClientesService {
             { alias: { contains: q, mode: "insensitive" as const } },
             { telefono: { contains: q, mode: "insensitive" as const } },
             { codigo: { contains: q, mode: "insensitive" as const } },
+            { direccion: { contains: q, mode: "insensitive" as const } },
           ],
         }
       : {};
@@ -49,6 +50,20 @@ export class ClientesService {
       data: conSaldos,
       meta: { pagina, porPagina, total },
     };
+  }
+
+  async listarCartera(pagina = 1, porPagina = 15, q = "", clienteId?: string, orden = "total") {
+    return this.prisma.$transaction(async tx => {
+      const filtro = q ? Prisma.sql`AND (c.nombre ILIKE ${'%'+q+'%'} OR c.alias ILIKE ${'%'+q+'%'} OR c.telefono ILIKE ${'%'+q+'%'} OR EXISTS (SELECT 1 FROM saldos s WHERE s."clienteId"=c.id AND s.saldo>0 AND s.numero ILIKE ${'%'+q+'%'}))` : Prisma.empty;
+      const base = Prisma.sql`${pedidosConSaldoSql}, grupos AS (SELECT "clienteId", SUM(saldo) AS total, COUNT(*) AS cantidad, MIN("creadoEn") AS antiguo FROM saldos WHERE saldo>0 AND "clienteId" IS NOT NULL GROUP BY "clienteId")`;
+      const condicion = Prisma.sql`FROM grupos g JOIN clientes c ON c.id=g."clienteId" WHERE TRUE ${filtro} ${clienteId ? Prisma.sql`AND c.id=${clienteId}` : Prisma.empty}`;
+      const [cuenta] = await tx.$queryRaw<Array<{cantidad:bigint}>>(Prisma.sql`${base} SELECT COUNT(*) AS cantidad ${condicion}`);
+      const [resumen] = await tx.$queryRaw<Array<{total:Prisma.Decimal}>>(Prisma.sql`${base} SELECT COALESCE(SUM(total),0) AS total FROM grupos`);
+      const total=Number(cuenta.cantidad), actual=Math.min(pagina,Math.max(1,Math.ceil(total/porPagina)));
+      const filas=await tx.$queryRaw<Array<{clienteId:string;total:Prisma.Decimal;cantidad:bigint;antiguo:Date}>>(Prisma.sql`${base} SELECT g.* ${condicion} ORDER BY ${orden === "mora" ? Prisma.sql`g.antiguo,g.total DESC,c.id` : Prisma.sql`g.total DESC,g.antiguo,c.id`} LIMIT ${porPagina} OFFSET ${(actual-1)*porPagina}`);
+      const clientes=await tx.cliente.findMany({where:{id:{in:filas.map(f=>f.clienteId)}},include:{tipoCredito:true}});
+      return {data:filas.map(f=>({clienteId:f.clienteId,cliente:{...clientes.find(c=>c.id===f.clienteId)!,tipoCredito:clientes.find(c=>c.id===f.clienteId)?.tipoCredito?.nombre, saldoPendiente:numero(f.total),estadoCuenta:"pendiente"},total:numero(f.total),cantidadPedidos:Number(f.cantidad),masAntiguo:f.antiguo,diasMora:Math.max(0,Math.floor((new Date(new Intl.DateTimeFormat("en-CA",{timeZone:"America/Bogota"}).format(new Date())).getTime()-new Date(new Intl.DateTimeFormat("en-CA",{timeZone:"America/Bogota"}).format(f.antiguo)).getTime())/86400000)),pedidos:[]})),meta:{pagina:actual,porPagina,total,saldoTotal:numero(resumen.total)}};
+    },{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead});
   }
 
   async obtener(clienteId: string) {

@@ -7,6 +7,21 @@
 
 import { z } from "zod";
 
+export const ImportarProductosEsquema = z.object({
+  prepararInicial: z.boolean(),
+  productos: z.array(z.object({
+    codigoInterno: z.string().trim().max(40).optional(),
+    nombre: z.string().trim().min(1).max(200),
+    categoria: z.string().trim().max(100).optional(),
+    unidad: z.string().trim().max(40).optional(),
+    precioVenta: z.number().finite().min(0).max(999999999).refine(n => Math.abs(n * 100 - Math.round(n * 100)) < 0.00001, "Usa máximo dos decimales"),
+    costoActual: z.number().finite().min(0).max(999999999).optional(),
+    stock: z.number().int().min(0).max(2147483647).optional(),
+    stockMinimo: z.number().int().min(0).max(2147483647).optional(),
+  })).min(1).max(200),
+});
+export type ImportarProductosDTO = z.infer<typeof ImportarProductosEsquema>;
+
 const diaTablero = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((dia) => {
   const fecha = new Date(`${dia}T00:00:00Z`);
   return !Number.isNaN(fecha.getTime()) && fecha.toISOString().slice(0, 10) === dia;

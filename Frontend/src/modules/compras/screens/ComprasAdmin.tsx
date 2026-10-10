@@ -10,11 +10,13 @@ import { ListaVacia } from "../../../components/ListaVacia";
 import { Paginacion } from "../../../components/Paginacion";
 import { PantallaCompletaAdmin } from "../../../components/PantallaCompletaAdmin";
 import { SegmentoControl } from "../../../components/SegmentoControl";
-import { POR_PAGINA, paginar } from "../../../utils/paginacion";
+import { useTamanoPagina, paginar } from "../../../utils/paginacion";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
 import { useOperaciones } from "../../../context/operaciones";
-import type { LineaRecepcion, RecepcionCompra } from "../../../types";
+import { usaApi } from "../../../data/api";
+import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
+import type { Gasto, LineaRecepcion, RecepcionCompra, Producto, Proveedor } from "../../../types";
 import { construirLineaRecepcion } from "../../../dominio/servicios";
 import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodo, type Periodo } from "../../../utils/fechas";
 import { formatoMoneda } from "../../../utils/formato";
@@ -25,6 +27,7 @@ type Vista = "historial" | "recepcion" | "detalle";
 type PasoRecepcion = 1 | 2 | 3;
 
 export function ComprasAdmin() {
+  const POR_PAGINA = useTamanoPagina();
   const { inventario, proveedores, recepciones, gastos, crearProveedor, crearProducto, registrarRecepcion, registrarGasto, obtenerProveedor, nombreUsuario } =
     useOperaciones();
 
@@ -56,23 +59,36 @@ export function ComprasAdmin() {
 
   const { aviso, mostrarAviso: mostrarToast, cerrarAviso } = useAviso();
 
+  const [paginaProveedor,setPaginaProveedor]=useState(1);
+  const [paginaProducto,setPaginaProducto]=useState(1);
+  const proveedoresRemotos=usePaginaApi<Proveedor>(`/proveedores?page=${paginaProveedor}&pageSize=${POR_PAGINA}&q=${encodeURIComponent(busquedaProveedor)}`,vista === "recepcion" && paso === 1);
+  const productosRemotos=usePaginaApi<Producto>(`/productos?page=${paginaProducto}&pageSize=${POR_PAGINA}&orden=nombre&q=${encodeURIComponent(busquedaProd)}`,vista === "recepcion" && paso === 2);
+  const proveedorRemoto=useRegistroApi<Proveedor>(`/proveedores/${proveedorId}`,!!proveedorId);
+  useEffect(()=>setPaginaProveedor(1),[busquedaProveedor]);
+  useEffect(()=>setPaginaProducto(1),[busquedaProd]);
   const hoy = useMemo(() => new Date(), []);
 
   useEffect(() => {
     setPagina(1);
   }, [tab, periodo, busqueda]);
 
+  const recepcionesRemotas = usePaginaApi<RecepcionCompra>(`/recepciones-compra?page=${pagina}&pageSize=${POR_PAGINA}&q=${encodeURIComponent(busqueda)}&periodo=${periodo}`, tab === "compras" && vista === "historial");
+  const gastosRemotos = usePaginaApi<Gasto>(`/gastos?page=${pagina}&pageSize=${POR_PAGINA}&q=${encodeURIComponent(busqueda)}&periodo=${periodo}`, tab === "gastos" && vista === "historial");
+
   const proveedoresFiltrados = useMemo(() => {
+    if(usaApi) return proveedoresRemotos.items;
     const q = busquedaProveedor.trim().toLowerCase();
     return proveedores.filter((p) => !q || p.nombre.toLowerCase().includes(q) || (p.telefono ?? "").includes(q));
-  }, [busquedaProveedor, proveedores]);
+  }, [busquedaProveedor, proveedores, proveedoresRemotos.items]);
 
   const productosFiltrados = useMemo(() => {
+    if(usaApi) return productosRemotos.items;
     const q = busquedaProd.trim().toLowerCase();
     return inventario.filter((p) => !q || p.nombre.toLowerCase().includes(q) || p.codigoInterno.toLowerCase().includes(q));
-  }, [busquedaProd, inventario]);
+  }, [busquedaProd, inventario, productosRemotos.items]);
 
   const recepcionesFiltradas = useMemo(() => {
+    if (usaApi) return recepcionesRemotas.items;
     const q = busqueda.trim().toLowerCase();
     return recepciones
       .filter((r) => {
@@ -82,9 +98,10 @@ export function ComprasAdmin() {
         return r.numero.toLowerCase().includes(q) || (prov?.nombre.toLowerCase().includes(q) ?? false);
       })
       .sort((a, b) => (b.creadoEn < a.creadoEn ? -1 : b.creadoEn > a.creadoEn ? 1 : 0));
-  }, [busqueda, hoy, obtenerProveedor, periodo, recepciones]);
+  }, [busqueda, hoy, obtenerProveedor, periodo, recepciones, recepcionesRemotas.items]);
 
   const gastosFiltrados = useMemo(() => {
+    if (usaApi) return gastosRemotos.items;
     const q = busqueda.trim().toLowerCase();
     return gastos
       .filter((g) => {
@@ -92,10 +109,10 @@ export function ComprasAdmin() {
         return !q || g.concepto.toLowerCase().includes(q);
       })
       .sort((a, b) => (b.creadoEn < a.creadoEn ? -1 : b.creadoEn > a.creadoEn ? 1 : 0));
-  }, [busqueda, gastos, hoy, periodo]);
+  }, [busqueda, gastos, hoy, periodo, gastosRemotos.items]);
 
   const totalRecepcion = lineas.reduce((s, l) => s + l.subtotal, 0);
-  const proveedorActual = proveedorId ? (obtenerProveedor(proveedorId) ?? proveedores.find((p) => p.id === proveedorId)) : null;
+  const proveedorActual = proveedorId ? (proveedorRemoto.data ?? obtenerProveedor(proveedorId) ?? proveedores.find((p) => p.id === proveedorId)) : null;
   const unidadesRecepcion = lineas.reduce((s, l) => s + l.cantidad, 0);
 
   function abrirRecepcion() {
@@ -154,7 +171,7 @@ export function ComprasAdmin() {
   }
 
   function agregarLinea(productoId: string) {
-    const producto = inventario.find((p) => p.id === productoId);
+    const producto = productosFiltrados.find((p) => p.id === productoId);
     if (!producto) return;
     const cantidad = Number(cantidadTmp[productoId] || "1") || 1;
     const costo = Number(costoTmp[productoId] || producto.costoActual || 0);
@@ -171,7 +188,7 @@ export function ComprasAdmin() {
   }
 
   function agregarProductoConToast(productoId: string) {
-    const producto = inventario.find((p) => p.id === productoId);
+    const producto = productosFiltrados.find((p) => p.id === productoId);
     if (!producto) return;
     const cantidad = Number(cantidadTmp[productoId] || "1") || 1;
     const previa = lineas.find((l) => l.productoId === productoId);
@@ -300,7 +317,15 @@ export function ComprasAdmin() {
           )}
         </div>
 
-        {/* Contenedor de lista con scroll propio */}
+        <Paginacion
+            pagina={pagina}
+            totalPaginas={Math.max(1, Math.ceil((usaApi ? (tab === "compras" ? recepcionesRemotas.total : gastosRemotos.total) : (tab === "compras" ? recepcionesFiltradas.length : gastosFiltrados.length)) / POR_PAGINA))}
+            total={usaApi ? (tab === "compras" ? recepcionesRemotas.total : gastosRemotos.total) : (tab === "compras" ? recepcionesFiltradas.length : gastosFiltrados.length)}
+            porPagina={POR_PAGINA}
+            onChange={setPagina}
+          />
+
+      {/* Contenedor de lista con scroll propio */}
         <div className="flex min-h-0 flex-1 flex-col px-5 py-3 md:px-6 lg:px-8">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
             <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
@@ -311,13 +336,13 @@ export function ComprasAdmin() {
                 {tab === "compras" ? "Toca para ver el detalle" : "Se descuentan de caja"}
               </span>
             </div>
-            <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
+            <div inert={usaApi && (recepcionesRemotas.actualizando || gastosRemotos.actualizando)} className="lista-datos no-scrollbar min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
               <div className="space-y-2.5">
           {tab === "compras" ? (
             recepcionesFiltradas.length === 0 ? (
               <ListaVacia titulo="Sin recepciones para este filtro." texto="Toca “+ Nueva recepción” para registrar compras." />
             ) : (
-              paginar(recepcionesFiltradas, pagina, POR_PAGINA).items.map((r) => {
+              (usaApi ? recepcionesFiltradas : paginar(recepcionesFiltradas, pagina, POR_PAGINA).items).map((r) => {
                 const prov = obtenerProveedor(r.proveedorId);
                 return (
                   <article key={r.id}>
@@ -331,7 +356,7 @@ export function ComprasAdmin() {
                         <p className="font-mono text-[11.5px] font-semibold text-ink-faint">
                           {r.numero} · {new Date(r.creadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" })}
                         </p>
-                        <p className="mt-0.5 truncate text-[14px] font-semibold text-ink">{prov?.nombre ?? "Proveedor"}</p>
+                        <p className="mt-0.5 truncate text-[14px] font-semibold text-ink">{prov?.nombre ?? (r as RecepcionCompra & {proveedor?:string}).proveedor ?? "Proveedor"}</p>
                         <p className="mt-0.5 text-[12px] text-ink-soft">
                           {r.lineas.length} línea(s) · {r.descontarCaja ? "descontado de caja" : "sin caja"}
                         </p>
@@ -348,7 +373,7 @@ export function ComprasAdmin() {
           ) : gastosFiltrados.length === 0 ? (
             <ListaVacia titulo="Sin gastos para este filtro." texto="Registra un gasto para verlo aquí." />
           ) : (
-            paginar(gastosFiltrados, pagina, POR_PAGINA).items.map((g) => (
+            (usaApi ? gastosFiltrados : paginar(gastosFiltrados, pagina, POR_PAGINA).items).map((g) => (
               <article key={g.id} className="flex items-center justify-between rounded-xl border border-line bg-paper-raised px-4 py-3 shadow-sm">
                 <div className="min-w-0">
                   <p className="truncate text-[13px] font-semibold text-ink">{g.concepto}</p>
@@ -368,15 +393,7 @@ export function ComprasAdmin() {
         {tiraToast}
 
         {/* Paginación fija */}
-        <div className="flex-shrink-0 mt-2">
-          <Paginacion
-            pagina={pagina}
-            totalPaginas={Math.max(1, Math.ceil((tab === "compras" ? recepcionesFiltradas.length : gastosFiltrados.length) / POR_PAGINA))}
-            total={tab === "compras" ? recepcionesFiltradas.length : gastosFiltrados.length}
-            porPagina={POR_PAGINA}
-            onChange={setPagina}
-          />
-        </div>
+
       </div>
     );
   }
@@ -401,7 +418,7 @@ export function ComprasAdmin() {
         <div className="-mx-5 -mt-5 md:-mx-6 lg:-mx-8 lg:-mt-8">
           <BarraSuperior
             titulo="Detalle de compra"
-            subtitulo={`${detalle.numero} · ${prov?.nombre ?? "Proveedor"}`}
+            subtitulo={`${detalle.numero} · ${prov?.nombre ?? (detalle as RecepcionCompra & {proveedor?:string}).proveedor ?? "Proveedor"}`}
             onVolver={cerrarDetalle}
           />
         </div>
@@ -410,7 +427,7 @@ export function ComprasAdmin() {
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Proveedor</p>
-                <p className="mt-1 truncate text-[15px] font-semibold text-ink">{prov?.nombre ?? "Proveedor"}</p>
+                <p className="mt-1 truncate text-[15px] font-semibold text-ink">{prov?.nombre ?? (detalle as RecepcionCompra & {proveedor?:string}).proveedor ?? "Proveedor"}</p>
                 {prov?.telefono && <p className="text-[12.5px] text-ink-soft">{prov.telefono}</p>}
               </div>
               <span
@@ -502,7 +519,7 @@ export function ComprasAdmin() {
             )}
           </div>
 
-          {/* Contenedor fijo: lista de proveedores con scroll propio */}
+          <Paginacion pagina={paginaProveedor} totalPaginas={Math.max(1,Math.ceil((usaApi ? proveedoresRemotos.total : proveedoresFiltrados.length)/POR_PAGINA))} total={usaApi ? proveedoresRemotos.total : proveedoresFiltrados.length} porPagina={POR_PAGINA} onChange={setPaginaProveedor}/>
           <div className="flex min-h-0 flex-1 flex-col px-5 py-3 md:px-6 lg:px-8">
             <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
               <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
@@ -513,7 +530,7 @@ export function ComprasAdmin() {
               </div>
               <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2">
                 <ul className="space-y-1.5">
-                  {proveedoresFiltrados.slice(0, POR_PAGINA).map((prov) => (
+                  {(usaApi ? proveedoresFiltrados : paginar(proveedoresFiltrados,paginaProveedor,POR_PAGINA).items).map((prov) => (
                     <li key={prov.id}>
                       <button
                         type="button"
@@ -611,6 +628,7 @@ export function ComprasAdmin() {
             )}
           </div>
 
+          <Paginacion pagina={paginaProducto} totalPaginas={Math.max(1,Math.ceil((usaApi ? productosRemotos.total : productosFiltrados.length)/POR_PAGINA))} total={usaApi ? productosRemotos.total : productosFiltrados.length} porPagina={POR_PAGINA} onChange={setPaginaProducto}/>
           {/* Contenedor fijo: catálogo con scroll propio */}
           <div className="flex min-h-0 flex-1 flex-col px-5 py-3 md:px-6 lg:px-8">
             <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
@@ -621,8 +639,9 @@ export function ComprasAdmin() {
                 <span className="text-[11px] text-ink-soft">Cant · $ · +</span>
               </div>
               <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto p-2">
+
                 <ul className="space-y-1.5">
-                  {productosFiltrados.slice(0, POR_PAGINA).map((prod) => {
+                  {(usaApi ? productosFiltrados : paginar(productosFiltrados,paginaProducto,POR_PAGINA).items).map((prod) => {
                     const enLinea = lineas.find((l) => l.productoId === prod.id);
                     return (
                       <li

@@ -17,11 +17,14 @@ import { useOperaciones } from "../../../context/operaciones";
 import { categorias } from "../../../data/semilla";
 import { construirPago } from "../../../dominio/servicios";
 import { SelectorPago } from "../../clientes-pedido/components/SelectorPago";
-import type { EstadoPedido, LineaPedido, MetodoPago, Pedido } from "../../../types";
+import type { EstadoPedido, LineaPedido, MetodoPago, Pedido, Producto, Cliente } from "../../../types";
+import { usaApi } from "../../../data/api";
+import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
 import { formatoMoneda } from "../../../utils/formato";
 
 import { DetalleProductosPedido } from "../components/DetalleProductosPedido";
-import { POR_PAGINA } from "../../../utils/paginacion";
+import { Paginacion } from "../../../components/Paginacion";
+import { useTamanoPagina, paginar } from "../../../utils/paginacion";
 
 type Paso = 1 | 2 | 3 | 4;
 type ModoEntrega = Extract<EstadoPedido, "entregado" | "pendiente">;
@@ -44,6 +47,7 @@ interface FlujoVentaProps {
  * Pasos a pantalla completa: cliente → productos → entrega → pago.
  */
 export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titulo = "Crear pedido", alConfirmar }: FlujoVentaProps) {
+  const POR_PAGINA = useTamanoPagina();
   const navegar = useNavigate();
   const ubicacion = useLocation();
   const { usuario } = useAuth();
@@ -52,34 +56,44 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
 
   const clienteIdDeRuta = (ubicacion.state as { clienteId?: string } | null)?.clienteId;
   const clienteReciénCreado = (ubicacion.state as { clienteCreado?: string } | null)?.clienteCreado;
+  const [paginaCliente,setPaginaCliente]=useState(1);
+  const [paginaProducto,setPaginaProducto]=useState(1);
   const [paso, setPaso] = useState<Paso>(1);
   const [busquedaCliente, setBusquedaCliente] = useState("");
   const [busquedaProducto, setBusquedaProducto] = useState("");
   const [categoria, setCategoria] = useState<string>("Todas");
+  const [productosElegidos, setProductosElegidos] = useState<Record<string, Producto>>({});
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
   const [entrega, setEntrega] = useState<ModoEntrega>("entregado");
   const [metodo, setMetodo] = useState<MetodoPago>("efectivo");
   const [ocasional, setOcasional] = useState(false);
+  useEffect(()=>setPaginaCliente(1),[busquedaCliente]);
+  useEffect(()=>setPaginaProducto(1),[busquedaProducto,categoria]);
+  const clientesRemotos=usePaginaApi<Cliente>(`/clientes?page=${paginaCliente}&pageSize=${POR_PAGINA}&q=${encodeURIComponent(busquedaCliente)}`,paso === 1);
+  const productosRemotos = usePaginaApi<Producto>(`/productos?page=${paginaProducto}&pageSize=${POR_PAGINA}&orden=nombre&activo=true&q=${encodeURIComponent(busquedaProducto)}&categoria=${encodeURIComponent(categoria)}`,paso === 2);
+  const clienteDeRuta=useRegistroApi<Cliente>(`/clientes/${clienteIdDeRuta}`,!!clienteIdDeRuta);
   const clienteRutaAplicado = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    if (clienteIdDeRuta && clienteRutaAplicado.current !== clienteIdDeRuta && obtenerCliente(clienteIdDeRuta)) {
+    if (clienteIdDeRuta && clienteRutaAplicado.current !== clienteIdDeRuta && (clienteDeRuta.data || obtenerCliente(clienteIdDeRuta))) {
       clienteRutaAplicado.current = clienteIdDeRuta;
       seleccionarClienteActivo(clienteIdDeRuta);
       setPaso(2);
     }
-  }, [clienteIdDeRuta, obtenerCliente, seleccionarClienteActivo]);
+  }, [clienteIdDeRuta, clienteDeRuta.data, obtenerCliente, seleccionarClienteActivo]);
 
   const clienteSeleccionado = ocasional ? { id: null, nombre: "Venta ocasional", alias: "Sin registro de cliente" } : clienteActivo;
 
   /** Elige cliente y avanza al paso de productos. */
   function elegirCliente(id: string) {
+    if (clientesRemotos.actualizando) return;
     setOcasional(false);
     seleccionarClienteActivo(id);
     setPaso(2);
   }
 
   const clientesFiltrados = useMemo(() => {
+    if(usaApi) return clientesRemotos.items;
     const q = busquedaCliente.trim().toLowerCase();
     if (!q) return clientes;
     return clientes.filter(
@@ -89,20 +103,21 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
         c.telefono.toLowerCase().includes(q) ||
         c.direccion.toLowerCase().includes(q),
     );
-  }, [busquedaCliente, clientes]);
+  }, [busquedaCliente, clientes, clientesRemotos.items]);
 
   const productosFiltrados = useMemo(() => {
+    if (usaApi) return productosRemotos.items.map(p => ({...p, stock: (p as Producto & {stockDisponible?:number}).stockDisponible ?? p.stock}));
     const q = busquedaProducto.trim().toLowerCase();
     return inventario.filter((p) => {
       if (!p.activo) return false;
       if (categoria !== "Todas" && p.categoria !== categoria) return false;
       return !q || p.nombre.toLowerCase().includes(q) || p.codigoInterno.toLowerCase().includes(q);
     });
-  }, [busquedaProducto, categoria, inventario]);
+  }, [busquedaProducto, categoria, inventario, productosRemotos.items]);
 
   const lineas = useMemo<LineaPedido[]>(
     () =>
-      inventario
+      (usaApi ? Object.values(productosElegidos) : inventario)
         .filter((producto) => cantidades[producto.id])
         .map((producto) => ({
           productoId: producto.id,
@@ -112,13 +127,14 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
           subtotal: producto.precioVenta * cantidades[producto.id],
           costoUnitario: producto.costoActual,
         })),
-    [cantidades, inventario],
+    [cantidades, inventario, productosElegidos],
   );
   const total = lineas.reduce((suma, linea) => suma + linea.subtotal, 0);
   const unidades = lineas.reduce((suma, linea) => suma + linea.cantidad, 0);
 
   function cambiarCantidad(productoId: string, delta: number) {
-    const producto = inventario.find((p) => p.id === productoId);
+    const producto = productosFiltrados.find((p) => p.id === productoId) ?? productosElegidos[productoId];
+    if (producto) setProductosElegidos(actuales => ({...actuales,[productoId]:producto}));
     const tope = producto?.stock ?? 0;
     setCantidades((actuales) => {
       const siguienteCantidad = Math.max(0, Math.min(tope, (actuales[productoId] ?? 0) + delta));
@@ -173,6 +189,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
         />
         <div className="flex-shrink-0 px-5 pt-3 md:px-6">
           <BuscadorInput autoFocus value={busquedaCliente} onChange={setBusquedaCliente} placeholder="Buscar por nombre, alias o teléfono" />
+          <Paginacion pagina={paginaCliente} totalPaginas={Math.max(1,Math.ceil((usaApi ? clientesRemotos.total : clientesFiltrados.length)/POR_PAGINA))} total={usaApi ? clientesRemotos.total : clientesFiltrados.length} porPagina={POR_PAGINA} onChange={setPaginaCliente} />
         </div>
         <main className="no-scrollbar flex-1 min-h-0 overflow-y-auto px-5 py-3 md:px-6">
           {clienteReciénCreado && (
@@ -189,7 +206,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
             />
           ) : (
             <ul className="space-y-2">
-              {clientesFiltrados.slice(0, POR_PAGINA).map((cliente) => (
+              {(usaApi ? clientesFiltrados : paginar(clientesFiltrados,paginaCliente,POR_PAGINA).items).map((cliente) => (
                 <li key={cliente.id}>
                   <TarjetaClicable onClick={() => elegirCliente(cliente.id)} ariaLabel={`${cliente.nombre}${clienteActivo?.id === cliente.id ? ", seleccionado" : ""}`} className="flex items-center gap-3">
                     <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-ink font-display text-[12.5px] font-semibold text-white">
@@ -216,7 +233,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
           )}
         </main>
         <BarraInferior>
-          {clientesFiltrados.length > POR_PAGINA && <p className="mb-2 text-xs text-ink-soft">Se muestran 30 clientes. Usa el buscador para encontrar otro.</p>}
+
           <Boton variante="fantasma" onClick={() => navegar(rutaNuevoCliente, { state: { volverA: "pedido" } })}>
             + Crear cliente nuevo
           </Boton>
@@ -234,7 +251,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
   };
 
   return (
-    <div className="flex h-full flex-col min-h-0">
+    <div className={`flex h-full min-h-0 flex-col ${paso === 2 ? "overflow-y-auto" : ""}`}>
       <BarraSuperior
         titulo={titulos[paso]}
         subtitulo={`${clienteSeleccionado.alias} · Paso ${paso} de 4`}
@@ -263,11 +280,14 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
             </div>
           </div>
 
-          <main className="no-scrollbar flex-1 min-h-0 overflow-y-auto px-5 py-3 md:px-6">
+          <Paginacion pagina={paginaProducto} totalPaginas={Math.max(1,Math.ceil((usaApi ? productosRemotos.total : productosFiltrados.length)/POR_PAGINA))} total={usaApi ? productosRemotos.total : productosFiltrados.length} porPagina={POR_PAGINA} onChange={setPaginaProducto} />
+          {productosRemotos.error && <p role="alert" className="px-4 text-danger">{productosRemotos.error}<button type="button" onClick={productosRemotos.actualizar}>Reintentar</button></p>}
+          {productosRemotos.cargando && <p role="status" className="px-4">Cargando productos…</p>}
+          <main inert={usaApi && productosRemotos.actualizando} className="lista-productos no-scrollbar mx-2 my-3 overflow-y-auto rounded-xl border border-line px-2 py-2 md:mx-4">
             <ul className="space-y-2">
-              {productosFiltrados.slice(0, POR_PAGINA).map((producto) => {
+              {(usaApi ? productosFiltrados : paginar(productosFiltrados,paginaProducto,POR_PAGINA).items).map((producto) => {
                 const cantidad = cantidades[producto.id] ?? 0;
-                const sinStock = producto.stock <= 0;
+                const sinStock = producto.stock <= 0 || productosRemotos.actualizando;
                 if (sinStock) {
                   return (
                     <li key={producto.id}>
@@ -308,7 +328,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
 
           <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
           <BarraInferior>
-            {productosFiltrados.length > POR_PAGINA && <p className="mb-2 text-xs text-ink-soft">Se muestran 30 productos. Usa categoría o buscador para encontrar otro.</p>}
+
             <div className="mb-2.5 flex items-center justify-between">
               <span className="text-[13px] text-ink-soft">{unidades} unidad(es)</span>
               <span className="font-mono text-[17px] font-semibold text-ink">{formatoMoneda(total)}</span>

@@ -1,3 +1,5 @@
+import { useRegistroApi } from "../../../data/usePaginaApi";
+import type { Pedido } from "../../../types";
 import { useNavigate, useParams } from "react-router-dom";
 import CrearCliente from "../../../screens/ClientesPedido/CrearCliente";
 import { useOperaciones } from "../../../context/operaciones";
@@ -11,11 +13,12 @@ function DetalleDePedido({ rutaInicio }: { rutaInicio: string }) {
   const navegar = useNavigate();
   const { pedidoId } = useParams<{ pedidoId: string }>();
   const { obtenerPedido } = useOperaciones();
-  const pedido = pedidoId ? obtenerPedido(pedidoId) : null;
+  const remoto=useRegistroApi<Pedido>(`/pedidos/${pedidoId}`,!!pedidoId);
+  const pedido = remoto.data ?? (pedidoId ? obtenerPedido(pedidoId) : null);
   if (!pedido) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-        <p className="text-[13.5px] font-medium text-ink">Pedido no encontrado</p>
+        <p className="text-[13.5px] font-medium text-ink">{remoto.isLoading ? "Cargando pedido…" : remoto.error ? "No se pudo cargar el pedido. Vuelve a intentarlo." : "Pedido no encontrado"}</p>
         <button
           type="button"
           onClick={() => navegar(rutaInicio)}

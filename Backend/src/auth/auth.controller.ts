@@ -2,7 +2,7 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res } from "@ne
 import { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { AuthService } from "./auth.service";
-import { Public, UsuarioActual, RequestAutenticado, COOKIE_ACCESO, COOKIE_REFRESH } from "../common/guards";
+import { Public, SesionOpcional, UsuarioActual, RequestAutenticado, COOKIE_ACCESO, COOKIE_REFRESH } from "../common/guards";
 import { TokensService } from "../common/tokens";
 import { ErrorDominio } from "../common/errores";
 import { Usuario } from "@prisma/client";
@@ -122,7 +122,9 @@ export class AuthController {
   }
 
   @Get("me")
+  @SesionOpcional()
   async me(@UsuarioActual() usuario: Usuario, @Req() req: FastifyRequest) {
+    if (!usuario) return { data: null, renovable: Boolean((req as unknown as RequestAutenticado).cookies?.[COOKIE_REFRESH]) };
     return { data: { ...await this.auth.me(usuario.id), expiraEn: (req as unknown as RequestAutenticado).expiraAccesoEn } };
   }
 

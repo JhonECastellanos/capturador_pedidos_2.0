@@ -1,0 +1,4 @@
+codigoInterno,nombre,categoria,unidad,precioVenta,costoActual,cantidadInicial,stockMinimo
+,Ejemplo CSV Arepa de queso,Preparados,unidad,4500,2100,20,5
+,Ejemplo CSV Empanada de pollo,Preparados,unidad,3000,1300,15,4
+,Ejemplo CSV Coca-Cola pequeña,Bebidas,botella,2500,1500,12,3

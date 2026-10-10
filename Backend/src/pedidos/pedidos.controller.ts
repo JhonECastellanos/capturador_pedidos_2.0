@@ -19,6 +19,10 @@ export class PedidosController {
 
   @Get()
   listar(
+    @Query("metodo") metodo?:string,
+    @Query("periodo") periodo?:string,
+    @Query("clienteId") clienteId?:string,
+    @Query("saldoPendiente") saldoPendiente?:string,
     @Query("segmento") segmento?: string,
     @Query("estado") estado?: string,
     @Query("q") q?: string,
@@ -33,13 +37,18 @@ export class PedidosController {
       }
     }
     return this.pedidos.listar({
-      segmento,
+      segmento, metodo, periodo, clienteId, saldoPendiente,
       estado,
       q,
       desde,
       hasta,
       ...paginacion(page, pageSize),
     });
+  }
+
+  @Get("resumen-ventas")
+  async resumenVentas(@UsuarioActual() usuario: Usuario) {
+    return {data:await this.pedidos.resumenVentas(usuario.rol === RolUsuario.ADMINISTRADOR)};
   }
 
   @Get(":pedidoId")

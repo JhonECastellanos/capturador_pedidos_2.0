@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, Post, Query, Param } from "@nestjs/common";
 import { Usuario, RolUsuario } from "@prisma/client";
 import { ComprasService } from "./compras.service";
 import { Roles, UsuarioActual } from "../common/guards";
@@ -25,8 +25,14 @@ export class ComprasController {
   constructor(private readonly compras: ComprasService) {}
 
   @Get("proveedores")
-  listarProveedores() {
-    return this.compras.listarProveedores();
+  listarProveedores(@Query("page") page?:string, @Query("pageSize") pageSize?:string, @Query("q") q?:string) {
+    const p=paginacion(page,pageSize);
+    return this.compras.listarProveedores(p.pagina,p.porPagina,q);
+  }
+
+  @Get("proveedores/:id")
+  async obtenerProveedor(@Param("id") id:string) {
+    return {data:await this.compras.obtenerProveedor(id)};
   }
 
   @Roles(RolUsuario.ADMINISTRADOR)
@@ -37,13 +43,15 @@ export class ComprasController {
   }
 
   @Get("recepciones-compra")
-  listarRecepciones(@Query("page") page?: string, @Query("pageSize") pageSize?: string) {
+  listarRecepciones(@Query("page") page?: string, @Query("pageSize") pageSize?: string, @Query("q") q?:string, @Query("periodo") periodo?:string) {
     const p = paginacion(page, pageSize);
-    return this.compras.listarRecepciones(p.pagina, p.porPagina);
+    return this.compras.listarRecepciones(p.pagina, p.porPagina, q, periodo);
   }
 
   @Get("gastos")
   listarGastos(
+    @Query("q") q?: string,
+    @Query("periodo") periodo?: string,
     @Query("desde") desde?: string,
     @Query("hasta") hasta?: string,
     @Query("page") page?: string,
@@ -51,7 +59,7 @@ export class ComprasController {
   ) {
     return this.compras.listarGastos({
       desde,
-      hasta,
+      hasta, q, periodo,
       ...paginacion(page, pageSize),
     });
   }

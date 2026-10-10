@@ -20,6 +20,8 @@ Publica la rama de desarrollo, abre un PR a la principal y fusiónalo después d
 
 Para suspender despliegues automáticos configura `DEPLOY_ENABLED=false`. El despliegue manual sigue disponible con `infra/desplegar.ps1 -Actualizar` o `sh infra/desplegar.sh --actualizar`. Antes de volver a una versión anterior revisa sus migraciones y respalda datos/archivos. Nunca uses `down -v` como parte de una actualización.
 
+Para publicar un commit que todavía no debe instalarse, incluye la marca `[sin despliegue]` en su mensaje. El workflow verifica ese push pero omite el trabajo de despliegue, incluso con DEPLOY_ENABLED activo. No impide una instalación manual posterior expresamente autorizada. La preparación de CSV y descuadres del 10/10/2026 usa esta marca y se valida únicamente en QA; la instalación actual del negocio permanece con sus imágenes y esquema anteriores hasta autorizar su actualización.
+
 ## Alcance de seguridad
 
 `.env`, `.local`, respaldos, claves, datos de Docker y configuración personal están excluidos. `npm run seguridad:repositorio` revisa archivos versionados, rutas privadas y patrones de secretos sin imprimir sus valores. Complementa con revisión del diff y secret scanning de GitHub: un patrón no demuestra ausencia absoluta de información sensible ni limpia el historial previo. Si una clave fue publicada, revócala y trata el historial por separado.

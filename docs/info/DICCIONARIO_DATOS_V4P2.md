@@ -1,4 +1,4 @@
-# Diccionario de tablas y campos — V4P2
+# Diccionario de tablas y campos — V5P3
 
 Referencia del esquema Prisma y sus migraciones. Cada fila siguiente describe una **columna física**. Los campos de relación de Prisma se enumeran aparte: no son columnas adicionales ni datos repetidos.
 
@@ -31,6 +31,7 @@ Relaciones Prisma:
 - `pedidoEstados`: PedidoEstadoHistorial[] (relación inversa; no columna).
 - `pagos`: Pago[] (relación inversa; no columna).
 - `conteos`: ConteoInventario[] (relación inversa; no columna).
+- `lineasContadas`: ConteoLinea[] (relación inversa; no columna).
 - `ajustes`: AjusteInventario[] (relación inversa; no columna).
 - `cambiosPrecio`: CambioPrecio[] (relación inversa; no columna).
 - `recepciones`: RecepcionCompra[] (relación inversa; no columna).
@@ -223,29 +224,8 @@ Relaciones Prisma:
 - `pedidos`: Pedido[] (relación inversa; no columna).
 - `pagos`: Pago[] (relación inversa; no columna).
 - `facturas`: Factura[] (relación inversa; no columna).
-- `recordatorios`: RecordatorioCredito[] (relación inversa; no columna).
 
 Claves e índices declarados: `@@index([nombre])`.
-
-## recordatoriosCredito (RecordatorioCredito)
-
-Trazabilidad de recordatorios de cartera.
-
-| Columna | Tipo Prisma / almacenamiento especial | Nulo | Generación y restricciones | Significado |
-|---|---|---|---|---|
-| `id` | String  | No | @id @default(uuid()) | Identificador técnico; UUID generado por Prisma salvo identificadores técnicos definidos por el servicio. |
-| `clienteId` | String  | No | Sin default; lo proporciona el servicio | Cliente relacionado; nulo en ventas ocasionales donde el modelo lo permite. |
-| `pedidoId` | String  | Sí | Sin default; lo proporciona el servicio | Pedido relacionado; en tablas de trazabilidad sin FK declarada solo identifica su origen. |
-| `usuarioId` | String  | Sí | Sin default; lo proporciona el servicio | Cuenta responsable; cuando no hay relación Prisma declarada funciona como referencia de trazabilidad. |
-| `canal` | String  | No | @default("whatsapp") | Canal utilizado para el recordatorio. |
-| `creadoEn` | DateTime  | No | @default(now()) | Momento de inserción; normalmente lo fija PostgreSQL. |
-| `estado` | String  | No | @default("enviado") | Estado del documento o evento; confirmar/aplicar un conteo son pasos diferentes. |
-
-Relaciones Prisma:
-
-- `cliente`: Cliente — @relation(fields: [clienteId], references: [id], onDelete: Cascade).
-
-Claves e índices declarados: `@@index([clienteId])`.
 
 ## productos (Producto)
 
@@ -549,6 +529,7 @@ Cabecera del conteo general, aleatorio o inicial. Confirmado significa conteo fi
 | `id` | String  | No | @id @default(uuid()) | Identificador técnico; UUID generado por Prisma salvo identificadores técnicos definidos por el servicio. |
 | `tipo` | TipoConteo  | No | Sin default; lo proporciona el servicio | Clase de documento, movimiento o contador; consultar la enumeración o el servicio según la tabla. |
 | `usuarioId` | String  | No | Sin default; lo proporciona el servicio | Cuenta responsable; cuando no hay relación Prisma declarada funciona como referencia de trazabilidad. |
+| `fechaDiaria` | DateTime / date | Sí | Índice único para diarios no cancelados | Día de Bogotá del conteo diario; nulo en conteos generales, iniciales e históricos. |
 | `turno` | String  | No | Sin default; lo proporciona el servicio | Turno que identificó el responsable del conteo. |
 | `iniciadoEn` | DateTime  | No | @default(now()) | Momento de apertura del conteo. |
 | `finalizadoEn` | DateTime  | Sí | Sin default; lo proporciona el servicio | Momento de finalización o cancelación; no equivale al momento de aplicación. |
@@ -557,6 +538,7 @@ Cabecera del conteo general, aleatorio o inicial. Confirmado significa conteo fi
 Relaciones Prisma:
 
 - `lineas`: ConteoLinea[] (relación inversa; no columna).
+- `ajustes`: AjusteInventario[] (relación inversa; no columna).
 - `usuario`: Usuario — @relation(fields: [usuarioId], references: [id]).
 
 Claves e índices declarados: `@@index([estado])`.
@@ -568,8 +550,11 @@ Una línea por producto del conteo. Los valores nulos distinguen lo todavía no 
 | Columna | Tipo Prisma / almacenamiento especial | Nulo | Generación y restricciones | Significado |
 |---|---|---|---|---|
 | `id` | String  | No | @id @default(uuid()) | Identificador técnico; UUID generado por Prisma salvo identificadores técnicos definidos por el servicio. |
-| `conteoId` | String  | No | Sin default; lo proporciona el servicio | Conteo relacionado; nulo en ajuste manual. |
+| `conteoId` | String  | No | FK conteosInventario(id), ON DELETE CASCADE | Conteo al que pertenece esta línea; obligatorio. |
 | `productoId` | String  | No | Sin default; lo proporciona el servicio | Producto relacionado. |
+| `cicloDiario` | Int / integer | Sí | Debe ser positivo cuando existe; índice con productoId | Ciclo de cobertura al que pertenece esta línea diaria. |
+| `contadoPorId` | String / text | Sí | FK usuarios(id), ON DELETE SET NULL | Usuario autenticado que guardó la última cantidad; no se recibe del formulario. |
+| `costoUnitarioConteo` | Decimal / numeric(18,2) | Sí | CHECK >= 0; sin default | Costo del catálogo guardado al digitar la cantidad. No cambia al editar precios o costos después. NULL identifica registros anteriores sin valoración conocida. |
 | `stockTeorico` | Int  | No | Sin default; lo proporciona el servicio | Físico que se tomó como referencia al abrir el conteo o ajuste. |
 | `stockFisico` | Int  | Sí | Sin default; lo proporciona el servicio | Existencias físicas. En conteos es la cantidad digitada, nula mientras no se cuenta. |
 | `diferencia` | Int  | Sí | Sin default; lo proporciona el servicio | Físico menos teórico; en cierre contado menos esperado. |
@@ -581,9 +566,10 @@ Una línea por producto del conteo. Los valores nulos distinguen lo todavía no 
 Relaciones Prisma:
 
 - `conteo`: ConteoInventario — @relation(fields: [conteoId], references: [id], onDelete: Cascade).
+- `contadoPor`: Usuario? — @relation(fields: [contadoPorId], references: [id], onDelete: SetNull).
 - `producto`: Producto — @relation(fields: [productoId], references: [id]).
 
-Claves e índices declarados: `@@unique([conteoId, productoId])`.
+Claves e índices declarados: `@@unique([conteoId, productoId])`, `@@index([cicloDiario, productoId])`. La relación `contadoPor` identifica a quien capturó; `usuarioId` de la cabecera identifica a quien abrió el conteo.
 
 ## ajustesInventario (AjusteInventario)
 
@@ -602,11 +588,14 @@ Cabecera de corrección de stock. conteoId nulo corresponde a ajuste manual; un 
 Relaciones Prisma:
 
 - `lineas`: AjusteLinea[] (relación inversa; no columna).
+- `conteo`: ConteoInventario? — @relation(fields: [conteoId], references: [id], onDelete: SetNull); clave única nullable.
 - `usuario`: Usuario — @relation(fields: [usuarioId], references: [id]).
 
 ## ajusteLineas (AjusteLinea)
 
 Cantidades teóricas, físicas y diferencia de cada ajuste aplicado.
+
+`costoUnitario` (numeric(18,2), nullable, CHECK >= 0) conserva el costo de la línea del conteo, o el costo actual en el momento del ajuste manual. Los registros anteriores mantienen NULL. Los ajustes de conteo no se vuelven a sumar en Inicio: allí se usa el conteo confirmado; solo los ajustes manuales se agregan por separado.
 
 | Columna | Tipo Prisma / almacenamiento especial | Nulo | Generación y restricciones | Significado |
 |---|---|---|---|---|
@@ -761,8 +750,6 @@ Relaciones Prisma:
 
 - `usuario`: Usuario — @relation(fields: [usuarioId], references: [id]).
 - `medios`: CierreMedio[] (relación inversa; no columna).
-- `pedidos`: CierrePedido[] (relación inversa; no columna).
-- `movimientos`: CierreMovimiento[] (relación inversa; no columna).
 - `acciones`: CierreAccion[] (relación inversa; no columna).
 
 Claves e índices declarados: `@@unique([fecha])`.
@@ -779,41 +766,6 @@ Dinero esperado y contado por medio del cierre.
 | `esperado` | Decimal @db.Decimal(18, 2) | No | @default(0) | Importe calculado según los movimientos del cierre. |
 | `contado` | Decimal @db.Decimal(18, 2) | No | @default(0) | Importe digitado al cerrar. |
 | `diferencia` | Decimal @db.Decimal(18, 2) | No | @default(0) | Físico menos teórico; en cierre contado menos esperado. |
-
-Relaciones Prisma:
-
-- `cierre`: CierreDia — @relation(fields: [cierreId], references: [id], onDelete: Cascade).
-
-## cierrePedidos (CierrePedido)
-
-Snapshot de pedidos incluidos en el cierre.
-
-| Columna | Tipo Prisma / almacenamiento especial | Nulo | Generación y restricciones | Significado |
-|---|---|---|---|---|
-| `id` | String  | No | @id @default(uuid()) | Identificador técnico; UUID generado por Prisma salvo identificadores técnicos definidos por el servicio. |
-| `cierreId` | String  | No | Sin default; lo proporciona el servicio | Cierre al que pertenece la línea o snapshot. |
-| `pedidoId` | String  | No | Sin default; lo proporciona el servicio | Pedido relacionado; en tablas de trazabilidad sin FK declarada solo identifica su origen. |
-| `numero` | String  | No | Sin default; lo proporciona el servicio | Consecutivo visible del documento; no es su clave primaria. |
-| `fechaOperacion` | DateTime @db.Date | No | Sin default; lo proporciona el servicio | Fecha de calendario contable del documento en America/Bogota; puede diferir de su creación. |
-| `estado` | EstadoPedido  | No | Sin default; lo proporciona el servicio | Estado del documento o evento; confirmar/aplicar un conteo son pasos diferentes. |
-| `total` | Decimal @db.Decimal(18, 2) | No | Sin default; lo proporciona el servicio | Total confirmado del documento; hoy la venta no agrega impuestos ni descuentos. |
-
-Relaciones Prisma:
-
-- `cierre`: CierreDia — @relation(fields: [cierreId], references: [id], onDelete: Cascade).
-
-## cierreMovimientos (CierreMovimiento)
-
-Snapshot de movimientos de caja incluidos en el cierre.
-
-| Columna | Tipo Prisma / almacenamiento especial | Nulo | Generación y restricciones | Significado |
-|---|---|---|---|---|
-| `id` | String  | No | @id @default(uuid()) | Identificador técnico; UUID generado por Prisma salvo identificadores técnicos definidos por el servicio. |
-| `cierreId` | String  | No | Sin default; lo proporciona el servicio | Cierre al que pertenece la línea o snapshot. |
-| `movimientoCajaId` | String  | No | Sin default; lo proporciona el servicio | Movimiento de caja incluido en el snapshot del cierre. |
-| `tipo` | TipoMovimientoCaja  | No | Sin default; lo proporciona el servicio | Clase de documento, movimiento o contador; consultar la enumeración o el servicio según la tabla. |
-| `metodo` | MetodoPago  | Sí | Sin default; lo proporciona el servicio | Modalidad de pago pactada o medio del movimiento; crédito no es dinero recibido en caja. |
-| `monto` | Decimal @db.Decimal(18, 2) | No | Sin default; lo proporciona el servicio | Importe positivo del pago, gasto o movimiento; el tipo indica ingreso/egreso/reembolso. |
 
 Relaciones Prisma:
 
@@ -842,7 +794,7 @@ Relaciones Prisma:
 
 - Cuenta system: protección en PostgreSQL además de API y pantalla.
 - Conteo inicial: índice parcial único sobre tipo cuando tipo=inicial y estado distinto de cancelado.
-- Ajuste de conteo: índice parcial único sobre conteoId no nulo; los ajustes manuales pueden tener conteoId nulo.
+- Ajuste de conteo: clave única sobre conteoId y FK a conteosInventario; PostgreSQL admite varios nulos para ajustes manuales. La migración retira el índice parcial anterior que protegía la misma columna.
 - escriturasConfirmadas.usuarioId tiene FK a usuarios, aunque la relación no se usa para cargar el documento.
 - Triggers diferidos incrementan las revisiones de dashboard/sincronización una vez por transacción confirmada. Las escriturasConfirmadas son confirmaciones técnicas y no llevan trigger de datos operativos. Reenviar no cambia la revisión.
 - El CHECK reservasStock_cantidades_estado_coherentes mantiene estado y cantidades de reserva consistentes. La migración V4P2 corrige los contadores históricos sin modificar el stock.

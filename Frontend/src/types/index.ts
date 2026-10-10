@@ -141,6 +141,7 @@ export interface PagoPedido {
 }
 
 export interface HistorialEstadoPedido {
+  usuarioNombre?: string;
   estado: EstadoPedido;
   usuarioId: string;
   fecha: string;
@@ -153,6 +154,7 @@ export interface Pedido extends Pick<PedidoDTO, "clienteNombre" | "comprobantePa
   numero: string;
   clienteId: string | null;
   vendedorId: string;
+  vendedorNombre?: string;
   lineas: LineaPedido[];
   subtotal: number;
   total: number;
@@ -249,6 +251,9 @@ export interface LineaConteo {
   stockTeorico: number;
   stockFisico: number;
   diferencia: number;
+  cicloDiario?: number | null;
+  contadoPorId?: string | null;
+  contadoEn?: string | null;
   nombreInicial?: string | null;
   costoUnitarioInicial?: number | null;
 }
@@ -257,6 +262,8 @@ export interface ConteoInventario {
   id: string;
   tipo: TipoConteo;
   usuarioId: string;
+  fechaDiaria?: string | null;
+  aplicado?: boolean;
   turno: string;
   iniciadoEn: string;
   finalizadoEn?: string;

@@ -151,6 +151,28 @@ body {
 .admin-cuerpo .overflow-y-auto > *, .admin-cuerpo .overflow-y-auto article,
 .admin-cuerpo .overflow-y-auto li { flex-shrink: 0; }
 .admin-cuerpo .overflow-y-auto article { min-height: 64px; }
+/* La lista ocupa solo su contenido; el panel y la lista admiten desplazamiento. */
+.admin-pantalla :has(.lista-datos) {
+  height: auto;
+  min-height: 0;
+  flex: none;
+}
+.lista-datos, .admin-pantalla .lista-datos {
+  height: auto;
+  min-height: 0;
+  max-height: max(12rem, calc(100dvh - 20rem));
+  flex: none;
+  overflow-y: auto;
+}
+.lista-productos, .admin-pantalla .lista-productos {
+  height: auto;
+  min-height: 0;
+  max-height: max(18rem, calc(100dvh - 20rem));
+  flex: none;
+}
+.admin-pantalla { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+.paginador button { min-height: 28px; }
+.lista-datos.lista-pedidos { max-height: max(27rem, calc(100dvh - 20rem)); }
 .app-viewport--amplio aside { min-height: 0; overflow-y: auto; }
 .app-viewport--amplio aside nav { flex-shrink: 0; }
 @media (pointer: coarse) {

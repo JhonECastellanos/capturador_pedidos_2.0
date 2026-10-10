@@ -6,12 +6,13 @@ import { IconArrowLeft, IconCheckCircle } from "../../../components/Icons";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
 import { useOperaciones } from "../../../context/operaciones";
-import type { EstadoPedido, Pedido } from "../../../types";
+import { useRegistroApi, usePaginaApi } from "../../../data/usePaginaApi";
+import type { EstadoPedido, Pedido, Cliente, AbonoCredito } from "../../../types";
 import { CLASES_ESTADO, ETIQUETAS_ESTADO } from "../../../utils/estados";
 import { formatoFechaHora } from "../../../utils/fechas";
 import { formatoMoneda } from "../../../utils/formato";
 import { TRANSICIONES_PEDIDO } from "@ambie/contrato";
-import { usaApi } from "../../../data/api";
+import { usaApi, baseApi } from "../../../data/api";
 
 import { DetalleProductosPedido } from "../components/DetalleProductosPedido";
 
@@ -46,11 +47,14 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
   const [confirmarCobro, setConfirmarCobro] = useState(false);
   const [metodoCobro, setMetodoCobro] = useState<"efectivo" | "billetera">("efectivo");
   const [confirmarReactivar, setConfirmarReactivar] = useState(false);
-  const cliente = useMemo(() => obtenerCliente(pedido.clienteId), [obtenerCliente, pedido.clienteId]);
+  const clienteRemoto=useRegistroApi<Cliente>(`/clientes/${pedido.clienteId}`,!!pedido.clienteId);
+  const cliente = clienteRemoto.data ?? obtenerCliente(pedido.clienteId);
+  const abonosRemotos=usePaginaApi<AbonoCredito>(`/abonos?pedidoId=${pedido.id}&pageSize=15`,true);
   const pagosDelPedido = useMemo(
-    () => abonos.filter((abono) => abono.pedidosAfectados.some((p) => p.pedidoId === pedido.id)),
-    [abonos, pedido.id],
+    () => usaApi ? abonosRemotos.items : abonos.filter((abono) => abono.pedidosAfectados.some((p) => p.pedidoId === pedido.id)),
+    [abonos, pedido.id,abonosRemotos.items],
   );
+  const comprobanteUrl = pedido.comprobantePagoUrl ?? (pedido.comprobantePagoAdjuntoId ? `${baseApi}/archivos/${pedido.comprobantePagoAdjuntoId}` : undefined);
   const pendiente = pedido.pago.saldoPendiente;
   const porPreparar = pedido.estado === "pendiente" || pedido.estado === "en-preparacion";
   const unidades = pedido.lineas.reduce((suma, linea) => suma + linea.cantidad, 0);
@@ -166,14 +170,14 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
           <div className="mt-2 rounded-xl border border-line bg-paper-raised px-3 py-2">
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">Auditoría</p>
             <p className="text-[11px] text-ink-soft">
-              Generó el pedido: <span className="font-semibold text-ink">{nombreUsuario(pedido.vendedorId)}</span>
+              Generó el pedido: <span className="font-semibold text-ink">{pedido.vendedorNombre ?? nombreUsuario(pedido.vendedorId)}</span>
             </p>
             <ul className="mt-1.5 space-y-1">
               {pedido.historialEstados.map((entrada, indice) => (
                 <li key={`${entrada.fecha}-${indice}`} className="flex items-center gap-2 text-[11px] text-ink-soft">
                   <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${entrada.estado === "entregado" ? "bg-success" : entrada.estado === "cancelado" ? "bg-danger" : entrada.estado === "en-preparacion" ? "bg-accent" : "bg-ink-faint"}`} />
                   <span className="capitalize text-ink">{entrada.estado.replace("-", " ")}</span>
-                  <span className="truncate">· {nombreUsuario(entrada.usuarioId)} · {formatoFechaHora(entrada.fecha)}</span>
+                  <span className="truncate">· {entrada.usuarioNombre ?? nombreUsuario(entrada.usuarioId)} · {formatoFechaHora(entrada.fecha)}</span>
                 </li>
               ))}
             </ul>
@@ -187,7 +191,7 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
                   return (
                     <li key={abono.id} className="flex items-center justify-between gap-2 text-[11px] text-ink-soft">
                       <span className="min-w-0 truncate">
-                        <span className="font-mono font-semibold text-ink">{formatoMoneda(aplicado)}</span> · <span className="capitalize">{abono.metodo}</span> · recibió {nombreUsuario(abono.usuarioId)}
+                        <span className="font-mono font-semibold text-ink">{formatoMoneda(aplicado)}</span> · <span className="capitalize">{abono.metodo}</span> · recibió {((abono as typeof abono & {usuario?:string}).usuario ?? nombreUsuario(abono.usuarioId))}
                       </span>
                       <span className="flex-shrink-0">{new Date(abono.creadoEn).toLocaleDateString("es-CO")}</span>
                     </li>
@@ -200,7 +204,7 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
       </div>
       <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
       {/* ─── Pie fijo ─── */}
-      {(!soloLectura || pedido.comprobantePagoUrl || (pedido.estado === "cancelado" && alReactivar)) && (
+      {(!soloLectura || comprobanteUrl || (pedido.estado === "cancelado" && alReactivar)) && (
         <BarraInferior>
           <div className="space-y-2">
             {pedido.estado === "cancelado" && alReactivar && (
@@ -250,12 +254,12 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
                       if (archivo) void adjuntarComprobante(pedido.id, archivo).catch(() => mostrarAviso("No se pudo subir el comprobante", "error"));
                     }}
                   />
-                  {pedido.comprobantePagoUrl ? "Cambiar comprobante" : "Adjuntar comprobante"}
+                  {comprobanteUrl ? "Cambiar comprobante" : "Adjuntar comprobante"}
                 </label>
               )}
-              {pedido.comprobantePagoUrl && (
+              {comprobanteUrl && (
                 <a
-                  href={pedido.comprobantePagoUrl}
+                  href={comprobanteUrl}
                   target="_blank"
                   rel="noreferrer"
                   className={`flex items-center justify-center rounded-xl border border-line bg-paper px-3 py-2.5 text-[11.5px] font-semibold text-teal ${soloLectura ? "flex-1" : ""}`}

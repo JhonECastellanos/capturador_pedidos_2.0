@@ -3,7 +3,8 @@ import { z } from "zod";
 import { PrismaService } from "../common/prisma.module";
 import { ErrorDominio } from "../common/errores";
 import { numero, Tx } from "../common/consecutivos";
-import { aplicadoPorPedido } from "../dominio/cartera";
+import { pedidosConSaldoSql } from "../dominio/cartera";
+import { rangoPeriodo } from "../common/periodo";
 import { hoyLocal } from "../common/crypto";
 import { EstadoPedido, TipoMovimientoCaja, Prisma } from "@prisma/client";
 import { PedidosService } from "../pedidos/pedidos.service";
@@ -29,45 +30,13 @@ export class CierresService {
     const inicio = fecha;
     const fin = new Date(fecha.getTime() + 24 * 60 * 60 * 1000);
 
-    const pedidos = await tx.pedido.findMany({
-      where: { fechaOperacion: { gte: inicio, lt: fin }, estado: { not: EstadoPedido.CANCELADO } },
-      include: { cliente: true },
-      orderBy: { creadoEn: "asc" },
-    });
-
-    const aplicados = await aplicadoPorPedido(
-      tx,
-      pedidos.map((p) => p.id),
-    );
-
-    const movimientos = await tx.movimientoCaja.findMany({
-      where: { fechaContable: { gte: inicio, lt: fin } },
-    });
-
-    const ingresos = movimientos.filter((m) => m.tipo === TipoMovimientoCaja.INGRESO);
-    const egresos = movimientos.filter((m) => m.tipo === TipoMovimientoCaja.EGRESO);
-
-    const pendientes = pedidos
-      .map((p) => ({
-        id: p.id,
-        numero: p.numero,
-        cliente: p.cliente?.nombre ?? "Venta ocasional",
-        total: numero(p.total),
-        saldoPendiente: Math.max(0, numero(p.total) - (aplicados.get(p.id) ?? 0)),
-        estado: p.estado,
-      }))
-      .filter((p) => p.saldoPendiente > 0);
-
-    return {
-      fecha: fechaISO,
-      totalVentas: pedidos.reduce((s, p) => s + numero(p.total), 0),
-      pedidosCount: pedidos.length,
-      totalIngresos: ingresos.reduce((s, m) => s + numero(m.monto), 0),
-      totalEgresos: egresos.reduce((s, m) => s + numero(m.monto), 0),
-      efectivoEsperado: movimientos.filter((m) => m.metodo === "EFECTIVO").reduce((s, m) => s + (m.tipo === TipoMovimientoCaja.INGRESO ? numero(m.monto) : -numero(m.monto)), 0),
-      billeteraEsperado: movimientos.filter((m) => m.metodo === "BILLETERA").reduce((s, m) => s + (m.tipo === TipoMovimientoCaja.INGRESO ? numero(m.monto) : -numero(m.monto)), 0),
-      pendientes,
-    };
+    const [ventas]=await tx.$queryRaw<Array<{totalVentas:number;pedidosCount:bigint;ventasEfectivo:number;ventasBilletera:number;ventasCredito:number;pedidosEfectivo:bigint;pedidosBilletera:bigint;pedidosCredito:bigint}>>(Prisma.sql`${pedidosConSaldoSql} SELECT COALESCE(SUM(total),0)::float8 AS "totalVentas",COUNT(*) AS "pedidosCount",COALESCE(SUM(total) FILTER (WHERE metodo='efectivo' AND saldo=0),0)::float8 AS "ventasEfectivo",COALESCE(SUM(total) FILTER (WHERE metodo='billetera' AND saldo=0),0)::float8 AS "ventasBilletera",COALESCE(SUM(saldo),0)::float8 AS "ventasCredito", COUNT(*) FILTER(WHERE metodo='efectivo' AND saldo=0) AS "pedidosEfectivo",COUNT(*) FILTER(WHERE metodo='billetera' AND saldo=0) AS "pedidosBilletera",COUNT(*) FILTER(WHERE saldo>0) AS "pedidosCredito" FROM saldos WHERE "fechaOperacion">=${inicio} AND "fechaOperacion"<${fin}`);
+    const [caja]=await tx.$queryRaw<Array<{totalIngresos:number;totalEgresos:number;efectivoEsperado:number;billeteraEsperado:number}>>`SELECT COALESCE(SUM(monto) FILTER (WHERE tipo='ingreso'),0)::float8 AS "totalIngresos",COALESCE(SUM(monto) FILTER (WHERE tipo='egreso'),0)::float8 AS "totalEgresos",COALESCE(SUM(CASE WHEN tipo='ingreso' THEN monto ELSE -monto END) FILTER (WHERE metodo='efectivo'),0)::float8 AS "efectivoEsperado",COALESCE(SUM(CASE WHEN tipo='ingreso' THEN monto ELSE -monto END) FILTER (WHERE metodo='billetera'),0)::float8 AS "billeteraEsperado" FROM "movimientosCaja" WHERE "fechaContable">=${inicio} AND "fechaContable"<${fin}`;
+    const pendientes=await tx.$queryRaw<Array<{id:string;numero:string;cliente:string;total:number;saldoPendiente:number;estado:string}>>(Prisma.sql`${pedidosConSaldoSql} SELECT s.id,s.numero,COALESCE(c.nombre,'Venta ocasional') AS cliente,s.total::float8,s.saldo::float8 AS "saldoPendiente",s.estado FROM saldos s LEFT JOIN clientes c ON c.id=s."clienteId" WHERE s."fechaOperacion">=${inicio} AND s."fechaOperacion"<${fin} AND s.saldo>0 ORDER BY s."creadoEn",s.id LIMIT 20`);
+    const ayer=new Date(inicio.getTime()-86400000);
+    const pendientesCount=await tx.pedido.count({where:{fechaOperacion:{gte:ayer,lt:fin},estado:{in:[EstadoPedido.PENDIENTE,EstadoPedido.EN_PREPARACION]}}});
+    const pendientesAyerCount=await tx.pedido.count({where:{fechaOperacion:ayer,estado:{in:[EstadoPedido.PENDIENTE,EstadoPedido.EN_PREPARACION]}}});
+    return {fecha:fechaISO,...ventas,pedidosCount:Number(ventas.pedidosCount),pedidosEfectivo:Number(ventas.pedidosEfectivo),pedidosBilletera:Number(ventas.pedidosBilletera),pedidosCredito:Number(ventas.pedidosCredito),...caja,pendientes,pendientesCount,pendientesAyerCount,yaCerrado:!!await tx.cierreDia.findUnique({where:{fecha}})};
   }
 
   async crear(datos: z.infer<typeof CierreSchema>, usuarioId: string) {
@@ -174,9 +143,11 @@ export class CierresService {
     };
   }
 
-  async historial(pagina = 1, porPagina = 20) {
+  async historial(pagina = 1, porPagina = 20, periodo = "todo", desde?:string, hasta?:string) {
+    const where:Prisma.CierreDiaWhereInput={fecha:rangoPeriodo(periodo,true)};
+    if(desde || hasta) where.AND=[...(desde?[{fecha:{gte:new Date(`${desde}T00:00:00Z`)}}]:[]),...(hasta?[{fecha:{lte:new Date(`${hasta}T00:00:00Z`)}}]:[])];
     const [total, cierres] = await this.prisma.$transaction([
-      this.prisma.cierreDia.count(),
+      this.prisma.cierreDia.count({where}),
       this.prisma.cierreDia.findMany({
         orderBy: { fecha: "desc" },
         skip: (pagina - 1) * porPagina,

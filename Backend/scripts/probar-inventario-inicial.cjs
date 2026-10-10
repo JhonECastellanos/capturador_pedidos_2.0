@@ -14,16 +14,27 @@ async function main() {
     return cuerpo.data;
   }
   token = (await pedir('/auth/login', 'POST', { identifier: 'qa-admin@pruebas.invalid', password: 'SoloPruebas2026!' }, 200)).accessToken;
+  async function listarTodo(ruta) {
+    const registros = [];
+    const vistos = new Set();
+    for (let pagina = 1; ; pagina++) {
+      const lote = await pedir(`${ruta}?page=${pagina}&pageSize=100`);
+      // La API ajusta una página fuera de rango a la última; no repetirla.
+      if (lote.every(registro => vistos.has(registro.id))) return registros;
+      for (const registro of lote) if (!vistos.has(registro.id)) { vistos.add(registro.id); registros.push(registro); }
+      if (lote.length < 100) return registros;
+    }
+  }
   try {
     let inicial = await pedir('/inventario/inicial');
     if (!inicial) {
-      const pendientes = await pedir('/inventario/conteos');
+      const pendientes = await listarTodo('/inventario/conteos');
       for (const c of pendientes.filter(c => c.tipo === 'inicial' && c.estado !== 'cancelado')) await pedir(`/inventario/conteos/${c.id}/cancelar`, 'POST');
       const c = await pedir('/inventario/conteos', 'POST', { tipo: 'inicial', turno: 'mañana' });
       await pedir('/inventario/conteos', 'POST', { tipo: 'inicial', turno: 'tarde' }, 409);
       await pedir(`/inventario/conteos/${c.id}/finalizar`, 'POST', undefined, 400);
       casos.push('Inicio único y rechazo del conteo incompleto');
-      const productos = await pedir('/productos?pageSize=200');
+      const productos = await listarTodo('/productos');
       assert.ok(productos.length >= c.lineas.length, 'El catálogo QA cabe en la consulta de preparación');
       const porId = new Map(productos.map(p => [p.id, p]));
       const completar = async conteo => {
@@ -57,8 +68,7 @@ async function main() {
     assert.ok(linea);
     await pedir(`/inventario/conteos/${inicial.conteoId}/lineas/${linea.productoId}`, 'PATCH', { stockFisico: 0 }, 400);
     casos.push('El inicio aplicado no permite reemplazo, cancelación ni editar cantidades');
-    const productos = await pedir('/productos?pageSize=200');
-    const producto = productos.find(p => p.id === linea.productoId);
+    const producto = await pedir(`/productos/${linea.productoId}`);
     const proveedor = await pedir('/proveedores', 'POST', { nombre: `Inicio ${Date.now()}` });
     const claveCompra = randomUUID();
     const compra = { proveedorId: proveedor.id, lineas: [{ productoId: producto.id, cantidad: 2, costoUnitario: 700 }], descontarCaja: false };

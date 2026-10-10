@@ -3,7 +3,18 @@
  * Fast Refresh: un archivo que exporta un componente no debe exportar
  * también constantes ni funciones).
  */
-export const POR_PAGINA = 30;
+import { useSyncExternalStore } from "react";
+
+export const POR_PAGINA = 15;
+const escritorio = "(min-width: 1024px) and (pointer: fine)";
+function suscribirTamano(actualizar: () => void) {
+  const media = window.matchMedia(escritorio);
+  media.addEventListener("change", actualizar);
+  return () => media.removeEventListener("change", actualizar);
+}
+export function useTamanoPagina() {
+  return useSyncExternalStore(suscribirTamano, () => window.matchMedia(escritorio).matches ? 15 : 5, () => 15);
+}
 
 export function paginar<T>(
   lista: T[],

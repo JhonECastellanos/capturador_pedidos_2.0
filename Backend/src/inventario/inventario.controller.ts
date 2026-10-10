@@ -11,16 +11,21 @@ export class InventarioController {
   constructor(private readonly inventario: InventarioService) {}
 
   @Get("inicial")
-  async inicial(@Query("page") page?: string, @Query("q") q?: string) {
-    return { data: await this.inventario.inicial(paginacion(page, "30").pagina, q) };
+  async inicial(@Query("page") page?: string, @Query("q") q?: string, @Query("pageSize") pageSize?: string) {
+    const p = paginacion(page, pageSize);
+    return { data: await this.inventario.inicial(p.pagina, q, p.porPagina) };
   }
 
   @Get("ajustes")
-  listarAjustes() { return this.inventario.listarAjustes(); }
+  listarAjustes(@Query("page") page?: string, @Query("pageSize") pageSize?: string, @Query("q") q?: string) { const p = paginacion(page, pageSize); return this.inventario.listarAjustes(p.pagina, p.porPagina, q); }
+
+  @Get("descuadres")
+  listarDescuadres(@Query("page") page?: string, @Query("pageSize") pageSize?: string, @Query("q") q?: string) { const p = paginacion(page, pageSize); return this.inventario.listarDescuadres(p.pagina, p.porPagina, q); }
 
   @Get("conteos")
-  listarConteos() {
-    return this.inventario.listarConteos();
+  listarConteos(@Query("page") page?: string, @Query("pageSize") pageSize?: string, @Query("actuales") actuales?: string) {
+    const p = paginacion(page, pageSize);
+    return this.inventario.listarConteos(p.pagina, p.porPagina, actuales === "true");
   }
 
   @Get("conteos/:conteoId")
@@ -48,9 +53,10 @@ export class InventarioController {
     @Param("conteoId") conteoId: string,
     @Param("productoId") productoId: string,
     @Body() body: { stockFisico?: number },
+    @UsuarioActual() usuario: Usuario,
   ) {
     const datos = ContarLineaEsquema.parse(body);
-    return { data: await this.inventario.actualizarLinea(conteoId, productoId, datos.stockFisico) };
+    return { data: await this.inventario.actualizarLinea(conteoId, productoId, datos.stockFisico, usuario.id) };
   }
 
   @Post("conteos/:conteoId/finalizar")

@@ -720,7 +720,7 @@ Para regenerar la lista de enums verificados: npm run contrato:verificar
   RevisionDatosDTO.revision   GET /sincronizacion/revision   versionesCache (id=sincronizacion).version
   INTERVALO_SINCRONIZACION_MS useSincronizacion             2000 ms, solo pestana visible
   conectado                  Revision autenticada          Indicador de ultima lectura/conexion
-  POR_PAGINA=30              pageSize=30                   Limite visual, no modifica totales/FIFO
+  useTamanoPagina=5/15        pageSize=5/15                 Limite visual, no modifica totales/FIFO
   BASE_PRUEBAS_UI            prueba:paneles                Solo http://localhost:8180 (QA)
   Pedido.facturaNumero      PedidoDTO.facturaNumero       Numero de factura persistido
   DetalleProductosPedido    PedidoDTO.lineas              nombre/cantidad/precioUnitario/subtotal historicos
@@ -748,3 +748,47 @@ Para regenerar la lista de enums verificados: npm run contrato:verificar
   /auth/me.data.expiraEn       RequestAutenticado.expiraAccesoEn  JWT verificado exp; fecha ISO, sin nuevo campo en BD
   expiraEn/revisionAcceso      Frontend data/api.ts               Solo RAM; renovacion previa con margen de 30 segundos
   sesionExpirada              ambie:sesion-expirada               Bloquea lecturas tras revocacion/logout; login habilita de nuevo
+
+V5P3 — Conteos diarios y páginas adaptadas al dispositivo
+  Conteo.fechaDiaria          fechaDiaria                   conteosInventario.fechaDiaria (DATE Bogotá, nullable)
+  LineaConteo.cicloDiario     cicloDiario                   conteoLineas.cicloDiario (INTEGER positivo, nullable)
+  LineaConteo.contadoPorId    usuario de sesión             conteoLineas.contadoPorId -> usuarios.id
+  LineaConteo.contadoEn       instante ISO                  conteoLineas.contadoEn
+  Conteo.aplicado             derivado de ajustes           EXISTS ajustesInventario.conteoId; no columna nueva
+  lineasContadas              stockFisico !== null          conteoLineas.stockFisico; 0 es dato válido
+  useTamanoPagina            pageSize                      LIMIT 5 móvil/tablet; 15 escritorio con puntero fino
+  historial pagina           page / meta.pagina            OFFSET/LIMIT; filtros y sumas antes de paginar
+  cartera total              meta.saldoTotal               SUM(total - aplicaciones activas), excluye cancelados
+  caja tarjetas              meta.ingresos/egresos         agregados del periodo completo; no suma de filas visibles
+
+  resumen de jornada         GET /pedidos/resumen-ventas   agregados SQL; ventas por fechaOperacion, cartera activa completa
+  pedido seleccionado        GET /pedidos/:id              detalle independiente de la pagina visible
+  proveedor seleccionado     GET /proveedores/:id          seleccionado independiente de busqueda y pagina
+  producto seleccionado      carrito en RAM                lineas conservadas al paginar; API valida precio y stock al guardar
+  precio historial           /productos/:id/precios        limite=3; solo cambios del producto elegido
+  stockEstado=alerta/ok       /productos?stockEstado        fisico-reservado frente a minimo; filtro antes de LIMIT
+  vendedorNombre             JOIN usuarios del pedido      nombre de visualizacion; no nueva columna duplicada
+  historial.usuarioNombre    JOIN usuarios del historial   responsable de cambio; no descarga global de usuarios
+  comprobantePagoAdjuntoId   GET /archivos/:id              archivo privado del pedido individual, autenticado
+  paso de conteo             conteoLineas.id estable        mismo orden en apertura, guardado y recarga
+
+  cache por sesion/ruta      Envelope {data,meta?}         respuesta HTTP completa; select extrae data sin alterar el cache
+
+  CSV.codigoInterno          codigoInterno                productos.codigoInterno; vacío en nuevos -> siguienteCodigo(PROD)
+  CSV.nombre                 nombre                       productos.nombre; coincidencia sin código ignora mayúsculas y espacios repetidos
+  CSV.precioVenta            precioVenta                  productos.precioVenta y cambiosPrecio; precios históricos de pedidoLineas intactos
+  CSV.costoActual            costoActual                  productos.costoActual; el costo inicial confirmado no se recalcula
+  CSV.cantidadInicial        productos[].stock            nuevo: stockFisico + movimiento inicial; existente: conteoLineas.stockFisico antes de aplicar
+  CSV.stockMinimo            stockMinimo                  productos.stockMinimo
+  prepararInicial            POST /productos/importar     reutiliza conteosInventario INICIAL en curso y conteoLineas
+  importacion.resultado      creados/actualizados          conteoInicialId apunta al borrador persistido, no a un saldo duplicado
+  auth/me sin cookie acceso  data=null,renovable           solo consulta de sesión; datos operativos siguen protegidos
+
+VALORACION DE DESCUADRES — V5P3
+  Cantidad contada + costo guardado  LineaConteoDTO.costoUnitarioConteo  conteoLineas.costoUnitarioConteo numeric(18,2), nullable
+  Costo aplicado/manual             LineaAjusteDTO.costoUnitario        ajusteLineas.costoUnitario numeric(18,2), nullable
+  Inicio / Descuadres                DashboardResumenDTO.descuadres     agregado SQL, no tabla de saldos
+  Barras por período                 descuadres.serie[dia]               fecha UTC convertida a America/Bogota al confirmar/ajustar
+  Faltantes/sobrantes/neto            descuadres.faltantes/sobrantes/neto diferencias × costo histórico, excluye inicial/borrador/cancelado
+  Históricos sin valoración          descuadres.lineasSinCosto           cuenta costos NULL, nunca usa costo vigente como sustituto
+  Caché del resumen                  DashboardService v2                 revisión transaccional de conteos y ajustes, además de negocio

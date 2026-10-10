@@ -2,12 +2,15 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { api, listaApi, baseApi } from "../data/api";
 import { consultas } from "../data/query";
 import { replaceEqualDeep } from "@tanstack/react-query";
+import { normalizarConteo } from "../utils/inventario";
+import type { ConteoInventarioDTO } from "@ambie/contrato";
+import { useRegistroApi } from "../data/usePaginaApi";
 import { useSincronizacion } from "../data/useSincronizacion";
 import { archivoAImagenDataUrl } from "../utils/imagen";
 import { useAuth } from "./auth";
 import { useLocation } from "react-router-dom";
 import { OperacionesContext, type OperacionesContextValue } from "./operaciones-context";
-import type { Cliente, Pedido, Producto, MovimientoCaja, UsuarioSistema, Proveedor, RecepcionCompra, Gasto, ConteoInventario, AjusteInventario, CambioPrecio, AbonoCredito, CierreDia } from "../types";
+import type { Cliente, Pedido, Producto, MovimientoCaja, Proveedor, RecepcionCompra, Gasto, AjusteInventario, CambioPrecio, AbonoCredito, CierreDia } from "../types";
 
 type Datos = Pick<OperacionesContextValue, "clientes" | "pedidos" | "inventario" | "movimientosCaja" | "usuarios" | "proveedores" | "recepciones" | "gastos" | "conteos" | "ajustes" | "cambiosPrecio" | "abonos" | "cierres">;
 const vacios: Datos = { clientes: [], pedidos: [], inventario: [], movimientosCaja: [], usuarios: [], proveedores: [], recepciones: [], gastos: [], conteos: [], ajustes: [], cambiosPrecio: [], abonos: [], cierres: [] };
@@ -16,10 +19,10 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
   const { usuario } = useAuth();
   const conectado = useSincronizacion(usuario?.id);
   const { pathname } = useLocation();
-  const esTablero = pathname === "/admin" || pathname === "/admin/" || (pathname === "/" && usuario?.rol === "administrador");
-  const necesitaHistorialPedidos = pathname === "/admin/creditos" || pathname === "/admin/cierre" || pathname.startsWith("/admin/ventas") || pathname.startsWith("/vendedor");
+  const esTablero = pathname === "/admin" || pathname === "/admin/" || ["/admin/usuarios", "/admin/auditoria", "/admin/configuracion"].includes(pathname) || (pathname === "/" && usuario?.rol === "administrador");
   const [datos, setDatos] = useState<Datos>(vacios);
   const [clienteActivoId, setClienteActivoId] = useState<string | null>(null);
+  const clienteRemoto=useRegistroApi<Cliente>(`/clientes/${clienteActivoId}`,!!clienteActivoId);
   const [cargadoPara, setCargadoPara] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
@@ -29,6 +32,12 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
   const revision = useRef(0);
   const datosSesion = useRef<string | undefined>(undefined);
 
+  useEffect(() => {
+    const mostrarError = (evento: Event) => setError((evento as CustomEvent<string>).detail);
+    window.addEventListener("ambie:error-lectura", mostrarError);
+    return () => window.removeEventListener("ambie:error-lectura", mostrarError);
+  }, []);
+
   const cargar = useCallback(async () => {
     if (!usuario) return;
     if (esTablero) {
@@ -37,38 +46,39 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
       setCargadoPara(usuario.id);
       return;
     }
-    const claveSnapshot = ["operaciones", usuario.id, necesitaHistorialPedidos];
+    const claveSnapshot = ["operaciones", usuario.id, pathname];
     const anterior = consultas.getQueryData<Datos>(claveSnapshot);
     // Un refresco no debe volver atrás a un snapshot de otra pantalla.
     if (anterior && datosSesion.current !== usuario.id) { setDatos(anterior); setCargadoPara(usuario.id); }
     const lectura = ++revision.current;
     const esAdmin = usuario.rol === "administrador";
+        const inventarioPantalla=pathname === "/admin/inventario";
     const [clientes, pedidos, inventario, abonos, movimientosCaja, usuarios, proveedores, recepciones, gastos, conteos, ajustes, cambiosPrecio, cierres, archivos] = await Promise.all([
-      listaApi<Cliente>("/clientes"), necesitaHistorialPedidos ? listaApi<Pedido>("/pedidos") : Promise.resolve([] as Pedido[]), listaApi<Producto>("/productos"), listaApi<AbonoCredito>("/abonos"),
-      esAdmin ? listaApi<MovimientoCaja>("/caja/movimientos") : Promise.resolve([]),
-      esAdmin ? listaApi<UsuarioSistema>("/usuarios") : Promise.resolve([usuario]),
-      esAdmin ? listaApi<Proveedor>("/proveedores") : Promise.resolve([]),
-      esAdmin ? listaApi<RecepcionCompra>("/recepciones-compra") : Promise.resolve([]),
-      esAdmin ? listaApi<Gasto>("/gastos") : Promise.resolve([]),
-      esAdmin ? listaApi<ConteoInventario>("/inventario/conteos") : Promise.resolve([]),
-      esAdmin ? listaApi<AjusteInventario>("/inventario/ajustes") : Promise.resolve([]),
-      esAdmin ? listaApi<CambioPrecio>("/productos/cambios-precio") : Promise.resolve([]),
-      esAdmin ? listaApi<CierreDia>("/cierres") : Promise.resolve([]),
-      api<Array<{ id: string; productoId: string | null; pedidoId: string | null; nombre: string }>>("/archivos"),
+      Promise.resolve([] as Cliente[]), Promise.resolve([] as Pedido[]), Promise.resolve([] as Producto[]), Promise.resolve([] as AbonoCredito[]),
+      Promise.resolve([] as MovimientoCaja[]),
+      Promise.resolve([usuario]),
+      Promise.resolve([] as Proveedor[]),
+      Promise.resolve([] as RecepcionCompra[]),
+      Promise.resolve([] as Gasto[]),
+      esAdmin && inventarioPantalla ? listaApi<ConteoInventarioDTO>("/inventario/conteos?actuales=true") : Promise.resolve([]),
+      Promise.resolve([] as AjusteInventario[]),
+      Promise.resolve([] as CambioPrecio[]),
+      Promise.resolve([] as CierreDia[]),
+      Promise.resolve([] as Array<{id:string;productoId:string|null;pedidoId:string|null;nombre:string}>),
     ]);
     if (sesionId.current !== usuario.id || lectura !== revision.current) return;
     const nuevosDatos: Datos = { ...vacios, clientes: clientes.map((c) => ({ ...c, identificacion: c.identificacion ?? "", alias: c.alias || c.nombre })), pedidos: pedidos.map((p) => { const archivo = archivos.find((a) => a.pedidoId === p.id); return { ...p, comprobantePagoUrl: archivo ? `${baseApi}/archivos/${archivo.id}` : undefined, comprobantePagoNombre: archivo?.nombre }; }),
-      inventario: inventario.map((p: Producto & { stockDisponible?: number }) => { const archivo = archivos.find((a) => a.productoId === p.id); return { ...p, stock: p.stockDisponible ?? p.stock, imagenUrl: archivo ? `${baseApi}/archivos/${archivo.id}` : undefined }; }),
+      inventario: inventario.map((p: Producto & { stockDisponible?: number }) => { const archivo = archivos.find((a) => a.productoId === p.id); return { ...p, stock: p.stockDisponible ?? p.stock, imagenUrl: archivo ? `${baseApi}/archivos/${archivo.id}` : p.imagenUrl }; }),
       abonos: abonos.map((a) => ({ ...a, pedidosAfectados: a.pedidosAfectados.map((p) => ({ ...p, numero: pedidos.find((pedido) => pedido.id === p.pedidoId)?.numero ?? "" })) })),
       movimientosCaja, usuarios, proveedores, recepciones, gastos, ajustes, cambiosPrecio, cierres: cierres.map((c) => ({ ...c, fecha: c.fecha.slice(0, 10) })),
-      conteos: conteos.map((c) => ({ ...c, lineasContadas: c.lineas.filter((l) => l.stockFisico !== null).map((l) => l.productoId), lineas: c.lineas.map((l) => ({ ...l, nombre: l.nombreInicial ?? inventario.find((p) => p.id === l.productoId)?.nombre ?? "Producto", stockFisico: l.stockFisico ?? 0, diferencia: l.diferencia ?? 0 })) })),
+      conteos: conteos.map(normalizarConteo),
     };
     consultas.setQueryData(claveSnapshot, nuevosDatos);
     const mismaSesion = datosSesion.current === usuario.id;
     setDatos((actuales) => mismaSesion ? replaceEqualDeep(actuales, nuevosDatos) : nuevosDatos);
     datosSesion.current = usuario.id;
     setCargadoPara(usuario.id);
-  }, [usuario, necesitaHistorialPedidos, esTablero]);
+  }, [usuario, esTablero, pathname]);
 
   useEffect(() => {
     sesionId.current = usuario?.id;
@@ -109,9 +119,9 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
   }
   const value: OperacionesContextValue = {
     ...datos,
-    clienteActivo: datos.clientes.find((c) => c.id === clienteActivoId) ?? null,
+    clienteActivo: clienteRemoto.data ?? datos.clientes.find((c) => c.id === clienteActivoId) ?? null,
     seleccionarClienteActivo: setClienteActivoId,
-    obtenerCliente: (id) => datos.clientes.find((c) => c.id === id) ?? null,
+    obtenerCliente: (id) => (id === clienteActivoId ? clienteRemoto.data : undefined) ?? datos.clientes.find((c) => c.id === id) ?? null,
     obtenerPedido: (id) => datos.pedidos.find((p) => p.id === id) ?? null,
     obtenerProveedor: (id) => datos.proveedores.find((p) => p.id === id) ?? null,
     nombreUsuario: (id) => datos.usuarios.find((u) => u.id === id)?.nombre ?? "Usuario",
@@ -128,7 +138,7 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
     crearProveedor: (nombre, telefono) => ejecutar<Proveedor>("/proveedores", "POST", { nombre, telefono }),
     registrarRecepcion: (proveedorId, lineas, descontarCaja) => ejecutar<RecepcionCompra>("/recepciones-compra", "POST", { proveedorId, lineas, descontarCaja }),
     registrarGasto: (concepto, monto) => ejecutar<Gasto>("/gastos", "POST", { concepto, monto }),
-    iniciarConteo: (tipo, cantidadAleatoria, turno) => ejecutar<ConteoInventario>("/inventario/conteos", "POST", { tipo, cantidadAleatoria: cantidadAleatoria ?? undefined, turno }),
+    iniciarConteo: async (tipo, cantidadAleatoria, turno) => { const conteo = await ejecutar<ConteoInventarioDTO>("/inventario/conteos", "POST", { tipo, cantidadAleatoria: cantidadAleatoria ?? undefined, turno }); return conteo ? normalizarConteo(conteo) : null; },
     actualizarConteoLinea: (id, productoId, stockFisico) => accion(`/inventario/conteos/${id}/lineas/${productoId}`, { stockFisico }, "PATCH"),
     finalizarConteoActivo: (id) => accion(`/inventario/conteos/${id}/finalizar`),
     cancelarConteoActivo: (id) => accion(`/inventario/conteos/${id}/cancelar`),

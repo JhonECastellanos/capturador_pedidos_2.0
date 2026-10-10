@@ -357,14 +357,19 @@ function OperacionesLocalProvider({ children }: { children: ReactNode }) {
     const id = nuevoId();
     const iniciadoEn = new Date().toISOString();
     const usuarioId = usuario?.id ?? "sistema";
-    const conteo = construirConteo(tipo, inventario, cantidadAleatoria, usuarioId, turno, id, iniciadoEn);
+    const fechaDiaria = new Intl.DateTimeFormat("en-CA", {timeZone:"America/Bogota",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date(iniciadoEn));
+    if (tipo === "aleatorio") {
+      const existente=conteos.find(c=>c.fechaDiaria===fechaDiaria && c.estado!=="cancelado") ?? conteos.find(c=>c.fechaDiaria && c.estado==="en-curso");
+      if(existente) return existente;
+    }
+    const conteo = construirConteo(tipo, inventario, cantidadAleatoria, usuarioId, turno, id, iniciadoEn, conteos);
     setConteos((actuales) => {
       const siguientes = [conteo, ...actuales];
       guardarConteos(siguientes);
       return siguientes;
     });
     return conteo;
-  }, [inventario, usuario]);
+  }, [inventario, usuario, conteos]);
 
   const actualizarConteoLinea = useCallback((conteoId: string, productoId: string, stockFisico: number) => {
     setConteos((actuales) => {

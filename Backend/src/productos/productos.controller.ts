@@ -4,6 +4,7 @@ import { ProductosService, NuevoProductoSchema } from "./productos.service";
 import { Roles, UsuarioActual } from "../common/guards";
 import { ErrorDominio } from "../common/errores";
 import { paginacion } from "../common/paginacion";
+import { ImportarProductosEsquema } from "@ambie/contrato";
 
 @Controller("productos")
 export class ProductosController {
@@ -16,9 +17,11 @@ export class ProductosController {
     @Query("stockEstado") stockEstado?: string,
     @Query("page") page?: string,
     @Query("pageSize") pageSize?: string,
+    @Query("orden") orden?: string,
+    @Query("activo") activo?: string,
   ) {
     const p = paginacion(page, pageSize);
-    return this.productos.listar(q, categoria, stockEstado, p.pagina, p.porPagina);
+    return this.productos.listar(q, categoria, stockEstado, p.pagina, p.porPagina, orden, activo === "true");
   }
 
   @Roles(RolUsuario.ADMINISTRADOR)
@@ -33,9 +36,17 @@ export class ProductosController {
     return { data: await this.productos.obtener(productoId) };
   }
 
+  @Roles(RolUsuario.ADMINISTRADOR)
+  @Post("importar")
+  async importar(@Body() body: unknown, @UsuarioActual() usuario: Usuario) {
+    const datos = ImportarProductosEsquema.safeParse(body);
+    if (!datos.success) throw new ErrorDominio("VALIDACION", `Revisa el archivo: ${datos.error.issues[0]?.message ?? "datos inválidos"}. Máximo 200 productos por carga`);
+    return { data: await this.productos.importar(datos.data, usuario.id) };
+  }
+
   @Get(":productoId/precios")
   async historialPrecios(@Param("productoId") productoId: string, @Query("limite") limite?: string) {
-    return this.productos.historialPrecios(productoId, Number(limite ?? 50));
+    return this.productos.historialPrecios(productoId, paginacion("1", limite ?? "50").porPagina);
   }
 
   @Roles(RolUsuario.ADMINISTRADOR)

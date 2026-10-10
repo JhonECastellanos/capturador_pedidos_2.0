@@ -118,6 +118,7 @@ model Usuario {
   pedidoEstados  PedidoEstadoHistorial[]
   pagos          Pago[]
   conteos        ConteoInventario[]
+  lineasContadas ConteoLinea[]
   ajustes        AjusteInventario[]
   cambiosPrecio  CambioPrecio[]
   recepciones    RecepcionCompra[]
@@ -267,25 +268,11 @@ model Cliente {
   pedidos      Pedido[]
   pagos        Pago[]
   facturas     Factura[]
-  recordatorios RecordatorioCredito[]
 
   @@index([nombre])
   @@map("clientes")
 }
 
-model RecordatorioCredito {
-  id        String    @id @default(uuid())
-  clienteId String
-  pedidoId  String?
-  usuarioId String?
-  canal     String    @default("whatsapp")
-  creadoEn  DateTime  @default(now())
-  estado    String    @default("enviado")
-  cliente   Cliente   @relation(fields: [clienteId], references: [id], onDelete: Cascade)
-
-  @@index([clienteId])
-  @@map("recordatoriosCredito")
-}
 
 model Producto {
   id             String   @id @default(uuid())
@@ -548,11 +535,14 @@ model ConteoInventario {
   iniciadoEn   DateTime      @default(now())
   finalizadoEn DateTime?
   estado       EstadoConteo  @default(EN_CURSO)
+  fechaDiaria  DateTime?     @db.Date
   lineas       ConteoLinea[]
+  ajustes      AjusteInventario[]
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
 
   @@index([estado])
+  @@index([estado, finalizadoEn])
   @@map("conteosInventario")
 }
 
@@ -564,6 +554,9 @@ model ConteoLinea {
   stockFisico  Int?
   diferencia   Int?
   contadoEn    DateTime?
+  contadoPorId String?
+  costoUnitarioConteo Decimal? @db.Decimal(18, 2)
+  cicloDiario  Int?
   // Solo el inventario inicial: identidad y costo conservados al aplicar.
   nombreInicial String?
   costoUnitarioInicial Decimal? @db.Decimal(18, 2)
@@ -571,14 +564,16 @@ model ConteoLinea {
 
   conteo   ConteoInventario @relation(fields: [conteoId], references: [id], onDelete: Cascade)
   producto Producto         @relation(fields: [productoId], references: [id])
+  contadoPor Usuario?       @relation(fields: [contadoPorId], references: [id])
 
   @@unique([conteoId, productoId])
+  @@index([cicloDiario, productoId])
   @@map("conteoLineas")
 }
 
 model AjusteInventario {
   id          String   @id @default(uuid())
-  conteoId    String?
+  conteoId    String?  @unique
   usuarioId   String
   motivo      String?
   comentario  String?
@@ -587,7 +582,9 @@ model AjusteInventario {
   lineas      AjusteLinea[]
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
+  conteo ConteoInventario? @relation(fields: [conteoId], references: [id])
 
+  @@index([creadoEn])
   @@map("ajustesInventario")
 }
 
@@ -599,6 +596,7 @@ model AjusteLinea {
   stockTeorico        Int
   stockFisico         Int
   diferencia          Int
+  costoUnitario       Decimal? @db.Decimal(18, 2)
 
   ajuste   AjusteInventario @relation(fields: [ajusteInventarioId], references: [id], onDelete: Cascade)
   producto Producto         @relation(fields: [productoId], references: [id])
@@ -717,8 +715,6 @@ model CierreDia {
 
   usuario    Usuario          @relation(fields: [usuarioId], references: [id])
   medios     CierreMedio[]
-  pedidos    CierrePedido[]
-  movimientos CierreMovimiento[]
   acciones   CierreAccion[]
 
   @@unique([fecha])
@@ -738,32 +734,7 @@ model CierreMedio {
   @@map("cierreMedios")
 }
 
-model CierrePedido {
-  id             String       @id @default(uuid())
-  cierreId       String
-  pedidoId       String
-  numero         String
-  fechaOperacion DateTime     @db.Date
-  estado         EstadoPedido
-  total          Decimal      @db.Decimal(18, 2)
 
-  cierre CierreDia @relation(fields: [cierreId], references: [id], onDelete: Cascade)
-
-  @@map("cierrePedidos")
-}
-
-model CierreMovimiento {
-  id                String             @id @default(uuid())
-  cierreId          String
-  movimientoCajaId  String
-  tipo              TipoMovimientoCaja
-  metodo            MetodoPago?
-  monto             Decimal            @db.Decimal(18, 2)
-
-  cierre CierreDia @relation(fields: [cierreId], references: [id], onDelete: Cascade)
-
-  @@map("cierreMovimientos")
-}
 
 model CierreAccion {
   id                    String   @id @default(uuid())
