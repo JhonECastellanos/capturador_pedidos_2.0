@@ -805,3 +805,20 @@ cantidadInicial CSV vacía -> stock undefined -> producto nuevo stockFisico=0 / 
 cantidadInicial CSV 0 -> stock 0 -> producto nuevo stockFisico=0 / línea inicial 0
 
 corregir cantidad -> contadoEnEsperado opcional -> compara conteoLineas.contadoEn dentro del bloqueo transaccional; si cambió devuelve 409
+
+AGENTES V6P4 (10/10/2026)
+Configuración > Agentes IA -> ConfiguracionAgente -> configuracionesAgente.configuracion JSON sin claves
+Clave proveedor -> secretos cifrados AES-256-GCM -> configuracionesAgente.secretos (nunca DTO público)
+Versión ajustes -> ConfiguracionAgentePublica.version -> configuracionesAgente.version (control 409 concurrente)
+AGENT_CONFIG_SECRET -> cifrado estable de claves; si vacío utiliza secreto de autenticación del servidor
+VOICE_AGENT_TOKEN -> autorización interna y firma HMAC de tickets de audio; nunca frontend
+OLLAMA_URL -> conexión interna permitida para Local; no ejecuta instalación de modelos
+VOICE_AGENT_URL -> servicio optativo de audio http://voice-agent:7860
+VOICE_PROXY_TARGET -> proxy WebSocket de desarrollo, localhost:7860 por defecto
+Texto o audio -> InstruccionAgente -> RevisionAgente RAM -> formulario actual -> API comercial existente
+Precio revisado -> LineaPedidoEsquema.precioEsperado -> comparación producto.precioVenta dentro de transacción; 409 si cambió
+Ticket micrófono -> /agentes/audio/sesion -> WSS /agentes/audio/conversar -> un uso, 30 segundos
+Confirmación voz y botón -> mismo callback y promesa pendiente -> misma clave idempotente existente
+VOICE_BUILD_TARGET -> Docker build target voz-hibrida por defecto / voz-local optativo para etapa Ollama
+
+ContextoAgente: conteoId y producto asignado de la pantalla abierta → POST /agentes/interpretar → revisión de asignación vigente por usuario. No aporta cantidades ni pagos predeterminados.

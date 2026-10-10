@@ -24,6 +24,7 @@ import { ConteosCompartidos } from "../components/ConteosCompartidos";
 import { api, usaApi } from "../../../data/api";
 import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
 import { normalizarConteo } from "../../../utils/inventario";
+import { useRevisionAgente } from "../../agentes/operacion-agente";
 
 const campo = "rounded-lg border border-line bg-paper-raised px-3 py-2.5 text-[13px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none";
 
@@ -51,6 +52,10 @@ export function InventarioAdmin() {
 
   // Cada proceso empresarial en su propia pantalla (sin scroll de página)
   const [vista, setVista] = useState<VistaInv>("menu");
+  const revisionOperacion = useRevisionAgente();
+  useEffect(() => {
+    if (revisionOperacion && ["conteo", "iniciar-conteo", "finalizar-conteo", "aplicar-conteo"].includes(revisionOperacion.instruccion.operacion)) setVista("conteo");
+  }, [revisionOperacion]);
   const [mostrarProducto, setMostrarProducto] = useState(false);
   const [tipoConteo, setTipoConteo] = useState<TipoConteo>("general");
   const [turno, setTurno] = useState("mañana");

@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { PanelAgentes } from "../agentes/PanelAgentes";
 
 export function Configuracion() {
   return (
@@ -16,6 +17,7 @@ export function Configuracion() {
             <Link to="/admin/auditoria" className="rounded-xl border border-line px-4 py-3 text-sm font-semibold text-ink">Consultar auditoría</Link>
           </div>
         </section>
+        <PanelAgentes />
       </main>
     </div>
   );

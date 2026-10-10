@@ -15,6 +15,7 @@ import { fechaOperativa } from "../../../utils/fechas";
 import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
 import type { Pedido, CierreDia } from "../../../types";
 import { usaApi } from "../../../data/api";
+import { useOperacionAgente } from "../../agentes/operacion-agente";
 
 type FiltroPagoCierre = "todos" | "credito" | "efectivo" | "billetera";
 
@@ -159,6 +160,12 @@ export function CierreAdmin() {
     setPendientesCancelados(0);
     return true;
   }
+
+  const confirmarCierreCompartido = useOperacionAgente("cierre", r => {
+    setConteoEfectivo(r.instruccion.efectivo === undefined ? "" : String(r.instruccion.efectivo));
+    setConteoBilletera(r.instruccion.billetera === undefined ? "" : String(r.instruccion.billetera));
+    setVista("cierre"); setPasoCierre(2);
+  }, confirmarCierreFinal, () => ({ operacion: "cierre", fecha: fechaHoyStr, ...(conteoEfectivo.trim() ? { efectivo: Number(conteoEfectivo) } : {}), ...(conteoBilletera.trim() ? { billetera: Number(conteoBilletera) } : {}) }));
 
   async function trasladar(id: string) {
     const pedido = (usaApi ? pendientesRemotos.items : pendientesHoy).find(p => p.id === id);
@@ -505,7 +512,7 @@ export function CierreAdmin() {
               </button>
               <button
                 type="button"
-                onClick={confirmarCierreFinal}
+                onClick={confirmarCierreCompartido}
                 disabled={usaApi && yaCerradoHoy}
                 className="flex items-center justify-center gap-1.5 rounded-xl bg-ink py-3.5 text-[13.5px] font-semibold text-white active:bg-ink/90 shadow-sm"
               >

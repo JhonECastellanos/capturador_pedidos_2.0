@@ -12,6 +12,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Ajustes opcionales; no contienen documentos comerciales ni audio.
+model ConfiguracionAgente {
+  id String @id @default("principal")
+  configuracion Json
+  secretos String
+  version Int @default(1)
+  actualizadoEn DateTime @updatedAt
+  @@map("configuracionesAgente")
+}
+
 // ─── Enumeraciones ────────────────────────────────────────────────
 
 enum RolUsuario {

@@ -7,6 +7,7 @@ import { Boton } from "../../../components/Boton";
 import { BuscadorInput } from "../../../components/BuscadorInput";
 import { Paginacion } from "../../../components/Paginacion";
 import { formatoMoneda } from "../../../utils/formato";
+import { useOperacionAgente } from "../../agentes/operacion-agente";
 
 type Asignacion = Pick<LineaCompartidaDTO, "productoId" | "nombre" | "codigo" | "unidad" | "asignadoHasta"> & { contadoEnEsperado?: string | null };
 const nombreTipo = (tipo: string) => tipo === "aleatorio" ? "Conteo diario" : tipo === "inicial" ? "Inventario inicial" : "Inventario general";
@@ -24,21 +25,22 @@ export function ConteosCompartidos({ inicialId }: { inicialId?: string | null })
   const [ocupado, setOcupado] = useState(false);
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
-  const [confirmacion, setConfirmacion] = useState<"finalizar" | "aplicar-ajuste" | "cancelar" | null>(null);
+  const [confirmacion, setConfirmacion] = useState<"iniciar" | "finalizar" | "aplicar-ajuste" | "cancelar" | null>(null);
+  const [tipoInicio, setTipoInicio] = useState<string | null>(null);
   const historial = usePaginaApi<CabeceraConteoCompartidoDTO>(`/inventario/compartidos?page=${pagina}&abiertos=${!administrador}`);
   const lineas = usePaginaApi<LineaCompartidaDTO>(`/inventario/compartidos/${seleccion}/lineas?page=${paginaLineas}&q=${encodeURIComponent(busqueda)}`, !!seleccion);
   const detalle = useRegistroApi<CabeceraConteoCompartidoDTO>(`/inventario/compartidos/${seleccion}`, !!seleccion);
   const conteo = detalle.data ?? historial.items.find(c => c.id === seleccion);
   function refrescar() { window.dispatchEvent(new Event("ambie:datos-actualizados")); }
   async function ejecutar(trabajo: () => Promise<void>) {
-    if (ocupado) return;
+    if (ocupado) return false;
     setOcupado(true); setError(""); setMensaje("");
-    try { await trabajo(); refrescar(); }
-    catch (e) { setError(e instanceof Error ? e.message : "No se pudo completar la operación."); }
+    try { await trabajo(); refrescar(); return true; }
+    catch (e) { setError(e instanceof Error ? e.message : "No se pudo completar la operación."); return false; }
     finally { setOcupado(false); }
   }
   async function iniciar(tipo: string) {
-    await ejecutar(async () => {
+    return ejecutar(async () => {
       const creado = await api<{ id: string }>("/inventario/compartidos", "POST", { tipo, turno: "Conteo compartido" });
       setPagina(1); setSeleccion(creado.id); setPaginaLineas(1); setAsignacion(null); setCantidad(""); setBusqueda("");
     });
@@ -52,12 +54,36 @@ export function ConteosCompartidos({ inicialId }: { inicialId?: string | null })
   }
   async function guardar() {
     const unidades = Number(cantidad);
-    if (!asignacion || cantidad.trim() === "" || !Number.isSafeInteger(unidades) || unidades < 0) { setError("Escribe una cantidad entera, incluyendo 0 si no hay unidades."); return; }
-    await ejecutar(async () => {
+    if (!asignacion || cantidad.trim() === "" || !Number.isSafeInteger(unidades) || unidades < 0) { setError("Escribe una cantidad entera, incluyendo 0 si no hay unidades."); return false; }
+    return ejecutar(async () => {
       await api(`/inventario/conteos/${seleccion}/lineas/${asignacion.productoId}?resumen=true`, "PATCH", { stockFisico: unidades, ...("contadoEnEsperado" in asignacion ? { contadoEnEsperado: asignacion.contadoEnEsperado } : {}) });
       setAsignacion(null); setCantidad(""); setMensaje("Cantidad guardada. Puedes tomar el siguiente producto.");
     });
   }
+  const confirmarCantidadCompartida = useOperacionAgente("conteo", r => {
+    setSeleccion(r.instruccion.conteoId ?? null);
+    setAsignacion((r.datos.asignacion as Asignacion | null) ?? null);
+    setCantidad(r.instruccion.cantidad === undefined ? "" : String(r.instruccion.cantidad));
+    setMensaje(r.resumen);
+  }, guardar, () => ({ operacion: "conteo", ...(seleccion ? { conteoId: seleccion } : {}), producto: asignacion?.nombre, ...(cantidad.trim() ? { cantidad: Number(cantidad) } : {}) }));
+  const confirmarInicioCompartido = useOperacionAgente("iniciar-conteo", r => {
+    setTipoInicio(r.instruccion.tipoConteo ?? null); setConfirmacion("iniciar"); setMensaje(r.resumen);
+  }, async () => {
+    if (!administrador || !tipoInicio) return false;
+    const resultado = await iniciar(tipoInicio);
+    if (resultado) { setConfirmacion(null); setTipoInicio(null); }
+    return resultado;
+  });
+  async function guardarConfirmacion(accion: "finalizar" | "aplicar-ajuste" | "cancelar") {
+    if (!administrador || !seleccion) return false;
+    return ejecutar(async () => { await api(`/inventario/conteos/${seleccion}/${accion}`, "POST", {}); setConfirmacion(null); setMensaje("Operación guardada correctamente."); });
+  }
+  const confirmarFinalCompartido = useOperacionAgente("finalizar-conteo", r => {
+    setSeleccion(r.instruccion.conteoId ?? null); setConfirmacion("finalizar"); setMensaje(r.resumen);
+  }, () => guardarConfirmacion("finalizar"));
+  const confirmarAplicacionCompartida = useOperacionAgente("aplicar-conteo", r => {
+    setSeleccion(r.instruccion.conteoId ?? null); setConfirmacion("aplicar-ajuste"); setMensaje(r.resumen);
+  }, () => guardarConfirmacion("aplicar-ajuste"));
   function abrir(id: string) { setSeleccion(id); setPaginaLineas(1); setAsignacion(null); setCantidad(""); setBusqueda(""); setMensaje(""); setError(""); }
   return <section className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4" aria-label="Conteos compartidos">
     {administrador && <div className="flex flex-wrap gap-2">
@@ -81,7 +107,7 @@ export function ConteosCompartidos({ inicialId }: { inicialId?: string | null })
         </div>}
       </>}
       {conteo?.estado === "en-curso" && <>
-        {asignacion ? <form onSubmit={e => { e.preventDefault(); void guardar(); }} className="space-y-2 rounded-lg bg-teal-soft p-3">
+        {asignacion ? <form onSubmit={e => { e.preventDefault(); void confirmarCantidadCompartida(); }} className="space-y-2 rounded-lg bg-teal-soft p-3">
           <p className="font-semibold">{asignacion.nombre}</p><p className="text-xs">{asignacion.codigo} · {asignacion.unidad} · {asignacion.asignadoHasta ? `asignado hasta ${new Date(asignacion.asignadoHasta).toLocaleTimeString("es-CO")}` : "Corrección administrativa"}</p>
           <label className="block text-sm">Cantidad contada<input aria-label="Cantidad contada" type="number" inputMode="numeric" min="0" step="1" value={cantidad} onChange={e => setCantidad(e.target.value)} className="mt-1 w-full rounded-lg border border-line bg-paper p-3" /></label>
           <div className="flex flex-wrap gap-2"><Boton type="submit" ancho="auto" disabled={ocupado}>Guardar cantidad</Boton><Boton ancho="auto" variante="fantasma" disabled={ocupado} onClick={() => { if ("contadoEnEsperado" in asignacion) { setAsignacion(null); setCantidad(""); } else void solicitar(true); }}>{"contadoEnEsperado" in asignacion ? "Cancelar corrección" : "Liberar producto"}</Boton>{!("contadoEnEsperado" in asignacion) && <button type="button" disabled={ocupado} onClick={() => void ejecutar(async () => { const renovada = await api<Asignacion | null>(`/inventario/compartidos/${seleccion}/asignar`, "POST", {}); if (renovada?.productoId === asignacion.productoId) setAsignacion(renovada); else { setAsignacion(renovada); setCantidad(""); setMensaje("La asignación anterior venció; revisa el producto asignado."); } })} className="text-sm text-teal">Renovar tiempo</button>}</div>
@@ -105,11 +131,12 @@ export function ConteosCompartidos({ inicialId }: { inicialId?: string | null })
         {conteo.estado === "confirmado" && !conteo.aplicado && <Boton ancho="auto" disabled={ocupado} onClick={() => setConfirmacion("aplicar-ajuste")}>{conteo.tipo === "inicial" ? "Confirmar inventario inicial" : "Aplicar ajuste al stock"}</Boton>}
         {conteo.aplicado && <p className="text-sm text-success">Cantidades aplicadas al inventario.</p>}
       </div>}
-      {confirmacion && <div role="dialog" aria-label="Confirmar operación de inventario" className="rounded-lg border border-line p-3 text-sm">
+      {confirmacion && confirmacion !== "iniciar" && <div role="dialog" aria-label="Confirmar operación de inventario" className="rounded-lg border border-line p-3 text-sm">
         <p>{confirmacion === "aplicar-ajuste" ? "Se actualizará el stock con las cantidades revisadas. Realiza el conteo durante una pausa de ventas y compras." : confirmacion === "finalizar" ? "Se cerrará el conteo y quedará guardado en el historial. Todavía no cambia el stock." : "Se cancelará este conteo conservando su historial."}</p>
-        <div className="mt-2 flex gap-2"><Boton ancho="auto" disabled={ocupado} onClick={() => void ejecutar(async () => { await api(`/inventario/conteos/${seleccion}/${confirmacion}`, "POST", {}); setConfirmacion(null); setMensaje("Operación guardada correctamente."); })}>Confirmar</Boton><Boton ancho="auto" variante="fantasma" disabled={ocupado} onClick={() => setConfirmacion(null)}>Volver</Boton></div>
+        <div className="mt-2 flex gap-2"><Boton ancho="auto" disabled={ocupado} onClick={() => void (confirmacion === "finalizar" ? confirmarFinalCompartido() : confirmacion === "aplicar-ajuste" ? confirmarAplicacionCompartida() : guardarConfirmacion("cancelar"))}>Confirmar</Boton><Boton ancho="auto" variante="fantasma" disabled={ocupado} onClick={() => setConfirmacion(null)}>Volver</Boton></div>
       </div>}
     </div>}
+    {administrador && confirmacion === "iniciar" && <div role="dialog" aria-label="Revisar inicio de inventario" className="rounded-lg border border-line bg-paper-raised p-3 text-sm"><p>Crear {nombreTipo(tipoInicio ?? "general")}. El stock solo cambia al aplicar las cantidades revisadas.</p><div className="mt-2 flex gap-2"><Boton ancho="auto" disabled={ocupado} onClick={confirmarInicioCompartido}>Confirmar inicio</Boton><Boton ancho="auto" variante="fantasma" disabled={ocupado} onClick={() => { setConfirmacion(null); setTipoInicio(null); }}>Volver</Boton></div></div>}
     <h3 className="font-semibold">{administrador ? "Historial y progreso de inventarios" : "Conteos disponibles"}</h3>
     <Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil(historial.total / 30))} total={historial.total} porPagina={30} onChange={setPagina} />
     <div className="lista-datos min-h-[320px] max-h-[420px] overflow-y-auto space-y-1" inert={historial.actualizando}>

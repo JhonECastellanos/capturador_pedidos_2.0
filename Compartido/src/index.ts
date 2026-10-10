@@ -15,3 +15,4 @@ export * from "./conteo-diario";
 export const VERSION_CONTRATO = "1.0.0";
 
 export * from "./conteo-compartido";
+export * from "./agentes";

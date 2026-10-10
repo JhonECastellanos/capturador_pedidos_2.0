@@ -33,7 +33,7 @@ curl http://localhost:8080/api/v1/salud
 npm run verificar
 ~~~
 
-Las pruebas operativas se ejecutan en QA aislada, nunca sobre los datos reales. Esta versión no incluye un servicio de agente; Configuración conserva los accesos a Usuarios y Auditoría.
+Las pruebas operativas se ejecutan en QA aislada, nunca sobre los datos reales. V6P4 incorpora un servicio optativo de voz y ajustes en Configuración > Agentes IA. Primero se valida Híbrido; Local queda preparado sin modelos y API Live conserva sus ajustes para la siguiente etapa. Los agentes revisan operaciones antes de confirmarlas mediante los formularios existentes. Consulta la guía para activar audio, ver sus logs y conocer las pruebas pendientes.
 
 ## Funcionamiento esperado
 

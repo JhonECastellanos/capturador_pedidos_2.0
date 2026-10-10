@@ -25,6 +25,7 @@ import { formatoMoneda } from "../../../utils/formato";
 import { DetalleProductosPedido } from "../components/DetalleProductosPedido";
 import { Paginacion } from "../../../components/Paginacion";
 import { useTamanoPagina, paginar } from "../../../utils/paginacion";
+import { useOperacionAgente } from "../../agentes/operacion-agente";
 
 type Paso = 1 | 2 | 3 | 4;
 type ModoEntrega = Extract<EstadoPedido, "entregado" | "pendiente">;
@@ -165,6 +166,19 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
     navegar(rutaCompletado, { state: { pedidoId: pedido.id }, replace: true });
     return true;
   }
+
+  const confirmarPedidoCompartido = useOperacionAgente("pedido", r => {
+    const productos = (r.datos.productos ?? []) as Producto[];
+    const elegidas = (r.datos.lineas ?? []) as LineaPedido[];
+    const cliente = r.datos.cliente as Cliente | null;
+    setProductosElegidos(Object.fromEntries(productos.map(p => [p.id, p])));
+    setCantidades(Object.fromEntries(elegidas.map(l => [l.productoId, l.cantidad])));
+    setOcasional(r.datos.ocasional === true);
+    if (cliente) seleccionarClienteActivo(cliente.id);
+    if (r.datos.metodo) setMetodo(r.datos.metodo as MetodoPago);
+    if (r.datos.entrega) setEntrega(r.datos.entrega as ModoEntrega);
+    setPaso(4);
+  }, confirmarPedido, () => ({ operacion: "pedido", ocasional, ...(ocasional ? {} : { cliente: clienteSeleccionado?.nombre }), lineas: lineas.map(l => ({ producto: l.nombre, cantidad: l.cantidad })), metodo, preparacion: entrega }));
 
   function volver() {
     if (paso === 1) {
@@ -383,8 +397,8 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Cliente</p>
-                  <p className="mt-0.5 truncate text-[15px] font-semibold text-ink">{clienteSeleccionado.nombre}</p>
-                  <p className="truncate text-[12.5px] text-ink-soft">“{clienteSeleccionado.alias}”</p>
+                  <p className="mt-0.5 truncate text-[15px] font-semibold text-ink">{clienteSeleccionado?.nombre ?? "Cliente por definir"}</p>
+                  <p className="truncate text-[12.5px] text-ink-soft">{clienteSeleccionado?.alias ? `“${clienteSeleccionado.alias}”` : ""}</p>
                 </div>
                 <span className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                   entrega === "entregado" ? "bg-success-soft text-success" : "bg-accent-soft text-accent-dark"
@@ -421,7 +435,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
 
           </main>
           <BarraInferior>
-            <Boton onClick={confirmarPedido}>
+            <Boton onClick={confirmarPedidoCompartido}>
               {metodo === "credito" ? "Registrar crédito" : "Confirmar pedido"} · {formatoMoneda(total)}
             </Boton>
           </BarraInferior>

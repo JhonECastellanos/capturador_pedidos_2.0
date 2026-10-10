@@ -196,6 +196,9 @@ export class PedidosService {
       const lineas = datos.lineas.map((linea) => {
         const producto = productos.find((p) => p.id === linea.productoId);
         if (!producto) throw new ErrorDominio("PRODUCTO_INVALIDO", "Producto no válido");
+        if (linea.precioEsperado !== undefined && !producto.precioVenta.equals(linea.precioEsperado)) {
+          throw new ErrorDominio("PRECIO_CAMBIO", `El precio de ${producto.nombre} cambió. Revisa el detalle actualizado antes de confirmar`, 409);
+        }
         const disponible = producto.stockFisico - producto.stockReservado;
         if (disponible < linea.cantidad) {
           throw new ErrorDominio("SOBREVENTA", `Stock insuficiente para ${producto.nombre}`);

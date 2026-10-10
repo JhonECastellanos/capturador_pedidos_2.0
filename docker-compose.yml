@@ -109,6 +109,10 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       SESSION_SECRET: ${SESSION_SECRET}
       CACHE_REDIS_URL: redis://redis:6379
+      AGENT_CONFIG_SECRET: ${AGENT_CONFIG_SECRET:-}
+      VOICE_AGENT_TOKEN: ${VOICE_AGENT_TOKEN:-}
+      VOICE_AGENT_URL: http://voice-agent:7860
+      OLLAMA_URL: ${OLLAMA_URL:-http://voice-agent:11434}
       JWT_SECRET: ${JWT_SECRET}
       JWT_ACCESS_TTL_SEGUNDOS: ${JWT_ACCESS_TTL_SEGUNDOS:-900}
       JWT_REFRESH_TTL_DIAS: ${JWT_REFRESH_TTL_DIAS:-7}
@@ -184,7 +188,30 @@ services:
       timeout: 5s
       retries: 5
 
+  voice-agent:
+    profiles: ["voz"]
+    image: capturador_pedidos_20-voz:local
+    build:
+      context: .
+      dockerfile: Agentes/voz/Dockerfile
+      target: ${VOICE_BUILD_TARGET:-voz-hibrida}
+    mem_limit: ${VOICE_MEMORY:-1536m}
+    memswap_limit: ${VOICE_MEMORY:-1536m}
+    cpus: ${VOICE_CPUS:-2}
+    restart: unless-stopped
+    environment:
+      VOICE_AGENT_TOKEN: ${VOICE_AGENT_TOKEN:-}
+      HF_HOME: /data/modelos
+    volumes:
+      - voz_modelos:/data/modelos
+    tmpfs:
+      - /tmp:size=32m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+
 volumes:
+  voz_modelos:
   postgres_data:
   minio_data:
 

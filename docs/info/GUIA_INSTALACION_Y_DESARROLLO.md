@@ -385,3 +385,53 @@ Configuración conserva su ruta administrativa y permite acceder a Usuarios y Au
 - [Equivalencia de variables](../../EQUIVALENCIA_VARIABLES.txt)
 - [Imágenes de productos](../../Frontend/public/assets/productos/README.md)
 - [Comprobantes](../../Frontend/public/assets/comprobantes/README.md)
+
+## Agentes V6P4: implementación y pruebas por etapas
+
+La primera etapa utiliza Híbrido: reconocimiento local de audio y un proveedor remoto para interpretar la instrucción. Local y API Live tienen su configuración separada. No se descarga ningún modelo de Ollama al construir, iniciar o guardar ajustes. API Live todavía no inicia una conversación nativa; se valida después del circuito Híbrido.
+
+Configuración > Agentes IA permite agregar proveedores, conservar o retirar claves, consultar modelos, probar llamadas con herramientas, seleccionar voz del navegador, transcribir archivos y ensayar instrucciones sin crear documentos comerciales. Las claves se cifran en el servidor y no regresan al navegador. El asistente solo solicita el micrófono al pulsar Hablar; cerrar el panel o terminar la sesión detiene la captura.
+
+El texto interpretado abre el detalle de los formularios existentes. Las correcciones mantienen el borrador y la confirmación utiliza sus mismos guardados. La API vuelve a resolver productos, permisos y precios antes de confirmar. Si un precio cambia entre revisión y escritura, devuelve 409 sin registrar el pedido; debe revisarse nuevamente. Los pedidos manuales también aprovechan esta comprobación.
+
+### Orden de validación
+
+1. Ejecutar `npm run verificar` y `npm run prueba:agentes`. Las pruebas aisladas utilizan catálogo en memoria y proveedor simulado; no demuestran funcionamiento de una API real.
+2. Ejecutar `python Agentes/voz/probar_autorizacion.py`: firma, expiración, límite de conexiones y autorización de un solo uso, sin descargar modelos.
+3. En QA, aplicar la migración aditiva de configuración. Configurar `VOICE_AGENT_TOKEN` privado y `AGENT_CONFIG_SECRET` estable, ambos con al menos 32 caracteres. Conservarlos fuera del repositorio. La voz es un perfil optativo de Docker; los formularios manuales funcionan sin él.
+4. Preparar únicamente Whisper tiny desde Configuración si se va a probar audio. Este modelo es de transcripción, independiente de Ollama. Moonshine español permanece deshabilitado hasta verificar la licencia comercial aplicable.
+5. Agregar una API desde la pantalla, guardar y probar un modelo con herramientas. Un modelo listado no equivale a un modelo probado. Verde confirma la respuesta de esa prueba; amarillo indica límite temporal, no acredita agotamiento diario; rojo indica fallo de la prueba y no una indisponibilidad permanente.
+6. Dictar: «Cliente ocasional, una arepa de queso, una empanada de pollo y dos Coca-Colas pequeñas; efectivo y para preparar». Debe abrir directamente el detalle del pedido. Corregir «paga con billetera» y comprobar que conserva cliente, productos y preparación. Confirmar una vez y conciliar pedido, factura, pagos y caja en PostgreSQL QA.
+7. Repetir con productos inexistentes, cantidades superiores al disponible, datos faltantes, pérdida de red y doble confirmación. Debe conservar el detalle; no crear documentos incompletos ni repetir cobros. Probar también permisos de vendedor e inventario.
+8. Validar micrófono físico en celular mediante HTTPS, suspensión de pestaña y cierre de sesión. La conexión de audio usa WebSocket con una autorización de 30 segundos, de un solo uso; la captura se limita a dos minutos. No se guardan audios ni transcripciones en el navegador.
+9. Después del circuito Híbrido real, instalar voluntariamente un modelo Ollama con herramientas y repetir los mismos ejercicios. Después validar API Live con su proveedor y audio nativo.
+
+### Estado comprobado y pendientes
+
+Se comprobó visualmente Configuración a 390 px y 1440 px, y una instrucción completa abrió la revisión existente de venta con tres líneas, cuatro unidades y total de $14.000. Este recorrido usó respuestas simuladas y no guardó una venta. Las pruebas actuales no equivalen a pruebas con micrófono físico, proveedores reales ni producción.
+
+Están pendientes la conversación nativa API Live, los canales WhatsApp y Hermes/Telegram, y sus pruebas de aislamiento, permisos y aprobación. La construcción del servicio híbrido y la conciliación de configuración y borradores con PostgreSQL QA ya se comprobaron. Todavía falta transcribir audio y conversar con un proveedor real antes de publicar. Producción permanece en su versión anterior.
+
+Referencias: [Pipecat Whisper](https://github.com/pipecat-ai/pipecat/blob/v1.12.0/src/pipecat/services/whisper/stt.py), [licencias de modelos Moonshine por idioma](https://github.com/moonshine-ai/moonshine/blob/main/language-bindings/python/src/moonshine_voice/download.py).
+
+La construcción inicial usa `VOICE_BUILD_TARGET=voz-hibrida`. La etapa posterior usa `VOICE_BUILD_TARGET=voz-local` para incorporar el motor Ollama al mismo servicio de voz; requiere reconstruir únicamente ese servicio. Ninguna etapa ejecuta `ollama pull`. Hasta activar esa etapa, consultar modelos locales informa que la conexión no está disponible; no se presenta como prueba aprobada.
+
+### Comprobaciones actuales adicionales
+
+Se aplicaron las migraciones pendientes únicamente en `ambie_test`. Una configuración de prueba se confirmó, se releyó tras desconectar/reconectar PostgreSQL, conservó la clave cifrada y rechazó una versión antigua. Pedidos y productos mantuvieron sus cantidades de registros; la configuración ficticia se retiró al terminar. El ejercicio completo tomó 4.906 ms; esta cifra incluye varias lecturas y una reconexión y no representa la latencia de un solo guardado.
+
+El servicio de voz QA confirmó salud HTTP 200, rechazo 401 sin autorización privada, estado 200 y aviso 409 al intentar transcribir sin preparar el reconocimiento. El WebSocket validó el ticket y devolvió el aviso de preparación. Estas pruebas no transcribieron un audio ni descargaron modelos.
+
+Scripts adicionales: `node Backend/scripts/probar-configuracion-agentes-db.cjs` usa exclusivamente PostgreSQL QA en 127.0.0.1:5433; `node Backend/scripts/probar-audio-agentes.cjs` usa exclusivamente audio QA en 127.0.0.1:7861 y un token privado dentro de `.local/`. No ejecutarlos contra producción ni reutilizar sus claves de pruebas para el negocio.
+
+La prueba HTTP QA confirmó que la revisión usa los identificadores y precios reales del catálogo PostgreSQL; cambiar efectivo por billetera mantuvo las líneas y el total, sin crear pedidos. La regresión de guardados realizó 23 solicitudes de QA: confirmó cuatro intenciones legítimas y un solo pedido/cobro por clave. La inicialización real de Pipecat, Silero, Smart Turn y su agregador terminó correctamente a 16 kHz; todavía no equivale a transcripción de un audio ni a conversación con un proveedor real.
+
+Se comprobó además el arranque del motor Ollama CPU en un contenedor temporal: respondió con una lista vacía de modelos. Se retiró el contenedor sin descargar modelos. Esto comprueba el motor preparado, no su capacidad de interpretar órdenes; esa prueba requiere instalar voluntariamente un modelo después del circuito Híbrido.
+
+Un borrador con datos pendientes no se confirma ni por voz ni por botón. Primero se aclara por texto o voz el dato que falta. Esto evita que los valores predeterminados del formulario completen un pago por intuición o que desaparezca un producto no reconocido al volver a validar. Un borrador completo sí permite corregir los campos manualmente y revisar el cambio antes de confirmar.
+
+En Chrome QA se intentó confirmar un borrador con un producto inexistente dos veces desde el formulario y una desde el asistente: permaneció en la vista de detalle, conservó el aviso del producto pendiente y no envió solicitudes de creación de pedidos. PostgreSQL conservó la cantidad de pedidos. En este ejercicio se simuló exclusivamente la interpretación; la revisión previa procedía de la API y del catálogo QA reales.
+
+En conteos, abre el inventario y toma un producto antes de dictar «Conté cinco». La pantalla aporta únicamente el identificador del conteo y el producto asignado; la cantidad debe indicarse. La API vuelve a comprobar propietario y vencimiento de la asignación. Un colaborador no puede cerrar ni aplicar el conteo. Prueba adicional: contar cero, omitir la cantidad y repetir tras vencer o perder la asignación; solo el primer caso completo debe permitir confirmar.
+
+Comprobación final de esta etapa V6P4: verificar completó compilación, tipos y revisión del frontend sin errores (mantiene advertencias de efectos/render). Pasaron 13 pruebas aisladas del asistente, seis de autorización de audio y la revisión HTTP real contra PostgreSQL QA. La repetición del ejercicio de configuración confirmó persistencia tras reconexión en 162 ms para el ejercicio completo; no es una medición de una escritura individual. No se descargaron modelos y no se modificó producción. El entorno de revisión está en http://127.0.0.1:8180/admin/configuracion, separado del negocio en 8080.

@@ -15,6 +15,7 @@ import { TRANSICIONES_PEDIDO } from "@ambie/contrato";
 import { usaApi, baseApi } from "../../../data/api";
 
 import { DetalleProductosPedido } from "../components/DetalleProductosPedido";
+import { useOperacionAgente } from "../../agentes/operacion-agente";
 
 interface PedidoDetalleProps {
   pedido: Pedido;
@@ -81,6 +82,9 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
     mostrarAviso(`Cobrado ${formatoMoneda(pendiente)} · pedido entregado`, "exito");
     return true;
   }
+  const confirmarEstadoCompartido = useOperacionAgente("estado", r => {
+    if (r.datos.pedidoId === pedido.id && !soloLectura) setEstadoPendiente(r.instruccion.estado ?? null);
+  }, confirmarCambioEstado, () => ({ operacion: "estado", referencia: pedido.numero, ...(estadoPendiente ? { estado: estadoPendiente } : {}) }));
   const etiquetaEstado = (
     <span className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-semibold ${porPreparar ? "bg-accent-soft text-accent-dark" : pedido.estado === "cancelado" ? "bg-danger-soft text-danger" : "bg-success-soft text-success"}`}>
       {pedido.estado.replace("-", " ")}
@@ -282,7 +286,7 @@ export function PedidoDetalle({ pedido, onVolver, permitirCobro = false, variant
         textoConfirmar="Sí, cambiar"
         tono={estadoPendiente === "cancelado" ? "peligro" : "ink"}
         alCancelar={() => setEstadoPendiente(null)}
-        alConfirmar={confirmarCambioEstado}
+        alConfirmar={confirmarEstadoCompartido}
       />
       <ConfirmarAccion
         abierto={confirmarReactivar}

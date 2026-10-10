@@ -139,6 +139,7 @@ export const FiltroProductosEsquema = z.object({
 export const LineaPedidoEsquema = z.object({
   productoId: z.string().min(1),
   cantidad: cantidad.min(1, "La cantidad debe ser al menos 1"),
+  precioEsperado: monto.min(0).optional(),
 });
 
 export const NuevoPedidoEsquema = z.object({

@@ -23,6 +23,7 @@ import {
 } from "./modules/ventas/screens/RutasVentas";
 
 const ConteoColaborador = lazy(() => import("./modules/inventario/screens/ConteoColaborador"));
+const Asistente = lazy(() => import("./modules/agentes/Asistente"));
 const InventarioAdmin = lazy(() => import("./modules/inventario/screens/InventarioAdmin").then((m) => ({ default: m.InventarioAdmin })));
 const PedidosAdmin = lazy(() => import("./modules/pedidos/screens/PedidosAdmin").then((m) => ({ default: m.PedidosAdmin })));
 const CreditosAdmin = lazy(() => import("./modules/creditos/screens/CreditosAdmin").then((m) => ({ default: m.CreditosAdmin })));
@@ -94,6 +95,7 @@ export default function App() {
     <AuthProvider>
       <OperacionesProvider>
         <Contenido />
+        <Suspense fallback={null}><Asistente /></Suspense>
       </OperacionesProvider>
     </AuthProvider>
   );

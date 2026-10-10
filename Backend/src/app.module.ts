@@ -21,6 +21,7 @@ import { CajaModule } from "./caja/caja.module";
 import { UsuariosModule } from "./usuarios/usuarios.module";
 import { CierresModule } from "./cierres/cierres.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
+import { AgentesModule } from "./agentes/agentes.module";
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { DashboardModule } from "./dashboard/dashboard.module";
     DashboardModule,
     AuditoriaModule,
     ArchivosModule,
+    AgentesModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: AuthGuard }, { provide: APP_INTERCEPTOR, useClass: GuardadoInterceptor }, { provide: APP_INTERCEPTOR, useClass: AuditoriaInterceptor }],
 })

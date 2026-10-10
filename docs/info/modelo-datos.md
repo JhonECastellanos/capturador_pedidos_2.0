@@ -144,3 +144,28 @@ La asignación ocurre dentro de la misma transacción que inserta la entidad
 - Soporte: sesiones, archivosAdjuntos, auditoriaEventos, consecutivos, escriturasConfirmadas y versionesCache. La tabla _prisma_migrations registra migraciones. Total después de actualizar: 36 tablas.
 
 La migración 202610100003 retira recordatoriosCredito, cierrePedidos y cierreMovimientos: estaban vacías tanto en negocio como en QA y no tienen lecturas ni escrituras en los servicios actuales. Conserva cierresDia, cierreMedios y cierreAcciones, que sí guardan los cierres y sus decisiones. Si alguna instalación tiene registros en las tablas retiradas, la migración se detiene sin eliminarlos. No se borra ni se restablece información comercial. La migración 202610100002 retira solo un índice redundante; la unicidad de ajuste por conteo permanece protegida por Prisma y PostgreSQL.
+
+### Configuración del asistente (V6P4)
+
+`configuracionesAgente` contiene una sola configuración, identificada por `principal`. No agrega empresas ni modifica pedidos, pagos, inventario o caja.
+
+| Campo | Tipo y uso |
+|---|---|
+| `id` | Texto, clave primaria; el servicio usa `principal`. |
+| `configuracion` | JSONB con modo, proveedores sin claves, selección de modelos y ajustes de audio/local/live. Validado con el contrato compartido. |
+| `secretos` | Texto cifrado con AES-256-GCM: IV, etiqueta de autenticación y contenido cifrado. Contiene las claves por identificador de proveedor; nunca se devuelve al frontend. |
+| `version` | Entero positivo. La actualización exige la versión leída, bajo bloqueo transaccional; devuelve 409 si otro administrador ya guardó. |
+| `actualizadoEn` | Fecha de la última modificación, administrada por Prisma. |
+
+La clave privada `AGENT_CONFIG_SECRET` debe mantenerse estable y protegida junto con el respaldo de la instalación. Si está vacía se utiliza el secreto de autenticación del servidor. Cambiarla sin conservar la anterior impide abrir las claves ya guardadas. El DTO público solo indica `tieneClave`.
+
+Una instrucción interpretada permanece como borrador en memoria del navegador. No crea una tabla paralela de ventas ni ejecuta documentos. Al confirmar, utiliza el mismo formulario, endpoint y transacción comercial. La auditoría registra metadatos de las solicitudes, sin audio, cuerpos ni claves.
+
+Consulta de validación sin mostrar secretos:
+
+```sql
+SELECT id, version, "actualizadoEn",
+       configuracion->>'modo' AS modo,
+       configuracion->>'habilitado' AS habilitado
+FROM "configuracionesAgente";
+```

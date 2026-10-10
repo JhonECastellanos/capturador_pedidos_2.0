@@ -17,6 +17,7 @@ import type { Producto, CambioPrecio } from "../../../types";
 import { usaApi } from "../../../data/api";
 import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
 import { IntercambioProductosCSV } from "../components/IntercambioProductosCSV";
+import { useOperacionAgente } from "../../agentes/operacion-agente";
 
 /** Paso 1: nuevo precio · Paso 2: confirmar */
 type Paso = 1 | 2;
@@ -67,6 +68,12 @@ export function PreciosAdmin() {
     cerrarProceso();
     return true;
   }
+
+  const confirmarPrecioCompartido = useOperacionAgente("precio", r => {
+    setProductoId(typeof r.datos.productoId === "string" ? r.datos.productoId : null);
+    setPrecio(r.instruccion.precio === undefined ? "" : String(r.instruccion.precio));
+    setPaso(2);
+  }, guardarPrecio, () => ({ operacion: "precio", producto: producto?.nombre, ...(precio.trim() ? { precio: Number(precio) } : {}) }));
 
   // ─── Proceso paso a paso: cambiar precio ───
   if (producto) {
@@ -203,7 +210,7 @@ export function PreciosAdmin() {
               >
                 ← Corregir
               </button>
-              <Boton onClick={guardarPrecio}>Guardar precio</Boton>
+              <Boton onClick={confirmarPrecioCompartido}>Guardar precio</Boton>
             </div>
           )}
         </BarraInferior>

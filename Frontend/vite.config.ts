@@ -12,7 +12,7 @@ export default defineConfig(({ mode }) => {
   optimizeDeps: { include: ['@ambie/contrato'] },
   server: {
     host: true,
-    proxy: { '/api': { target: entorno.API_PROXY_TARGET || 'http://localhost:3000', changeOrigin: true, ws: true } },
+    proxy: { '/api/v1/agentes/audio/conversar': { target: entorno.VOICE_PROXY_TARGET || 'http://localhost:7860', changeOrigin: true, ws: true, rewrite: ruta => ruta.replace('/api/v1/agentes/audio/conversar', '/conversar') }, '/api': { target: entorno.API_PROXY_TARGET || 'http://localhost:3000', changeOrigin: true, ws: true } },
   },
   }
 })

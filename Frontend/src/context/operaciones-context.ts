@@ -56,7 +56,7 @@ export interface OperacionesContextValue {
   crearProveedor: (nombre: string, telefono?: string) => Resultado<Proveedor>;
   obtenerProveedor: (id: string) => Proveedor | null;
   registrarRecepcion: (proveedorId: string, lineas: LineaRecepcion[], descontarCaja: boolean) => Resultado<RecepcionCompra>;
-  registrarGasto: (concepto: string, monto: number) => Resultado<Gasto>;
+  registrarGasto: (concepto: string, monto: number, metodo?: "efectivo" | "billetera") => Resultado<Gasto>;
   iniciarConteo: (tipo: ConteoInventario["tipo"], cantidadAleatoria: number | null, turno: string) => Resultado<ConteoInventario>;
   actualizarConteoLinea: (conteoId: string, productoId: string, stockFisico: number) => Accion;
   finalizarConteoActivo: (conteoId: string) => Accion;

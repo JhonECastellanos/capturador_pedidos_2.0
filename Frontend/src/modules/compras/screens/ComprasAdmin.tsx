@@ -21,6 +21,7 @@ import { construirLineaRecepcion } from "../../../dominio/servicios";
 import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodo, type Periodo } from "../../../utils/fechas";
 import { formatoMoneda } from "../../../utils/formato";
 import { FormularioGasto } from "../components/FormularioGasto";
+import { useOperacionAgente, useRevisionAgente } from "../../agentes/operacion-agente";
 
 type TabCompras = "compras" | "gastos";
 type Vista = "historial" | "recepcion" | "detalle";
@@ -220,6 +221,19 @@ export function ComprasAdmin() {
     return true;
   }
 
+  const revisionOperacion = useRevisionAgente();
+  useEffect(() => {
+    if (revisionOperacion?.instruccion.operacion === "gasto") { setVista("historial"); setTab("gastos"); }
+  }, [revisionOperacion]);
+  const confirmarRecepcionCompartida = useOperacionAgente("compra", r => {
+    setProveedorId(typeof r.datos.proveedorId === "string" ? r.datos.proveedorId : null);
+    const productos = r.datos.productos as Producto[];
+    const recibidas = r.datos.lineas as Array<Omit<LineaRecepcion, "codigoInterno">>;
+    setLineas(recibidas.map(l => ({ ...l, codigoInterno: productos.find(p => p.id === l.productoId)?.codigoInterno ?? "" })));
+    setDescontarCaja(r.instruccion.descontarCaja ?? true);
+    setVista("recepcion"); setPaso(3);
+  }, confirmarRecepcion, () => ({ operacion: "compra", proveedor: proveedorActual?.nombre, descontarCaja, lineas: lineas.map(l => ({ producto: l.nombre, cantidad: l.cantidad, costoUnitario: l.costoUnitario })) }));
+
   async function guardarProductoInline(e: FormEvent) {
     e.preventDefault();
     const prod = await crearProducto({
@@ -308,8 +322,8 @@ export function ComprasAdmin() {
 
           {tab === "gastos" && (
             <FormularioGasto
-              alGuardar={async (concepto, monto) => {
-                if (!await registrarGasto(concepto, monto)) return false;
+              alGuardar={async (concepto, monto, metodo) => {
+                if (!await registrarGasto(concepto, monto, metodo)) return false;
                 mostrarToast(`Gasto "${concepto}" descontado de caja`, "exito");
                 return true;
               }}
@@ -764,7 +778,7 @@ export function ComprasAdmin() {
           {tiraToast}
 
           <BarraInferior>
-            <Boton onClick={confirmarRecepcion}>Confirmar recepción · {formatoMoneda(totalRecepcion)}</Boton>
+            <Boton onClick={confirmarRecepcionCompartida}>Confirmar recepción · {formatoMoneda(totalRecepcion)}</Boton>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <button
                 type="button"

@@ -1,0 +1,159 @@
+/* Pruebas aisladas: proveedor simulado y catálogo en memoria, sin datos del negocio. */
+const { test, after } = require('node:test');
+const assert = require('node:assert/strict');
+const http = require('node:http');
+const { Prisma, RolUsuario } = require('@prisma/client');
+const { InstruccionAgenteEsquema } = require('@ambie/contrato');
+const { AgentesService, autorizarOperacion } = require('../dist/agentes/agentes.service');
+const { probarProveedor, validarDestino } = require('../dist/agentes/proveedores');
+const { PedidosService } = require('../dist/pedidos/pedidos.service');
+
+const anteriorPruebas = process.env.AGENTES_PROVEEDORES_PRUEBA;
+process.env.AGENTES_PROVEEDORES_PRUEBA = 'true';
+let respuesta = { operacion: 'gasto', concepto: 'Transporte', monto: 1, metodo: 'efectivo' };
+let codigo = 200;
+const servidor = http.createServer((req, res) => {
+  req.resume();
+  res.writeHead(codigo, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ choices: [{ message: { tool_calls: [{ function: { name: 'preparar_operacion', arguments: JSON.stringify(respuesta) } }] } }] }));
+});
+const listo = new Promise(resolve => servidor.listen(0, '127.0.0.1', resolve));
+after(async () => { await new Promise(resolve => servidor.close(resolve)); if (anteriorPruebas === undefined) delete process.env.AGENTES_PROVEEDORES_PRUEBA; else process.env.AGENTES_PROVEEDORES_PRUEBA = anteriorPruebas; });
+const productos = [
+  { id: 'arepa', codigoInterno: 'PROD-0001', nombre: 'Arepa de queso', precioVenta: new Prisma.Decimal(4500), costoActual: new Prisma.Decimal(2000), stockFisico: 10, stockReservado: 1, activo: true, unidad: 'unidad' },
+  { id: 'empanada', codigoInterno: 'PROD-0002', nombre: 'Empanada de pollo', precioVenta: new Prisma.Decimal(3500), costoActual: new Prisma.Decimal(1500), stockFisico: 10, stockReservado: 0, activo: true, unidad: 'unidad' },
+  { id: 'cola', codigoInterno: 'PROD-0003', nombre: 'Coca-Cola pequeña', precioVenta: new Prisma.Decimal(3000), costoActual: new Prisma.Decimal(1800), stockFisico: 10, stockReservado: 0, activo: true, unidad: 'unidad' },
+];
+const servicio = new AgentesService({ producto: { findMany: async () => productos }, cliente: { findMany: async () => [] } });
+const usuario = { id: 'vendedor', rol: RolUsuario.VENDEDOR };
+const pedido = { operacion: 'pedido', ocasional: true, lineas: [{ producto: 'Arepa de queso', cantidad: 1 }, { producto: 'Empanada de pollo', cantidad: 1 }, { producto: 'Coca-Cola pequeña', cantidad: 2 }], metodo: 'efectivo', preparacion: 'pendiente' };
+
+test('instrucción completa conserva tres productos y calcula el total del catálogo', async () => {
+  const r = await servicio.revisar(pedido, usuario);
+  assert.deepEqual(r.faltantes, []); assert.equal(r.total, '14000.00');
+  assert.equal(r.datos.lineas.length, 3); assert.equal(r.ruta, '/vendedor/pedido');
+});
+test('corregir pago y cantidad mantiene el resto del pedido', async () => {
+  const antes = await servicio.revisar(pedido, usuario);
+  const r = await servicio.revisar({ ...pedido, metodo: 'billetera', lineas: pedido.lineas.map((l, i) => i === 2 ? { ...l, cantidad: 3 } : l) }, usuario, antes.id, 2);
+  assert.equal(r.id, antes.id); assert.equal(r.version, 2); assert.equal(r.total, '17000.00');
+  assert.equal(r.instruccion.preparacion, 'pendiente'); assert.equal(r.datos.metodo, 'billetera'); assert.notEqual(r.huella, antes.huella);
+});
+test('faltantes conservan líneas reconocidas sin completar el pago por intuición', async () => {
+  const r = await servicio.revisar({ operacion: 'pedido', lineas: pedido.lineas }, usuario);
+  assert.equal(r.datos.lineas.length, 3); assert.equal(r.faltantes.length, 3); assert.equal(r.datos.metodo, undefined);
+});
+test('producto desconocido y stock insuficiente impiden confirmar', async () => {
+  const r = await servicio.revisar({ ...pedido, lineas: [{ producto: 'Producto inexistente', cantidad: 1 }, { producto: 'Arepa de queso', cantidad: 10 }] }, usuario);
+  assert.equal(r.faltantes.length, 2); assert.match(r.faltantes.join(' '), /Solo hay 9/);
+});
+test('crédito ocasional no se permite y productos repetidos requieren aclaración', async () => {
+  const r = await servicio.revisar({ ...pedido, metodo: 'credito', lineas: [pedido.lineas[0], pedido.lineas[0]] }, usuario);
+  assert.equal(r.faltantes.length, 2);
+});
+test('permisos del agente respetan los roles del negocio', () => {
+  assert.throws(() => autorizarOperacion(RolUsuario.VENDEDOR, 'precio'), e => e.getStatus() === 403);
+  assert.throws(() => autorizarOperacion(RolUsuario.INVENTARIO, 'pedido'), e => e.getStatus() === 403);
+  assert.doesNotThrow(() => autorizarOperacion(RolUsuario.INVENTARIO, 'conteo'));
+});
+test('contrato rechaza importes infinitos y campos ajenos a una instrucción', () => {
+  assert.equal(InstruccionAgenteEsquema.safeParse({ operacion: 'gasto', monto: Infinity }).success, false);
+  assert.equal(InstruccionAgenteEsquema.safeParse({ operacion: 'pedido', apiKey: 'dato-no-admitido' }).success, false);
+});
+test('destinos privados y URLs con credenciales se rechazan', async () => {
+  await assert.rejects(validarDestino('https://192.168.1.10'));
+  await assert.rejects(validarDestino('https://usuario:clave@example.com'));
+  await assert.rejects(validarDestino('https://[::ffff:c0a8:101]'));
+});
+test('precio modificado después de revisar se rechaza antes de escribir el pedido', async () => {
+  let escrituras = 0;
+  const tx = { $queryRaw: async () => [], producto: { findMany: async () => [productos[0]] }, pedido: { create: async () => { escrituras++; } } };
+  const pedidos = new PedidosService({ $transaction: async fn => fn(tx) });
+  await assert.rejects(pedidos.crear({ metodo: 'efectivo', lineas: [{ productoId: 'arepa', cantidad: 1, precioEsperado: 4000 }] }, 'vendedor'), e => e.codigo === 'PRECIO_CAMBIO' && e.getStatus() === 409);
+  assert.equal(escrituras, 0);
+});
+test('el indicador distingue respuesta válida, campos inválidos y cuota agotada', async () => {
+  await listo;
+  const p = { nombre: 'Proveedor de pruebas', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' };
+  assert.equal((await probarProveedor(p)).estado, 'disponible');
+  respuesta = { operacion: 'inventada' }; assert.equal((await probarProveedor(p)).estado, 'error');
+  codigo = 429; assert.equal((await probarProveedor(p)).estado, 'limitado');
+  codigo = 503; assert.equal((await probarProveedor(p)).estado, 'error');
+});
+
+test('captura del micrófono convierte un segundo a PCM de 16 kHz sin reproducirlo', () => {
+  const fs = require('node:fs');
+  const vm = require('node:vm');
+  const path = require('node:path');
+  const codigo = fs.readFileSync(path.resolve(__dirname, '../../Frontend/src/modules/agentes/captura-audio.js'), 'utf8');
+  for (const frecuencia of [44100, 48000]) {
+    const paquetes = [];
+    let Captura;
+    const contexto = { sampleRate: frecuencia, AudioWorkletProcessor: class { constructor() { this.port = { postMessage: buffer => paquetes.push(buffer) }; } }, registerProcessor: (_nombre, clase) => { Captura = clase; } };
+    vm.runInNewContext(codigo, contexto);
+    const captura = new Captura();
+    const entrada = new Float32Array(frecuencia).fill(0.25);
+    for (let inicio = 0; inicio < frecuencia; inicio += 128) assert.equal(captura.process([[entrada.subarray(inicio, inicio + 128)]]), true);
+    assert.equal(paquetes.length, 10);
+    assert.equal(paquetes.reduce((suma, p) => suma + p.byteLength, 0), 32000);
+    assert.equal(new Int16Array(paquetes[0])[0], 8192);
+  }
+});
+
+test('configuración cifra claves, las conserva en edición y controla versiones', async () => {
+  const { ConfiguracionAgenteInicial } = require('@ambie/contrato');
+  const { randomUUID, randomBytes } = require('node:crypto');
+  const anterior = process.env.AGENT_CONFIG_SECRET;
+  process.env.AGENT_CONFIG_SECRET = randomBytes(32).toString('hex');
+  let registro = null;
+  const prisma = {
+    configuracionAgente: { findUnique: async () => registro, upsert: async ({ create, update }) => { registro = registro ? { ...registro, ...update, version: registro.version + 1 } : { ...create, version: 1 }; } },
+    $executeRaw: async () => 1,
+    enTransaccion: async trabajo => trabajo(prisma),
+  };
+  const agente = new AgentesService(prisma);
+  const clave = randomBytes(20).toString('hex');
+  const id = randomUUID();
+  const configuracion = { ...structuredClone(ConfiguracionAgenteInicial), proveedorId: id, proveedores: [{ id, nombre: 'Proveedor de pruebas', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba', apiKey: clave }] };
+  try {
+    const inicial = await agente.guardar(configuracion, 0);
+    assert.equal(inicial.version, 1); assert.equal(inicial.proveedores[0].tieneClave, true);
+    assert.equal(inicial.proveedores[0].apiKey, undefined);
+    assert.equal(JSON.stringify(registro.configuracion).includes(clave), false);
+    assert.equal(registro.secretos.includes(clave), false);
+    delete configuracion.proveedores[0].apiKey;
+    const segunda = await agente.guardar(configuracion, 1);
+    assert.equal(segunda.proveedores[0].tieneClave, true);
+    await assert.rejects(agente.guardar(configuracion, 1), error => error.codigo === 'CONFIGURACION_CAMBIO');
+    configuracion.proveedores[0].borrarClave = true;
+    const tercera = await agente.guardar(configuracion, 2);
+    assert.equal(tercera.proveedores[0].tieneClave, false);
+  } finally { if (anterior === undefined) delete process.env.AGENT_CONFIG_SECRET; else process.env.AGENT_CONFIG_SECRET = anterior; }
+});
+test('conteo usa el contexto abierto sin inventar cantidades y verifica la asignación', async () => {
+  await listo; codigo = 200; respuesta = { operacion: 'conteo', cantidad: 0 };
+  const conteoId = '7e604833-ef59-46cd-9c91-c1a98f157e43';
+  let asignado = true;
+  const contar = new AgentesService({
+    conteoInventario: { findUnique: async () => ({ id: conteoId }) },
+    conteoLinea: { findFirst: async ({ where }) => {
+      assert.equal(where.asignadoPorId, 'colaborador');
+      assert.equal(where.conteoId, conteoId);
+      assert.ok(where.asignadoHasta.gt instanceof Date);
+      return asignado ? { productoId: 'arepa', producto: productos[0], contadoEn: null, asignadoHasta: new Date(Date.now() + 300000) } : null;
+    } },
+  });
+  contar.estado = async () => ({ habilitado: true });
+  contar.proveedor = async () => ({ nombre: 'Prueba', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' });
+  const colaborador = { id: 'colaborador', rol: RolUsuario.INVENTARIO };
+  const contexto = { conteoId, producto: 'Arepa de queso' };
+  const r = await contar.interpretar('Conté cero', undefined, colaborador, undefined, 1, contexto);
+  assert.deepEqual(r.faltantes, []); assert.equal(r.datos.cantidad, 0); assert.equal(r.instruccion.conteoId, conteoId);
+  respuesta = { operacion: 'conteo' };
+  assert.match((await contar.interpretar('Contar', undefined, colaborador, undefined, 1, contexto)).faltantes.join(' '), /cantidad contada/);
+  assert.match((await contar.interpretar('Contar', undefined, colaborador)).faltantes.join(' '), /Abre el conteo/);
+  asignado = false; respuesta = { operacion: 'conteo', cantidad: 3 };
+  assert.match((await contar.interpretar('Conté tres', undefined, colaborador, undefined, 1, contexto)).faltantes.join(' '), /producto asignado/);
+  respuesta = { operacion: 'finalizar-conteo' };
+  await assert.rejects(contar.interpretar('Finalizar', undefined, colaborador, undefined, 1, contexto), e => e.getStatus() === 403);
+});
