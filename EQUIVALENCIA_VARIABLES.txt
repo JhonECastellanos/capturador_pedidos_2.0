@@ -822,3 +822,9 @@ Confirmación voz y botón -> mismo callback y promesa pendiente -> misma clave 
 VOICE_BUILD_TARGET -> Docker build target voz-hibrida por defecto / voz-local optativo para etapa Ollama
 
 ContextoAgente: conteoId y producto asignado de la pantalla abierta → POST /agentes/interpretar → revisión de asignación vigente por usuario. No aporta cantidades ni pagos predeterminados.
+
+V6P4 proveedores: protocolo responses → POST /responses, function_call → InstruccionAgente validada. OpenCode Zen usa https://opencode.ai/zen/v1; el protocolo depende del endpoint del modelo.
+ConfiguracionAgente.proveedores[].maxTokens → max_tokens / max_output_tokens / maxOutputTokens / options.num_predict; salida por solicitud, 256..8192, por defecto 2000.
+ConfiguracionAgente.respaldoId → conexión alternativa autorizada solo en Híbrido ante fallos transitorios; null desactiva respaldo.
+RevisionAgente.conexion → proveedor/modelo/respaldo/milisegundos/uso; uso conserva solo tokens enteros informados por el proveedor, sin prompts ni credenciales.
+PROVEEDOR_CREDENCIALES / PROVEEDOR_RUTA / PROVEEDOR_PARAMETROS → HTTP 422; no caduca la sesión del negocio. PROVEEDOR_LIMITE → 429; fallo del proveedor → 502.

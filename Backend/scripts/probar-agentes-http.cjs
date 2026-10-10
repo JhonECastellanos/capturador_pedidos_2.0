@@ -16,7 +16,13 @@ async function main() {
   try {
     const configuracion = (await leer('/agentes/configuracion')).data;
     assert.equal(configuracion.modo, 'hibrido');
-    assert.equal(configuracion.habilitado, false);
+    assert.equal(typeof configuracion.habilitado, 'boolean');
+    const { version: versionConfiguracion, proveedores, ...preferencias } = configuracion;
+    const configuracionInvalida = { ...preferencias, proveedores: [{ id: randomUUID(), nombre: 'Conexión inválida de prueba', protocolo: 'openai', url: 'https://generativelanguage.googleapis.com/v1beta', modelo: '', maxTokens: 2000 }], proveedorId: null, respaldoId: null };
+    const invalida = await fetch(base + '/agentes/configuracion', { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ configuracion: configuracionInvalida, version: versionConfiguracion }) });
+    assert.equal(invalida.status, 400);
+    assert.equal((await invalida.json()).code, 'PROVEEDOR_CONFIGURACION');
+    assert.equal((await leer('/agentes/configuracion')).data.version, versionConfiguracion);
     const productos = (await leer('/productos')).data;
     const producto = productos.find(p => p.stock >= 2);
     assert.ok(producto, 'QA necesita un producto con dos unidades disponibles');
@@ -31,7 +37,7 @@ async function main() {
     assert.equal(corregido.datos.metodo, 'billetera');
     assert.deepEqual(corregido.datos.lineas, r.datos.lineas);
     assert.equal((await leer('/pedidos')).meta.total, antes);
-    console.log('API QA: sesión obligatoria, configuración desactivada por defecto, catálogo PostgreSQL conciliado, corrección conserva líneas y total; ningún pedido creado.');
+    console.log('API QA: sesión obligatoria, configuración incorrecta rechazada sin modificar preferencias, catálogo PostgreSQL conciliado, corrección conserva líneas y total; ningún pedido creado.');
   } finally { if (token) await leer('/auth/logout', {}); }
 }
 main().catch(error => { console.error(error.message); process.exitCode = 1; });

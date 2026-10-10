@@ -3,19 +3,27 @@ const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
 const { Prisma, RolUsuario } = require('@prisma/client');
-const { InstruccionAgenteEsquema } = require('@ambie/contrato');
+const { InstruccionAgenteEsquema, problemaConexionAgente } = require('@ambie/contrato');
 const { AgentesService, autorizarOperacion } = require('../dist/agentes/agentes.service');
-const { probarProveedor, validarDestino } = require('../dist/agentes/proveedores');
+const { probarProveedor, validarDestino, modelosProveedor, interpretarProveedor, permiteRespaldo } = require('../dist/agentes/proveedores');
 const { PedidosService } = require('../dist/pedidos/pedidos.service');
 
 const anteriorPruebas = process.env.AGENTES_PROVEEDORES_PRUEBA;
 process.env.AGENTES_PROVEEDORES_PRUEBA = 'true';
 let respuesta = { operacion: 'gasto', concepto: 'Transporte', monto: 1, metodo: 'efectivo' };
 let codigo = 200;
+let cuerpoProveedor;
+let ultimaRuta;
+let ultimoCuerpo;
 const servidor = http.createServer((req, res) => {
-  req.resume();
+  ultimaRuta = req.url;
+  let entrada = '';
+  req.on('data', parte => { entrada += parte; });
+  req.on('end', () => {
+  ultimoCuerpo = entrada ? JSON.parse(entrada) : undefined;
   res.writeHead(codigo, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ choices: [{ message: { tool_calls: [{ function: { name: 'preparar_operacion', arguments: JSON.stringify(respuesta) } }] } }] }));
+  res.end(JSON.stringify(cuerpoProveedor ?? { choices: [{ message: { tool_calls: [{ function: { name: 'preparar_operacion', arguments: JSON.stringify(respuesta) } }] } }] }));
+  });
 });
 const listo = new Promise(resolve => servidor.listen(0, '127.0.0.1', resolve));
 after(async () => { await new Promise(resolve => servidor.close(resolve)); if (anteriorPruebas === undefined) delete process.env.AGENTES_PROVEEDORES_PRUEBA; else process.env.AGENTES_PROVEEDORES_PRUEBA = anteriorPruebas; });
@@ -156,4 +164,62 @@ test('conteo usa el contexto abierto sin inventar cantidades y verifica la asign
   assert.match((await contar.interpretar('Conté tres', undefined, colaborador, undefined, 1, contexto)).faltantes.join(' '), /producto asignado/);
   respuesta = { operacion: 'finalizar-conteo' };
   await assert.rejects(contar.interpretar('Finalizar', undefined, colaborador, undefined, 1, contexto), e => e.getStatus() === 403);
+});
+
+test('formato de conexión detecta protocolo Google incorrecto y rutas completas', () => {
+  assert.match(problemaConexionAgente({ url: 'https://generativelanguage.googleapis.com/v1beta', protocolo: 'openai' }), /Google Gemini/);
+  assert.equal(problemaConexionAgente({ url: 'https://generativelanguage.googleapis.com/v1beta', protocolo: 'gemini' }), null);
+  assert.equal(problemaConexionAgente({ url: 'https://opencode.ai/zen/v1', protocolo: 'responses' }), null);
+  assert.match(problemaConexionAgente({ url: 'https://opencode.ai/zen/v1/chat/completions', protocolo: 'openai' }), /quita la ruta/);
+  assert.match(problemaConexionAgente({ url: 'https://opencode.ai/zen/v1?key=privada', protocolo: 'openai' }), /propio campo/);
+  assert.match(problemaConexionAgente({ url: '', protocolo: 'openai' }), /completa/);
+});
+test('rechazo de clave se explica sin exponer el cuerpo privado del proveedor', async () => {
+  await listo; codigo = 400;
+  cuerpoProveedor = { error: { message: 'No debe mostrarse: secreto de prueba', details: [{ reason: 'API_KEY_INVALID' }] } };
+  const p = { nombre: 'Prueba', protocolo: 'gemini', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' };
+  try { await assert.rejects(modelosProveedor(p), e => e.getStatus() === 422 && e.codigo === 'PROVEEDOR_CREDENCIALES' && !e.message.includes('secreto de prueba')); }
+  finally { codigo = 200; cuerpoProveedor = undefined; }
+});
+test('Responses utiliza su ruta y llamada estructurada sin conservar conversación remota', async () => {
+  await listo; codigo = 200;
+  cuerpoProveedor = { output: [{ type: 'function_call', name: 'preparar_operacion', arguments: JSON.stringify({ operacion: 'gasto', monto: 5, concepto: 'Prueba', metodo: 'efectivo' }) }] };
+  const p = { nombre: 'Responses', protocolo: 'responses', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' };
+  try {
+    assert.equal((await interpretarProveedor(p, [{ role: 'user', content: 'Prepara un gasto' }])).monto, 5);
+    assert.equal(ultimaRuta, '/responses'); assert.equal(ultimoCuerpo.store, false);
+    assert.equal(ultimoCuerpo.tools[0].name, 'preparar_operacion');
+  } finally { cuerpoProveedor = undefined; }
+});
+
+test('respaldo requiere autorización y se limita a fallos transitorios', async () => {
+  const { ErrorDominio } = require('../dist/common/errores');
+  assert.equal(permiteRespaldo(new ErrorDominio('PROVEEDOR_CREDENCIALES', 'Rechazada', 422)), false);
+  assert.equal(permiteRespaldo(new ErrorDominio('MODELO_HERRAMIENTAS', 'Inválida', 502)), false);
+  assert.equal(permiteRespaldo(new ErrorDominio('PROVEEDOR_LIMITE', 'Límite', 429)), true);
+  const instancia = new AgentesService({});
+  instancia.estado = async () => ({ habilitado: true });
+  instancia.leer = async () => ({ configuracion: { modo: 'hibrido', respaldoId: null } });
+  let consultas = 0;
+  instancia.proveedor = async id => { consultas++; return { nombre: id ? 'Respaldo' : 'Principal', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: id ? 'respaldo' : 'principal' }; };
+  instancia.revisar = async instruccion => ({ instruccion, faltantes: [] });
+  codigo = 429;
+  try {
+    await assert.rejects(instancia.interpretar('Prueba', undefined, usuario), e => e.codigo === 'PROVEEDOR_LIMITE');
+    assert.equal(consultas, 1);
+    instancia.leer = async () => ({ configuracion: { modo: 'hibrido', respaldoId: 'autorizado' } });
+    instancia.proveedor = async id => { consultas++; if (id) { codigo = 200; respuesta = { operacion: 'gasto', concepto: 'Prueba', monto: 1 }; } return { nombre: id ? 'Respaldo' : 'Principal', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: id ? 'respaldo' : 'principal' }; };
+    const r = await instancia.interpretar('Prueba', undefined, usuario);
+    assert.equal(r.conexion.respaldo, true); assert.equal(r.conexion.proveedor, 'Respaldo');
+    assert.equal(consultas, 3);
+  } finally { codigo = 200; }
+});
+test('límite de salida y métricas provienen de la solicitud y respuesta reales', async () => {
+  await listo; codigo = 200;
+  cuerpoProveedor = { choices: [{ message: { tool_calls: [{ function: { name: 'preparar_operacion', arguments: JSON.stringify({ operacion: 'gasto', concepto: 'Prueba', monto: 1 }) } }] } }], usage: { prompt_tokens: 40, completion_tokens: 12, total_tokens: 52 } };
+  let uso;
+  try {
+    await interpretarProveedor({ nombre: 'Prueba', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba', maxTokens: 256 }, [{ role: 'user', content: 'Prueba' }], dato => { uso = dato; });
+    assert.equal(ultimoCuerpo.max_tokens, 256); assert.deepEqual(uso, { entrada: 40, salida: 12, total: 52 });
+  } finally { cuerpoProveedor = undefined; }
 });

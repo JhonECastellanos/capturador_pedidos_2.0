@@ -41,7 +41,7 @@ export class ErrorApi extends Error {
 async function enviar(ruta: string, metodo: string, datos?: unknown, signal?: AbortSignal, clave?: string) {
   try {
     return await fetch(`${baseApi}${ruta}`, {
-      method: metodo, credentials: "include", signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(20000)]) : AbortSignal.timeout(20000),
+      method: metodo, credentials: "include", signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(ruta.startsWith("/agentes/") ? 45000 : 20000)]) : AbortSignal.timeout(ruta.startsWith("/agentes/") ? 45000 : 20000),
       headers: { ...(datos === undefined ? {} : { "Content-Type": "application/json" }), ...(clave ? { "Idempotency-Key": clave } : {}) },
       body: datos === undefined ? undefined : JSON.stringify(datos),
     });

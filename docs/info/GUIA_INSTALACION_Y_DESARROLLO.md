@@ -435,3 +435,27 @@ En Chrome QA se intentó confirmar un borrador con un producto inexistente dos v
 En conteos, abre el inventario y toma un producto antes de dictar «Conté cinco». La pantalla aporta únicamente el identificador del conteo y el producto asignado; la cantidad debe indicarse. La API vuelve a comprobar propietario y vencimiento de la asignación. Un colaborador no puede cerrar ni aplicar el conteo. Prueba adicional: contar cero, omitir la cantidad y repetir tras vencer o perder la asignación; solo el primer caso completo debe permitir confirmar.
 
 Comprobación final de esta etapa V6P4: verificar completó compilación, tipos y revisión del frontend sin errores (mantiene advertencias de efectos/render). Pasaron 13 pruebas aisladas del asistente, seis de autorización de audio y la revisión HTTP real contra PostgreSQL QA. La repetición del ejercicio de configuración confirmó persistencia tras reconexión en 162 ms para el ejercicio completo; no es una medición de una escritura individual. No se descargaron modelos y no se modificó producción. El entorno de revisión está en http://127.0.0.1:8180/admin/configuracion, separado del negocio en 8080.
+
+### Configurar un proveedor externo y probarlo en desarrollo
+
+El frontend de trabajo conserva la dirección `http://127.0.0.1:8180/admin/configuracion`, ahora con Vite en desarrollo y actualización automática. La API de pruebas sigue en 3100 y utiliza `ambie_test`; producción en 8080 permanece independiente. No se crea otro túnel público en esta etapa.
+
+| Campo | Qué debes colocar |
+|---|---|
+| Nombre | Una etiqueta para reconocer la conexión, por ejemplo OpenCode Zen. |
+| Protocolo | El formato admitido por el modelo: Chat Completions, Responses, Gemini o Anthropic. No se identifica por la marca de la clave. |
+| URL base | Dirección oficial del servicio, sin la ruta de modelos o conversación, sin claves ni parámetros. Para Zen: `https://opencode.ai/zen/v1`. |
+| Clave de acceso | La clave de esa misma conexión, sin el prefijo Bearer. Vacía conserva la guardada. Nunca va en documentos, URL ni frontend compilado. |
+| Modelo | Identificador exacto del catálogo. En Zen se usa el ID sin el prefijo `opencode/` de su cliente. |
+| Máximo de tokens de respuesta | Límite de salida por solicitud, entre 256 y 8192; predeterminado 2000. No limita los tokens de entrada ni el saldo mensual. |
+| Proveedor alternativo autorizado | Otra conexión con modelo, optativa. Autoriza enviar la misma instrucción al respaldo ante desconexión, límite temporal o fallo del proveedor. No se usa para ocultar una clave rechazada ni un formato inválido. |
+
+Consulta la [tabla oficial de OpenCode Zen](https://opencode.ai/docs/zen/#endpoints) para elegir protocolo: los modelos que usan `/chat/completions` corresponden a Chat Completions; `/responses` a Responses; `/messages` a Anthropic y `/models/<id>` a Gemini. Las rutas especializadas como `/systemone` no tienen adaptador comercial y no deben tratarse como Chat Completions. La lista del proveedor informa existencia, pero solo una prueba de herramientas válida demuestra disponibilidad para esta operación y esta clave, en ese momento.
+
+Ejercicio inicial: elegir Zen, conservar su URL base, escoger `big-pickle` si sigue en el catálogo y utilizar Chat Completions. Guardar y probar conexión. Una marca blanca significa sin probar; verde significa que respondió con una herramienta válida; amarillo indica límite temporal y rojo una prueba fallida. El proveedor puede cambiar sus modelos, precios, permisos y cuotas. Las mediciones de tokens solo se muestran cuando el proveedor las informa; no se estiman costos ni saldo disponible.
+
+Para una URL incorrecta, la pantalla muestra el campo que debe corregirse antes del PUT. La API también valida formato y combinación conocida de protocolo/host. Si otro administrador guardó cambios, «Recargar ajustes guardados» recupera la versión actual y descarta las ediciones no guardadas. Durante un guardado o prueba se bloquean los controles para evitar sobrescribir ediciones hechas a mitad de la solicitud.
+
+Pruebas actuales: 18 regresiones aisladas pasaron, con Responses, privacidad de errores, asignaciones de conteo, cifras reportadas y respaldo autorizado. La consulta real de Zen devolvió 82 modelos. La prueba real de Big Pickle rechazó la clave o sus permisos: no se presenta como conversación aprobada. Se corrigió la conexión que había recibido una clave Zen bajo el nombre y URL de Google, conservando la clave cifrada. En navegador se comprobó que una URL terminada en `/chat/completions` produce un aviso y no envía PUT. Los documentos comerciales no se modificaron por estas pruebas de configuración.
+
+Después de reemplazar la clave en la pantalla y obtener una prueba verde, habilitar el asistente y repetir el pedido completo, la corrección del pago y la confirmación única en QA. Preparar Whisper tiny únicamente si se va a probar audio: no descarga modelos Ollama. Repetir las pruebas de caída del proveedor y preservación del borrador antes de avanzar a conversación Live y canales externos.

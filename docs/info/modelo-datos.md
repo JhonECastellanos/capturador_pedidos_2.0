@@ -169,3 +169,5 @@ SELECT id, version, "actualizadoEn",
        configuracion->>'habilitado' AS habilitado
 FROM "configuracionesAgente";
 ```
+
+V6P4: dentro del JSON configuracion, proveedores[].maxTokens guarda el límite de salida por solicitud (256..8192; 2000 predeterminado) y respaldoId conserva el UUID de otra conexión autorizada o null. Los registros anteriores reciben esos valores predeterminados al validar; no se requiere otra tabla ni se modifican documentos comerciales. Las métricas de una interpretación se devuelven en RevisionAgente.conexion sin guardar texto, claves ni una estimación de saldo.

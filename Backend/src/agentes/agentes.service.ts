@@ -1,12 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
 import { Prisma, RolUsuario, Usuario } from "@prisma/client";
-import { ConfiguracionAgenteEsquema, ConfiguracionAgenteInicial, InstruccionAgenteEsquema, type ContextoAgente, type ConfiguracionAgente, type ConfiguracionAgentePublica, type InstruccionAgente, type RevisionAgente } from "@ambie/contrato";
+import { ConfiguracionAgenteEsquema, ConfiguracionAgenteInicial, problemaConexionAgente, InstruccionAgenteEsquema, type ContextoAgente, type ConfiguracionAgente, type ConfiguracionAgentePublica, type InstruccionAgente, type RevisionAgente, type UsoAgente } from "@ambie/contrato";
 import { PrismaService } from "../common/prisma.module";
 import { ErrorDominio } from "../common/errores";
 import { TokensService } from "../common/tokens";
 import { fechaLocalISO } from "../common/crypto";
-import { interpretarProveedor, modelosProveedor, probarProveedor, validarDestino } from "./proveedores";
+import { interpretarProveedor, modelosProveedor, probarProveedor, validarDestino, permiteRespaldo } from "./proveedores";
 
 export function autorizarOperacion(rol: RolUsuario, operacion: InstruccionAgente["operacion"]) {
   if (rol === RolUsuario.INVENTARIO && operacion !== "conteo") throw new ErrorDominio("AGENTE_PERMISO", "Tu acceso permite únicamente guardar cantidades en tus productos asignados", 403);
@@ -48,7 +48,12 @@ export class AgentesService {
     if (new Set(datos.proveedores.map(p => p.id)).size !== datos.proveedores.length) throw new ErrorDominio("PROVEEDOR_DUPLICADO", "Cada proveedor debe tener un identificador diferente");
     if (datos.proveedorId && !datos.proveedores.some(p => p.id === datos.proveedorId)) throw new ErrorDominio("PROVEEDOR_INVALIDO", "El proveedor seleccionado ya no existe");
     if (datos.live.proveedorId && !datos.proveedores.some(p => p.id === datos.live.proveedorId)) throw new ErrorDominio("PROVEEDOR_INVALIDO", "Selecciona una conexión existente para Live");
-    for (const p of datos.proveedores) await validarDestino(p.url, p.protocolo === "ollama");
+    if (datos.respaldoId && (datos.respaldoId === datos.proveedorId || !datos.proveedores.some(p => p.id === datos.respaldoId && p.modelo))) throw new ErrorDominio("RESPALDO_INVALIDO", "Elige otra conexión con un modelo para el respaldo autorizado");
+    for (const p of datos.proveedores) {
+      const problema = problemaConexionAgente(p);
+      if (problema && !(process.env.AGENTES_PROVEEDORES_PRUEBA === "true" && ["localhost", "127.0.0.1"].includes(new URL(p.url).hostname))) throw new ErrorDominio("PROVEEDOR_CONFIGURACION", `${p.nombre}: ${problema}`);
+      await validarDestino(p.url, p.protocolo === "ollama");
+    }
     await this.prisma.enTransaccion(async tx => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('configuracion:agentes'))`;
       const anterior = await this.leer();
@@ -82,13 +87,24 @@ export class AgentesService {
   async interpretar(texto: string, anterior: InstruccionAgente | undefined, usuario: Usuario, id: string = randomUUID(), version = 1, contexto?: ContextoAgente) {
     const estado = await this.estado();
     if (!estado.habilitado) throw new ErrorDominio("AGENTE_DESACTIVADO", "Activa el asistente en Configuración para empezar");
-    const llamada = await interpretarProveedor(await this.proveedor(), [{ role: "system", content: `Interpreta instrucciones comerciales en español. Prepara una operación, nunca la ejecutes. Devuelve todos los datos expresados. Si hay un borrador anterior, conserva sus campos y aplica únicamente las correcciones pedidas. No completes datos faltantes por intuición, ni inventes IDs, productos, clientes, precios o pagos. No interpretes confirmar/cancelar como un nuevo pedido. Rol actual: ${usuario.rol}. El rol inventario solo puede contar productos asignados. Borrador anterior: ${JSON.stringify(anterior ?? null)}.` }, { role: "user", content: texto }]);
+    const mensajes: Array<{ role: "system" | "user"; content: string }> = [{ role: "system", content: `Interpreta instrucciones comerciales en español. Prepara una operación, nunca la ejecutes. Devuelve todos los datos expresados. Si hay un borrador anterior, conserva sus campos y aplica únicamente las correcciones pedidas. No completes datos faltantes por intuición, ni inventes IDs, productos, clientes, precios o pagos. No interpretes confirmar/cancelar como un nuevo pedido. Rol actual: ${usuario.rol}. El rol inventario solo puede contar productos asignados. Borrador anterior: ${JSON.stringify(anterior ?? null)}.` }, { role: "user", content: texto }];
+    const inicio = Date.now(); let uso: UsoAgente | undefined; let respaldo = false;
+    let proveedor = await this.proveedor(); let llamada: unknown;
+    try { llamada = await interpretarProveedor(proveedor, mensajes, medida => { uso = medida; }); }
+    catch (error) {
+      if (!permiteRespaldo(error)) throw error;
+      const configuracion = (await this.leer()).configuracion;
+      if (configuracion.modo !== "hibrido" || !configuracion.respaldoId) throw error;
+      proveedor = await this.proveedor(configuracion.respaldoId); respaldo = true;
+      llamada = await interpretarProveedor(proveedor, mensajes, medida => { uso = medida; });
+    }
     const instruccion = InstruccionAgenteEsquema.parse(llamada);
     if (contexto && ["conteo", "finalizar-conteo", "aplicar-conteo"].includes(instruccion.operacion)) {
       instruccion.conteoId ??= contexto.conteoId;
       if (instruccion.operacion === "conteo") instruccion.producto ??= contexto.producto;
     }
-    return this.revisar(instruccion, usuario, id, version);
+    const revision = await this.revisar(instruccion, usuario, id, version);
+    return { ...revision, conexion: { proveedor: proveedor.nombre, modelo: proveedor.modelo, respaldo, milisegundos: Date.now() - inicio, ...(uso && Object.keys(uso).length ? { uso } : {}) } };
   }
   private async producto(texto: string) {
     const q = texto.trim();
