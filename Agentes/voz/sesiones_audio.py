@@ -11,6 +11,8 @@ from uuid import UUID
 
 from fastapi import WebSocket, WebSocketDisconnect
 
+VOCABULARIO_AUDIO = "arepa arepas queso empanada empanadas yogur yogurt gaseosa Coca-Cola cliente ocasional efectivo billetera crédito inventario pedido"
+
 usados = {}
 activas = set()
 
@@ -55,38 +57,51 @@ async def conversar(socket: WebSocket):
         if not (ruta / "model.bin").is_file():
             raise ValueError("Prepara primero el reconocimiento elegido desde Configuración")
         from pipecat.audio.vad.silero import SileroVADAnalyzer
-        from pipecat.audio.turn.smart_turn.local_smart_turn_v3 import LocalSmartTurnAnalyzerV3
+        from pipecat.audio.vad.vad_analyzer import VADParams
         from pipecat.processors.audio.vad_processor import VADProcessor
         from pipecat.processors.frame_processor import FrameProcessor, FrameDirection
         from pipecat.frames.frames import Frame, InputAudioRawFrame
         from pipecat.processors.aggregators.llm_context import LLMContext
         from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair, LLMUserAggregatorParams
         from pipecat.turns.user_turn_strategies import UserTurnStrategies
-        from pipecat.turns.user_stop.turn_analyzer_user_turn_stop_strategy import TurnAnalyzerUserTurnStopStrategy
+        from pipecat.turns.user_stop.speech_timeout_user_turn_stop_strategy import SpeechTimeoutUserTurnStopStrategy
         from pipecat.pipeline.pipeline import Pipeline
         from pipecat.pipeline.worker import PipelineWorker, PipelineParams
         from pipecat.workers.runner import WorkerRunner
         from pipecat.services.whisper.stt import WhisperSTTService
         from pipecat.transcriptions.language import Language
 
+        from pipecat.frames.frames import TranscriptionFrame
+        texto_parcial = ""
+
         class Entrada(FrameProcessor):
+            def __init__(self, mostrar=False):
+                super().__init__()
+                self.mostrar = mostrar
+
             async def process_frame(self, frame: Frame, direction: FrameDirection):
+                nonlocal texto_parcial
                 await super().process_frame(frame, direction)
+                if self.mostrar and isinstance(frame, TranscriptionFrame) and frame.text.strip():
+                    texto_parcial = (texto_parcial + " " + frame.text.strip()).strip()[:6000]
+                    await socket.send_json({"tipo": "texto", "texto": texto_parcial})
                 await self.push_frame(frame, direction)
 
         contexto = LLMContext([])
-        usuario = LLMContextAggregatorPair(contexto, user_params=LLMUserAggregatorParams(user_turn_strategies=UserTurnStrategies(stop=[TurnAnalyzerUserTurnStopStrategy(turn_analyzer=LocalSmartTurnAnalyzerV3(cpu_count=1))]))).user()
-        stt = await asyncio.to_thread(WhisperSTTService, device="cpu", compute_type="int8", settings=WhisperSTTService.Settings(model=str(ruta), language=Language(datos["idioma"])))
+        usuario = LLMContextAggregatorPair(contexto, user_params=LLMUserAggregatorParams(user_turn_strategies=UserTurnStrategies(stop=[SpeechTimeoutUserTurnStopStrategy(user_speech_timeout=2.0)]))).user()
+        stt = await asyncio.to_thread(WhisperSTTService, device="cpu", compute_type="int8", settings=WhisperSTTService.Settings(model=str(ruta), language=Language(datos["idioma"]), hotwords=VOCABULARIO_AUDIO if datos["idioma"] == "es" else None))
 
         @usuario.event_handler("on_user_turn_stopped")
         async def turno_completo(_agregador, _estrategia, mensaje):
+            nonlocal texto_parcial
             if mensaje.content and len(mensaje.content) > 6000:
                 await socket.send_json({"tipo": "error", "mensaje": "La instrucción es demasiado larga. Divide la operación y vuelve a dictarla"})
             elif mensaje.content:
                 await socket.send_json({"tipo": "instruccion", "texto": mensaje.content})
+            texto_parcial = ""
             contexto.set_messages([])
 
-        worker = PipelineWorker(Pipeline([Entrada(), VADProcessor(vad_analyzer=SileroVADAnalyzer()), stt, usuario, Entrada()]), idle_timeout_secs=90, enable_rtvi=False, params=PipelineParams(audio_in_sample_rate=16000))
+        worker = PipelineWorker(Pipeline([Entrada(), VADProcessor(vad_analyzer=SileroVADAnalyzer(params=VADParams(stop_secs=2.0))), stt, Entrada(mostrar=True), usuario, Entrada()]), idle_timeout_secs=90, enable_rtvi=False, params=PipelineParams(audio_in_sample_rate=16000))
         preparado = asyncio.Event()
 
         @worker.event_handler("on_pipeline_started")

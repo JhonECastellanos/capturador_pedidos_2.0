@@ -270,3 +270,37 @@ test('respuesta truncada explica el límite de salida sin inventar una operació
   try { await assert.rejects(interpretarProveedor({ nombre: 'Prueba', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' }, [{ role: 'user', content: 'Prueba' }]), e => e.codigo === 'MODELO_SALIDA_LIMITADA' && e.getStatus() === 422); }
   finally { cuerpoProveedor = undefined; }
 });
+
+test('micrófono muestra texto parcial sin interpretar y envía silencio durante el procesamiento', async () => {
+  const ts = require('typescript'), vm = require('node:vm'), fs = require('node:fs');
+  const fuente = fs.readFileSync('Frontend/src/modules/agentes/microfono.ts', 'utf8').replaceAll('import.meta.url', '"https://pruebas.invalid/captura.js"');
+  const codigo = ts.transpileModule(fuente, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  let socket, capturador, pausado = false, paradas = 0, cierres = 0;
+  const parciales = [], finales = [], enviados = [];
+  class Conexion {
+    static OPEN = 1;
+    constructor() { socket = this; this.readyState = 1; this.bufferedAmount = 0; queueMicrotask(() => this.onmessage({ data: JSON.stringify({ tipo: 'listo' }) })); }
+    send(datos) { enviados.push(new Int16Array(datos)); }
+    close() { this.readyState = 3; this.onclose?.(); }
+  }
+  class Contexto {
+    constructor() { this.audioWorklet = { addModule: async () => {} }; }
+    async resume() {} async close() { cierres++; }
+    createMediaStreamSource() { return { connect() {} }; }
+  }
+  class Capturador { constructor() { capturador = this; this.port = {}; } connect() {} disconnect() {} }
+  const modulo = { exports: {} };
+  vm.runInNewContext(codigo, { module: modulo, exports: modulo.exports, require: () => ({ api: async () => ({ ticket: 'ticket-ficticio' }), baseApi: '/api/v1' }), window: { isSecureContext: true, location: { href: 'https://pruebas.invalid/' }, speechSynthesis: { speaking: false } }, navigator: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [{ stop: () => { paradas++; } }] }) } }, AudioContext: Contexto, AudioWorkletNode: Capturador, WebSocket: Conexion, URL, setTimeout, clearTimeout, ArrayBuffer });
+  const detener = await modulo.exports.abrirMicrofono(v => finales.push(v), () => {}, () => {}, () => pausado, v => parciales.push(v));
+  try {
+    socket.onmessage({ data: JSON.stringify({ tipo: 'texto', texto: 'Dos arepas con queso' }) });
+    assert.deepEqual(parciales, ['Dos arepas con queso']); assert.equal(finales.length, 0);
+    socket.onmessage({ data: JSON.stringify({ tipo: 'instruccion', texto: 'Dos arepas con queso y un yogur' }) });
+    assert.deepEqual(finales, ['Dos arepas con queso y un yogur']);
+    const pcm = new Int16Array([25, -40]);
+    pausado = true; capturador.port.onmessage({ data: pcm.buffer }); assert.deepEqual([...enviados.at(-1)], [0, 0]);
+    pausado = false; capturador.port.onmessage({ data: pcm.buffer }); assert.deepEqual([...enviados.at(-1)], [25, -40]);
+  } finally { detener(); }
+  detener(); assert.equal(paradas, 1); assert.equal(cierres, 1);
+  socket.onmessage({ data: JSON.stringify({ tipo: 'instruccion', texto: 'No debe enviarse' }) }); assert.equal(finales.length, 1);
+});

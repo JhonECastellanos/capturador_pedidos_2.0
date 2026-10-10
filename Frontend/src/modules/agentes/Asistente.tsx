@@ -56,7 +56,10 @@ export default function Asistente() {
       const anterior = revisionAgente();
       if (/^confirmar(?:\s+(?:pedido|operación|operacion))?[.!]?$/i.test(orden)) { await confirmarDesdeAgente(); return; }
       if (/^cancelar(?:\s+(?:instrucción|instruccion))?[.!]?$/i.test(orden)) { cambiarRevisionAgente(null); setTexto(""); setMensaje("Instrucción cancelada. No se guardó una operación"); return; }
-      const resultado = await api<RevisionAgente>("/agentes/interpretar", "POST", { texto: orden, contexto: contextoAgente(), ...(anterior ? { anterior: anterior.instruccion, id: anterior.id, version: anterior.version + 1 } : {}) });
+      const resultado = await api<RevisionAgente>("/agentes/interpretar", "POST", { texto: orden, contexto: contextoAgente(), ...(anterior ? { anterior: anterior.instruccion, id: anterior.id, version: anterior.version + 1 } : {}) }).catch(error => {
+        if (turno === generacion.current) { detenerMicrofono.current?.(); detenerMicrofono.current = null; setEscuchando(false); }
+        throw new Error(`${error instanceof Error ? error.message : "No se pudo interpretar"}. El texto se conserva; revísalo y pulsa Preparar detalle para reintentar`);
+      });
       if (turno !== generacion.current || revisionAgente() !== anterior || agenteGuardando()) return;
       cambiarRevisionAgente(resultado); setMensaje(resultado.resumen); setTexto(""); navegar(resultado.ruta);
       if (estado && escuchando) hablar(resultado.resumen, estado.audio);
@@ -65,19 +68,18 @@ export default function Asistente() {
   useEffect(() => { interpretarActual.current = interpretar; });
   if (!usuario || !usaApi) return null;
   return <aside className="fixed bottom-3 right-3 z-50 max-w-[calc(100vw-1.5rem)]" aria-label="Asistente de operaciones">
-    {abierto && <section className="mb-2 w-80 max-w-full rounded-xl border border-line bg-paper-raised p-3 shadow-lg">
+    {abierto && <section className="mb-2 w-72 max-w-full rounded-xl border border-line bg-paper-raised p-3 shadow-lg">
       <div className="flex items-center justify-between"><strong className="text-sm text-ink">Instrucciones completas</strong><button type="button" aria-label="Cerrar asistente" onClick={() => { generacion.current++; detenerMicrofono.current?.(); detenerMicrofono.current = null; setEscuchando(false); bloqueo.current = false; setOcupado(false); setAbierto(false); }}>×</button></div>
-      <p className="my-2 text-xs text-ink-soft">Describe la operación completa. Revisa su detalle antes de confirmar.</p>
       {estado && !estado.habilitado && <p role="status" className="text-xs text-ink-soft">Habilita el asistente en Configuración.</p>}
       {estado?.modo === "live" && <p role="status" className="text-xs text-ink-soft">La conexión de audio Live requiere su prueba específica. Usa el modo híbrido para las primeras pruebas.</p>}
-      <textarea aria-label="Instrucción o corrección" value={texto} disabled={ocupado} onChange={e => setTexto(e.target.value)} rows={3} className="w-full rounded-lg border border-line bg-paper p-2 text-sm" placeholder="Un pedido ocasional, dos productos, efectivo y para preparar…" />
+      <textarea aria-label="Instrucción o corrección" value={texto} disabled={ocupado} onChange={e => setTexto(e.target.value)} rows={2} className="mt-2 w-full resize-none rounded-lg border border-line bg-paper p-2 text-xs" placeholder="Aquí aparece lo que dictas. Puedes corregirlo…" />
       <div className="mt-2 flex flex-wrap gap-2 text-xs">
         <button type="button" disabled={ocupado || !estado?.habilitado || estado.modo === "live" || !texto.trim()} onClick={() => void interpretar()} className="rounded-lg bg-brand px-3 py-2 text-white">{ocupado ? "Procesando…" : "Preparar detalle"}</button>
         <button type="button" disabled={ocupado || !estado?.habilitado || estado.modo === "live"} className="rounded-lg border border-line px-3 py-2" onClick={() => {
           if (escuchando) { detenerMicrofono.current?.(); detenerMicrofono.current = null; setEscuchando(false); return; }
           void ejecutar(async () => {
             const turno = generacion.current;
-            const detener = await abrirMicrofono(valor => { if (turno !== generacion.current || window.speechSynthesis?.speaking) return; setTexto(valor); void interpretarActual.current(valor); }, aviso => { if (turno !== generacion.current) return; setMensaje(aviso); if (aviso === "Micrófono desconectado") setEscuchando(false); }, detener => { if (turno !== generacion.current) detener(); else detenerMicrofono.current = detener; });
+            const detener = await abrirMicrofono(valor => { if (turno !== generacion.current || bloqueo.current || agenteGuardando() || window.speechSynthesis?.speaking) return; setTexto(valor); void interpretarActual.current(valor); }, aviso => { if (turno !== generacion.current) return; setMensaje(aviso); if (aviso === "Micrófono desconectado") setEscuchando(false); }, detener => { if (turno !== generacion.current) detener(); else detenerMicrofono.current = detener; }, () => bloqueo.current || agenteGuardando(), valor => { if (turno === generacion.current && !bloqueo.current) setTexto(valor); });
             if (turno !== generacion.current) { detener(); return; }
             detenerMicrofono.current = detener; setEscuchando(true); setMensaje("Escuchando. Puedes dictar la operación completa");
           });

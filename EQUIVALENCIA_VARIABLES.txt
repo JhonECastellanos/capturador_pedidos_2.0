@@ -834,3 +834,9 @@ API agentes/proveedores/:id/modelos -> PanelAgentes.Modelo: gratis (precio publi
 Gemini herramienta.parameters -> functionDeclarations.parametersJsonSchema; no modifica el contrato comercial.
 RevisionAgente.id -> Proveedor.sesion -> cabecera x-opencode-session, solo OpenCode; identificador del borrador, sin tokens ni cuerpos privados.
 Modelo opcional null/"" -> faltante antes de validar InstruccionAgente; 0/false/líneas se conservan.
+
+V6P4 audio: Pipecat TranscriptionFrame -> WebSocket tipo:texto -> vistaPrevia -> Asistente.texto (no interpreta). on_user_turn_stopped -> tipo:instruccion -> interpretarActual -> revisión existente.
+Asistente.bloqueo/estado de guardado -> abrirMicrofono.pausado -> PCM silencio; fallo de interpretación -> detenerMicrofono y conservar texto/revisión.
+Whisper.Settings.hotwords <- VOCABULARIO_AUDIO compartido para archivos y WebSocket; ConfiguracionAgente.audio.modeloStt selecciona tiny/base/small sin instalar pesos al guardar.
+
+Audio híbrido: VADParams.stop_secs=2.0 y SpeechTimeoutUserTurnStopStrategy.user_speech_timeout=2.0 agrupan pausas breves antes de enviar tipo=instruccion. tipo=texto muestra la transcripción sin ejecutar la interpretación.

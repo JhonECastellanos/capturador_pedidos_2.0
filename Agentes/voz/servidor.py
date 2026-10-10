@@ -13,6 +13,7 @@ from pathlib import Path
 from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket
 from pydantic import BaseModel, ConfigDict, Field
 from loguru import logger
+from sesiones_audio import VOCABULARIO_AUDIO
 
 logger.remove()  # Pipecat no debe registrar el texto de pedidos ni audio privado.
 
@@ -170,7 +171,7 @@ async def transcribir(audio: Audio):
             from pipecat.frames.frames import TranscriptionFrame, ErrorFrame
             if motor_id != identificador:
                 motor = None  # Mantener un solo modelo cargado en CPU.
-                motor = await asyncio.to_thread(WhisperSTTService, device="cpu", compute_type="int8", settings=WhisperSTTService.Settings(model=str(ruta_modelo(audio)), language=Language(audio.idioma)))
+                motor = await asyncio.to_thread(WhisperSTTService, device="cpu", compute_type="int8", settings=WhisperSTTService.Settings(model=str(ruta_modelo(audio)), language=Language(audio.idioma), hotwords=VOCABULARIO_AUDIO if audio.idioma == "es" else None))
                 motor_id = identificador
             textos = []
             async for frame in motor.run_stt(pcm):

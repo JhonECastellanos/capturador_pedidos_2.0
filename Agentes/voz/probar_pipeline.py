@@ -1,15 +1,15 @@
-"""Comprueba la inicialización real de Silero/Smart Turn sin modelos Ollama ni audios."""
+"""Comprueba la inicialización real de Silero/espera de silencio sin modelos Ollama ni audios."""
 import asyncio
 from loguru import logger
 logger.remove()
 from pipecat.audio.vad.silero import SileroVADAnalyzer
-from pipecat.audio.turn.smart_turn.local_smart_turn_v3 import LocalSmartTurnAnalyzerV3
+from pipecat.audio.vad.vad_analyzer import VADParams
 from pipecat.processors.audio.vad_processor import VADProcessor
 from pipecat.processors.frame_processor import FrameProcessor
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair, LLMUserAggregatorParams
 from pipecat.turns.user_turn_strategies import UserTurnStrategies
-from pipecat.turns.user_stop.turn_analyzer_user_turn_stop_strategy import TurnAnalyzerUserTurnStopStrategy
+from pipecat.turns.user_stop.speech_timeout_user_turn_stop_strategy import SpeechTimeoutUserTurnStopStrategy
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.worker import PipelineWorker, PipelineParams
 from pipecat.workers.runner import WorkerRunner
@@ -21,8 +21,8 @@ class Paso(FrameProcessor):
         await self.push_frame(frame, direction)
 
 async def comprobar():
-    usuario = LLMContextAggregatorPair(LLMContext([]), user_params=LLMUserAggregatorParams(user_turn_strategies=UserTurnStrategies(stop=[TurnAnalyzerUserTurnStopStrategy(turn_analyzer=LocalSmartTurnAnalyzerV3(cpu_count=1))]))).user()
-    worker = PipelineWorker(Pipeline([Paso(), VADProcessor(vad_analyzer=SileroVADAnalyzer()), usuario, Paso()]), enable_rtvi=False, idle_timeout_secs=None, params=PipelineParams(audio_in_sample_rate=16000))
+    usuario = LLMContextAggregatorPair(LLMContext([]), user_params=LLMUserAggregatorParams(user_turn_strategies=UserTurnStrategies(stop=[SpeechTimeoutUserTurnStopStrategy(user_speech_timeout=2.0)]))).user()
+    worker = PipelineWorker(Pipeline([Paso(), VADProcessor(vad_analyzer=SileroVADAnalyzer(params=VADParams(stop_secs=2.0))), usuario, Paso()]), enable_rtvi=False, idle_timeout_secs=None, params=PipelineParams(audio_in_sample_rate=16000))
     preparado = asyncio.Event()
     @worker.event_handler('on_pipeline_started')
     async def al_iniciar(_worker, _frame):
@@ -34,7 +34,7 @@ async def comprobar():
         await asyncio.wait_for(preparado.wait(), 30)
         await worker.queue_frames([EndFrame()])
         await asyncio.wait_for(tarea, 30)
-        print('Pipecat: Silero, Smart Turn y agregador inicializaron y finalizaron correctamente a 16 kHz. Sin transcribir audio ni descargar modelos Ollama.')
+        print('Pipecat: Silero, espera de silencio y agregador inicializaron y finalizaron correctamente a 16 kHz. Sin transcribir audio ni descargar modelos Ollama.')
     finally:
         if not tarea.done():
             await runner.cancel()

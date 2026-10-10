@@ -1,6 +1,6 @@
 import { api, baseApi } from "../../data/api";
 
-export async function abrirMicrofono(texto: (valor: string) => void, estado: (valor: string) => void, registrar: (detener: () => void) => void) {
+export async function abrirMicrofono(texto: (valor: string) => void, estado: (valor: string) => void, registrar: (detener: () => void) => void, pausado: () => boolean = () => false, vistaPrevia?: (valor: string) => void) {
   if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) throw new Error("El micrófono necesita HTTPS o localhost. Puedes usar un archivo de audio o escribir la instrucción");
   const contexto = new AudioContext();
   await contexto.resume();
@@ -40,6 +40,7 @@ export async function abrirMicrofono(texto: (valor: string) => void, estado: (va
           const mensaje = JSON.parse(evento.data);
           if (mensaje.tipo === "listo") terminar();
           else if (mensaje.tipo === "error") { const error = new Error(typeof mensaje.mensaje === "string" ? mensaje.mensaje : "No se pudo procesar el audio"); terminar(error); cerrar(); estado(error.message); }
+          else if (mensaje.tipo === "texto" && typeof mensaje.texto === "string" && mensaje.texto.trim() && mensaje.texto.length <= 6000) vistaPrevia?.(mensaje.texto.trim());
           else if (mensaje.tipo === "instruccion" && typeof mensaje.texto === "string" && mensaje.texto.trim() && mensaje.texto.length <= 6000) texto(mensaje.texto.trim());
         } catch { estado("Se recibió un mensaje de audio que no se pudo interpretar"); }
       };
@@ -49,7 +50,7 @@ export async function abrirMicrofono(texto: (valor: string) => void, estado: (va
     capturador.port.onmessage = evento => {
       if (cerrada || socket.readyState !== WebSocket.OPEN) return;
       if (socket.bufferedAmount > 128000) { cerrar(); estado("La conexión está lenta. Puedes volver a iniciar el micrófono"); return; }
-      socket.send(window.speechSynthesis?.speaking ? new ArrayBuffer(evento.data.byteLength) : evento.data);
+      socket.send((pausado() || window.speechSynthesis?.speaking) ? new ArrayBuffer(evento.data.byteLength) : evento.data);
     };
     contexto.createMediaStreamSource(medios).connect(capturador);
     capturador.connect(contexto.destination);
