@@ -36,8 +36,43 @@ const marca = 'QA-CSV-' + Date.now();
       assert.equal((await vendedorContexto.request.post(base + '/api/v1/productos/importar', { data: { prepararInicial: false, productos: [{ nombre: marca, precioVenta: 1 }] } })).status(), 403);
     } finally { await vendedorContexto.close(); }
     await page.goto(base + '/admin/precios');
+    const sinCantidades = 'codigoInterno,nombre,categoria,unidad,precioVenta,costoActual,cantidadInicial,stockMinimo\n' +
+      `,${marca} vacío,Preparados,unidad,1200,500,,1\n,${marca} cero,Preparados,unidad,1300,600,0,2\n`;
+    await page.getByLabel('Archivo CSV de productos').setInputFiles({name:'sin-existencias.csv',mimeType:'text/csv',buffer:Buffer.from(sinCantidades)});
+    await page.getByText('Revisar 2 productos antes de guardar',{exact:true}).waitFor();
+    assert.equal(await page.getByRole('checkbox',{name:'Preparar inventario inicial con las cantidades'}).isChecked(),false);
+    const soloCatalogo = page.waitForResponse(r=>r.url().endsWith('/productos/importar') && r.request().method()==='POST');
+    await page.getByRole('button',{name:'Confirmar importación',exact:true}).click();
+    assert.equal((await (await soloCatalogo).json()).data.conteoInicialId,null);
+    const catalogoCero = sql(`SELECT json_agg(json_build_object('nombre',nombre,'stock',"stockFisico")) FROM productos WHERE nombre IN ('${marca} vacío','${marca} cero');`);
+    assert.equal(catalogoCero.length,2); assert.ok(catalogoCero.every(p=>p.stock===0));
+    // Preparar inicio conserva la diferencia entre una celda vacía y el cero explícito.
+    await page.getByLabel('Archivo CSV de productos').setInputFiles({name:'inicio-cero.csv',mimeType:'text/csv',buffer:Buffer.from(sinCantidades)});
+    await page.getByRole('checkbox',{name:'Preparar inventario inicial con las cantidades'}).check();
+    const inicioCero = page.waitForResponse(r=>r.url().endsWith('/productos/importar') && r.request().method()==='POST');
+    await page.getByRole('button',{name:'Confirmar importación',exact:true}).click();
+    const idCero = (await (await inicioCero).json()).data.conteoInicialId;
+    const conteosCero = sql(`SELECT json_object_agg(p.nombre,l."stockFisico") FROM "conteoLineas" l JOIN productos p ON p.id=l."productoId" WHERE l."conteoId"='${idCero}' AND p.nombre IN ('${marca} vacío','${marca} cero');`);
+    assert.equal(conteosCero[marca+' vacío'],null); assert.equal(conteosCero[marca+' cero'],0);
+    const colaboradorInicial = await browser.newContext();
+    try {
+      const correoInicial = marca.toLowerCase()+'-inicial@pruebas.invalid';
+      assert.equal((await api('/usuarios','POST',{nombre:'Colaborador inicial QA',email:correoInicial,password:'SoloPruebas2026!',rol:'inventario'})).status,201);
+      assert.equal((await colaboradorInicial.request.post(base+'/api/v1/auth/login',{data:{identifier:correoInicial,password:'SoloPruebas2026!'}})).status(),200);
+      assert.equal((await api('/inventario/compartidos','POST',{tipo:'inicial',turno:'Continuar CSV'})).cuerpo.data.id,idCero);
+      const tomada = await colaboradorInicial.request.post(base+`/api/v1/inventario/compartidos/${idCero}/asignar`,{data:{}});
+      assert.equal(tomada.status(),201); const asignada=(await tomada.json()).data;
+      const detalleInicial=(await api('/inventario/conteos/'+idCero)).cuerpo.data;
+      const fisico=detalleInicial.lineas.find(l=>l.productoId===asignada.productoId).stockTeorico;
+      assert.equal((await colaboradorInicial.request.patch(base+`/api/v1/inventario/conteos/${idCero}/lineas/${asignada.productoId}?resumen=true`,{data:{stockFisico:fisico}})).status(),200);
+      assert.equal((await api('/inventario/compartidos/'+idCero)).cuerpo.data.colaboradores,2);
+      console.log('✓ Inventario inicial compartido: administrador y colaborador guardan en el mismo documento');
+    } finally { await colaboradorInicial.close(); }
+    console.log('✓ CSV: celda vacía y cero crean catálogo sin stock; en el inicio vacío queda pendiente y cero queda contado');
+
     await page.getByLabel('Archivo CSV de productos').setInputFiles('docs/ejemplos/catalogo-inicial.csv');
     await page.getByText('Revisar 3 productos antes de guardar', { exact: true }).waitFor();
+    await page.getByRole('checkbox', { name: 'Preparar inventario inicial con las cantidades' }).check();
     const respuestaEjemplo = page.waitForResponse(r => r.url().endsWith('/productos/importar') && r.request().method() === 'POST');
     await page.getByRole('button', { name: 'Confirmar importación', exact: true }).click();
     const ejemploRespuesta = await respuestaEjemplo; assert.equal(ejemploRespuesta.status(), 201);
@@ -62,7 +97,8 @@ const marca = 'QA-CSV-' + Date.now();
     const entrada = page.getByLabel('Archivo CSV de productos');
     await entrada.setInputFiles({ name: 'productos.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
     await page.getByText('Revisar 2 productos antes de guardar', { exact: true }).waitFor();
-    assert.equal(sql(`SELECT count(*) FROM productos WHERE nombre LIKE '${marca}%';`), 1);
+    assert.equal(sql(`SELECT count(*) FROM productos WHERE nombre LIKE '${marca}%';`), 3);
+    await page.getByRole('checkbox', { name: 'Preparar inventario inicial con las cantidades' }).check();
     const respuestaCarga = page.waitForResponse(r => r.url().endsWith('/productos/importar') && r.request().method() === 'POST');
     await page.getByRole('button', { name: 'Confirmar importación', exact: true }).click();
     const carga = await respuestaCarga; const cuerpoCarga = await carga.json();
@@ -80,7 +116,7 @@ const marca = 'QA-CSV-' + Date.now();
     const repetida = await api('/productos/importar', 'POST', { prepararInicial: true, productos }, clave);
     assert.equal(repetida.status, 201); assert.equal(repetida.cuerpo.data.creados, 0);
     assert.deepEqual((await api('/productos/importar', 'POST', { prepararInicial: true, productos }, clave)).cuerpo, repetida.cuerpo);
-    assert.equal(sql(`SELECT count(*) FROM productos WHERE nombre LIKE '${marca}%';`), 2);
+    assert.equal(sql(`SELECT count(*) FROM productos WHERE nombre LIKE '${marca}%';`), 4);
     assert.equal(sql(`SELECT count(*) FROM "movimientosInventario" WHERE "productoId"='${nuevo.id}' AND tipo='inicializacion';`), 1);
     const antes = sql(`SELECT json_build_object('productos',(SELECT count(*) FROM productos),'consecutivo',(SELECT "ultimoValor" FROM consecutivos WHERE tipo='PROD' AND periodo='global'));`);
     const invalida = await api('/productos/importar', 'POST', { prepararInicial: false, productos: [{ nombre: marca + ' revertido', precioVenta: 9, stock: 3 }, { codigoInterno: 'PROD-NO-EXISTE', nombre: marca + ' inválido', precioVenta: 9 }] }, randomUUID());

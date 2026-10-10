@@ -24,6 +24,15 @@ LEFT JOIN "ajustesInventario" a ON a."conteoId"=c.id
 WHERE (COALESCE(c."finalizadoEn",c."iniciadoEn") AT TIME ZONE 'UTC' AT TIME ZONE 'America/Bogota')::date BETWEEN :'desde'::date AND :'hasta'::date
 ORDER BY c."iniciadoEn",p.nombre;
 
+-- Progreso y colaboradores por inventario, sin duplicar líneas al unir participantes.
+SELECT c.id,c.tipo,c.estado,c."iniciadoEn",c."finalizadoEn",
+ (SELECT COUNT(*) FROM "conteoLineas" l WHERE l."conteoId"=c.id) AS productos,
+ (SELECT COUNT(*) FROM "conteoLineas" l WHERE l."conteoId"=c.id AND l."stockFisico" IS NOT NULL) AS contados,
+ (SELECT COUNT(*) FROM "participantesConteo" pc WHERE pc."conteoId"=c.id) AS colaboradores
+FROM "conteosInventario" c ORDER BY c."iniciadoEn" DESC;
+SELECT pc."conteoId",u.nombre,pc."primeroEn",pc."ultimoEn" FROM "participantesConteo" pc JOIN usuarios u ON u.id=pc."usuarioId" ORDER BY pc."conteoId",u.nombre;
+SELECT l."conteoId",p.nombre,u.nombre AS contando,l."asignadoHasta" FROM "conteoLineas" l JOIN productos p ON p.id=l."productoId" JOIN usuarios u ON u.id=l."asignadoPorId" WHERE l."stockFisico" IS NULL AND l."asignadoHasta">CURRENT_TIMESTAMP;
+
 -- Descuadres por día, semana (lunes), mes y año: la misma definición del Inicio.
 -- El inicial, borradores y cancelados no se suman. Un ajuste de conteo no se suma otra vez.
 WITH diferencias AS (

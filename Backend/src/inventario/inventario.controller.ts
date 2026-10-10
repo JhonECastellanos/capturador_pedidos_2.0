@@ -10,6 +10,35 @@ import { paginacion } from "../common/paginacion";
 export class InventarioController {
   constructor(private readonly inventario: InventarioService) {}
 
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO)
+  @Get("compartidos")
+  compartidos(@UsuarioActual() usuario: Usuario, @Query("page") page?: string, @Query("abiertos") abiertos?: string) {
+    return this.inventario.resumenes(paginacion(page, "30").pagina, 30, abiertos === "true", usuario.rol === RolUsuario.ADMINISTRADOR);
+  }
+
+  @Post("compartidos")
+  async iniciarCompartido(@Body() body: unknown, @UsuarioActual() usuario: Usuario) {
+    return { data: await this.inventario.iniciarCompartido(IniciarConteoEsquema.parse(body).tipo, usuario.id) };
+  }
+
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO)
+  @Get("compartidos/:conteoId")
+  async resumenCompartido(@Param("conteoId") id: string, @UsuarioActual() usuario: Usuario) {
+    return { data: (await this.inventario.resumenes(1, 1, false, usuario.rol === RolUsuario.ADMINISTRADOR, id)).data[0] ?? null };
+  }
+
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO)
+  @Get("compartidos/:conteoId/lineas")
+  lineasCompartidas(@Param("conteoId") id: string, @UsuarioActual() usuario: Usuario, @Query("page") page?: string, @Query("q") q = "") {
+    return this.inventario.lineasCompartidas(id, paginacion(page, "30").pagina, 30, q.trim().slice(0, 100), usuario.rol === RolUsuario.ADMINISTRADOR);
+  }
+
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO)
+  @Post("compartidos/:conteoId/asignar")
+  async asignar(@Param("conteoId") id: string, @UsuarioActual() usuario: Usuario, @Query("liberar") liberar?: string) {
+    return { data: await this.inventario.asignar(id, usuario.id, liberar === "true") };
+  }
+
   @Get("inicial")
   async inicial(@Query("page") page?: string, @Query("q") q?: string, @Query("pageSize") pageSize?: string) {
     const p = paginacion(page, pageSize);
@@ -48,15 +77,17 @@ export class InventarioController {
     };
   }
 
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO)
   @Patch("conteos/:conteoId/lineas/:productoId")
   async actualizarLinea(
     @Param("conteoId") conteoId: string,
     @Param("productoId") productoId: string,
     @Body() body: { stockFisico?: number },
     @UsuarioActual() usuario: Usuario,
+    @Query("resumen") resumen?: string,
   ) {
     const datos = ContarLineaEsquema.parse(body);
-    return { data: await this.inventario.actualizarLinea(conteoId, productoId, datos.stockFisico, usuario.id) };
+    return { data: await this.inventario.actualizarLinea(conteoId, productoId, datos.stockFisico, usuario.id, resumen !== "true" && usuario.rol === RolUsuario.ADMINISTRADOR, datos.contadoEnEsperado) };
   }
 
   @Post("conteos/:conteoId/finalizar")

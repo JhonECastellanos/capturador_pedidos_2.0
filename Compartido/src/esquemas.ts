@@ -202,6 +202,7 @@ export const IniciarConteoEsquema = z.object({
 
 export const ContarLineaEsquema = z.object({
   stockFisico: cantidad.min(0, "El stock físico no puede ser negativo"),
+  contadoEnEsperado: z.string().datetime().nullable().optional(),
 });
 
 export const AjusteManualEsquema = z.object({

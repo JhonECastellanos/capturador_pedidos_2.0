@@ -2,7 +2,7 @@
 
 ## Revisión vigente de conteos y paginación — 09/10/2026
 
-La API pagina las listas y selectores administrativos; aplica búsqueda, orden y filtros antes de LIMIT. Cartera, caja, jornada y cierre usan agregados SQL completos. La fachada global ya no descarga clientes, productos, pedidos, pagos, adjuntos, proveedores ni cambios de precio completos. Conserva los documentos de inventario en curso y el inicio histórico necesarios para continuar operaciones; un documento individual conserva todas sus líneas. La exportación completa de pedidos se consulta únicamente al solicitarla.
+La API pagina las listas y selectores administrativos; aplica búsqueda, orden y filtros antes de LIMIT. Cartera, caja, jornada y cierre usan agregados SQL completos. La fachada global ya no descarga clientes, productos, pedidos, pagos, adjuntos, proveedores ni cambios de precio completos. La revisión del 10/10/2026 consulta el progreso y las líneas de inventario mediante páginas; ya no descarga conteos completos como snapshot global. Los endpoints históricos de documento individual conservan sus líneas para compatibilidad. La exportación completa de pedidos se consulta únicamente al solicitarla.
 
 Conteos reutiliza cabeceras, líneas, ajustes y movimientos existentes. Las migraciones añaden fecha diaria, ciclo y responsable; fortalecen la relación única entre conteo y ajuste y retiran tres tablas sin uso solo cuando están vacías. No reinician datos comerciales. No se introducen saldos duplicados, tablas de resumen por pantalla ni empresas adicionales.
 

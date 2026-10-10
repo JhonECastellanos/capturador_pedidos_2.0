@@ -37,6 +37,7 @@ import { esMismoDia } from "../utils/fechas";
 export const PERMISOS_POR_ROL: Record<RolUsuario, string[]> = {
   administrador: ["pedidos", "inventario", "caja", "usuarios", "cierre-diario"],
   vendedor: ["clientes", "pedidos", "cobros"],
+  inventario: ["inventario"],
 };
 
 export function permisosDeRol(rol: RolUsuario): string[] {

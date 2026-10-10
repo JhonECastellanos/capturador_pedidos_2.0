@@ -792,3 +792,16 @@ VALORACION DE DESCUADRES — V5P3
   Faltantes/sobrantes/neto            descuadres.faltantes/sobrantes/neto diferencias × costo histórico, excluye inicial/borrador/cancelado
   Históricos sin valoración          descuadres.lineasSinCosto           cuenta costos NULL, nunca usa costo vigente como sustituto
   Caché del resumen                  DashboardService v2                 revisión transaccional de conteos y ajustes, además de negocio
+
+CONTEOS COMPARTIDOS (10/10/2026)
+rol inventario -> UsuarioDTO.rol inventario -> RolUsuario.INVENTARIO @map(inventario)
+producto asignado -> asignadoPorId/asignadoHasta -> conteoLineas (FK usuarios / timestamp UTC)
+responsable guardado -> contadoPorId/contadoEn -> conteoLineas
+colaboradores -> COUNT(participantesConteo) por conteoId (PK conteoId,usuarioId)
+primera/ultima participación -> primeroEn/ultimoEn -> participantesConteo
+progreso total/contadas/ocupadas -> /inventario/compartidos -> agregados SQL, sin tablas de resumen
+lista de productos del conteo -> /inventario/compartidos/:id/lineas?page&q -> 30 filas por página
+cantidadInicial CSV vacía -> stock undefined -> producto nuevo stockFisico=0 / línea inicial NULL
+cantidadInicial CSV 0 -> stock 0 -> producto nuevo stockFisico=0 / línea inicial 0
+
+corregir cantidad -> contadoEnEsperado opcional -> compara conteoLineas.contadoEn dentro del bloqueo transaccional; si cambió devuelve 409

@@ -17,6 +17,7 @@ datasource db {
 enum RolUsuario {
   ADMINISTRADOR @map("administrador")
   VENDEDOR     @map("vendedor")
+  INVENTARIO   @map("inventario")
 }
 
 enum MetodoPago {
@@ -118,7 +119,9 @@ model Usuario {
   pedidoEstados  PedidoEstadoHistorial[]
   pagos          Pago[]
   conteos        ConteoInventario[]
-  lineasContadas ConteoLinea[]
+  lineasContadas ConteoLinea[] @relation("Contador")
+  lineasAsignadas ConteoLinea[] @relation("Asignacion")
+  participacionesConteo ParticipacionConteo[]
   ajustes        AjusteInventario[]
   cambiosPrecio  CambioPrecio[]
   recepciones    RecepcionCompra[]
@@ -537,6 +540,7 @@ model ConteoInventario {
   estado       EstadoConteo  @default(EN_CURSO)
   fechaDiaria  DateTime?     @db.Date
   lineas       ConteoLinea[]
+  participantes ParticipacionConteo[]
   ajustes      AjusteInventario[]
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
@@ -564,7 +568,12 @@ model ConteoLinea {
 
   conteo   ConteoInventario @relation(fields: [conteoId], references: [id], onDelete: Cascade)
   producto Producto         @relation(fields: [productoId], references: [id])
-  contadoPor Usuario?       @relation(fields: [contadoPorId], references: [id])
+  contadoPor Usuario?       @relation("Contador", fields: [contadoPorId], references: [id])
+  asignadoPorId String?
+  asignadoHasta DateTime?
+  asignadoPor Usuario? @relation("Asignacion", fields: [asignadoPorId], references: [id])
+
+  @@index([conteoId, stockFisico, asignadoHasta])
 
   @@unique([conteoId, productoId])
   @@index([cicloDiario, productoId])
@@ -749,4 +758,15 @@ model CierreAccion {
   cierre CierreDia @relation(fields: [cierreId], references: [id], onDelete: Cascade)
 
   @@map("cierreAcciones")
+}
+
+model ParticipacionConteo {
+  conteoId String
+  usuarioId String
+  primeroEn DateTime @default(now())
+  ultimoEn DateTime @default(now())
+  conteo ConteoInventario @relation(fields: [conteoId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  @@id([conteoId, usuarioId])
+  @@map("participantesConteo")
 }

@@ -8,7 +8,7 @@ import { leerProductosCSV } from "../../../utils/productos-csv";
 export function IntercambioProductosCSV() {
   const archivo = useRef<HTMLInputElement>(null);
   const [productos, setProductos] = useState<ImportarProductosDTO["productos"]>([]);
-  const [prepararInicial, setPrepararInicial] = useState(true);
+  const [prepararInicial, setPrepararInicial] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState("");
   const [resultado, setResultado] = useState<ResultadoImportacionProductosDTO | null>(null);
@@ -50,7 +50,7 @@ export function IntercambioProductosCSV() {
       <p className="mt-1 text-ink-soft">Con código se actualiza ese producto. Sin código se busca por nombre; si es nuevo, recibe un código automático. Hasta 200 productos por archivo.</p>
       <ul className="my-2 space-y-1">{productos.slice(0, 5).map((p, i) => <li key={i}>{p.nombre} · precio {p.precioVenta} · cantidad {p.stock ?? "sin contar"}</li>)}</ul>
       <label className="flex items-center gap-2"><input type="checkbox" checked={prepararInicial} disabled={ocupado} onChange={e => setPrepararInicial(e.target.checked)} />Preparar inventario inicial con las cantidades</label>
-      <p className="mt-1 text-ink-soft">Si ya confirmaste el inicio del negocio, desmarca esta opción. Las cantidades existentes se conservan; los productos nuevos se crean con la cantidad indicada.</p>
+      <p className="mt-1 text-ink-soft">Para crear solo productos, deja esta opción desmarcada y cantidadInicial vacía o en 0. Vacío significa sin contar; 0 significa cero unidades. Para preparar el inicio, marca la opción. Las cantidades existentes se conservan; los productos nuevos se crean con la cantidad indicada.</p>
       <div className="mt-2 flex gap-2"><Boton ancho="auto" className="!px-3 !py-2 !text-xs" disabled={ocupado} onClick={() => void importar()}>Confirmar importación</Boton><Boton ancho="auto" variante="fantasma" className="!px-3 !py-2 !text-xs" disabled={ocupado} onClick={() => { setProductos([]); setError(""); }}>Cancelar</Boton></div>
     </div>}
   </section>;

@@ -18,9 +18,10 @@ import { lineasContadasDe, resumenConteo } from "../../../dominio/servicios";
 import { formatoMoneda } from "../../../utils/formato";
 import { FormularioProducto } from "../components/FormularioProducto";
 import { InventarioInicial } from "../components/InventarioInicial";
-import type { TipoConteo, ConteoInventarioDTO } from "@ambie/contrato";
+import type { TipoConteo, ConteoInventarioDTO, CabeceraConteoCompartidoDTO } from "@ambie/contrato";
 import type { Producto, AjusteInventario, LineaConteo } from "../../../types";
-import { usaApi } from "../../../data/api";
+import { ConteosCompartidos } from "../components/ConteosCompartidos";
+import { api, usaApi } from "../../../data/api";
 import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
 import { normalizarConteo } from "../../../utils/inventario";
 
@@ -78,10 +79,11 @@ export function InventarioAdmin() {
   const { aviso, mostrarAviso, cerrarAviso } = useAviso();
 
   const productosRemotos = usePaginaApi<Producto>(`/productos?page=${pagina}&pageSize=${POR_PAGINA}&orden=alertas&q=${encodeURIComponent(mostrarAjusteManual ? busquedaAjuste : vista === "general" ? busquedaGeneral : "")}&stockEstado=${vista === "general" ? filtroEstado : "todos"}`);
-  const historialRemoto = usePaginaApi<ConteoInventarioDTO>(`/inventario/conteos?page=${paginaConteos}&pageSize=${POR_PAGINA}`, vista === "conteo");
+  const abiertosRemotos = usePaginaApi<CabeceraConteoCompartidoDTO>("/inventario/compartidos?abiertos=true", vista === "menu");
+  const historialRemoto = usePaginaApi<ConteoInventarioDTO>(`/inventario/conteos?page=${paginaConteos}&pageSize=${POR_PAGINA}`, !usaApi && vista === "conteo");
   const ajustesRemotos = usePaginaApi<AjusteInventario>(`/inventario/ajustes?page=${pagina}&pageSize=${POR_PAGINA}&q=${encodeURIComponent(vista === "menu" ? "" : busquedaHistorial)}`, vista === "ajustes" || vista === "menu");
   const diferenciasRemotas = usePaginaApi<LineaConteo & { conteoId: string; turno: string; usuarioId: string; finalizadoEn: string; yaAjustado: boolean }>(`/inventario/descuadres?page=${pagina}&pageSize=${POR_PAGINA}&q=${encodeURIComponent(vista === "menu" ? "" : busquedaHistorial)}`, vista === "descuadres" || vista === "menu");
-  const detalleRemoto = useRegistroApi<ConteoInventarioDTO>(`/inventario/conteos/${conteoDetalleId}`, !!conteoDetalleId);
+  const detalleRemoto = useRegistroApi<ConteoInventarioDTO>(`/inventario/conteos/${conteoDetalleId}`, !usaApi && !!conteoDetalleId);
   const inventario = usaApi ? productosRemotos.items : inventarioLocal;
   const ajustes = usaApi ? ajustesRemotos.items : ajustesLocales;
   const conteosPagina = useMemo(() => usaApi ? historialRemoto.items.map(normalizarConteo) : conteosActuales, [historialRemoto.items, conteosActuales]);
@@ -114,7 +116,7 @@ export function InventarioAdmin() {
   const qHistorial = busquedaHistorial.trim().toLowerCase();
   const diferenciasFiltradas = lineasConDiferencia.filter((l) => !qHistorial || `${l.nombre} ${l.turno}`.toLowerCase().includes(qHistorial));
   const ajustesFiltrados = ajustes.filter((a) => !qHistorial || `${a.motivo ?? ""} ${a.comentario ?? ""} ${a.lineas.map((l) => l.nombre).join(" ")}`.toLowerCase().includes(qHistorial));
-  const conteosEnCurso = conteos.filter((c) => c.estado === "en-curso").length;
+  const conteosEnCurso = usaApi ? abiertosRemotos.total : conteos.filter((c) => c.estado === "en-curso").length;
 
   const inventarioFiltradoGeneral = useMemo(() => {
     if (usaApi) return inventario;
@@ -141,6 +143,10 @@ export function InventarioAdmin() {
   }, [busquedaAjuste, inventario]);
 
   async function handleIniciar(tipo: TipoConteo) {
+    if (usaApi) {
+      try { const c = await api<{id:string}>("/inventario/compartidos", "POST", { tipo, turno: "Conteo compartido" }); setConteoActivoId(c.id); setVista("conteo"); return true; }
+      catch (e) { mostrarAviso(e instanceof Error ? e.message : "No se pudo iniciar el conteo", "error"); return false; }
+    }
     if (conteoEnCurso?.estado === "en-curso") { mostrarAviso("Termina o cancela el conteo en curso antes de iniciar otro.", "info"); return false; }
     if (inventario.length === 0) {
       mostrarAviso("Registra productos antes de iniciar un conteo", "error");
@@ -236,7 +242,7 @@ export function InventarioAdmin() {
       {
         id: "conteo" as VistaInv,
         titulo: "Conteo guiado",
-        descripcion: "Contar producto a producto por turno",
+        descripcion: "Inventario general y conteo diario compartidos",
         detalle: conteoEnCurso ? `En curso ${indice + 1}/${conteoEnCurso.lineas.length}` : `${conteosEnCurso} en curso`,
         icono: <IconClipboard width={24} height={24} />,
         tono: "acento" as const,
@@ -324,6 +330,7 @@ export function InventarioAdmin() {
         )}
       </div>
 
+      {usaApi && vista === "conteo" && <ConteosCompartidos inicialId={conteoActivoId ?? conteoDetalleId} />}
       {vista === "inicial" && <InventarioInicial conteo={conteos.find((c) => c.tipo === "inicial" && c.estado !== "cancelado")} iniciar={() => { void handleIniciar("inicial"); }} abrir={(conteo) => { setVista("conteo"); setConteoActivoId(conteo.id); setConteoDetalleId(conteo.estado === "en-curso" ? null : conteo.id); setIndice(0); setBorradorConteo({}); }} />}
 
       {vista === "general" && (
@@ -415,7 +422,7 @@ export function InventarioAdmin() {
       )}
 
       {/* ─── Conteo: detalle de un conteo del historial ─── */}
-      {vista === "conteo" && conteoDetalle && (() => {
+      {!usaApi && vista === "conteo" && conteoDetalle && (() => {
         const resumen = resumenConteo(conteoDetalle);
         const yaAjustado = conteoDetalle.aplicado ?? ajustes.some((a) => a.conteoId === conteoDetalle.id);
         const lineasDetalle = lineasContadasDe(conteoDetalle);
@@ -519,7 +526,7 @@ export function InventarioAdmin() {
       })()}
 
       {/* ─── Conteo: iniciar o capturar producto a producto ─── */}
-      {vista === "conteo" && !conteoDetalle && (conteoEnCurso && conteoEnCurso.estado === "en-curso" ? (
+      {!usaApi && vista === "conteo" && !conteoDetalle && (conteoEnCurso && conteoEnCurso.estado === "en-curso" ? (
         <div className="mt-3 flex-1 min-h-0 overflow-y-auto no-scrollbar rounded-2xl border border-line bg-paper-raised p-4 max-w-xl">
           <div className="flex items-center justify-between">
             <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">

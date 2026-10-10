@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { api, listaApi, baseApi } from "../data/api";
+import { api, baseApi } from "../data/api";
 import { consultas } from "../data/query";
 import { replaceEqualDeep } from "@tanstack/react-query";
 import { normalizarConteo } from "../utils/inventario";
@@ -51,8 +51,7 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
     // Un refresco no debe volver atrás a un snapshot de otra pantalla.
     if (anterior && datosSesion.current !== usuario.id) { setDatos(anterior); setCargadoPara(usuario.id); }
     const lectura = ++revision.current;
-    const esAdmin = usuario.rol === "administrador";
-        const inventarioPantalla=pathname === "/admin/inventario";
+
     const [clientes, pedidos, inventario, abonos, movimientosCaja, usuarios, proveedores, recepciones, gastos, conteos, ajustes, cambiosPrecio, cierres, archivos] = await Promise.all([
       Promise.resolve([] as Cliente[]), Promise.resolve([] as Pedido[]), Promise.resolve([] as Producto[]), Promise.resolve([] as AbonoCredito[]),
       Promise.resolve([] as MovimientoCaja[]),
@@ -60,7 +59,7 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
       Promise.resolve([] as Proveedor[]),
       Promise.resolve([] as RecepcionCompra[]),
       Promise.resolve([] as Gasto[]),
-      esAdmin && inventarioPantalla ? listaApi<ConteoInventarioDTO>("/inventario/conteos?actuales=true") : Promise.resolve([]),
+      Promise.resolve([] as ConteoInventarioDTO[]),
       Promise.resolve([] as AjusteInventario[]),
       Promise.resolve([] as CambioPrecio[]),
       Promise.resolve([] as CierreDia[]),

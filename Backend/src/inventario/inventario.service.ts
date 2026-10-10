@@ -5,13 +5,79 @@ import { ErrorDominio } from "../common/errores";
 import { seleccionarConteoDiario, IniciarConteoEsquema, type InventarioInicialDTO } from "@ambie/contrato";
 import { numero } from "../common/consecutivos";
 import { hoyLocal } from "../common/crypto";
-import { EstadoConteo, TipoConteo, TipoMovimientoInventario, Prisma } from "@prisma/client";
+import { EstadoConteo, TipoConteo, TipoMovimientoInventario, RolUsuario, Prisma } from "@prisma/client";
 
 const IniciarConteoSchema = IniciarConteoEsquema;
 
 @Injectable()
 export class InventarioService {
   constructor(private readonly prisma: PrismaService) {}
+
+  async iniciarCompartido(tipo: "inicial" | "general" | "aleatorio", usuarioId: string) {
+    return this.prisma.enTransaccion(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`inventario:${tipo}`}))`;
+      const abierto = await tx.conteoInventario.findFirst({ where: { tipo: tipo === "inicial" ? TipoConteo.INICIAL : tipo === "general" ? TipoConteo.GENERAL : TipoConteo.ALEATORIO, estado: tipo === "inicial" ? { not: EstadoConteo.CANCELADO } : EstadoConteo.EN_CURSO }, orderBy: { iniciadoEn: "asc" }, select: { id: true } });
+      return abierto ?? { id: (await this.iniciarConteo({ tipo, turno: "Conteo compartido" }, usuarioId)).id };
+    });
+  }
+
+  async asignar(conteoId: string, usuarioId: string, liberar = false) {
+    return this.prisma.$transaction(async tx => {
+      if (liberar) {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`conteo:${conteoId}`}))`;
+        await tx.conteoLinea.updateMany({ where: { conteoId, asignadoPorId: usuarioId }, data: { asignadoPorId: null, asignadoHasta: null } });
+        return null;
+      }
+      await this.validarEnCurso(conteoId, tx);
+      const ahora = new Date();
+      const propia = await tx.conteoLinea.findFirst({ where: { conteoId, stockFisico: null, asignadoPorId: usuarioId, asignadoHasta: { gt: ahora } }, orderBy: { id: "asc" } });
+      const siguiente = propia ?? await tx.conteoLinea.findFirst({ where: { conteoId, stockFisico: null, OR: [{ asignadoPorId: null }, { asignadoHasta: { lte: ahora } }, { asignadoPor: { activo: false } }] }, orderBy: { producto: { nombre: "asc" } } });
+      if (!siguiente) return null;
+      const linea = await tx.conteoLinea.update({ where: { id: siguiente.id }, data: { asignadoPorId: usuarioId, asignadoHasta: new Date(ahora.getTime() + 5 * 60_000) }, include: { producto: true } });
+      return { productoId: linea.productoId, nombre: linea.producto.nombre, codigo: linea.producto.codigoInterno, unidad: linea.producto.unidad, asignadoHasta: linea.asignadoHasta!.toISOString() };
+    });
+  }
+
+  async resumenes(pagina = 1, porPagina = 30, soloAbiertos = false, administrador = true, conteoId?: string) {
+    return this.prisma.$transaction(async tx => {
+      const where = Prisma.sql`WHERE TRUE ${soloAbiertos || !administrador ? Prisma.sql`AND c.estado = 'en-curso'` : Prisma.empty} ${conteoId ? Prisma.sql`AND c.id = ${conteoId}` : Prisma.empty}`;
+      const [cuenta] = await tx.$queryRaw<Array<{ total: bigint }>>(Prisma.sql`SELECT COUNT(*) AS total FROM "conteosInventario" c ${where}`);
+      const total = Number(cuenta.total), actual = Math.min(pagina, Math.max(1, Math.ceil(total / porPagina)));
+      const filas = await tx.$queryRaw<Array<{ id: string; tipo: string; estado: string; iniciadoEn: Date; finalizadoEn: Date | null; total: bigint; contadas: bigint; ocupadas: bigint; colaboradores: bigint; unidades: bigint; faltantes: Prisma.Decimal; sobrantes: Prisma.Decimal; valorContado: Prisma.Decimal; sinCosto: bigint; aplicado: boolean }>>(Prisma.sql`
+        SELECT c.id, c.tipo::text, c.estado::text, c."iniciadoEn", c."finalizadoEn", l.*,
+          (SELECT COUNT(*) FROM "participantesConteo" pc WHERE pc."conteoId"=c.id) AS colaboradores,
+          EXISTS(SELECT 1 FROM "ajustesInventario" a WHERE a."conteoId"=c.id) AS aplicado
+        FROM (SELECT * FROM "conteosInventario" c ${where} ORDER BY c."iniciadoEn" DESC,c.id DESC LIMIT ${porPagina} OFFSET ${(actual - 1) * porPagina}) c
+        CROSS JOIN LATERAL (SELECT COUNT(*) AS total, COUNT("stockFisico") AS contadas,
+          COUNT(*) FILTER(WHERE "stockFisico" IS NULL AND "asignadoHasta">CURRENT_TIMESTAMP) AS ocupadas,
+          COALESCE(SUM("stockFisico"),0) AS unidades,
+          COALESCE(SUM(GREATEST(-diferencia,0)*"costoUnitarioConteo"),0) AS faltantes,
+          COALESCE(SUM(GREATEST(diferencia,0)*"costoUnitarioConteo"),0) AS sobrantes,
+          COALESCE(SUM("stockFisico"*"costoUnitarioConteo"),0) AS "valorContado",
+          COUNT(*) FILTER(WHERE "stockFisico" IS NOT NULL AND "costoUnitarioConteo" IS NULL) AS "sinCosto"
+          FROM "conteoLineas" WHERE "conteoId"=c.id) l`);
+      return { data: filas.map(f => ({ ...f, iniciadoEn: f.iniciadoEn.toISOString(), finalizadoEn: f.finalizadoEn?.toISOString() ?? null,
+        total: Number(f.total), contadas: Number(f.contadas), ocupadas: Number(f.ocupadas), colaboradores: Number(f.colaboradores), unidades: Number(f.unidades),
+        faltantes: administrador ? Number(f.faltantes) : 0, sobrantes: administrador ? Number(f.sobrantes) : 0, valorContado: administrador ? Number(f.valorContado) : 0, sinCosto: Number(f.sinCosto) })), meta: { total, pagina: actual, porPagina } };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
+  }
+
+  async lineasCompartidas(conteoId: string, pagina: number, porPagina: number, q: string, administrador: boolean) {
+    return this.prisma.$transaction(async tx => {
+      const conteo = await tx.conteoInventario.findUnique({ where: { id: conteoId }, select: { estado: true } });
+      if (!conteo) throw new ErrorDominio("NO_ENCONTRADO", "Conteo no encontrado", 404);
+      if (!administrador && conteo.estado !== EstadoConteo.EN_CURSO) throw new ErrorDominio("CONTEO_CERRADO", "El administrador ya cerró este conteo", 403);
+      const where: Prisma.ConteoLineaWhereInput = { conteoId, producto: { OR: [{ nombre: { contains: q, mode: "insensitive" } }, { codigoInterno: { contains: q, mode: "insensitive" } }] } };
+      const total = await tx.conteoLinea.count({ where });
+      const actual = Math.min(pagina, Math.max(1, Math.ceil(total / porPagina)));
+      const filas = await tx.conteoLinea.findMany({ where, orderBy: [{ producto: { nombre: "asc" } }, { id: "asc" }], take: porPagina, skip: (actual - 1) * porPagina,
+        include: { producto: { select: { nombre: true, codigoInterno: true, unidad: true } }, contadoPor: { select: { nombre: true } }, asignadoPor: { select: { nombre: true } } } });
+      return { data: filas.map(l => ({ productoId: l.productoId, nombre: l.producto.nombre, codigo: l.producto.codigoInterno, unidad: l.producto.unidad,
+        stockFisico: l.stockFisico, diferencia: administrador ? l.diferencia : null, contadoEn: l.contadoEn?.toISOString() ?? null, contadoPor: l.contadoPor?.nombre ?? null,
+        asignadoPorId: l.asignadoHasta && l.asignadoHasta > new Date() ? l.asignadoPorId : null,
+        asignadoPor: l.asignadoHasta && l.asignadoHasta > new Date() ? l.asignadoPor?.nombre ?? null : null, asignadoHasta: l.asignadoHasta?.toISOString() ?? null })), meta: { total, pagina: actual, porPagina } };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
+  }
 
   async iniciarConteo(datos: z.infer<typeof IniciarConteoSchema>, usuarioId: string) {
     return this.prisma.$transaction(async (tx) => {
@@ -64,14 +130,20 @@ export class InventarioService {
     });
   }
 
-  async actualizarLinea(conteoId: string, productoId: string, stockFisico: number, usuarioId: string, devolverDetalle = true) {
+  async actualizarLinea(conteoId: string, productoId: string, stockFisico: number, usuarioId: string, devolverDetalle = true, contadoEnEsperado?: string | null) {
     await this.prisma.$transaction(async (tx) => {
       await this.validarEnCurso(conteoId, tx);
       const linea = await tx.conteoLinea.findUnique({
         where: { conteoId_productoId: { conteoId, productoId } },
       });
       if (!linea) throw new ErrorDominio("NO_ENCONTRADO", "Línea de conteo no encontrada", 404);
+      if (contadoEnEsperado !== undefined && (linea.contadoEn?.toISOString() ?? null) !== contadoEnEsperado) throw new ErrorDominio("CONTEO_CAMBIO", "La cantidad cambió desde que la abriste. Revisa la lectura actual antes de corregir", 409);
+      const ahora = new Date();
+      if (linea.asignadoPorId && linea.asignadoPorId !== usuarioId && linea.asignadoHasta && linea.asignadoHasta > ahora) throw new ErrorDominio("PRODUCTO_OCUPADO", "Otro colaborador está contando este producto", 409);
+      const usuario = await tx.usuario.findUniqueOrThrow({ where: { id: usuarioId }, select: { rol: true } });
+      if (usuario.rol === RolUsuario.INVENTARIO && (linea.stockFisico !== null || linea.asignadoPorId !== usuarioId || !linea.asignadoHasta || linea.asignadoHasta <= ahora)) throw new ErrorDominio("ASIGNACION_VENCIDA", "Solicita un producto disponible antes de guardar. La cantidad anterior se conserva", 409);
       const producto = await tx.producto.findUniqueOrThrow({ where: { id: productoId }, select: { costoActual: true } });
+      await tx.participacionConteo.upsert({ where: { conteoId_usuarioId: { conteoId, usuarioId } }, create: { conteoId, usuarioId }, update: { ultimoEn: ahora } });
 
       await tx.conteoLinea.update({
         where: { id: linea.id },
@@ -81,6 +153,7 @@ export class InventarioService {
           contadoEn: new Date(),
           contadoPorId: usuarioId,
           costoUnitarioConteo: producto.costoActual,
+          asignadoPorId: null, asignadoHasta: null,
         },
       });
     });
@@ -91,6 +164,7 @@ export class InventarioService {
   async finalizar(conteoId: string) {
     await this.prisma.$transaction(async (tx) => {
       const conteo = await this.validarEnCurso(conteoId, tx);
+      if (await tx.conteoLinea.count({ where: { conteoId, asignadoHasta: { gt: new Date() } } })) throw new ErrorDominio("CONTEO_OCUPADO", "Hay colaboradores contando productos. Espera a que guarden o liberen su producto", 409);
       if ((conteo.tipo === TipoConteo.INICIAL || conteo.fechaDiaria) && await tx.conteoLinea.count({ where: { conteoId, stockFisico: null } })) throw new ErrorDominio("CONTEO_INCOMPLETO", "Cuenta todos los productos antes de confirmar este inventario");
       await tx.conteoInventario.update({
         where: { id: conteoId },

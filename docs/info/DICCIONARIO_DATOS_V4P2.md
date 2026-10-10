@@ -801,3 +801,11 @@ Relaciones Prisma:
 - Las migraciones iniciales agregan checks monetarios/de stock y las FKs. Las relaciones con onDelete:Cascade afectan líneas dependientes; la aplicación no ofrece borrado físico de documentos comerciales.
 
 Consulta el [flujo de guardado y las comprobaciones SQL](GUARDADO_Y_CONCILIACION_V4P2.md) antes de comparar saldos, stock o dinero.
+
+### Colaboración en inventarios — 10/10/2026
+
+RolUsuario agrega inventario; roles/rolPermisos le asignan solo inventario. La API autoriza expresamente los endpoints de consulta de conteos abiertos, asignación y guardado de líneas. Finalización, aplicación y creación siguen siendo administrativas.
+
+conteoLineas.asignadoPorId: FK a usuarios, nullable; identifica quién está contando. asignadoHasta: instante UTC nullable; vence a los cinco minutos. Ambos se limpian al guardar o liberar. contadoPorId/contadoEn identifican el guardado confirmado; stockFisico NULL sigue pendiente, 0 es contado. Índice conteoId/stockFisico/asignadoHasta para recuperar pendientes. La unicidad conteoId/productoId impide duplicar una línea.
+
+participantesConteo: PK compuesta conteoId/usuarioId; FK a conteosInventario y usuarios. primeroEn/ultimoEn: primera y última cantidad guardada por ese usuario. No almacena otra copia de cantidades ni balances. La migración conserva participantes históricos conocidos a partir de las líneas con responsable y fecha. Los antiguos registros sin responsable no reciben un colaborador inventado. Trigger diferido de sincronización publica cambios solo al confirmar la transacción.

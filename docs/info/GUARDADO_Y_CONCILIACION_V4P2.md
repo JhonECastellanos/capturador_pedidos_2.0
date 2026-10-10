@@ -284,3 +284,23 @@ conteoLineas.costoUnitarioConteo captura el costo al guardar la cantidad; ajuste
 El stockTeorico de un conteo corresponde a su apertura. Si hay ventas/compras mientras se cuenta, la diferencia observada puede diferir del delta aplicado al stock; movimientosInventario conserva el antes/después real de la aplicación. El costo de descuadres representa diferencias observadas, no un egreso de caja ni una medición de pérdida contable certificada.
 
 La caché del tablero usa formato v2 y revisión transaccional también para cabeceras/líneas de conteo y ajuste. Confirmar o aplicar invalida automáticamente; rollback no publica una revisión. La actualización entre pantallas conserva el mecanismo de sincronización existente.
+
+## CSV y conteos compartidos — 10/10/2026
+
+En Precios → Importar CSV, la opción «Preparar inventario inicial con las cantidades» comienza desmarcada. Para crear solo el catálogo, deja cantidadInicial vacía o en 0: los productos nuevos quedan con cero existencias y no se crea un conteo. Una cantidad positiva se carga al producto nuevo. En productos existentes siempre se conservan las existencias; para modificarlas usa compras o un conteo confirmado. El código vacío recibe un consecutivo automático; un nombre existente se reconoce y no se duplica.
+
+Si marcas «Preparar inventario inicial», la celda vacía queda pendiente de conteo; 0 guarda un conteo de cero unidades; un entero positivo guarda esa cantidad. Revisa las líneas en Inventario → Conteo guiado y confirma el inicio. No se aplica automáticamente un ajuste al inventario existente.
+
+Cada colaborador necesita su propia cuenta: Usuarios → Nuevo usuario → rol Inventario. Este rol entra en /inventario, ve los conteos abiertos y puede contar productos; no accede a ventas, clientes, caja, precios, usuarios ni ajustes. El administrador inicia el inventario inicial/general o el conteo diario. Al solicitar un inventario compartido del mismo tipo se continúa el abierto, sin crear otra copia.
+
+«Tomar siguiente producto» asigna un pendiente por cinco minutos, usando el bloqueo transaccional del conteo. Otro colaborador no puede tomarlo ni guardar una cantidad en esa línea. «Renovar tiempo» prolonga la asignación propia; «Liberar producto» la devuelve a pendientes. Al vencer, otro usuario puede recuperarla; una pantalla vieja no puede guardar sin una asignación vigente. Se recomienda una cuenta distinta por persona, no compartir la misma sesión. Recargar y tomar un producto recupera la asignación propia vigente.
+
+Guardar confirma la cantidad, fecha, responsable y costo en una sola transacción. Cero cuenta como completado. Una línea ya guardada no puede sobrescribirse desde el rol Inventario. participantesConteo conserva quienes guardaron al menos una cantidad, con primera y última participación; una corrección posterior no borra a un colaborador del historial. No duplica stock ni saldos. El progreso se agrega desde conteoLineas y la participación desde participantesConteo; el historial y sus líneas se consultan paginados (30).
+
+El administrador ve progreso, unidades, valoración al costo, faltantes/sobrantes y fechas dentro de Conteo guiado. La pantalla exige completar todas las líneas antes de finalizar un conteo compartido. Los conteos parciales anteriores siguen admitidos por el mecanismo existente. Finalizar conserva el documento; «Aplicar ajuste al stock» requiere una segunda confirmación. Haz inventarios generales/iniciales durante una pausa de ventas y compras para evitar mezclar movimientos con cantidades observadas. La fecha de cada línea indica cuándo se detectó la diferencia; la fecha de cierre determina su período en Inicio. Estas valoraciones no equivalen a rentabilidad contable.
+
+El conteo diario incluye cinco productos aleatorios (todos si hay menos). La rotación prioriza los no contados en el ciclo antes de repetir, y solo avanza al confirmar. Un conteo diario pendiente se retoma antes de abrir otro; varios celulares continúan el mismo conteo del día. No se ejecuta automáticamente sin confirmación del administrador.
+
+Las pantallas se sincronizan con el mecanismo existente cada dos segundos más la latencia. Guardar espera la confirmación real de PostgreSQL, no una promesa de escritura instantánea ni la caché local.
+
+El administrador puede usar Corregir sobre una línea contada mientras el documento siga abierto. La corrección envía contadoEnEsperado y se rechaza si la lectura cambió desde que se abrió; conserva a los participantes anteriores y no modifica el stock hasta aplicar el conteo.

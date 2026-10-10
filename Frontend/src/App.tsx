@@ -22,6 +22,7 @@ import {
   VendedorPedidoDetalle,
 } from "./modules/ventas/screens/RutasVentas";
 
+const ConteoColaborador = lazy(() => import("./modules/inventario/screens/ConteoColaborador"));
 const InventarioAdmin = lazy(() => import("./modules/inventario/screens/InventarioAdmin").then((m) => ({ default: m.InventarioAdmin })));
 const PedidosAdmin = lazy(() => import("./modules/pedidos/screens/PedidosAdmin").then((m) => ({ default: m.PedidosAdmin })));
 const CreditosAdmin = lazy(() => import("./modules/creditos/screens/CreditosAdmin").then((m) => ({ default: m.CreditosAdmin })));
@@ -45,6 +46,7 @@ function Contenido() {
           <Route path="/" element={<Acceso />} />
 
           {/* ─── Flujo del vendedor (app móvil) ─── */}
+          <Route path="/inventario" element={<RutaProtegida roles={["inventario"]}><ConteoColaborador /></RutaProtegida>} />
           <Route path="/vendedor" element={<RutaProtegida roles={["vendedor"]}><VendedorInicio /></RutaProtegida>} />
           <Route path="/vendedor/pedido" element={<RutaProtegida roles={["vendedor"]}><VendedorPedido /></RutaProtegida>} />
           <Route path="/vendedor/pedido/completado" element={<RutaProtegida roles={["vendedor"]}><VendedorPedidoCompletado /></RutaProtegida>} />

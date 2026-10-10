@@ -2,10 +2,10 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res } from "@ne
 import { FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { AuthService } from "./auth.service";
-import { Public, SesionOpcional, UsuarioActual, RequestAutenticado, COOKIE_ACCESO, COOKIE_REFRESH } from "../common/guards";
+import { Roles, Public, SesionOpcional, UsuarioActual, RequestAutenticado, COOKIE_ACCESO, COOKIE_REFRESH } from "../common/guards";
 import { TokensService } from "../common/tokens";
 import { ErrorDominio } from "../common/errores";
-import { Usuario } from "@prisma/client";
+import { Usuario, RolUsuario } from "@prisma/client";
 
 const LoginSchema = z.object({
   identifier: z.string().min(1),
@@ -32,6 +32,7 @@ const COOKIE_OPCIONES = {
   path: "/",
 } as const;
 
+@Roles(RolUsuario.ADMINISTRADOR, RolUsuario.VENDEDOR, RolUsuario.INVENTARIO)
 @Controller("auth")
 export class AuthController {
   constructor(private readonly auth: AuthService) {}

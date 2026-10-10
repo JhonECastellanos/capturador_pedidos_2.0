@@ -84,6 +84,7 @@ export class AuthGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
+    if (sesion.usuario.rol === RolUsuario.INVENTARIO && !roles?.includes(RolUsuario.INVENTARIO)) throw new ForbiddenException("Este acceso permite únicamente realizar conteos de inventario");
     if (roles && roles.length > 0 && !roles.includes(sesion.usuario.rol)) {
       throw new ForbiddenException("No tienes permiso para esta acción");
     }

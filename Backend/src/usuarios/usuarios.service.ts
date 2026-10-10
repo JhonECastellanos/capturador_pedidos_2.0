@@ -15,7 +15,7 @@ export class UsuariosService {
   constructor(private readonly prisma: PrismaService) {}
 
   async listar(pagina = 1, porPagina = 20, q = "") {
-    const where = q ? { OR: [{ nombre: { contains: q, mode: "insensitive" as const } }, { email: { contains: q, mode: "insensitive" as const } }, ...(q === "administrador" ? [{ rol: RolUsuario.ADMINISTRADOR }] : q === "vendedor" ? [{ rol: RolUsuario.VENDEDOR }] : [])] } : {};
+    const where = q ? { OR: [{ nombre: { contains: q, mode: "insensitive" as const } }, { email: { contains: q, mode: "insensitive" as const } }, ...(q === "administrador" ? [{ rol: RolUsuario.ADMINISTRADOR }] : q === "vendedor" ? [{ rol: RolUsuario.VENDEDOR }] : q === "inventario" ? [{ rol: RolUsuario.INVENTARIO }] : [])] } : {};
     const total = await this.prisma.usuario.count({ where });
     const actual = Math.min(pagina, Math.max(1, Math.ceil(total / porPagina)));
     const usuarios = await this.prisma.usuario.findMany({ where, orderBy: [{ rol: "asc" }, { nombre: "asc" }, { id: "asc" }], take: porPagina, skip: (actual - 1) * porPagina });
@@ -53,7 +53,7 @@ export class UsuariosService {
           nombre: datos.nombre.trim(),
           email: datos.email,
           passwordHash,
-          rol: datos.rol === "administrador" ? RolUsuario.ADMINISTRADOR : RolUsuario.VENDEDOR,
+          rol: RolUsuario[datos.rol.toUpperCase() as keyof typeof RolUsuario],
         },
       });
     });
@@ -72,8 +72,8 @@ export class UsuariosService {
     return this.actualizarAcceso(usuarioId, actorId);
   }
 
-  async cambiarRol(usuarioId: string, rol: "administrador" | "vendedor", actorId: string) {
-    return this.actualizarAcceso(usuarioId, actorId, rol === "administrador" ? RolUsuario.ADMINISTRADOR : RolUsuario.VENDEDOR);
+  async cambiarRol(usuarioId: string, rol: "administrador" | "vendedor" | "inventario", actorId: string) {
+    return this.actualizarAcceso(usuarioId, actorId, RolUsuario[rol.toUpperCase() as keyof typeof RolUsuario]);
   }
 
   private async actualizarAcceso(usuarioId: string, actorId: string, rol?: RolUsuario) {

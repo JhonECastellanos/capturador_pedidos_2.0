@@ -138,7 +138,7 @@ export function UsuariosAdmin() {
                     onChange={(evento) => setUsuarioNuevo((actual) => ({ ...actual, rol: evento.target.value as NuevoUsuario["rol"] }))}
                     className="mt-1 w-full rounded-xl border border-line bg-paper px-3 py-2.5 text-[13px] text-ink focus:border-ink focus:outline-none"
                   >
-                    <option value="vendedor">Vendedor</option>
+                    <option value="vendedor">Vendedor</option><option value="inventario">Inventario</option>
                     <option value="administrador">Administrador</option>
                   </select>
                 </div>
@@ -168,7 +168,7 @@ export function UsuariosAdmin() {
                 <div className="flex justify-between px-3 py-2.5 text-[13px]"><span className="text-ink-soft">Rol</span><span className={`rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold ${usuarioNuevo.rol === "administrador" ? "bg-accent-soft text-accent-dark" : "bg-teal-soft text-teal"}`}>{usuarioNuevo.rol}</span></div>
               </div>
               <p className="mt-2 text-[11.5px] text-ink-soft">
-                {usuarioNuevo.rol === "administrador" ? "Acceso total: inventario, caja, cierre y usuarios." : "Acceso a clientes, pedidos y cobros del día."}
+                {usuarioNuevo.rol === "administrador" ? "Acceso total: inventario, caja, cierre y usuarios." : usuarioNuevo.rol === "inventario" ? "Cuenta productos en inventarios compartidos. No puede cambiar stock ni confirmar ajustes." : "Acceso a clientes, pedidos y cobros del día."}
               </p>
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <button
@@ -197,7 +197,7 @@ export function UsuariosAdmin() {
             pantalla="Usuarios y permisos"
             pasos={[
               { titulo: "1 · Crear acceso", texto: "Toca '+ Nuevo Usuario' para crear accesos con nombre, correo, rol y contraseña. Solo el administrador gestiona accesos." },
-              { titulo: "2 · Roles", texto: "Vendedor: clientes, pedidos y cobros. Administrador: control total, inventario y cierre." },
+              { titulo: "2 · Roles", texto: "Inventario: conteos compartidos de productos. Vendedor: clientes, pedidos y cobros. Administrador: control total, inventario y cierre." },
               { titulo: "3 · Lista", texto: "Revisa activos, roles y permisos en la tabla con scroll interno." },
             ]}
           />
@@ -254,7 +254,7 @@ export function UsuariosAdmin() {
             </div>
             {cambiarRolUsuario && !item.esSistema && item.id !== sesion?.id && <label className="mt-3 flex items-center justify-between gap-3 text-xs text-ink-soft">Cambiar rol
               <select aria-label={`Rol de ${item.nombre}`} value={item.rol} className="min-h-11 rounded-lg border border-line bg-paper px-3" onChange={(e) => setCambioRol({ id: item.id, rol: e.target.value as UsuarioSistema["rol"] })}>
-                <option value="vendedor">Vendedor</option><option value="administrador">Administrador</option>
+                <option value="vendedor">Vendedor</option><option value="inventario">Inventario</option><option value="administrador">Administrador</option>
               </select>
             </label>}
           </article>

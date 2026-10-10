@@ -10,7 +10,7 @@
 
 // ─── Identidad y permisos ─────────────────────────────────────────
 
-export const ROL_USUARIO = ["administrador", "vendedor"] as const;
+export const ROL_USUARIO = ["administrador", "vendedor", "inventario"] as const;
 export type RolUsuario = (typeof ROL_USUARIO)[number];
 
 export const PERMISOS = [
@@ -158,6 +158,7 @@ export const ETIQUETA_ESTADO_CUENTA: Record<EstadoCuenta, string> = {
 export const ETIQUETA_ROL: Record<RolUsuario, string> = {
   administrador: "Administrador",
   vendedor: "Vendedor",
+  inventario: "Inventario",
 };
 
 export const ETIQUETA_ESTADO_CONTEO: Record<EstadoConteo, string> = {

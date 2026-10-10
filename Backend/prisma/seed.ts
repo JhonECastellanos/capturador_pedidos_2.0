@@ -4,6 +4,7 @@ import { asegurarSystem } from "./system";
 const prisma = new PrismaClient();
 
 const ROLES = [
+  { codigo: "inventario", nombre: "Inventario", descripcion: "Conteos compartidos de productos" },
   { codigo: "administrador", nombre: "Administrador", descripcion: "Control total del negocio" },
   { codigo: "vendedor", nombre: "Vendedor", descripcion: "Venta y cobro de pedidos" },
 ];
@@ -28,6 +29,7 @@ const PERMISOS = [
 const PERMISOS_POR_ROL: Record<string, string[]> = {
   administrador: PERMISOS.map((permiso) => permiso.codigo),
   vendedor: ["clientes", "pedidos", "cobros"],
+  inventario: ["inventario"],
 };
 
 const CATEGORIAS = ["Bebidas", "Lácteos", "Aseo", "Snacks", "Abarrotes", "Preparados"];

@@ -14,7 +14,7 @@ export default function Acceso() {
   const [verPassword, setVerPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (usuario) return <Navigate to={usuario.rol === "administrador" ? "/admin" : "/vendedor"} replace />;
+  if (usuario) return <Navigate to={usuario.rol === "administrador" ? "/admin" : usuario.rol === "inventario" ? "/inventario" : "/vendedor"} replace />;
 
   async function handleLogin(e: FormEvent) {
     e.preventDefault();
@@ -28,7 +28,7 @@ export default function Acceso() {
     }
     // Redirección según el rol del usuario autenticado:
     // administrador → /admin, vendedor → /vendedor
-    if (res.usuario) navegar(res.usuario.rol === "administrador" ? "/admin" : "/vendedor", { replace: true });
+    if (res.usuario) navegar(res.usuario.rol === "administrador" ? "/admin" : res.usuario.rol === "inventario" ? "/inventario" : "/vendedor", { replace: true });
   }
 
   return (

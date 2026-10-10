@@ -1,6 +1,6 @@
 # AMBIÉ · Capturador de pedidos
 
-Aplicación para administrar un negocio desde computador o celular: pedidos, cobros, crédito, inventario, compras, gastos, precios y caja. Una empresa por instalación, con accesos de administrador y vendedor.
+Aplicación para administrar un negocio desde computador o celular: pedidos, cobros, crédito, inventario, compras, gastos, precios y caja. Una empresa por instalación, con accesos de administrador, vendedor y colaboradores de inventario.
 
 ## Tecnología
 

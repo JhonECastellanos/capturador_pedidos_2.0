@@ -41,7 +41,7 @@ Proteger cuenta/nombre en frontend, API y PostgreSQL: no desactivar, degradar, e
 
 ## Frontend y UX
 
-React 19, TypeScript, Vite, Tailwind 4 y React Router 7. `main.tsx` contiene raíz, router y QueryClientProvider. `App.tsx` compone AuthProvider por fuera de OperacionesProvider. Hooks requieren sus proveedores. Entrada explícita `/`, administrador `/admin`, vendedor `/vendedor`; `/administracion` redirige.
+React 19, TypeScript, Vite, Tailwind 4 y React Router 7. `main.tsx` contiene raíz, router y QueryClientProvider. `App.tsx` compone AuthProvider por fuera de OperacionesProvider. Hooks requieren sus proveedores. Entrada explícita `/`, administrador `/admin`, vendedor `/vendedor`, colaborador de inventario `/inventario`; `/administracion` redirige.
 
 Preservar pantalla → contexto/fachada (`OperacionesContext.tsx`) → dominio (`dominio/servicios.ts`) → repositorios/API. `OperacionesApiContext.tsx` implementa fachada remota. Reutilizar `modules/ventas/screens/RutasVentas.tsx` entre roles.
 
@@ -121,3 +121,5 @@ La factura usa todas las líneas persistidas y sus precios históricos; PedidoCo
 
 - [Imágenes de productos](Frontend/public/assets/productos/README.md)
 - [Comprobantes](Frontend/public/assets/comprobantes/README.md)
+
+Conteos compartidos: rol INVENTARIO con acceso explícito a consultas de conteos abiertos, asignaciones y guardado de líneas. No permite crear/cerrar/aplicar conteos ni operaciones comerciales. Reutilizar ConteosCompartidos para ambos roles; asignaciones de cinco minutos bajo bloqueo de conteo, participantes persistidos y correcciones administrativas con contadoEnEsperado. No volver a descargar documentos completos en el snapshot global.
