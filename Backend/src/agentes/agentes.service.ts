@@ -6,7 +6,7 @@ import { PrismaService } from "../common/prisma.module";
 import { ErrorDominio } from "../common/errores";
 import { TokensService } from "../common/tokens";
 import { fechaLocalISO } from "../common/crypto";
-import { interpretarProveedor, modelosProveedor, probarProveedor, validarDestino, permiteRespaldo } from "./proveedores";
+import { interpretarProveedor, modelosProveedor, probarProveedor, validarDestino, permiteRespaldo, limpiarInstruccionProveedor } from "./proveedores";
 
 export function autorizarOperacion(rol: RolUsuario, operacion: InstruccionAgente["operacion"]) {
   if (rol === RolUsuario.INVENTARIO && operacion !== "conteo") throw new ErrorDominio("AGENTE_PERMISO", "Tu acceso permite únicamente guardar cantidades en tus productos asignados", 403);
@@ -87,18 +87,18 @@ export class AgentesService {
   async interpretar(texto: string, anterior: InstruccionAgente | undefined, usuario: Usuario, id: string = randomUUID(), version = 1, contexto?: ContextoAgente) {
     const estado = await this.estado();
     if (!estado.habilitado) throw new ErrorDominio("AGENTE_DESACTIVADO", "Activa el asistente en Configuración para empezar");
-    const mensajes: Array<{ role: "system" | "user"; content: string }> = [{ role: "system", content: `Interpreta instrucciones comerciales en español. Prepara una operación, nunca la ejecutes. Devuelve todos los datos expresados. Si hay un borrador anterior, conserva sus campos y aplica únicamente las correcciones pedidas. No completes datos faltantes por intuición, ni inventes IDs, productos, clientes, precios o pagos. No interpretes confirmar/cancelar como un nuevo pedido. Rol actual: ${usuario.rol}. El rol inventario solo puede contar productos asignados. Borrador anterior: ${JSON.stringify(anterior ?? null)}.` }, { role: "user", content: texto }];
+    const mensajes: Array<{ role: "system" | "user"; content: string }> = [{ role: "system", content: `Interpreta instrucciones comerciales en español. Prepara una operación, nunca la ejecutes. Devuelve todos los datos expresados en sus campos de la herramienta: los importes van en monto como número, la forma de pago en metodo, las cantidades en cantidad y los productos en lineas. Escribe los números aunque el usuario los diga en palabras. efectivo y billetera como campos numéricos son exclusivos del cierre de caja; en las demás operaciones usa metodo: "efectivo" o "billetera". Ejemplo de extracción: "gasto de transporte por un peso en efectivo" devuelve {"operacion":"gasto","concepto":"transporte","monto":1,"metodo":"efectivo"}. "No confirmar" solo significa preparar el borrador; no significa descontarCaja:false. En gastos o egresos, conserva monto, concepto y metodo si el usuario los indicó. Si hay un borrador anterior, conserva sus campos y aplica únicamente las correcciones pedidas. No completes datos faltantes por intuición, ni inventes IDs, productos, clientes, precios o pagos. No interpretes confirmar/cancelar como un nuevo pedido. Rol actual: ${usuario.rol}. El rol inventario solo puede contar productos asignados. Borrador anterior: ${JSON.stringify(anterior ?? null)}.` }, { role: "user", content: texto }];
     const inicio = Date.now(); let uso: UsoAgente | undefined; let respaldo = false;
     let proveedor = await this.proveedor(); let llamada: unknown;
-    try { llamada = await interpretarProveedor(proveedor, mensajes, medida => { uso = medida; }); }
+    try { llamada = await interpretarProveedor({ ...proveedor, sesion: id }, mensajes, medida => { uso = medida; }); }
     catch (error) {
       if (!permiteRespaldo(error)) throw error;
       const configuracion = (await this.leer()).configuracion;
       if (configuracion.modo !== "hibrido" || !configuracion.respaldoId) throw error;
       proveedor = await this.proveedor(configuracion.respaldoId); respaldo = true;
-      llamada = await interpretarProveedor(proveedor, mensajes, medida => { uso = medida; });
+      llamada = await interpretarProveedor({ ...proveedor, sesion: id }, mensajes, medida => { uso = medida; });
     }
-    const instruccion = InstruccionAgenteEsquema.parse(llamada);
+    const instruccion = InstruccionAgenteEsquema.parse(limpiarInstruccionProveedor(llamada));
     if (contexto && ["conteo", "finalizar-conteo", "aplicar-conteo"].includes(instruccion.operacion)) {
       instruccion.conteoId ??= contexto.conteoId;
       if (instruccion.operacion === "conteo") instruccion.producto ??= contexto.producto;

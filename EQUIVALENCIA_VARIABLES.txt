@@ -828,3 +828,9 @@ ConfiguracionAgente.proveedores[].maxTokens → max_tokens / max_output_tokens /
 ConfiguracionAgente.respaldoId → conexión alternativa autorizada solo en Híbrido ante fallos transitorios; null desactiva respaldo.
 RevisionAgente.conexion → proveedor/modelo/respaldo/milisegundos/uso; uso conserva solo tokens enteros informados por el proveedor, sin prompts ni credenciales.
 PROVEEDOR_CREDENCIALES / PROVEEDOR_RUTA / PROVEEDOR_PARAMETROS → HTTP 422; no caduca la sesión del negocio. PROVEEDOR_LIMITE → 429; fallo del proveedor → 502.
+
+V6P4 — catálogo de agentes y conexiones (2026-10-10)
+API agentes/proveedores/:id/modelos -> PanelAgentes.Modelo: gratis (precio publicado), incluido (catálogo Go), protocolo (metadatos públicos), herramientas (compatibilidad declarada).
+Gemini herramienta.parameters -> functionDeclarations.parametersJsonSchema; no modifica el contrato comercial.
+RevisionAgente.id -> Proveedor.sesion -> cabecera x-opencode-session, solo OpenCode; identificador del borrador, sin tokens ni cuerpos privados.
+Modelo opcional null/"" -> faltante antes de validar InstruccionAgente; 0/false/líneas se conservan.

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { lookup } from "node:dns/promises";
 import { isIP, type LookupFunction } from "node:net";
 import { request as requestHttps } from "node:https";
@@ -5,7 +6,7 @@ import { request as requestHttp } from "node:http";
 import { ErrorDominio } from "../common/errores";
 import { InstruccionAgenteEsquema, problemaConexionAgente, type ConfiguracionAgente, type EstadoPruebaAgente, type UsoAgente } from "@ambie/contrato";
 
-type Proveedor = Omit<ConfiguracionAgente["proveedores"][number], "maxTokens"> & { maxTokens?: number };
+type Proveedor = Omit<ConfiguracionAgente["proveedores"][number], "maxTokens"> & { maxTokens?: number; sesion?: string };
 type Mensaje = { role: "system" | "user"; content: string };
 export function privado(ip: string) {
   const limpio = ip.toLowerCase().replace(/^::ffff:/, "");
@@ -30,6 +31,10 @@ async function solicitud(p: Proveedor, ruta: string, cuerpo?: unknown) {
   if (problema && process.env.AGENTES_PROVEEDORES_PRUEBA !== "true") throw new ErrorDominio("PROVEEDOR_CONFIGURACION", problema);
   const direcciones = await validarDestino(p.url, p.protocolo === "ollama");
   const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (new URL(p.url).hostname === "opencode.ai") {
+    headers["User-Agent"] = "AMBIE/1.0";
+    headers["x-opencode-session"] = p.sesion ?? randomUUID();
+  }
   if (p.apiKey) {
     if (p.protocolo === "gemini") headers["x-goog-api-key"] = p.apiKey;
     else if (p.protocolo === "anthropic") headers["x-api-key"] = p.apiKey;
@@ -77,17 +82,55 @@ function errorProveedor(status: number, cuerpo: string) {
   if (status >= 400 && status < 500) return new ErrorDominio("PROVEEDOR_PARAMETROS", `El proveedor rechazó la solicitud (HTTP ${status}). Comprueba su protocolo, el modelo y los parámetros admitidos`, 422);
   return new ErrorDominio("PROVEEDOR_RESPUESTA", `El proveedor no pudo responder (HTTP ${status}). Intenta nuevamente más tarde`, 502);
 }
-export async function modelosProveedor(p: Proveedor): Promise<Array<{ id: string; nombre: string; herramientas: boolean | null; bytes?: number }>> {
+type MetadatosModelo = { cost?: { input?: number; output?: number }; tool_call?: boolean; provider?: { npm?: string } };
+type CatalogoOpenCode = Record<string, { npm?: string; models?: Record<string, MetadatosModelo> }>;
+let catalogoOpenCode: { hasta: number; promesa: Promise<CatalogoOpenCode> } | undefined;
+async function metadatosOpenCode(): Promise<CatalogoOpenCode> {
+  if (!catalogoOpenCode || catalogoOpenCode.hasta < Date.now()) {
+    catalogoOpenCode = { hasta: Date.now() + 300000, promesa: (async () => {
+      // Catálogo público fijo: ninguna clave ni dato comercial se envía a este servicio.
+      const respuesta = await fetch("https://models.dev/api.json", { signal: AbortSignal.timeout(10000), redirect: "error" });
+      if (!respuesta.ok || !respuesta.body) return {};
+      const partes: Uint8Array[] = []; let bytes = 0;
+      for await (const parte of respuesta.body) { bytes += parte.length; if (bytes > 8 * 1024 * 1024) throw new Error("Catálogo demasiado grande"); partes.push(parte); }
+      return JSON.parse(Buffer.concat(partes).toString("utf8")) as CatalogoOpenCode;
+    })().catch(() => ({})) };
+  }
+  return catalogoOpenCode.promesa;
+}
+export function precioGratuito(precio: { prompt?: string; completion?: string; request?: string }): boolean {
+  const cero = (valor: unknown) => typeof valor === "string" && valor.trim() !== "" && Number(valor) === 0;
+  return cero(precio.prompt) && cero(precio.completion) && (precio.request === undefined || cero(precio.request));
+}
+export async function modelosProveedor(p: Proveedor): Promise<Array<{ id: string; nombre: string; herramientas: boolean | null; gratis?: boolean; incluido?: boolean; protocolo?: Proveedor["protocolo"]; bytes?: number }>> {
   const r = await solicitud(p, p.protocolo === "ollama" ? "/api/tags" : "/models");
   if (p.protocolo === "ollama") return (r.models ?? []).map((m: { name: string; size: number }) => ({ id: m.name, nombre: m.name, bytes: m.size, herramientas: null }));
-  if (p.protocolo === "gemini") return (r.models ?? []).filter((m: { supportedGenerationMethods?: string[] }) => m.supportedGenerationMethods?.includes("generateContent") || m.supportedGenerationMethods?.includes("bidiGenerateContent")).map((m: { name: string; displayName?: string }) => ({ id: m.name.replace(/^models\//, ""), nombre: m.displayName ?? m.name, herramientas: null }));
-  return (r.data ?? []).map((m: { id: string; display_name?: string }) => ({ id: m.id, nombre: m.display_name ?? m.id, herramientas: null }));
+  if (p.protocolo === "gemini") return (r.models ?? []).filter((m: { supportedGenerationMethods?: string[] }) => m.supportedGenerationMethods?.includes("generateContent")).map((m: { name: string; displayName?: string }) => ({ id: m.name.replace(/^models\//, ""), nombre: m.displayName ?? m.name, herramientas: null }));
+  const esOpenCode = new URL(p.url).hostname === "opencode.ai";
+  const esGo = esOpenCode && new URL(p.url).pathname.includes("/zen/go/");
+  const metadatos = esOpenCode ? (await metadatosOpenCode())[esGo ? "opencode-go" : "opencode"] : undefined;
+  return (r.data ?? []).map((m: { id: string; name?: string; display_name?: string; pricing?: { prompt?: string; completion?: string; request?: string }; supported_parameters?: string[] }) => {
+    const detalle = metadatos?.models?.[m.id];
+    const sdk = detalle?.provider?.npm ?? metadatos?.npm;
+    const protocolo: Proveedor["protocolo"] | undefined = sdk === "@ai-sdk/openai" ? "responses" : sdk === "@ai-sdk/anthropic" ? "anthropic" : sdk === "@ai-sdk/google" ? "gemini" : sdk === "@ai-sdk/openai-compatible" ? "openai" : undefined;
+    return {
+    ...(detalle?.cost?.input !== undefined && detalle.cost.output !== undefined ? { gratis: detalle.cost.input === 0 && detalle.cost.output === 0 } : {}),
+    ...(esGo && detalle ? { incluido: true } : {}), ...(protocolo ? { protocolo } : {}),
+    id: m.id, nombre: m.display_name ?? m.name ?? m.id,
+    herramientas: m.supported_parameters ? m.supported_parameters.includes("tools") : detalle?.tool_call ?? null,
+    ...(new URL(p.url).hostname === "openrouter.ai" && m.pricing ? { gratis: precioGratuito(m.pricing) } : {}),
+  }; }).sort((a: { gratis?: boolean }, b: { gratis?: boolean }) => Number(b.gratis === true) - Number(a.gratis === true));
 }
-const herramienta = { name: "preparar_operacion", description: "Preparar un borrador sin guardarlo. Conserva todos los campos previos al corregir. Nunca confirmar, cobrar o cambiar stock automáticamente.", parameters: { type: "object", properties: { operacion: { type: "string", enum: ["pedido", "compra", "gasto", "egreso", "precio", "cobro", "estado", "cierre", "conteo", "iniciar-conteo", "finalizar-conteo", "aplicar-conteo"] }, cliente: { type: "string" }, ocasional: { type: "boolean" }, proveedor: { type: "string" }, referencia: { type: "string" }, lineas: { type: "array", items: { type: "object", properties: { producto: { type: "string" }, cantidad: { type: "integer", minimum: 0 }, costoUnitario: { type: "number", minimum: 0 } }, required: ["producto", "cantidad"], additionalProperties: false } }, metodo: { type: "string", enum: ["efectivo", "billetera", "credito"] }, preparacion: { type: "string", enum: ["pendiente", "entregado"] }, estado: { type: "string", enum: ["pendiente", "en-preparacion", "entregado", "cancelado"] }, concepto: { type: "string" }, monto: { type: "number", minimum: 0 }, precio: { type: "number", minimum: 0 }, producto: { type: "string" }, conteoId: { type: "string" }, tipoConteo: { type: "string", enum: ["inicial", "general", "aleatorio"] }, cantidad: { type: "integer", minimum: 0 }, fecha: { type: "string" }, efectivo: { type: "number", minimum: 0 }, billetera: { type: "number", minimum: 0 }, descontarCaja: { type: "boolean" } }, required: ["operacion"], additionalProperties: false } };
+const herramienta = { name: "preparar_operacion", description: "Preparar un borrador sin guardarlo. Conserva todos los campos previos al corregir. Nunca confirmar, cobrar o cambiar stock automáticamente.", parameters: { type: "object", properties: { operacion: { type: "string", enum: ["pedido", "compra", "gasto", "egreso", "precio", "cobro", "estado", "cierre", "conteo", "iniciar-conteo", "finalizar-conteo", "aplicar-conteo"] }, cliente: { type: "string" }, ocasional: { type: "boolean" }, proveedor: { type: "string" }, referencia: { type: "string" }, lineas: { type: "array", items: { type: "object", properties: { producto: { type: "string" }, cantidad: { type: "integer", minimum: 0 }, costoUnitario: { type: "number", minimum: 0 } }, required: ["producto", "cantidad"], additionalProperties: false } }, metodo: { type: "string", description: "Forma de pago indicada por el usuario. Para gastos, egresos, pedidos y cobros. No omitir si se expresó.", enum: ["efectivo", "billetera", "credito"] }, preparacion: { type: "string", enum: ["pendiente", "entregado"] }, estado: { type: "string", enum: ["pendiente", "en-preparacion", "entregado", "cancelado"] }, concepto: { type: "string" }, monto: { type: "number", description: "Importe de gasto, egreso o cobro en pesos. Convierte números escritos en palabras: un peso es 1. No omitir si se expresó.", minimum: 0 }, precio: { type: "number", minimum: 0 }, producto: { type: "string" }, conteoId: { type: "string" }, tipoConteo: { type: "string", enum: ["inicial", "general", "aleatorio"] }, cantidad: { type: "integer", minimum: 0 }, fecha: { type: "string", description: "Fecha expresada por el usuario, YYYY-MM-DD. Omitir si no la indicó.", pattern: "^\\d{4}-\\d{2}-\\d{2}$" }, efectivo: { type: "number", description: "Solo para cierre: efectivo contado. En gastos y pedidos usa metodo.", minimum: 0 }, billetera: { type: "number", description: "Solo para cierre: billetera confirmada. En gastos y pedidos usa metodo.", minimum: 0 }, descontarCaja: { type: "boolean" } }, required: ["operacion"], additionalProperties: false } };
+export function limpiarInstruccionProveedor(valor: unknown): unknown {
+  if (!valor || typeof valor !== "object" || Array.isArray(valor)) return valor;
+  // Un campo opcional vacío significa dato faltante; conservar ceros, false y todas las líneas.
+  return Object.fromEntries(Object.entries(valor).filter(([clave, dato]) => clave === "operacion" || !Object.hasOwn(InstruccionAgenteEsquema.shape, clave) || (dato !== null && dato !== "")));
+}
 export async function interpretarProveedor(p: Proveedor, mensajes: Mensaje[], medir?: (uso: UsoAgente) => void): Promise<unknown> {
   if (!p.modelo) throw new ErrorDominio("MODELO_FALTANTE", "Selecciona un modelo antes de probar la conversación");
   if (p.protocolo === "gemini") {
-    const r = await solicitud(p, `/models/${encodeURIComponent(p.modelo.replace(/^models\//, ""))}:generateContent`, { systemInstruction: { parts: [{ text: mensajes.filter(m => m.role === "system").map(m => m.content).join("\n") }] }, contents: mensajes.filter(m => m.role === "user").map(m => ({ role: "user", parts: [{ text: m.content }] })), tools: [{ functionDeclarations: [herramienta] }], toolConfig: { functionCallingConfig: { mode: "ANY", allowedFunctionNames: [herramienta.name] } }, generationConfig: { temperature: 0, maxOutputTokens: p.maxTokens ?? 2000 } });
+    const r = await solicitud(p, `/models/${encodeURIComponent(p.modelo.replace(/^models\//, ""))}:generateContent`, { systemInstruction: { parts: [{ text: mensajes.filter(m => m.role === "system").map(m => m.content).join("\n") }] }, contents: mensajes.filter(m => m.role === "user").map(m => ({ role: "user", parts: [{ text: m.content }] })), tools: [{ functionDeclarations: [{ name: herramienta.name, description: herramienta.description, parametersJsonSchema: herramienta.parameters }] }], toolConfig: { functionCallingConfig: { mode: "ANY", allowedFunctionNames: [herramienta.name] } }, generationConfig: { temperature: 0, maxOutputTokens: p.maxTokens ?? 2000 } });
     medir?.(usoProveedor(r.usageMetadata, "gemini"));
     const llamada = r.candidates?.[0]?.content?.parts?.find((parte: { functionCall?: { name: string } }) => parte.functionCall?.name === herramienta.name);
     if (llamada) return llamada.functionCall.args;
@@ -105,6 +148,7 @@ export async function interpretarProveedor(p: Proveedor, mensajes: Mensaje[], me
     const local = p.protocolo === "ollama";
     const r = await solicitud(p, local ? "/api/chat" : "/chat/completions", { model: p.modelo, messages: mensajes, tools: [{ type: "function", function: herramienta }], ...(local ? { stream: false, options: { temperature: 0, num_predict: p.maxTokens ?? 2000 }, keep_alive: "2m" } : { temperature: 0, max_tokens: p.maxTokens ?? 2000, tool_choice: { type: "function", function: { name: herramienta.name } } }) });
     medir?.(usoProveedor(local ? r : r.usage, local ? "ollama" : "openai"));
+    if (!local && r.choices?.[0]?.finish_reason === "length") throw new ErrorDominio("MODELO_SALIDA_LIMITADA", "El modelo agotó el límite de respuesta antes de completar la operación. Aumenta el máximo de tokens en Ajustes avanzados o elige un modelo con menor consumo", 422);
     const mensaje = local ? r.message : r.choices?.[0]?.message;
     const llamada = mensaje?.tool_calls?.find((t: { function?: { name: string } }) => t.function?.name === herramienta.name);
     if (llamada) { try { return typeof llamada.function.arguments === "string" ? JSON.parse(llamada.function.arguments) : llamada.function.arguments; } catch { /* Mensaje controlado abajo. */ } }
@@ -122,6 +166,6 @@ function usoProveedor(datos: Record<string, unknown> | undefined, protocolo: str
 export function permiteRespaldo(error: unknown) { return error instanceof ErrorDominio && ["PROVEEDOR_LIMITE", "PROVEEDOR_CONEXION", "PROVEEDOR_RESPUESTA"].includes(error.codigo); }
 export async function probarProveedor(p: Proveedor): Promise<EstadoPruebaAgente> {
   const inicio = Date.now(); let uso: UsoAgente | undefined;
-  try { const resultado = await interpretarProveedor(p, [{ role: "system", content: "Prueba de conexión. Devuelve preparar_operacion con operacion gasto, concepto Prueba de conexión, monto 1, metodo efectivo. No se ejecuta ninguna escritura." }, { role: "user", content: "Prepara el gasto de prueba" }], medida => { uso = medida; }); if (!InstruccionAgenteEsquema.safeParse(resultado).success) throw new ErrorDominio("MODELO_HERRAMIENTAS", "El modelo devolvió campos inválidos. Prueba otro modelo", 502); return { estado: "disponible", mensaje: "El modelo respondió con una llamada a herramienta válida. No se guardó ninguna operación", comprobadoEn: new Date().toISOString(), milisegundos: Date.now() - inicio, ...(uso && Object.keys(uso).length ? { uso } : {}) }; }
+  try { const resultado = await interpretarProveedor(p, [{ role: "system", content: "Prueba de conexión. Devuelve preparar_operacion con operacion gasto, concepto Prueba de conexión, monto 1, metodo efectivo. No se ejecuta ninguna escritura." }, { role: "user", content: "Prepara el gasto de prueba" }], medida => { uso = medida; }); const validacion = InstruccionAgenteEsquema.safeParse(limpiarInstruccionProveedor(resultado)); if (!validacion.success || validacion.data.operacion !== "gasto" || validacion.data.monto !== 1 || validacion.data.metodo !== "efectivo" || !validacion.data.concepto) throw new ErrorDominio("MODELO_HERRAMIENTAS", "El modelo no conservó los datos del ejercicio: concepto, importe y pago. Prueba otro modelo", 502); return { estado: "disponible", mensaje: "El modelo respondió con una llamada a herramienta válida. No se guardó ninguna operación", comprobadoEn: new Date().toISOString(), milisegundos: Date.now() - inicio, ...(uso && Object.keys(uso).length ? { uso } : {}) }; }
   catch (e) { return { estado: e instanceof ErrorDominio && e.codigo === "PROVEEDOR_LIMITE" ? "limitado" : "error", mensaje: e instanceof Error ? e.message : "No se pudo comprobar el modelo", comprobadoEn: new Date().toISOString(), milisegundos: Date.now() - inicio }; }
 }

@@ -223,3 +223,50 @@ test('límite de salida y métricas provienen de la solicitud y respuesta reales
     assert.equal(ultimoCuerpo.max_tokens, 256); assert.deepEqual(uso, { entrada: 40, salida: 12, total: 52 });
   } finally { cuerpoProveedor = undefined; }
 });
+
+ test('Gemini envía JSON Schema en parametersJsonSchema, sin parameters incompatibles', async () => {
+  await listo; codigo = 200;
+  cuerpoProveedor = { candidates: [{ content: { parts: [{ functionCall: { name: 'preparar_operacion', args: { operacion: 'gasto', monto: 1 } } }] } }] };
+  try {
+    await interpretarProveedor({ nombre: 'Google', protocolo: 'gemini', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' }, [{ role: 'user', content: 'Prueba' }]);
+    const declaracion = ultimoCuerpo.tools[0].functionDeclarations[0];
+    assert.equal(declaracion.parameters, undefined);
+    assert.equal(declaracion.parametersJsonSchema.additionalProperties, false);
+    assert.equal(declaracion.parametersJsonSchema.properties.lineas.items.additionalProperties, false);
+  } finally { cuerpoProveedor = undefined; }
+});
+
+test('campos opcionales vacíos piden información, sin perder ceros ni líneas', () => {
+  const { limpiarInstruccionProveedor } = require('../dist/agentes/proveedores');
+  const dato = { operacion: 'conteo', cantidad: 0, descontarCaja: false, fecha: '', metodo: null, lineas: [{ producto: 'Prueba', cantidad: 0 }] };
+  assert.deepEqual(limpiarInstruccionProveedor(dato), { operacion: 'conteo', cantidad: 0, descontarCaja: false, lineas: dato.lineas });
+  assert.equal(InstruccionAgenteEsquema.safeParse(limpiarInstruccionProveedor({ operacion: '' })).success, false);
+  assert.equal(InstruccionAgenteEsquema.safeParse(limpiarInstruccionProveedor({ operacion: 'gasto', apiKey: '' })).success, false);
+  assert.equal(InstruccionAgenteEsquema.safeParse(limpiarInstruccionProveedor({ operacion: 'gasto', fecha: 'ayer' })).success, false);
+});
+
+test('indicador verde exige conservar el importe y el pago del ejercicio', async () => {
+  await listo; codigo = 200;
+  const anterior = respuesta;
+  try {
+    respuesta = { operacion: 'gasto', concepto: 'Prueba', monto: 1 };
+    const r = await probarProveedor({ nombre: 'Prueba', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' });
+    assert.equal(r.estado, 'error'); assert.match(r.mensaje, /importe y pago/);
+  } finally { respuesta = anterior; }
+});
+
+test('gratuito requiere precios explícitos en cero, no valores ausentes o vacíos', () => {
+  const { precioGratuito } = require('../dist/agentes/proveedores');
+  assert.equal(precioGratuito({ prompt: '0', completion: '0' }), true);
+  assert.equal(precioGratuito({ prompt: '0.000', completion: '0', request: '0' }), true);
+  assert.equal(precioGratuito({ prompt: '0', completion: '0', request: '0.01' }), false);
+  assert.equal(precioGratuito({ prompt: '', completion: '' }), false);
+  assert.equal(precioGratuito({}), false);
+  assert.equal(precioGratuito({ prompt: '0.01', completion: '0' }), false);
+});
+
+test('respuesta truncada explica el límite de salida sin inventar una operación', async () => {
+  await listo; codigo = 200; cuerpoProveedor = { choices: [{ finish_reason: 'length', message: {} }] };
+  try { await assert.rejects(interpretarProveedor({ nombre: 'Prueba', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' }, [{ role: 'user', content: 'Prueba' }]), e => e.codigo === 'MODELO_SALIDA_LIMITADA' && e.getStatus() === 422); }
+  finally { cuerpoProveedor = undefined; }
+});
