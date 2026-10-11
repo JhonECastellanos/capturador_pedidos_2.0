@@ -275,7 +275,7 @@ test('micrófono muestra texto parcial sin interpretar y envía silencio durante
   const ts = require('typescript'), vm = require('node:vm'), fs = require('node:fs');
   const fuente = fs.readFileSync('Frontend/src/modules/agentes/microfono.ts', 'utf8').replaceAll('import.meta.url', '"https://pruebas.invalid/captura.js"');
   const codigo = ts.transpileModule(fuente, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-  let socket, capturador, pausado = false, paradas = 0, cierres = 0;
+  let socket, capturador, pausado = false, paradas = 0, cierres = 0, interrupciones = 0;
   const parciales = [], finales = [], enviados = [];
   class Conexion {
     static OPEN = 1;
@@ -290,17 +290,70 @@ test('micrófono muestra texto parcial sin interpretar y envía silencio durante
   }
   class Capturador { constructor() { capturador = this; this.port = {}; } connect() {} disconnect() {} }
   const modulo = { exports: {} };
-  vm.runInNewContext(codigo, { module: modulo, exports: modulo.exports, require: () => ({ api: async () => ({ ticket: 'ticket-ficticio' }), baseApi: '/api/v1' }), window: { isSecureContext: true, location: { href: 'https://pruebas.invalid/' }, speechSynthesis: { speaking: false } }, navigator: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [{ stop: () => { paradas++; } }] }) } }, AudioContext: Contexto, AudioWorkletNode: Capturador, WebSocket: Conexion, URL, setTimeout, clearTimeout, ArrayBuffer });
+  vm.runInNewContext(codigo, { module: modulo, exports: modulo.exports, require: () => ({ api: async () => ({ ticket: 'ticket-ficticio' }), baseApi: '/api/v1' }), window: { isSecureContext: true, location: { href: 'https://pruebas.invalid/' }, speechSynthesis: { speaking: true, cancel: () => { interrupciones++; } } }, navigator: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [{ stop: () => { paradas++; } }] }) } }, AudioContext: Contexto, AudioWorkletNode: Capturador, WebSocket: Conexion, URL, setTimeout, clearTimeout, ArrayBuffer });
   const detener = await modulo.exports.abrirMicrofono(v => finales.push(v), () => {}, () => {}, () => pausado, v => parciales.push(v));
   try {
     socket.onmessage({ data: JSON.stringify({ tipo: 'texto', texto: 'Dos arepas con queso' }) });
     assert.deepEqual(parciales, ['Dos arepas con queso']); assert.equal(finales.length, 0);
     socket.onmessage({ data: JSON.stringify({ tipo: 'instruccion', texto: 'Dos arepas con queso y un yogur' }) });
     assert.deepEqual(finales, ['Dos arepas con queso y un yogur']);
+    socket.onmessage({ data: JSON.stringify({ tipo: 'hablando' }) }); assert.equal(interrupciones, 1);
     const pcm = new Int16Array([25, -40]);
     pausado = true; capturador.port.onmessage({ data: pcm.buffer }); assert.deepEqual([...enviados.at(-1)], [0, 0]);
     pausado = false; capturador.port.onmessage({ data: pcm.buffer }); assert.deepEqual([...enviados.at(-1)], [25, -40]);
   } finally { detener(); }
   detener(); assert.equal(paradas, 1); assert.equal(cierres, 1);
   socket.onmessage({ data: JSON.stringify({ tipo: 'instruccion', texto: 'No debe enviarse' }) }); assert.equal(finales.length, 1);
+});
+
+
+test('saludos y agradecimientos no se confunden con pedidos ni correcciones', () => {
+  const ts = require('typescript'), vm = require('node:vm'), fs = require('node:fs');
+  const fuente = fs.readFileSync('Frontend/src/modules/agentes/conversacion.ts', 'utf8');
+  const codigo = ts.transpileModule(fuente, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  const modulo = { exports: {} }; vm.runInNewContext(codigo, { module: modulo, exports: modulo.exports });
+  const responder = modulo.exports.respuestaCordial;
+  for (const texto of ['Hola buenas tardes', '¡Hola!', 'Buenos días', '¿Cómo estás?', 'Muchas gracias']) assert.ok(responder(texto));
+  for (const texto of ['Hola, quiero cinco cafés', 'Buenas tardes, cambia el pago a billetera', 'Gracias, agrega dos aguas', 'Quiero un pan', 'confirmar']) assert.equal(responder(texto), null);
+});
+
+test('pedido ya entregado conserva el significado sin aplicar estado a otro pedido', () => {
+  const { limpiarInstruccionProveedor } = require('../dist/agentes/proveedores');
+  assert.equal(limpiarInstruccionProveedor({ operacion: 'pedido', estado: 'entregado' }).preparacion, 'entregado');
+  assert.equal(limpiarInstruccionProveedor({ operacion: 'pedido', estado: 'entregado', preparacion: 'pendiente' }).preparacion, 'pendiente');
+  assert.equal(limpiarInstruccionProveedor({ operacion: 'estado', estado: 'entregado' }).preparacion, undefined);
+});
+
+
+test('unidades dictadas en mililitros coinciden con ml sin inventar productos', async () => {
+  const agua = { ...productos[0], id: 'agua', nombre: 'Agua Cristal 600 ml', codigoInterno: 'PROD-AGUA', precioVenta: new Prisma.Decimal(2500) };
+  const prueba = new AgentesService({ producto: { findMany: async () => [agua] }, cliente: { findMany: async () => [] } });
+  const r = await prueba.revisar({ operacion: 'pedido', ocasional: true, lineas: [{ producto: 'agua Cristal de 600 mililitros', cantidad: 3 }], metodo: 'efectivo', preparacion: 'pendiente' }, usuario);
+  assert.deepEqual(r.faltantes, []); assert.equal(r.total, '7500.00'); assert.equal(r.datos.lineas[0].productoId, 'agua');
+});
+
+
+test('preparar una instrucción responde sin refrescar listas; los guardados sí invalidan', async () => {
+  const ts = require('typescript'), vm = require('node:vm'), fs = require('node:fs');
+  const fuente = fs.readFileSync('Frontend/src/data/api.ts', 'utf8').replaceAll('import.meta.env', '{}');
+  const codigo = ts.transpileModule(fuente, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  let invalidaciones = 0;
+  const consultas = { invalidateQueries: async () => { invalidaciones++; } };
+  const modulo = { exports: {} }; vm.runInNewContext(codigo, { module: modulo, exports: modulo.exports, require: ruta => ruta === './query' ? { consultas, claveConsulta: ruta => ['api', 'sesion-ficticia', ruta] } : { claveGuardado: async () => undefined, resolverGuardado() {} }, fetch: async () => ({ ok: true, status: 201, json: async () => ({ data: { listo: true } }) }), AbortSignal, Date, DOMException });
+  for (const ruta of ['/agentes/interpretar', '/agentes/revisar', '/agentes/audio/sesion', '/agentes/audio/transcribir']) assert.deepEqual(JSON.parse(JSON.stringify(await modulo.exports.api(ruta, 'POST', {}))), { listo: true });
+  assert.equal(invalidaciones, 0);
+  await modulo.exports.api('/pedidos', 'POST', {}); assert.equal(invalidaciones, 1);
+  await modulo.exports.api('/agentes/configuracion', 'PUT', {}); assert.equal(invalidaciones, 2);
+});
+
+
+test('conversación conserva la sesión del proveedor sin reutilizar identificadores de operaciones', async () => {
+  const modulo = require('../dist/agentes/proveedores'); const original = modulo.interpretarProveedor; const sesiones = [];
+  modulo.interpretarProveedor = async p => { sesiones.push(p.sesion); return { operacion: 'gasto', concepto: 'Prueba', monto: 100, metodo: 'efectivo' }; };
+  const prueba = new AgentesService({}); prueba.estado = async () => ({ habilitado: true }); prueba.proveedor = async () => ({ nombre: 'Prueba', modelo: 'modelo' });
+  try {
+    const primero = await prueba.interpretar('Gasto ficticio', undefined, { rol: RolUsuario.ADMINISTRADOR }, 'operacion-1', 1, undefined, 'sesion-conversacion');
+    const segundo = await prueba.interpretar('Otro gasto ficticio', undefined, { rol: RolUsuario.ADMINISTRADOR }, 'operacion-2', 1, undefined, 'sesion-conversacion');
+    assert.deepEqual(sesiones, ['sesion-conversacion', 'sesion-conversacion']); assert.notEqual(primero.id, segundo.id);
+  } finally { modulo.interpretarProveedor = original; }
 });

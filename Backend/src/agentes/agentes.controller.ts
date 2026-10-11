@@ -20,8 +20,8 @@ export class AgentesController {
   @Roles(RolUsuario.ADMINISTRADOR) @Post("local/probar") probarLocal() { return this.agentes.probarLocal().then(data => ({ data })); }
   @Roles(RolUsuario.ADMINISTRADOR) @Post("proveedores/:id/probar") probar(@Param("id") id: string) { return this.agentes.probar(z.string().uuid().parse(id)).then(data => ({ data })); }
   @Roles(...roles) @Post("interpretar") interpretar(@Body() body: unknown, @UsuarioActual() usuario: Usuario) {
-    const r = z.object({ texto: z.string().trim().min(1).max(6000), contexto: ContextoAgenteEsquema.optional(), anterior: InstruccionAgenteEsquema.optional(), id: z.string().uuid().optional(), version: z.number().int().min(1).optional() }).strict().parse(body);
-    return this.agentes.interpretar(r.texto, r.anterior, usuario, r.id, r.version, r.contexto).then(data => ({ data }));
+    const r = z.object({ texto: z.string().trim().min(1).max(6000), conversacionId: z.string().uuid().optional(), contexto: ContextoAgenteEsquema.optional(), anterior: InstruccionAgenteEsquema.optional(), id: z.string().uuid().optional(), version: z.number().int().min(1).optional() }).strict().parse(body);
+    return this.agentes.interpretar(r.texto, r.anterior, usuario, r.id, r.version, r.contexto, r.conversacionId).then(data => ({ data }));
   }
   @Roles(...roles) @Post("revisar") revisar(@Body() body: unknown, @UsuarioActual() usuario: Usuario) {
     const r = z.object({ instruccion: InstruccionAgenteEsquema, id: z.string().uuid(), version: z.number().int().min(1) }).strict().parse(body);

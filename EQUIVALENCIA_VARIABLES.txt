@@ -839,4 +839,6 @@ V6P4 audio: Pipecat TranscriptionFrame -> WebSocket tipo:texto -> vistaPrevia ->
 Asistente.bloqueo/estado de guardado -> abrirMicrofono.pausado -> PCM silencio; fallo de interpretación -> detenerMicrofono y conservar texto/revisión.
 Whisper.Settings.hotwords <- VOCABULARIO_AUDIO compartido para archivos y WebSocket; ConfiguracionAgente.audio.modeloStt selecciona tiny/base/small sin instalar pesos al guardar.
 
-Audio híbrido: VADParams.stop_secs=2.0 y SpeechTimeoutUserTurnStopStrategy.user_speech_timeout=2.0 agrupan pausas breves antes de enviar tipo=instruccion. tipo=texto muestra la transcripción sin ejecutar la interpretación.
+Audio híbrido: VADParams.stop_secs=2.0 y SpeechTimeoutUserTurnStopStrategy.user_speech_timeout=0.6 agrupan pausas breves antes de enviar tipo=instruccion. tipo=texto muestra la transcripción sin ejecutar la interpretación.
+
+conversacionId (frontend en memoria) -> POST /agentes/interpretar -> x-opencode-session (proveedor): UUID de conversación, distinto del ID del borrador; no se persiste. Audio tipo=hablando -> speechSynthesis.cancel(): permite interrumpir la respuesta sin interpretar el evento como texto.

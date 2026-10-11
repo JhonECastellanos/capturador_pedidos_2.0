@@ -12,7 +12,7 @@ export function autorizarOperacion(rol: RolUsuario, operacion: InstruccionAgente
   if (rol === RolUsuario.INVENTARIO && operacion !== "conteo") throw new ErrorDominio("AGENTE_PERMISO", "Tu acceso permite únicamente guardar cantidades en tus productos asignados", 403);
   if (rol === RolUsuario.VENDEDOR && !["pedido", "cobro", "estado"].includes(operacion)) throw new ErrorDominio("AGENTE_PERMISO", "Esta operación requiere acceso de administrador", 403);
 }
-const normalizar = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const normalizar = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().replace(/\bmililitros?\b/g, "ml").replace(/[^a-z0-9]+/g, " ").trim();
 function claveConfiguracion() {
   const secreto = process.env.AGENT_CONFIG_SECRET || TokensService.secreto;
   if (secreto.length < 32) throw new ErrorDominio("CONFIGURACION_CLAVE", "La clave privada del servidor debe tener al menos 32 caracteres", 503);
@@ -84,19 +84,19 @@ export class AgentesService {
   async probar(id: string) { return probarProveedor(await this.proveedor(id)); }
   async modelosLocales() { return modelosProveedor({ id: "local", nombre: "Ollama", protocolo: "ollama", url: process.env.OLLAMA_URL ?? "http://voice-agent:11434", modelo: "" }); }
   async probarLocal() { const r = await this.leer(); return probarProveedor({ id: "local", nombre: "Ollama", protocolo: "ollama", url: process.env.OLLAMA_URL ?? "http://voice-agent:11434", modelo: r.configuracion.local.modelo }); }
-  async interpretar(texto: string, anterior: InstruccionAgente | undefined, usuario: Usuario, id: string = randomUUID(), version = 1, contexto?: ContextoAgente) {
+  async interpretar(texto: string, anterior: InstruccionAgente | undefined, usuario: Usuario, id: string = randomUUID(), version = 1, contexto?: ContextoAgente, conversacionId?: string) {
     const estado = await this.estado();
     if (!estado.habilitado) throw new ErrorDominio("AGENTE_DESACTIVADO", "Activa el asistente en Configuración para empezar");
-    const mensajes: Array<{ role: "system" | "user"; content: string }> = [{ role: "system", content: `Interpreta instrucciones comerciales en español. Prepara una operación, nunca la ejecutes. Devuelve todos los datos expresados en sus campos de la herramienta: los importes van en monto como número, la forma de pago en metodo, las cantidades en cantidad y los productos en lineas. Escribe los números aunque el usuario los diga en palabras. efectivo y billetera como campos numéricos son exclusivos del cierre de caja; en las demás operaciones usa metodo: "efectivo" o "billetera". Ejemplo de extracción: "gasto de transporte por un peso en efectivo" devuelve {"operacion":"gasto","concepto":"transporte","monto":1,"metodo":"efectivo"}. "No confirmar" solo significa preparar el borrador; no significa descontarCaja:false. En gastos o egresos, conserva monto, concepto y metodo si el usuario los indicó. Si hay un borrador anterior, conserva sus campos y aplica únicamente las correcciones pedidas. No completes datos faltantes por intuición, ni inventes IDs, productos, clientes, precios o pagos. No interpretes confirmar/cancelar como un nuevo pedido. Rol actual: ${usuario.rol}. El rol inventario solo puede contar productos asignados. Borrador anterior: ${JSON.stringify(anterior ?? null)}.` }, { role: "user", content: texto }];
+    const mensajes: Array<{ role: "system" | "user"; content: string }> = [{ role: "system", content: `Interpreta instrucciones comerciales en español. Prepara una operación, nunca la ejecutes. Devuelve todos los datos expresados en sus campos de la herramienta: los importes van en monto como número, la forma de pago en metodo, las cantidades en cantidad y los productos en lineas. Escribe los números aunque el usuario los diga en palabras. efectivo y billetera como campos numéricos son exclusivos del cierre de caja; en las demás operaciones usa metodo: "efectivo" o "billetera". Ejemplo de extracción: "gasto de transporte por un peso en efectivo" devuelve {"operacion":"gasto","concepto":"transporte","monto":1,"metodo":"efectivo"}. "No confirmar" solo significa preparar el borrador; no significa descontarCaja:false. En gastos o egresos, conserva monto, concepto y metodo si el usuario los indicó. Si hay un borrador anterior, conserva sus campos y aplica únicamente las correcciones pedidas. No completes datos faltantes por intuición, ni inventes IDs, productos, clientes, precios o pagos. Para un pedido, "ya entregado" usa preparacion:"entregado"; "para preparar" usa preparacion:"pendiente". estado es para cambiar un pedido existente. No interpretes confirmar/cancelar como un nuevo pedido. Rol actual: ${usuario.rol}. El rol inventario solo puede contar productos asignados. Borrador anterior: ${JSON.stringify(anterior ?? null)}.` }, { role: "user", content: texto }];
     const inicio = Date.now(); let uso: UsoAgente | undefined; let respaldo = false;
     let proveedor = await this.proveedor(); let llamada: unknown;
-    try { llamada = await interpretarProveedor({ ...proveedor, sesion: id }, mensajes, medida => { uso = medida; }); }
+    try { llamada = await interpretarProveedor({ ...proveedor, sesion: conversacionId ?? id }, mensajes, medida => { uso = medida; }); }
     catch (error) {
       if (!permiteRespaldo(error)) throw error;
       const configuracion = (await this.leer()).configuracion;
       if (configuracion.modo !== "hibrido" || !configuracion.respaldoId) throw error;
       proveedor = await this.proveedor(configuracion.respaldoId); respaldo = true;
-      llamada = await interpretarProveedor({ ...proveedor, sesion: id }, mensajes, medida => { uso = medida; });
+      llamada = await interpretarProveedor({ ...proveedor, sesion: conversacionId ?? id }, mensajes, medida => { uso = medida; });
     }
     const instruccion = InstruccionAgenteEsquema.parse(limpiarInstruccionProveedor(llamada));
     if (contexto && ["conteo", "finalizar-conteo", "aplicar-conteo"].includes(instruccion.operacion)) {

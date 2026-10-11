@@ -97,7 +97,8 @@ export async function respuestaRed<T>(ruta: string, metodo = "GET", datos?: unkn
 export async function respuestaApi<T>(ruta: string, metodo = "GET", datos?: unknown): Promise<T> {
   if (metodo === "GET" && !ruta.startsWith("/auth/") && ruta !== "/salud") return consultas.fetchQuery({ queryKey: claveConsulta(ruta), queryFn: ({ signal }) => respuestaRed<T>(ruta, "GET", undefined, signal) });
   const respuesta = await respuestaRed<T>(ruta, metodo, datos);
-  if (metodo !== "GET" && !ruta.startsWith("/auth/")) await consultas.invalidateQueries({ queryKey: ["api"] });
+  // Interpretar, revisar y transcribir no modifican los datos del negocio.
+  if (metodo !== "GET" && !ruta.startsWith("/auth/") && (!ruta.startsWith("/agentes/") || ruta === "/agentes/configuracion")) await consultas.invalidateQueries({ queryKey: ["api"] });
   return respuesta;
 }
 

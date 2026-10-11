@@ -21,7 +21,7 @@ class Paso(FrameProcessor):
         await self.push_frame(frame, direction)
 
 async def comprobar():
-    usuario = LLMContextAggregatorPair(LLMContext([]), user_params=LLMUserAggregatorParams(user_turn_strategies=UserTurnStrategies(stop=[SpeechTimeoutUserTurnStopStrategy(user_speech_timeout=2.0)]))).user()
+    usuario = LLMContextAggregatorPair(LLMContext([]), user_params=LLMUserAggregatorParams(user_turn_strategies=UserTurnStrategies(stop=[SpeechTimeoutUserTurnStopStrategy(user_speech_timeout=0.6)]))).user()
     worker = PipelineWorker(Pipeline([Paso(), VADProcessor(vad_analyzer=SileroVADAnalyzer(params=VADParams(stop_secs=2.0))), usuario, Paso()]), enable_rtvi=False, idle_timeout_secs=None, params=PipelineParams(audio_in_sample_rate=16000))
     preparado = asyncio.Event()
     @worker.event_handler('on_pipeline_started')

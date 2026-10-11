@@ -125,7 +125,9 @@ const herramienta = { name: "preparar_operacion", description: "Preparar un borr
 export function limpiarInstruccionProveedor(valor: unknown): unknown {
   if (!valor || typeof valor !== "object" || Array.isArray(valor)) return valor;
   // Un campo opcional vacío significa dato faltante; conservar ceros, false y todas las líneas.
-  return Object.fromEntries(Object.entries(valor).filter(([clave, dato]) => clave === "operacion" || !Object.hasOwn(InstruccionAgenteEsquema.shape, clave) || (dato !== null && dato !== "")));
+  const limpio = Object.fromEntries(Object.entries(valor).filter(([clave, dato]) => clave === "operacion" || !Object.hasOwn(InstruccionAgenteEsquema.shape, clave) || (dato !== null && dato !== "")));
+  if (limpio.operacion === "pedido" && limpio.preparacion === undefined && limpio.estado === "entregado") limpio.preparacion = "entregado";
+  return limpio;
 }
 export async function interpretarProveedor(p: Proveedor, mensajes: Mensaje[], medir?: (uso: UsoAgente) => void): Promise<unknown> {
   if (!p.modelo) throw new ErrorDominio("MODELO_FALTANTE", "Selecciona un modelo antes de probar la conversación");

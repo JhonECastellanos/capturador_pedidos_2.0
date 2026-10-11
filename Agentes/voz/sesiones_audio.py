@@ -11,7 +11,7 @@ from uuid import UUID
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-VOCABULARIO_AUDIO = "arepa arepas queso empanada empanadas yogur yogurt gaseosa Coca-Cola cliente ocasional efectivo billetera crédito inventario pedido"
+VOCABULARIO_AUDIO = "arepa arepas queso empanada empanadas yogur yogurt gaseosa Coca-Cola café cafés agua aguas Cristal chocolatina chocolatinas Jet galletas Oreo Doritos cliente ocasional efectivo billetera crédito inventario pedido"
 
 usados = {}
 activas = set()
@@ -71,7 +71,7 @@ async def conversar(socket: WebSocket):
         from pipecat.services.whisper.stt import WhisperSTTService
         from pipecat.transcriptions.language import Language
 
-        from pipecat.frames.frames import TranscriptionFrame
+        from pipecat.frames.frames import TranscriptionFrame, VADUserStartedSpeakingFrame
         texto_parcial = ""
 
         class Entrada(FrameProcessor):
@@ -82,13 +82,15 @@ async def conversar(socket: WebSocket):
             async def process_frame(self, frame: Frame, direction: FrameDirection):
                 nonlocal texto_parcial
                 await super().process_frame(frame, direction)
+                if self.mostrar and isinstance(frame, VADUserStartedSpeakingFrame):
+                    await socket.send_json({"tipo": "hablando"})
                 if self.mostrar and isinstance(frame, TranscriptionFrame) and frame.text.strip():
                     texto_parcial = (texto_parcial + " " + frame.text.strip()).strip()[:6000]
                     await socket.send_json({"tipo": "texto", "texto": texto_parcial})
                 await self.push_frame(frame, direction)
 
         contexto = LLMContext([])
-        usuario = LLMContextAggregatorPair(contexto, user_params=LLMUserAggregatorParams(user_turn_strategies=UserTurnStrategies(stop=[SpeechTimeoutUserTurnStopStrategy(user_speech_timeout=2.0)]))).user()
+        usuario = LLMContextAggregatorPair(contexto, user_params=LLMUserAggregatorParams(user_turn_strategies=UserTurnStrategies(stop=[SpeechTimeoutUserTurnStopStrategy(user_speech_timeout=0.6)]))).user()
         stt = await asyncio.to_thread(WhisperSTTService, device="cpu", compute_type="int8", settings=WhisperSTTService.Settings(model=str(ruta), language=Language(datos["idioma"]), hotwords=VOCABULARIO_AUDIO if datos["idioma"] == "es" else None))
 
         @usuario.event_handler("on_user_turn_stopped")
