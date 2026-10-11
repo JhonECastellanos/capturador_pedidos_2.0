@@ -61,6 +61,7 @@ export interface AuditoriaEventoDTO {
 // ─── Identidad ────────────────────────────────────────────────────
 
 export interface UsuarioDTO {
+  permisosDenegados?: string[];
   /** Identidad protegida del desarrollador, no un rol adicional. */
   esSistema?: boolean;
   id: string;

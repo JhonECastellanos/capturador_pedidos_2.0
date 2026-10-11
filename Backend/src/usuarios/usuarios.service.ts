@@ -6,7 +6,7 @@ import { ErrorDominio } from "../common/errores";
 import { siguienteCodigo } from "../common/consecutivos";
 import { codigoDeRol } from "../common/roles";
 import { RolUsuario } from "@prisma/client";
-import { CrearUsuarioEsquema } from "@ambie/contrato";
+import { PERMISOS_EDITABLES, CrearUsuarioEsquema } from "@synchronic-jo/contrato";
 
 const CrearUsuarioSchema = CrearUsuarioEsquema;
 
@@ -15,7 +15,8 @@ export class UsuariosService {
   constructor(private readonly prisma: PrismaService) {}
 
   async listar(pagina = 1, porPagina = 20, q = "") {
-    const where = q ? { OR: [{ nombre: { contains: q, mode: "insensitive" as const } }, { email: { contains: q, mode: "insensitive" as const } }, ...(q === "administrador" ? [{ rol: RolUsuario.ADMINISTRADOR }] : q === "vendedor" ? [{ rol: RolUsuario.VENDEDOR }] : q === "inventario" ? [{ rol: RolUsuario.INVENTARIO }] : [])] } : {};
+    const filtro = q ? { OR: [{ nombre: { contains: q, mode: "insensitive" as const } }, { email: { contains: q, mode: "insensitive" as const } }, ...(q === "administrador" ? [{ rol: RolUsuario.ADMINISTRADOR }] : q === "vendedor" ? [{ rol: RolUsuario.VENDEDOR }] : q === "inventario" ? [{ rol: RolUsuario.INVENTARIO }] : [])] } : {};
+    const where = { ...filtro, eliminadoEn: null };
     const total = await this.prisma.usuario.count({ where });
     const actual = Math.min(pagina, Math.max(1, Math.ceil(total / porPagina)));
     const usuarios = await this.prisma.usuario.findMany({ where, orderBy: [{ rol: "asc" }, { nombre: "asc" }, { id: "asc" }], take: porPagina, skip: (actual - 1) * porPagina });
@@ -31,6 +32,7 @@ export class UsuariosService {
           permisos,
           activo: u.activo,
           esSistema: u.esSistema,
+          permisosDenegados: u.permisosDenegados,
           creadoEn: u.creadoEn,
         };
       }),
@@ -40,18 +42,21 @@ export class UsuariosService {
 
   async crear(datos: z.infer<typeof CrearUsuarioSchema>) {
     if (datos.nombre.trim().toLowerCase() === "system") throw new ErrorDominio("NOMBRE_RESERVADO", "system es un usuario reservado de la instalación", 409);
-    const existente = await this.prisma.usuario.findUnique({ where: { email: datos.email } });
+    const email = datos.email.trim().toLowerCase();
+    const existente = await this.prisma.usuario.findFirst({ where: { email: { equals: email, mode: "insensitive" } } });
     if (existente) throw new ErrorDominio("EMAIL_DUPLICADO", "Ya existe un usuario con ese correo", 409);
 
     const passwordHash = await argon2.hash(datos.password);
 
     const usuario = await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT 1 FROM pg_advisory_xact_lock(hashtext(${`usuario:${email}`}))`;
+      if (await tx.usuario.findFirst({ where: { email: { equals: email, mode: "insensitive" } } })) throw new ErrorDominio("EMAIL_DUPLICADO", "Ya existe un usuario con ese correo", 409);
       const codigo = await siguienteCodigo(tx, "USR");
       return tx.usuario.create({
         data: {
           codigo,
           nombre: datos.nombre.trim(),
-          email: datos.email,
+          email,
           passwordHash,
           rol: RolUsuario[datos.rol.toUpperCase() as keyof typeof RolUsuario],
         },
@@ -76,24 +81,29 @@ export class UsuariosService {
     return this.actualizarAcceso(usuarioId, actorId, RolUsuario[rol.toUpperCase() as keyof typeof RolUsuario]);
   }
 
-  private async actualizarAcceso(usuarioId: string, actorId: string, rol?: RolUsuario) {
+  retirar(usuarioId: string, actorId: string) { return this.actualizarAcceso(usuarioId, actorId, undefined, undefined, true); }
+  cambiarPermisos(usuarioId: string, permisos: string[], actorId: string) { return this.actualizarAcceso(usuarioId, actorId, undefined, [...new Set(permisos)]); }
+
+  private async actualizarAcceso(usuarioId: string, actorId: string, rol?: RolUsuario, permisosDenegados?: string[], retirar = false) {
     if (usuarioId === actorId) throw new ErrorDominio("ACCESO_PROPIO", "Otro administrador debe modificar tu acceso", 409);
     return this.prisma.$transaction(async (tx) => {
       // Serializar cambios administrativos evita desactivar a los dos últimos administradores a la vez.
       await tx.$queryRaw`SELECT id FROM usuarios WHERE rol = 'administrador' ORDER BY id FOR UPDATE`;
       const usuario = await tx.usuario.findUnique({ where: { id: usuarioId } });
       if (!usuario) throw new ErrorDominio("NO_ENCONTRADO", "Usuario no encontrado", 404);
+      if (usuario.eliminadoEn) throw new ErrorDominio("USUARIO_RETIRADO", "Este usuario ya fue retirado", 409);
       if (usuario.esSistema) throw new ErrorDominio("SYSTEM_PROTEGIDO", "No se puede desactivar ni cambiar el rol de system", 409);
-      const activo = rol ? usuario.activo : !usuario.activo;
+      const activo = retirar ? false : rol || permisosDenegados ? usuario.activo : !usuario.activo;
+      if (permisosDenegados && permisosDenegados.some(p => !PERMISOS_EDITABLES[codigoDeRol(usuario.rol)].includes(p))) throw new ErrorDominio("PERMISO_INVALIDO", "El permiso no pertenece a este rol");
       const nuevoRol = rol ?? usuario.rol;
       if (usuario.activo && usuario.rol === RolUsuario.ADMINISTRADOR && (!activo || nuevoRol !== RolUsuario.ADMINISTRADOR)) {
         const administradores = await tx.usuario.count({ where: { activo: true, rol: RolUsuario.ADMINISTRADOR } });
         if (administradores <= 1) throw new ErrorDominio("ULTIMO_ADMINISTRADOR", "Debe quedar al menos un administrador activo", 409);
       }
-      const actualizado = await tx.usuario.update({ where: { id: usuarioId }, data: { activo, rol: nuevoRol } });
+      const actualizado = await tx.usuario.update({ where: { id: usuarioId }, data: { activo, rol: nuevoRol, ...(retirar ? { eliminadoEn: new Date() } : {}), ...(rol ? { permisosDenegados: [] } : permisosDenegados ? { permisosDenegados } : {}) } });
       await tx.sesion.updateMany({ where: { usuarioId, revocadoEn: null }, data: { revocadoEn: new Date() } });
-      await tx.auditoriaEvento.create({ data: { entidadTipo: "usuario", entidadId: usuarioId, accion: rol ? "cambiar-rol" : "cambiar-estado", usuarioId: actorId,
-        datosAntes: { activo: usuario.activo, rol: codigoDeRol(usuario.rol) }, datosDespues: { activo, rol: codigoDeRol(nuevoRol) } } });
+      await tx.auditoriaEvento.create({ data: { entidadTipo: "usuario", entidadId: usuarioId, accion: retirar ? "retirar-usuario" : permisosDenegados ? "cambiar-permisos" : rol ? "cambiar-rol" : "cambiar-estado", usuarioId: actorId,
+        datosAntes: { activo: usuario.activo, rol: codigoDeRol(usuario.rol), permisosDenegados: usuario.permisosDenegados }, datosDespues: { activo, rol: codigoDeRol(nuevoRol), permisosDenegados: actualizado.permisosDenegados, retirado: retirar } } });
       return { id: actualizado.id, activo, rol: codigoDeRol(nuevoRol) };
     });
   }
@@ -106,6 +116,6 @@ export class UsuariosService {
       where: { rol: { codigo: codigoDeRol(usuario.rol) } },
       include: { permiso: true },
     });
-    return vinculos.map((v) => v.permiso.codigo);
+    return vinculos.map((v) => v.permiso.codigo).filter(p => !usuario.permisosDenegados.includes(p));
   }
 }

@@ -79,7 +79,7 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
   // Con el día vacío evitamos tarjetas con $0: la app se ve "recién instalada".
   const tieneMetricasHoy = cantidadHoy > 0 || ventasHoy > 0 || porCobrar > 0 || descuadre !== 0;
   const acciones = [
-    ...(usuario?.rol === "vendedor" && usaApi ? [{ titulo: "Conteo diario", detalle: "5 productos del día", icono: <IconClipboard width={19} height={19} />, tono: "bg-teal-soft text-teal", onClick: () => navegar("/vendedor/conteo") }] : []),
+    ...(usuario?.rol === "vendedor" && !usuario.permisosDenegados?.includes("inventario") && usaApi ? [{ titulo: "Conteo diario", detalle: "5 productos del día", icono: <IconClipboard width={19} height={19} />, tono: "bg-teal-soft text-teal", onClick: () => navegar("/vendedor/conteo") }] : []),
     {
       titulo: "Crear Pedido",
       detalle: "Nuevo pedido",
@@ -101,7 +101,7 @@ export function InicioVentas({ rutaPedido, rutaCompletado, rutaAbonos, rutaNuevo
       tono: "bg-paper-sunken text-ink",
       onClick: () => navegar(rutaNuevoCliente),
     },
-  ];
+  ].filter(a => !usuario?.permisosDenegados?.includes(({ "Crear Pedido": "pedidos", "Recibir Abono": "cobros", "Crear Cliente": "clientes", "Conteo diario": "inventario" } as Record<string, string>)[a.titulo]));
   async function salir() {
     if (!await cerrarSesion()) return;
     navegar("/");

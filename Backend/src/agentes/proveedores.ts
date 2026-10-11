@@ -4,7 +4,7 @@ import { isIP, type LookupFunction } from "node:net";
 import { request as requestHttps } from "node:https";
 import { request as requestHttp } from "node:http";
 import { ErrorDominio } from "../common/errores";
-import { InstruccionAgenteEsquema, problemaConexionAgente, type ConfiguracionAgente, type EstadoPruebaAgente, type UsoAgente } from "@ambie/contrato";
+import { InstruccionAgenteEsquema, problemaConexionAgente, type ConfiguracionAgente, type EstadoPruebaAgente, type UsoAgente } from "@synchronic-jo/contrato";
 
 type Proveedor = Omit<ConfiguracionAgente["proveedores"][number], "maxTokens"> & { maxTokens?: number; sesion?: string };
 type Mensaje = { role: "system" | "user"; content: string };

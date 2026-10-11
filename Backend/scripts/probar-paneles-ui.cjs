@@ -45,7 +45,7 @@ async function main() {
       window.__panelPrueba = panel; window.__scrollPrueba = lista;
       return { documento: window.__documentoPrueba, scroll: lista?.scrollTop ?? 0 };
     });
-    for (let i = 0; i < 3; i++) { await page.evaluate(() => window.dispatchEvent(new Event('ambie:datos-actualizados'))); await reposo(); }
+    for (let i = 0; i < 3; i++) { await page.evaluate(() => window.dispatchEvent(new Event('synchronic:datos-actualizados'))); await reposo(); }
     const despues = await page.evaluate(() => ({ documento: window.__documentoPrueba, panelConservado: window.__panelPrueba === document.querySelector('.admin-pantalla'), listaConservada: !window.__scrollPrueba || window.__scrollPrueba.isConnected, scroll: window.__scrollPrueba?.scrollTop ?? 0 }));
     assert.equal(despues.documento, anterior.documento, nombre + ': sin recargar documento');
     if (!despues.panelConservado || !despues.listaConservada) await page.screenshot({ path: resolve('.local/pruebas-ui', `fallo-nodos-${nombre.toLowerCase()}.png`) });
@@ -127,10 +127,10 @@ async function main() {
     await filtro('Buscar por nombre, código o categoría', 'Pepsi', 'Pepsi 400 ml');
     await page.getByPlaceholder('Buscar por nombre, código o categoría').fill('Pepsi 400'); await reposo();
     await page.locator('.admin-pantalla .overflow-y-auto button').filter({ hasText: 'Pepsi 400 ml' }).first().click();
-    await page.locator('input[type=number]').fill('3700');
+    await page.locator('input[type=number][placeholder="0"]').fill('3700');
     await page.getByRole('button', { name: /Revisar/ }).click();
     await page.getByRole('button', { name: 'Volver', exact: true }).click();
-    assert.equal(await page.locator('input[type=number]').inputValue(), '3700');
+    assert.equal(await page.locator('input[type=number][placeholder="0"]').inputValue(), '3700');
     await page.getByRole('button', { name: 'Volver', exact: true }).click(); await reposo();
     console.log('✓ Precios: revisión → edición conserva el precio, sin escritura');
 

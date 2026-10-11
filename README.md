@@ -1,6 +1,8 @@
-# AMBIÉ · Capturador de pedidos
+# Synchronic.JO
 
 Aplicación para administrar un negocio desde computador o celular: pedidos, cobros, crédito, inventario, compras, gastos, precios y caja. Una empresa por instalación, con accesos de administrador, vendedor y colaboradores de inventario.
+
+Versión de producción: **V8P4**. Personaliza colores, fuente y portada desde Configuración. Puede instalarse como aplicación en un navegador compatible mediante HTTPS (localhost también permite probarla).
 
 ## Tecnología
 
@@ -33,7 +35,7 @@ curl http://localhost:8080/api/v1/salud
 npm run verificar
 ~~~
 
-Las pruebas operativas se ejecutan en QA aislada, nunca sobre los datos reales. V6P4 incorpora un servicio optativo de voz y ajustes en Configuración > Agentes IA. Primero se valida Híbrido; Local queda preparado sin modelos y API Live conserva sus ajustes para la siguiente etapa. Los agentes revisan operaciones antes de confirmarlas mediante los formularios existentes. Consulta la guía para activar audio, ver sus logs y conocer las pruebas pendientes.
+Las pruebas operativas se ejecutan en QA aislada, nunca sobre los datos reales. V8P4 incorpora un servicio optativo de voz y ajustes en Configuración > Agentes IA. Primero se valida Híbrido; Local queda preparado sin modelos y API Live conserva sus ajustes para la siguiente etapa. Los agentes revisan operaciones antes de confirmarlas mediante los formularios existentes. Consulta la guía para activar audio, ver sus logs y conocer las pruebas pendientes.
 
 ## Funcionamiento esperado
 

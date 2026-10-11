@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { useNavigate } from "react-router-dom";
-import type { InstruccionAgente, RevisionAgente } from "@ambie/contrato";
+import type { InstruccionAgente, RevisionAgente } from "@synchronic-jo/contrato";
 import { api } from "../../data/api";
 
 let revision: RevisionAgente | null = null;

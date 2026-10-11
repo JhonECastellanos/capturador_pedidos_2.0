@@ -1,4 +1,4 @@
-# La API vive en un monorepo: depende de @ambie/contrato, que está en
+# La API vive en un monorepo: depende de @synchronic-jo/contrato, que está en
 # ../Compartido. Por eso el contexto de Docker es la raíz del proyecto y no
 # Backend/. Con el contexto dentro de Backend la instalación falla, porque el
 # paquete del contrato no se encuentra.
@@ -19,8 +19,8 @@ COPY Frontend/package.json ./Frontend/
 # imagen del servidor y con sus dependencias casi doblaría el tamaño.
 # `npm rebuild` ejecuta los scripts de instalación que npm no corre por
 # defecto (argon2 nativo y los motores de Prisma).
-RUN npm ci --workspace @ambie/contrato --workspace ambie-backend --include-workspace-root \
- && npm rebuild --workspace ambie-backend
+RUN npm ci --workspace @synchronic-jo/contrato --workspace synchronic-jo-backend --include-workspace-root \
+ && npm rebuild --workspace synchronic-jo-backend
 
 # ─── 2. Compilación ────────────────────────────────────────────────
 FROM deps AS build
@@ -31,9 +31,9 @@ COPY Backend ./Backend
 # Orden obligatorio: el contrato primero (la API importa su código generado),
 # después el cliente de Prisma (la API importa sus tipos) y al final la API.
 # npm exec resuelve el binario instalado aunque npm lo hoistee a la raíz.
-RUN npm run build --workspace @ambie/contrato \
+RUN npm run build --workspace @synchronic-jo/contrato \
  && npm exec --no -- prisma generate --schema Backend/prisma/schema.prisma \
- && npm run build --workspace ambie-backend
+ && npm run build --workspace synchronic-jo-backend
 
 # ─── 3. Dependencias de producción ─────────────────────────────────
 FROM node:24-alpine AS prod-deps
@@ -45,8 +45,8 @@ COPY Frontend/package.json ./Frontend/
 # npm hoistea las dependencias del contrato a /app/node_modules. Si el
 # workspace no tiene dependencias propias, su carpeta node_modules no llega a
 # existir y el COPY de la etapa final falla; la creamos para que sea determinista.
-RUN npm ci --omit=dev --workspace @ambie/contrato --workspace ambie-backend --include-workspace-root \
- && npm rebuild argon2 --workspace ambie-backend \
+RUN npm ci --omit=dev --workspace @synchronic-jo/contrato --workspace synchronic-jo-backend --include-workspace-root \
+ && npm rebuild argon2 --workspace synchronic-jo-backend \
  && mkdir -p Compartido/node_modules Backend/node_modules
 
 # ─── 4. Imagen final ───────────────────────────────────────────────
@@ -82,8 +82,8 @@ COPY --from=build /app/Backend/scripts ./scripts
 RUN prisma generate --schema prisma/schema.prisma
 
 # La API no debería ejecutarse como root.
-RUN addgroup -S ambie && adduser -S ambie -G ambie
-USER ambie
+RUN addgroup -S synchronic && adduser -S synchronic -G synchronic
+USER synchronic
 
 EXPOSE 3000
 
@@ -92,6 +92,7 @@ EXPOSE 3000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/v1/salud').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
+LABEL org.opencontainers.image.title="Synchronic.JO" org.opencontainers.image.version="V8P4"
 CMD ["node", "dist/main.js"]
 
 # La imagen por defecto sigue siendo la API existente.

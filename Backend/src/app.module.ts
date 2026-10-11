@@ -1,3 +1,4 @@
+import { AparienciaModule } from "./apariencia/apariencia.module";
 import { Module } from "@nestjs/common";
 import { SincronizacionModule } from "./sincronizacion/sincronizacion.module";
 import { ConfigModule } from "@nestjs/config";
@@ -46,6 +47,7 @@ import { AgentesModule } from "./agentes/agentes.module";
     AuditoriaModule,
     ArchivosModule,
     AgentesModule,
+    AparienciaModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: AuthGuard }, { provide: APP_INTERCEPTOR, useClass: GuardadoInterceptor }, { provide: APP_INTERCEPTOR, useClass: AuditoriaInterceptor }],
 })

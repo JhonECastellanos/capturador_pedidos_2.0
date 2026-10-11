@@ -1,8 +1,8 @@
 {
-  "name": "ambie-backend",
+  "name": "synchronic-jo-backend",
   "version": "0.1.0",
   "private": true,
-  "description": "API de AMBIÉ — capturador de pedidos",
+  "description": "API de Synchronic.JO — capturador de pedidos",
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
   },
@@ -21,7 +21,7 @@
     "prueba:integracion": "node --env-file=../.env scripts/integracion-api.ts"
   },
   "dependencies": {
-    "@ambie/contrato": "^1.0.0",
+    "@synchronic-jo/contrato": "^1.0.0",
     "@fastify/cookie": "^11.0.2",
     "@fastify/rate-limit": "^10.3.0",
     "@keyv/redis": "^5.1.6",

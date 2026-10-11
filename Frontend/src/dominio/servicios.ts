@@ -1,4 +1,4 @@
-import { seleccionarConteoDiario } from "@ambie/contrato";
+import { seleccionarConteoDiario } from "@synchronic-jo/contrato";
 import type {
   AbonoCredito,
   AbonoCreditoParcial,

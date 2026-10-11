@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import type { AbonoDTO, UsuarioDTO } from "@ambie/contrato";
+import type { AbonoDTO, UsuarioDTO } from "@synchronic-jo/contrato";
 
 // Este recorrido escribe exclusivamente contra la instancia aislada de pruebas.
 const BASE = process.env.BASE_PRUEBAS_API ?? "http://localhost:3100/api/v1";
@@ -77,14 +77,20 @@ async function main() {
     const nuevo = await pedir<{ id: string }>("/usuarios", "POST", { nombre: "Acceso QA", email: emailTemporal, rol: "vendedor", password: clavePruebas });
     const acceso = await pedir<{ accessToken: string; refreshToken: string }>("/auth/login", "POST", { identifier: emailTemporal, password: clavePruebas }, "");
     await pedir(`/usuarios/${nuevo.id}/rol`, "PATCH", { rol: "administrador" });
-    assert.equal((await http("/auth/me", "GET", undefined, acceso.accessToken)).status, 401);
+    const consultaRevocada = await http("/auth/me", "GET", undefined, acceso.accessToken);
+    assert.equal(consultaRevocada.status, 200);
+    assert.equal(consultaRevocada.cuerpo.data, null);
+    assert.equal((await http("/clientes", "GET", undefined, acceso.accessToken)).status, 401);
     assert.equal((await http("/auth/refresh", "POST", { refreshToken: acceso.refreshToken }, "")).status, 401);
     const actual = await pedir<{ accessToken: string; refreshToken: string; usuario: UsuarioDTO }>("/auth/login", "POST", { identifier: emailTemporal, password: clavePruebas }, "");
     assert.equal(actual.usuario.rol, "administrador");
     const renovado = await pedir<{ accessToken: string }>("/auth/refresh", "POST", { refreshToken: actual.refreshToken }, "");
     assert.equal((await http("/auth/refresh", "POST", { refreshToken: actual.refreshToken }, "")).status, 401);
     await pedir("/auth/logout", "POST", {}, renovado.accessToken);
-    assert.equal((await http("/auth/me", "GET", undefined, renovado.accessToken)).status, 401);
+    const consultaCerrada = await http("/auth/me", "GET", undefined, renovado.accessToken);
+    assert.equal(consultaCerrada.status, 200);
+    assert.equal(consultaCerrada.cuerpo.data, null);
+    assert.equal((await http("/clientes", "GET", undefined, renovado.accessToken)).status, 401);
     await pedir(`/usuarios/${nuevo.id}/estado`, "PATCH");
     assert.equal((await http("/auth/login", "POST", { identifier: emailTemporal, password: clavePruebas }, "")).status, 401);
   });

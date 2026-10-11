@@ -44,7 +44,7 @@ async function main() {
         await pagina.evaluate(async () => {
           window.transporte = await import('/src/data/api.ts');
           window.expiraciones = 0;
-          addEventListener('ambie:sesion-expirada', () => window.expiraciones++);
+          addEventListener('synchronic:sesion-expirada', () => window.expiraciones++);
           await window.transporte.respuestaRed('/auth/login', 'POST', {});
         });
         if (caso === 'anticipada' || caso === 'respuestas-tardias') {

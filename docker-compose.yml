@@ -1,4 +1,4 @@
-name: capturador_pedidos_20
+name: ${COMPOSE_PROJECT_NAME:-synchronic_jo}
 
 services:
   redis:
@@ -19,7 +19,7 @@ services:
       timeout: 2s
       retries: 10
   frontend:
-    image: capturador_pedidos_20-frontend:local
+    image: synchronic-jo-frontend:local
     build:
       context: .
       dockerfile: Frontend/Dockerfile
@@ -77,11 +77,11 @@ services:
       retries: 10
 
   migrate:
-    image: capturador_pedidos_20-api:local
+    image: synchronic-jo-api:local
     mem_limit: 768m
     memswap_limit: 768m
     cpus: 1.0
-    # Contexto en la raíz: la API es un workspace que depende de @ambie/contrato.
+    # Contexto en la raíz: la API es un workspace que depende de @synchronic-jo/contrato.
     build:
       context: .
       dockerfile: Backend/Dockerfile
@@ -97,7 +97,7 @@ services:
     restart: "no"
 
   api:
-    image: capturador_pedidos_20-api:local
+    image: synchronic-jo-api:local
     mem_limit: ${API_MEMORY:-512m}
     memswap_limit: ${API_MEMORY:-512m}
     cpus: ${API_CPUS:-1.0}
@@ -145,7 +145,7 @@ services:
   #
   #   docker compose --profile bootstrap run --rm bootstrap
   bootstrap:
-    image: capturador_pedidos_20-api:local
+    image: synchronic-jo-api:local
     mem_limit: 256m
     memswap_limit: 256m
     cpus: 0.5
@@ -190,7 +190,7 @@ services:
 
   voice-agent:
     profiles: ["voz"]
-    image: capturador_pedidos_20-voz:local
+    image: synchronic-jo-voz:local
     build:
       context: .
       dockerfile: Agentes/voz/Dockerfile

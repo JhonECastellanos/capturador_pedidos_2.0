@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { ConfiguracionAgente, RevisionAgente } from "@ambie/contrato";
+import type { ConfiguracionAgente, RevisionAgente } from "@synchronic-jo/contrato";
 import { useAuth } from "../../context/auth";
 import { api, usaApi } from "../../data/api";
 import { agenteGuardando, contextoAgente, cambiarRevisionAgente, confirmarDesdeAgente, revisionAgente } from "./operacion-agente";
@@ -33,8 +33,8 @@ export default function Asistente() {
   useEffect(() => {
     const limpiar = () => { conversacionId.current = crypto.randomUUID(); generacion.current++; detenerMicrofono.current?.(); detenerMicrofono.current = null; setEscuchando(false); bloqueo.current = false; cambiarRevisionAgente(null); setAbierto(false); setHablando(false); setEstado(null); setTexto(""); setMensaje(""); setOcupado(false); window.speechSynthesis?.cancel(); };
     limpiar();
-    window.addEventListener("ambie:sesion-expirada", limpiar);
-    return () => { generacion.current++; detenerMicrofono.current?.(); detenerMicrofono.current = null; cambiarRevisionAgente(null); window.speechSynthesis?.cancel(); window.removeEventListener("ambie:sesion-expirada", limpiar); };
+    window.addEventListener("synchronic:sesion-expirada", limpiar);
+    return () => { generacion.current++; detenerMicrofono.current?.(); detenerMicrofono.current = null; cambiarRevisionAgente(null); window.speechSynthesis?.cancel(); window.removeEventListener("synchronic:sesion-expirada", limpiar); };
   }, [usuario?.id, usuario?.rol]);
   useEffect(() => {
     const aviso = (e: Event) => setMensaje(String((e as CustomEvent<unknown>).detail));
@@ -78,8 +78,8 @@ export default function Asistente() {
   useEffect(() => { interpretarActual.current = interpretar; });
   useEffect(() => {
     const actualizar = (e: Event) => setHablando(Boolean((e as CustomEvent<boolean>).detail));
-    window.addEventListener("ambie:agente-hablando", actualizar);
-    return () => window.removeEventListener("ambie:agente-hablando", actualizar);
+    window.addEventListener("synchronic:agente-hablando", actualizar);
+    return () => window.removeEventListener("synchronic:agente-hablando", actualizar);
   }, []);
   async function alternarMicrofono() {
     setAbierto(true);
@@ -107,7 +107,7 @@ export default function Asistente() {
       nivel => { robot.current?.style.setProperty("--nivel", String(nivel)); });
       if (turno !== generacion.current) { detener(); return; }
       detenerMicrofono.current = detener; setEscuchando(true);
-      const saludo = "Hola, soy el asistente de AMBIÉ. Puedes decirme la operación completa.";
+      const saludo = "Hola, soy el asistente de Synchronic.JO. Puedes decirme la operación completa.";
       setMensaje(saludo); hablar(saludo, configuracion.audio);
     } catch (error) {
       if (turno === generacion.current) setMensaje(error instanceof Error ? error.message : "No se pudo activar el micrófono");

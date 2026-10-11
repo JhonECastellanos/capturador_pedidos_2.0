@@ -1,3 +1,5 @@
+import { permisoPantalla } from "../../utils/apariencia";
+import { APP_NOMBRE, APP_VERSION } from "../../config";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   IconCart,
@@ -42,7 +44,7 @@ const todosLosItems = [...navegacionPrincipal, ...navegacionSecundaria];
 
 function claseItemNav({ isActive }: { isActive: boolean }) {
   return `flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-semibold transition-colors ${
-    isActive ? "bg-accent text-ink" : "text-white/70 active:bg-white/10"
+    isActive ? "bg-accent text-accent-ink" : "text-white/70 active:bg-white/10"
   }`;
 }
 
@@ -50,6 +52,7 @@ export function AdminLayout() {
   const navegar = useNavigate();
   const ubicacion = useLocation();
   const { usuario, cerrarSesion } = useAuth();
+  const itemsVisibles = todosLosItems.filter(item => !usuario?.permisosDenegados?.includes(permisoPantalla(item.to) ?? ""));
   const contenedorNav = useRef<HTMLElement | null>(null);
   const refsItems = useRef<Record<string, HTMLAnchorElement | null>>({});
 
@@ -71,12 +74,12 @@ export function AdminLayout() {
   return (
     <div className="flex h-full flex-col lg:flex-row">
       {/* ─── Sidebar desktop ─── */}
-      <aside className="hidden w-60 flex-shrink-0 flex-col bg-ink px-4 py-5 text-white lg:flex">
-        <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">Administrador</p>
+      <aside className="hidden w-60 flex-shrink-0 flex-col header-negocio border-r border-line px-4 py-5 lg:flex">
+        <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-header-ink">{APP_NOMBRE} · {APP_VERSION}</p>
         <h1 className="px-2 font-display text-[18px] font-semibold leading-tight">Centro de control</h1>
         <p className="mt-1 px-2 truncate text-[11px] text-white/60">{usuario?.nombre}</p>
         <nav className="mt-5 flex-1 space-y-1">
-          {todosLosItems.map((item) => (
+          {itemsVisibles.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.fin} className={claseItemNav}>
               <item.icono width={18} height={18} />
               {item.etiqueta}
@@ -98,10 +101,10 @@ export function AdminLayout() {
       {/* `admin-cuerpo` permite que la barra se pegue al viewport cuando la
           página hace scroll (≤ 824px) en lugar de quedarse dentro del marco. */}
       <div className="admin-cuerpo flex flex-1 flex-col overflow-hidden">
-        <header className="sticky top-0 z-30 flex-shrink-0 bg-ink px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-white lg:hidden">
+        <header className="sticky top-0 z-30 flex-shrink-0 header-negocio border-b border-line px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] lg:hidden">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] leading-none text-accent">Administrador · Centro de control</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] leading-none text-header-ink">{APP_NOMBRE} · {APP_VERSION}</p>
               <p className="mt-1 truncate text-[11px] leading-none text-white/60">{usuario?.nombre ?? "Perfil administrador"}</p>
             </div>
             <button type="button" onClick={salir} className="flex-shrink-0 rounded-lg border border-white/20 px-3 py-2 text-[11px] font-semibold text-white/80 active:bg-white/10">
@@ -110,14 +113,14 @@ export function AdminLayout() {
           </div>
           {/* Navegación siempre visible en el header */}
           <nav ref={contenedorNav} className="no-scrollbar -mx-4 mt-3 flex gap-1.5 overflow-x-auto scroll-smooth px-4 pb-1">
-            {todosLosItems.map((item) => (
+            {itemsVisibles.map((item) => (
               <NavLink
                 key={item.to}
                 ref={(el) => { refsItems.current[item.to] = el; }}
                 to={item.to}
                 end={item.fin}
                 className={({ isActive }) =>
-                  `flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11.5px] font-semibold transition-all duration-300 ${isActive ? "scale-105 border-accent bg-accent text-ink shadow-[0_0_0_3px_rgba(232,143,42,0.25)]" : "border-white/15 bg-white/10 text-white/80"}`
+                  `flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11.5px] font-semibold transition-all duration-300 ${isActive ? "border-accent bg-accent text-accent-ink" : "border-white/15 bg-white/10 text-white/80"}`
                 }
               >
                 <item.icono width={14} height={14} />

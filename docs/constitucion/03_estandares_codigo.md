@@ -1,6 +1,6 @@
 # 03 · Estándares de código
 
-> Constitución de AMBIÉ · Capturador de pedidos — archivo 3 de 4.
+> Constitución de Synchronic.JO — archivo 3 de 4.
 > Última revisión: 30/09/2026.
 > Objetivo: que el código nuevo se lea como el existente. Las convenciones descritas se tomaron del código real, no de preferencias externas.
 
@@ -74,7 +74,7 @@ Ojo con los enums: el cliente Prisma expone `EstadoPedido.CANCELADO`, pero la ba
 
 - `async/await` es la forma principal. `.then()` se reserva para casos concretos: mapeo de export en `React.lazy` y cadenas puntuales dentro de efectos.
 - Comentarios breves `/** … */` en español sobre clases y funciones del backend (servicios, guardas, utilidades). El proyecto no exige JSDoc general.
-- Imports del contrato siempre desde `@ambie/contrato`; nunca copiar tipos a mano.
+- Imports del contrato siempre desde `@synchronic-jo/contrato`; nunca copiar tipos a mano.
 - No duplicar funciones existentes (búsqueda, fechas, series, formato): extraer utilidad compartida y migrar los usos.
 
 ## 8. Git y revisión

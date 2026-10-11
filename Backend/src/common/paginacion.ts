@@ -1,4 +1,4 @@
-import { PaginacionEsquema } from "@ambie/contrato";
+import { PaginacionEsquema } from "@synchronic-jo/contrato";
 
 /** Traduce una sola vez los parámetros HTTP al nombre interno del contrato. */
 export function paginacion(page?: string, pageSize?: string) {

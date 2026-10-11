@@ -1,11 +1,14 @@
+import { useApariencia } from "../../context/apariencia-context";
+import { InstalarAplicacion } from "../../components/InstalarAplicacion";
 import { useState, type FormEvent } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { APP_VERSION } from "../../config";
+import { APP_VERSION, APP_NOMBRE } from "../../config";
 import { IconPackage } from "../../components/Icons";
 import { useAuth } from "../../context/auth";
 import { usaApi } from "../../data/api";
 
 export default function Acceso() {
+  const { apariencia } = useApariencia();
   const navegar = useNavigate();
   const { usuario, cargando, iniciarSesionConCredenciales } = useAuth();
   const [entrando, setEntrando] = useState(false);
@@ -32,12 +35,16 @@ export default function Acceso() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto bg-paper px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))] md:px-6">
+    <div className="acceso-negocio flex h-full min-h-0 flex-1 flex-col overflow-y-auto bg-paper px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-[max(2rem,env(safe-area-inset-top))] md:px-6">
       {/* Los márgenes automáticos centran solo cuando sobra espacio: en ventanas
           bajas el contenido empieza arriba y permanece accesible por scroll. */}
       <div className="mx-auto my-auto flex w-full max-w-sm shrink-0 flex-col">
+        <div className="mb-5 overflow-hidden rounded-2xl border border-line bg-paper-raised">
+          <img src={apariencia.imagen || `/portadas/${apariencia.portada}.svg`} alt="Bienvenido a tu negocio" className="h-36 w-full object-cover sm:h-44" />
+          <p className="px-4 py-3 text-sm font-semibold">Tu negocio, en sincronía.</p>
+        </div>
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-ink text-accent"><IconPackage width={28} height={28} /></div>
-        <p className="mt-6 text-[13px] font-semibold uppercase tracking-[0.16em] text-ink-soft">Capturador de pedidos</p>
+        <p className="mt-6 text-[13px] font-semibold uppercase tracking-[0.16em] text-ink-soft">{APP_NOMBRE}</p>
         <p className="mt-1 font-mono text-[10px] text-ink-faint">{APP_VERSION}</p>
         <h1 className="mt-2 font-display text-3xl font-semibold leading-tight text-ink">Iniciar sesión</h1>
 
@@ -49,7 +56,7 @@ export default function Acceso() {
                 id="usuario-acceso"
                 value={identificador}
                 onChange={(e) => { setIdentificador(e.target.value); setError(null); }}
-                placeholder="admin@ambie.local o vendedor@ambie.local"
+                placeholder="Tu correo, código o system"
                 autoComplete="username"
                 className="mt-1.5 w-full rounded-xl border border-line bg-paper px-3.5 py-3 text-[14px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
               />
@@ -124,6 +131,7 @@ export default function Acceso() {
             </button>
           </div>
         </div>}
+        <div className="mt-4"><InstalarAplicacion /></div>
         {usaApi && <p className="mt-4 text-sm text-ink-soft">Usa el acceso asignado por tu administrador. Los datos se comparten entre los dispositivos del negocio.</p>}
       </div>
     </div>

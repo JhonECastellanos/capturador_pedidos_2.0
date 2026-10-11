@@ -26,6 +26,8 @@ export const Roles = (...roles: RolUsuario[]) => SetMetadata(ROLES_KEY, roles);
 export interface RequestAutenticado {
   cookies?: Record<string, string | undefined>;
   headers?: Record<string, string | string[] | undefined>;
+  url?: string;
+  method?: string;
   user?: Usuario;
   sessionId?: string;
   expiraAccesoEn?: string;
@@ -96,6 +98,13 @@ export class AuthGuard implements CanActivate {
     if (sesion.usuario.rol === RolUsuario.INVENTARIO && !roles?.includes(RolUsuario.INVENTARIO)) throw new ForbiddenException("Este acceso permite únicamente realizar conteos de inventario");
     if (roles && roles.length > 0 && !roles.includes(sesion.usuario.rol)) {
       throw new ForbiddenException("No tienes permiso para esta acción");
+    }
+
+    if (!sesion.usuario.esSistema) {
+      const modulo = request.url?.split("?")[0].split("/")[3];
+      const permiso = ({ usuarios: "usuarios", clientes: "clientes", pedidos: "pedidos", pagos: "cobros", inventario: "inventario", compras: "inventario", "recepciones-compra": "inventario", proveedores: "inventario", gastos: "caja", abonos: "cobros", caja: "caja", cierres: "cierre-diario" } as Record<string, string>)[modulo ?? ""] ?? (modulo === "productos" && request.method !== "GET" ? "inventario" : undefined);
+      const requerido = /\/(?:pagos|abonos)(?:\?|$)/.test(request.url ?? "") ? "cobros" : permiso;
+      if (requerido && sesion.usuario.permisosDenegados.includes(requerido)) throw new ForbiddenException("Tu administrador deshabilitó este permiso");
     }
 
     return true;

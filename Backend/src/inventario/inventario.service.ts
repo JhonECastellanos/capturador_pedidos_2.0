@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { z } from "zod";
 import { PrismaService } from "../common/prisma.module";
 import { ErrorDominio } from "../common/errores";
-import { seleccionarConteoDiario, IniciarConteoEsquema, type InventarioInicialDTO } from "@ambie/contrato";
+import { seleccionarConteoDiario, IniciarConteoEsquema, type InventarioInicialDTO } from "@synchronic-jo/contrato";
 import { numero } from "../common/consecutivos";
 import { hoyLocal } from "../common/crypto";
 import { EstadoConteo, TipoConteo, TipoMovimientoInventario, RolUsuario, Prisma } from "@prisma/client";

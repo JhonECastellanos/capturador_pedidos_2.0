@@ -1,10 +1,10 @@
 # 01 · Stack y reglas no negociables
 
-> Constitución de AMBIÉ · Capturador de pedidos — archivo 1 de 4.
+> Constitución de Synchronic.JO — archivo 1 de 4.
 > Última revisión: 30/09/2026, basada en `README.md`, `AGENTS.md`, `docs/info/` y verificación directa del código.
 > Este archivo es normativo: si algo del código contradice una regla de aquí, se corrige el código (o se actualiza este documento con evidencia, nunca «porque sí»).
 
-## 1. Qué es AMBIÉ
+## 1. Qué es Synchronic.JO
 
 Aplicación para el día a día de un negocio de ventas: clientes, productos, pedidos, cobros, inventario, compras, precios y caja. Interfaz pensada como app móvil dentro del navegador: pasos claros, botones grandes, scroll interno y acciones siempre accesibles.
 
@@ -22,7 +22,7 @@ Aplicación para el día a día de un negocio de ventas: clientes, productos, pe
 | Base de datos | PostgreSQL 17 + Prisma 6 | `Backend/prisma/schema.prisma` es la fuente de verdad. |
 | Validación | Zod 3 | Esquemas compartidos en `Compartido/src/esquemas.ts`. |
 | Contraseñas | Argon2id | |
-| Contrato | `@ambie/contrato` | Workspace npm con DTO, enums y esquemas. |
+| Contrato | `@synchronic-jo/contrato` | Workspace npm con DTO, enums y esquemas. |
 | Caché | Redis 7 interno | TTL 5 min, expulsión LRU; sin puerto publicado. |
 | Archivos | MinIO privado | Imágenes y comprobantes con autenticación; máximo 5 MB. |
 | Servidor web | Nginx en el contenedor `frontend` | SPA + proxy de API. |

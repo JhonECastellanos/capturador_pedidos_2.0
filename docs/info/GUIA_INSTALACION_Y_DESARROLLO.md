@@ -2,7 +2,7 @@
 
 Contenido trasladado del README el 10/10/2026. Se conserva íntegro como referencia; las cifras y pendientes históricos corresponden a las fechas de sus secciones. Las novedades de CSV y descuadres se explican en [guardado y conciliación](GUARDADO_Y_CONCILIACION_V4P2.md).
 
-# AMBIÉ · Capturador de pedidos
+# Synchronic.JO
 
 Aplicación para llevar el día a día de un negocio de ventas: clientes, productos, pedidos, cobros, inventario, compras, precios y caja.
 
@@ -141,7 +141,7 @@ npm run front:dev                       # http://localhost:5173
 
 Dos cosas que conviene tener presentes:
 
-- La API no aplica migraciones al arrancar: se aplican con el paso `migrate` de arriba (o `npm run prisma:deploy --workspace ambie-backend`).
+- La API no aplica migraciones al arrancar: se aplican con el paso `migrate` de arriba (o `npm run prisma:deploy --workspace synchronic-jo-backend`).
 - Al correr la API fuera de Docker necesita sus propias variables: crea `Backend/.env` con `DATABASE_URL` apuntando a `localhost` (`postgresql://ambie:<clave>@localhost:5432/ambie?schema=public`), no al nombre del servicio del compose, y con el resto de secretos del `.env` de la raíz.
 
 ## Autenticación
@@ -557,7 +557,7 @@ Estos códigos pertenecen a la respuesta de la API; la consola del navegador sol
 
 Si el principal y el respaldo fallan, AGENTE_PROVEEDORES muestra los motivos de ambos, sin publicar el cuerpo privado ni credenciales, y usa el estado del último fallo. Por eso un rechazo de acceso inicial puede terminar en 502 del respaldo. Se conserva el borrador; interpretar no guarda una transacción.
 
-La documentación oficial consultada en https://docs.opencode.ai/docs/go/#where-can-i-use-it indica que Go está orientado a agentes de programación y supervisa el tráfico. AMBIÉ envía User-Agent propio y x-opencode-session estable, pero sus pedidos comerciales no son tráfico de programación; esto podría contribuir al rechazo, sin que se haya confirmado su causa interna. No se simula otro cliente. Para el negocio se debe elegir un proveedor que admita aplicaciones comerciales; comprobar sus permisos y cuota en su consola. Go tiene ventanas de cinco horas, semana y mes según modelo; Step 5 Preview Free aparece sin límite de uso por tiempo limitado en la documentación, por lo que no se atribuye su rechazo observado a cuota agotada sin evidencia. Zen permite restringir modelos desde su consola (https://docs.opencode.ai/docs/zen/).
+La documentación oficial consultada en https://docs.opencode.ai/docs/go/#where-can-i-use-it indica que Go está orientado a agentes de programación y supervisa el tráfico. Synchronic.JO envía User-Agent propio y x-opencode-session estable, pero sus pedidos comerciales no son tráfico de programación; esto podría contribuir al rechazo, sin que se haya confirmado su causa interna. No se simula otro cliente. Para el negocio se debe elegir un proveedor que admita aplicaciones comerciales; comprobar sus permisos y cuota en su consola. Go tiene ventanas de cinco horas, semana y mes según modelo; Step 5 Preview Free aparece sin límite de uso por tiempo limitado en la documentación, por lo que no se atribuye su rechazo observado a cuota agotada sin evidencia. Zen permite restringir modelos desde su consola (https://docs.opencode.ai/docs/zen/).
 
 Prueba actual con proveedor configurado: dos sándwiches de pollo, cliente ocasional y crédito quedaron bloqueados; corregir únicamente a billetera conservó los productos y $23.000, con respuestas en 1.951 y 1.551 ms. No se confirmó ninguna venta. No se garantiza disponibilidad del proveedor ni se modificó producción.
 Validación actual: 32 pruebas del asistente aprobadas, incluida la combinación principal 403 y respaldo 503; ambas causas permanecen visibles y el cuerpo privado no se publica.
@@ -570,3 +570,16 @@ Esta revisión reemplaza los botones Hablar/Detener de la burbuja: tocar el robo
 El lector de QR/barras se integra al buscador de ventas y conteos, con bip y liberación de la cámara al volver. General/diario alternan cámara y cantidad al confirmar; inicial permite registrar productos y varias etiquetas del mismo producto. Precios incluye creación y parametrización sin cantidades, gestión de etiquetas y CSV compatible con códigos opcionales. Historial administrativo usa listas, paginación responsive y detalle separado. Consultar [modelo de datos](modelo-datos.md) y [ejercicios y SQL](VALIDACION_FORMULARIOS_Y_BASE_DATOS.md#ejercicios-v7p4--robot-y-lectura-de-códigos).
 
 No incluye VibeVoice, descargas de modelos locales ni cambio de la rama principal o despliegue del negocio. Antes de publicar en producción: respaldo, migración no destructiva, compilación, salud de servicios y prueba HTTPS en un teléfono físico. Las pruebas de cámara sintética y transporte simulado se distinguen de esa prueba.
+
+
+## Synchronic.JO · V8P4
+
+La marca y los workspaces son Synchronic.JO; la versión aparece en el acceso y el encabezado. Una instalación existente conserva su `COMPOSE_PROJECT_NAME`, sus volúmenes, correos, cookies y claves históricas de compatibilidad. Renombrar estos identificadores sin migrarlos produciría otra base vacía; el cambio visual no borra ni reemplaza los documentos.
+
+Configuración → Apariencia permite elegir una paleta, colores con selector o código hexadecimal, fuente, tres portadas empresariales y una imagen propia. La vista previa no guarda hasta pulsar Guardar apariencia. Los ajustes se confirman en PostgreSQL y llegan a los otros dispositivos mediante la revisión compartida y una lectura de respaldo. Se valida contraste y contenido de imágenes; estas portadas son públicas porque aparecen antes del ingreso. No subir imágenes con datos privados.
+
+La instalación abre el mismo aplicativo en modo independiente, conservando roles y pantallas. En Chrome/Edge/Android usa Instalar aplicación; si no aparece el diálogo, sigue el menú del navegador. En iPhone/iPad: Safari → Compartir → Agregar a inicio. Requiere HTTPS para teléfonos; un enlace por IP y HTTP permite navegar en la red, pero no asegura cámara ni instalación. En computador se puede validar con localhost. El service worker no almacena API, cookies, comprobantes ni documentos; ante desconexión presenta Reintentar y no ejecuta operaciones en segundo plano. No es un modo de ventas sin conexión.
+
+System se autentica con `system`, su código o el correo de la instalación y una contraseña propia. No hay contraseña universal ni accesos sin validación. La búsqueda prioriza la cuenta técnica frente a colisiones históricas de mayúsculas. Repetir la semilla conserva credenciales. El administrador del negocio crea y asigna roles; puede desactivar, retirar usuarios o quitar los permisos propios de su rol. Retirar conserva usuario, fecha y relaciones de conteos, y revoca sesiones. System y el propio acceso están protegidos.
+
+Fuente primaria de instalación: https://web.dev/learn/pwa/installation y https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Secure_Contexts.

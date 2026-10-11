@@ -1,3 +1,4 @@
+import { PERMISOS_EDITABLES } from "@synchronic-jo/contrato";
 import { useMemo, useState, type FormEvent } from "react";
 import { Boton } from "../../../components/Boton";
 import { ConfirmarAccion } from "../../../components/ConfirmarAccion";
@@ -17,8 +18,11 @@ import { useTamanoPagina, paginar } from "../../../utils/paginacion";
 
 export function UsuariosAdmin() {
   const POR_PAGINA = useTamanoPagina();
-  const { usuarios, crearUsuario, cambiarEstadoUsuario, cambiarRolUsuario } = useOperaciones();
+  const { usuarios, crearUsuario, cambiarEstadoUsuario, cambiarRolUsuario, retirarUsuario, cambiarPermisosUsuario } = useOperaciones();
   const { usuario: sesion } = useAuth();
+  const [retiro, setRetiro] = useState<UsuarioSistema | null>(null);
+  const [permisosEditados, setPermisosEditados] = useState<{ usuario: UsuarioSistema; denegados: string[] } | null>(null);
+  const [guardandoAcceso, setGuardandoAcceso] = useState(false);
   const [cambioRol, setCambioRol] = useState<{ id: string; rol: UsuarioSistema["rol"] } | null>(null);
   const [vista, setVista] = useState<"lista" | "crear">("lista");
   const [pasoCrear, setPasoCrear] = useState<1 | 2>(1);
@@ -257,6 +261,10 @@ export function UsuariosAdmin() {
                 <option value="vendedor">Vendedor</option><option value="inventario">Inventario</option><option value="administrador">Administrador</option>
               </select>
             </label>}
+            {usaApi && !item.esSistema && item.id !== sesion?.id && <div className="mt-2 flex gap-3 text-xs font-semibold">
+              <button type="button" className="rounded-lg border border-line px-3 py-2" onClick={() => setPermisosEditados({ usuario: item, denegados: item.permisosDenegados ?? [] })}>Permisos</button>
+              <button type="button" className="rounded-lg px-3 py-2 text-danger" onClick={() => setRetiro(item)}>Retirar usuario</button>
+            </div>}
           </article>
         ))}
             </div>
@@ -264,6 +272,26 @@ export function UsuariosAdmin() {
         </div>
       </div>
 
+
+      {permisosEditados && <div role="dialog" aria-modal="true" aria-label="Permisos del usuario" className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/40 p-4">
+        <section className="max-h-[85dvh] w-full max-w-sm overflow-y-auto rounded-2xl border border-line bg-paper-raised p-5">
+          <h2 className="font-display font-semibold">Acceso de {permisosEditados.usuario.nombre}</h2>
+          <p className="mt-1 text-xs text-ink-soft">Desmarca los permisos que quieras quitar. Su rol seguirá limitando las operaciones disponibles.</p>
+          <div className="my-3 space-y-1">{PERMISOS_EDITABLES[permisosEditados.usuario.rol].map(p => <label key={p} className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={!permisosEditados.denegados.includes(p)} onChange={e => setPermisosEditados({ ...permisosEditados, denegados: e.target.checked ? permisosEditados.denegados.filter(x => x !== p) : [...permisosEditados.denegados, p] })} />{p === "inventario" && permisosEditados.usuario.rol === "vendedor" ? "Conteo diario" : p.replace(/-/g, " ")}</label>)}</div>
+          <div className="flex gap-2"><Boton variante="fantasma" disabled={guardandoAcceso} onClick={() => setPermisosEditados(null)}>Volver</Boton><Boton disabled={guardandoAcceso} onClick={async () => {
+            if (guardandoAcceso || !cambiarPermisosUsuario) return;
+            setGuardandoAcceso(true);
+            try { if (await cambiarPermisosUsuario(permisosEditados.usuario.id, permisosEditados.denegados)) { setPermisosEditados(null); mostrarAviso("Permisos guardados. El usuario deberá ingresar de nuevo.", "exito"); } }
+            finally { setGuardandoAcceso(false); }
+          }}>Guardar</Boton></div>
+        </section>
+      </div>}
+      <ConfirmarAccion abierto={!!retiro} titulo="Retirar usuario" mensaje={`${retiro?.nombre ?? "El usuario"} dejará de tener acceso. Su nombre y los conteos realizados se conservan en el historial.`} textoConfirmar="Retirar" tono="peligro" alCancelar={() => setRetiro(null)} alConfirmar={async () => {
+        if (!retiro || !retirarUsuario || guardandoAcceso) return;
+        setGuardandoAcceso(true);
+        try { if (await retirarUsuario(retiro.id)) { setRetiro(null); mostrarAviso("Usuario retirado. El historial se conserva.", "exito"); } }
+        finally { setGuardandoAcceso(false); }
+      }} />
 
       <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
 

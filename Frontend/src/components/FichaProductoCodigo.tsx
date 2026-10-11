@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ProductoDTO, LineaCompartidaDTO } from "@ambie/contrato";
+import type { ProductoDTO, LineaCompartidaDTO } from "@synchronic-jo/contrato";
 import { api } from "../data/api";
 import { usePaginaApi } from "../data/usePaginaApi";
 import { Boton } from "./Boton";
@@ -28,7 +28,7 @@ export function FichaProductoCodigo({ codigoInicial = "", productoInicial, conte
         if (precio.trim() === "" || costo.trim() === "") throw new Error("Indica costo y precio, incluyendo 0 cuando corresponda.");
         resultado = { producto: await api<ProductoDTO>("/productos", "POST", { nombre, unidad, precioVenta: Number(precio), costoActual: Number(costo), stockMinimo: Number(minimo), stock: 0, ...(codigo.trim() ? { codigosLectura: [codigo.trim()] } : {}) }) };
       }
-      window.dispatchEvent(new Event("ambie:datos-actualizados")); onGuardado(resultado);
+      window.dispatchEvent(new Event("synchronic:datos-actualizados")); onGuardado(resultado);
     } catch (e) { setError(e instanceof Error ? e.message : "No se pudo guardar el producto."); } finally { setOcupado(false); }
   }
   const campo = "mt-1 w-full rounded-lg border border-line bg-paper-raised px-3 py-2";

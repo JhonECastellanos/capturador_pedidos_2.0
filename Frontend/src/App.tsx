@@ -1,3 +1,4 @@
+import { AparienciaProvider } from "./context/AparienciaProvider";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { AuthProvider } from "./context/AuthContext";
@@ -93,11 +94,11 @@ function Contenido() {
 
 export default function App() {
   return (
-    <AuthProvider>
+    <AparienciaProvider><AuthProvider>
       <OperacionesProvider>
         <Contenido />
         <Suspense fallback={null}><Asistente /></Suspense>
       </OperacionesProvider>
-    </AuthProvider>
+    </AuthProvider></AparienciaProvider>
   );
 }

@@ -1,4 +1,4 @@
-# Modelo de datos — AMBIÉ (PostgreSQL)
+# Modelo de datos — Synchronic.JO (PostgreSQL)
 
 Base de datos PostgreSQL que reemplaza a `localStorage` como fuente de verdad.
 Una sola empresa por instalación. Las instalaciones nuevas empiezan sin operaciones comerciales; las existentes se actualizan mediante migraciones que conservan datos e historial. No se importan datos de `ambie:v1:*` automáticamente.
@@ -186,3 +186,10 @@ No se añadieron tablas de stock, participantes o historiales duplicadas. Se reu
 Escanear para contar reserva la línea elegida cinco minutos bajo el bloqueo del conteo. Otro colaborador recibe un conflicto si la línea está ocupada o contada. Guardar usa el PATCH existente, confirma la transacción y libera la reserva antes de abrir la siguiente cámara. Cero es un conteo válido. Cerrar y aplicar siguen siendo decisiones del administrador; el conteo no ajusta stock automáticamente.
 
 El vendedor solo accede a diarios abiertos; el colaborador Inventario solo a iniciales/generales abiertos. Este último consulta nombres, códigos y unidades, con costos y existencias teóricas ocultos para evitar influir en su conteo. El administrador/system conserva historial, responsables, fechas y diferencias. Un diario pendiente anterior se conserva, pero no bloquea la selección de otra jornada; la rotación utiliza las selecciones de jornadas no canceladas hasta cubrir el catálogo y comienza otro ciclo.
+
+
+### V8P4 · Apariencia y retiro de colaboradores
+
+`configuracionesVisuales`: fila `principal`, JSON validado `configuracion` (fondo, texto, acento, encabezado, textoEncabezado, fuente, portada, imagen pública) y `actualizadoEn`. GET es público y no entrega identidad ni documentos; PUT exige administrador. Su trigger diferido incrementa la revisión de sincronización tras confirmar el guardado. La imagen comprimida tiene hasta 300 KB y admite firmas JPEG/PNG/WebP; no admite SVG aportado por usuarios.
+
+`usuarios.permisosDenegados`: lista de restricciones sobre los permisos disponibles del rol. Se verifican en AuthGuard, además del rol. `usuarios.eliminadoEn`: fecha del retiro lógico; nunca se eliminan sus referencias de conteos. Cada cambio de acceso revoca sesiones y registra metadatos en auditoría. Una restricción en PostgreSQL impide retirar o restringir system. Los correos nuevos se normalizan y se comprueban sin distinguir mayúsculas bajo bloqueo de transacción.

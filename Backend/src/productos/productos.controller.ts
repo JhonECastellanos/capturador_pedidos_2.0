@@ -4,7 +4,7 @@ import { ProductosService, NuevoProductoSchema } from "./productos.service";
 import { Roles, UsuarioActual } from "../common/guards";
 import { ErrorDominio } from "../common/errores";
 import { paginacion } from "../common/paginacion";
-import { ImportarProductosEsquema, CodigoLecturaEsquema, VincularCodigoEsquema, ProductoInicialEsquema, CambiarPrecioEsquema } from "@ambie/contrato";
+import { ImportarProductosEsquema, CodigoLecturaEsquema, VincularCodigoEsquema, ProductoInicialEsquema, CambiarPrecioEsquema } from "@synchronic-jo/contrato";
 
 @Controller("productos")
 export class ProductosController {

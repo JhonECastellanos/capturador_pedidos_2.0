@@ -3,7 +3,7 @@ const { test, after } = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
 const { Prisma, RolUsuario } = require('@prisma/client');
-const { InstruccionAgenteEsquema, problemaConexionAgente } = require('@ambie/contrato');
+const { InstruccionAgenteEsquema, problemaConexionAgente } = require('@synchronic-jo/contrato');
 const { AgentesService, autorizarOperacion } = require('../dist/agentes/agentes.service');
 const { probarProveedor, validarDestino, modelosProveedor, interpretarProveedor, permiteRespaldo } = require('../dist/agentes/proveedores');
 const { PedidosService } = require('../dist/pedidos/pedidos.service');
@@ -109,7 +109,7 @@ test('captura del micrófono convierte un segundo a PCM de 16 kHz sin reproducir
 });
 
 test('configuración cifra claves, las conserva en edición y controla versiones', async () => {
-  const { ConfiguracionAgenteInicial } = require('@ambie/contrato');
+  const { ConfiguracionAgenteInicial } = require('@synchronic-jo/contrato');
   const { randomUUID, randomBytes } = require('node:crypto');
   const anterior = process.env.AGENT_CONFIG_SECRET;
   process.env.AGENT_CONFIG_SECRET = randomBytes(32).toString('hex');

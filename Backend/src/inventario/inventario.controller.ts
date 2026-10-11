@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common
 import { Usuario, RolUsuario } from "@prisma/client";
 import { InventarioService } from "./inventario.service";
 import { Roles, UsuarioActual } from "../common/guards";
-import { IniciarConteoEsquema, ContarLineaEsquema, AjusteManualEsquema } from "@ambie/contrato";
+import { IniciarConteoEsquema, ContarLineaEsquema, AjusteManualEsquema } from "@synchronic-jo/contrato";
 import { ErrorDominio } from "../common/errores";
 import { z } from "zod";
 import { paginacion } from "../common/paginacion";

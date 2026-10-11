@@ -51,6 +51,8 @@ export interface OperacionesContextValue {
   crearProducto: (datos: NuevoProducto) => Resultado<Producto>;
   registrarEgresoCaja: (concepto: string, monto: number, metodo?: "efectivo" | "billetera") => Accion;
   crearUsuario: (datos: NuevoUsuario) => Accion;
+  retirarUsuario?: (id: string) => Promise<boolean>;
+  cambiarPermisosUsuario?: (id: string, denegados: string[]) => Promise<boolean>;
   cambiarEstadoUsuario: (usuarioId: string) => Accion;
   cambiarRolUsuario?: (usuarioId: string, rol: UsuarioSistema["rol"]) => Promise<boolean>;
   crearProveedor: (nombre: string, telefono?: string) => Resultado<Proveedor>;

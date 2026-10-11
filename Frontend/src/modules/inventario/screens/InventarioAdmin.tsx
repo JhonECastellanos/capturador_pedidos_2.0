@@ -18,7 +18,7 @@ import { lineasContadasDe, resumenConteo } from "../../../dominio/servicios";
 import { formatoMoneda } from "../../../utils/formato";
 import { FormularioProducto } from "../components/FormularioProducto";
 import { InventarioInicial } from "../components/InventarioInicial";
-import type { TipoConteo, ConteoInventarioDTO, CabeceraConteoCompartidoDTO } from "@ambie/contrato";
+import type { TipoConteo, ConteoInventarioDTO, CabeceraConteoCompartidoDTO } from "@synchronic-jo/contrato";
 import type { Producto, AjusteInventario, LineaConteo } from "../../../types";
 import { ConteosCompartidos } from "../components/ConteosCompartidos";
 import { api, usaApi } from "../../../data/api";

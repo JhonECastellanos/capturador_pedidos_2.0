@@ -64,10 +64,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!usaApi) return;
     let vigente = true;
     const expirar = () => { limpiarConsultas(); setUsuario(null); };
-    window.addEventListener("ambie:sesion-expirada", expirar);
+    window.addEventListener("synchronic:sesion-expirada", expirar);
     void api<UsuarioSistema | null>("/auth/me").then((u) => { if (vigente) setUsuario(u); })
       .catch(() => {}).finally(() => { if (vigente) setCargando(false); });
-    return () => { vigente = false; window.removeEventListener("ambie:sesion-expirada", expirar); };
+    return () => { vigente = false; window.removeEventListener("synchronic:sesion-expirada", expirar); };
   }, []);
 
   function iniciarSesion(rol: RolUsuario) {

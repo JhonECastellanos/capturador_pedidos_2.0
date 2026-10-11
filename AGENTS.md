@@ -1,4 +1,4 @@
-# Guía para agentes — AMBIÉ
+# Guía para agentes — Synchronic.JO
 
 ## Alcance y fuentes de verdad
 
@@ -75,7 +75,7 @@ Backend usa @nestjs/cache-manager compatible con CommonJS, Keyv y Redis interno,
 
 `Compartido/src/sincronizacion.ts` define RevisionDatosDTO e intervalo. `/sincronizacion/revision` está autenticado, sin caché HTTP, y devuelve una revisión opaca. Triggers de sincronización cubren tablas operativas; agregar cobertura cuando aparezcan nuevas tablas que afecten pantallas.
 
-`useSincronizacion` consulta cada dos segundos con sesión/pestaña visible, sin superponer solicitudes; cambios confirmados disparan `ambie:datos-actualizados`. Reconexión/visibilidad reanudan lecturas. Es actualización casi en tiempo real, intervalo más latencia, no entrega instantánea garantizada. No reintroducir la banda blanca «Datos compartidos / Actualizar»: conservar indicador de desconexión con Reintentar y refresco periódico de respaldo. Una actualización mantiene el snapshot de la misma sesión y referencias compartidas, sin desmontar pantallas ni perder scroll/borradores. Los placeholders de consultas paginadas solo pertenecen a la misma sesión y recurso; indicar actualización y bloquear acciones sobre páginas anteriores.
+`useSincronizacion` consulta cada dos segundos con sesión/pestaña visible, sin superponer solicitudes; cambios confirmados disparan `synchronic:datos-actualizados`. Reconexión/visibilidad reanudan lecturas. Es actualización casi en tiempo real, intervalo más latencia, no entrega instantánea garantizada. No reintroducir la banda blanca «Datos compartidos / Actualizar»: conservar indicador de desconexión con Reintentar y refresco periódico de respaldo. Una actualización mantiene el snapshot de la misma sesión y referencias compartidas, sin desmontar pantallas ni perder scroll/borradores. Los placeholders de consultas paginadas solo pertenecen a la misma sesión y recurso; indicar actualización y bloquear acciones sobre páginas anteriores.
 
 Listas operativas: `POR_PAGINA=30`, filtros sobre el conjunto completo antes de paginar. Selectores y pendientes extensos muestran máximo 30 con buscador. Nunca recortar saldos, totales, FIFO o líneas de un documento por este límite visual. Panel administrativo con mínimo de 600 px de contenido y scroll exterior al reducir altura; listas mínimo 160 px, tarjetas mínimo 64 px. Boton usa type=button por defecto; formularios que guardan deben indicar type=submit.
 
@@ -109,7 +109,7 @@ Carga: registrar cantidad, concurrencia, errores, p95 y comprobar persistencia/s
 
 ## Git y producción
 
-Rama activa solicitada: V5P3. Revisar diff, archivos nuevos y secretos antes de commit; incluir código, configuraciones de ejemplo y documentación de desarrollo. Mensaje descriptivo sin atribuciones automáticas. No hacer push ni cambiar rama principal remota salvo petición.
+Rama activa solicitada: V8P4. Revisar diff, archivos nuevos y secretos antes de commit; incluir código, configuraciones de ejemplo y documentación de desarrollo. Mensaje descriptivo sin atribuciones automáticas. No hacer push ni cambiar rama principal remota salvo petición.
 
 Workflow detecta rama principal de GitHub. Despliegue desactivado hasta configurar DEPLOY_ENABLED, AMBIE_DEPLOY_PATH, environment produccion y runner dedicado ambie-produccion. No ejecutar PRs en el servidor. Serializar despliegues, respaldar y comprobar salud. Construir/reiniciar tarda; recargar pestañas para nueva compilación, sin perder formularios automáticamente.
 

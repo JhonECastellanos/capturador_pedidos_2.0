@@ -83,3 +83,10 @@ La pantalla final y el detalle muestran todas las líneas persistidas con cantid
 Instalación local actualizada: seis servicios saludables, migración terminada con código 0; cantidades de pedidos/clientes/productos antes y después iguales (9/8/32). Respaldo privado previo de 126.383 bytes, comprobado mediante lectura completa con pg_restore, no restauración. QA retirado sin eliminar volúmenes. Escaneo de 279 archivos sin patrones sensibles detectados; no sustituye revisión del historial.
 
 Aplicación local recompilada y reiniciada en `http://localhost:8080`: seis servicios saludables, migración con código 0; raíz, `/salud` y `/api/v1/salud` responden 200. Se comprobó que el archivo servido incluye la nueva revisión directa. Respaldo privado previo `.local/backups/antes-despliegue-20261009T170002796Z.dump`, 146.152 bytes, leído completamente con `pg_restore --file=/dev/null`; no equivale a restauración ensayada. Contenedores QA retirados sin eliminar sus volúmenes. Revisión final de tipos/compilación/lint aprobada y escaneo de 301 archivos sin patrones sensibles detectados.
+
+
+### Revisión V8P4 · 11/10/2026
+
+La cuenta system de QA coexistía con una cuenta inactiva cuyo correo difería únicamente en mayúsculas. La consulta anterior elegía una coincidencia arbitraria y rechazaba el acceso válido. La búsqueda actual prioriza la identidad técnica y coincidencias exactas, y bloquea nuevas duplicaciones sin distinguir mayúsculas. No se cambiaron contraseñas ni se eliminaron usuarios históricos.
+
+La revisión de dependencias de producción reportó siete avisos (tres altos, cuatro moderados), asociados a Prisma/MinIO y dependencias transitivas. Las propuestas automáticas requieren retroceder versiones; no se aplicaron cambios forzados que pudieran romper migraciones o archivos. Este pendiente se conserva para una revisión específica; compilación y pruebas no equivalen a ausencia de vulnerabilidades.

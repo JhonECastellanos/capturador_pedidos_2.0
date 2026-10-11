@@ -3,7 +3,7 @@ import { api, baseApi } from "../data/api";
 import { consultas } from "../data/query";
 import { replaceEqualDeep } from "@tanstack/react-query";
 import { normalizarConteo } from "../utils/inventario";
-import type { ConteoInventarioDTO } from "@ambie/contrato";
+import type { ConteoInventarioDTO } from "@synchronic-jo/contrato";
 import { useRegistroApi } from "../data/usePaginaApi";
 import { useSincronizacion } from "../data/useSincronizacion";
 import { archivoAImagenDataUrl } from "../utils/imagen";
@@ -34,8 +34,8 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const mostrarError = (evento: Event) => setError((evento as CustomEvent<string>).detail);
-    window.addEventListener("ambie:error-lectura", mostrarError);
-    return () => window.removeEventListener("ambie:error-lectura", mostrarError);
+    window.addEventListener("synchronic:error-lectura", mostrarError);
+    return () => window.removeEventListener("synchronic:error-lectura", mostrarError);
   }, []);
 
   const cargar = useCallback(async () => {
@@ -90,8 +90,8 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
     const intervalo = window.setInterval(refrescar, 30000);
     window.addEventListener("focus", refrescar);
     const forzar = () => { void consultas.invalidateQueries({ queryKey: ["api"] }).then(refrescar); };
-    window.addEventListener("ambie:datos-actualizados", forzar);
-    return () => { sesionId.current = undefined; window.clearInterval(intervalo); window.removeEventListener("focus", refrescar); window.removeEventListener("ambie:datos-actualizados", forzar); };
+    window.addEventListener("synchronic:datos-actualizados", forzar);
+    return () => { sesionId.current = undefined; window.clearInterval(intervalo); window.removeEventListener("focus", refrescar); window.removeEventListener("synchronic:datos-actualizados", forzar); };
   }, [usuario, cargar]);
 
   async function ejecutar<T>(ruta: string, metodo: string, cuerpo?: unknown): Promise<T | null> {
@@ -101,12 +101,12 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
       const resultado = await api<T>(ruta, metodo, cuerpo);
       // Si falla la lectura posterior, la escritura ya está confirmada: no inducir a duplicarla.
       await cargar().catch(() => setError("Guardado correctamente. No se pudo actualizar la lista; pulsa Reintentar."));
-      window.dispatchEvent(new Event("ambie:datos-actualizados"));
+      window.dispatchEvent(new Event("synchronic:datos-actualizados"));
       return resultado;
     } catch (e) { setError(e instanceof Error ? e.message : "No se pudo guardar"); return null; }
     finally {
       ocupado.current = false; setGuardando(false);
-      if (refrescoPendiente.current) { refrescoPendiente.current = false; window.dispatchEvent(new Event("ambie:datos-actualizados")); }
+      if (refrescoPendiente.current) { refrescoPendiente.current = false; window.dispatchEvent(new Event("synchronic:datos-actualizados")); }
     }
   }
   const accion = async (ruta: string, cuerpo?: unknown, metodo = "POST") => (await ejecutar(ruta, metodo, cuerpo)) !== null;
@@ -132,6 +132,8 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
     crearProducto: (p) => ejecutar<Producto>("/productos", "POST", p),
     registrarEgresoCaja: (concepto, monto, metodo = "efectivo") => accion("/caja/egresos", { concepto, monto, metodo }),
     crearUsuario: (u) => accion("/usuarios", u),
+    retirarUsuario: (id) => accion(`/usuarios/${id}`, undefined, "DELETE"),
+    cambiarPermisosUsuario: (id, permisosDenegados) => accion(`/usuarios/${id}/permisos`, { permisosDenegados }, "PATCH"),
     cambiarEstadoUsuario: (id) => accion(`/usuarios/${id}/estado`, undefined, "PATCH"),
     cambiarRolUsuario: (id, rol) => accion(`/usuarios/${id}/rol`, { rol }, "PATCH"),
     crearProveedor: (nombre, telefono) => ejecutar<Proveedor>("/proveedores", "POST", { nombre, telefono }),
@@ -153,7 +155,7 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
   if (usuario && cargadoPara !== usuario.id) return <div className="p-6 text-ink-soft"><p role="status">Cargando datos del negocio…</p>{error && <p role="alert" className="mt-3 text-danger">{error}</p>}<button className="mt-4 rounded-xl border border-line px-4 py-3" onClick={() => void cargar().catch((e: Error) => setError(e.message))}>Reintentar</button></div>;
   return <OperacionesContext.Provider value={value}><div className="operaciones-remotas">
     {usuario && !conectado && <p role="status" className="shrink-0 bg-danger-soft px-4 py-2 text-xs text-danger">Sin conexión. Se muestra la última lectura; la sincronización se reanudará automáticamente.</p>}
-    {error && <div role="alert" className="flex shrink-0 items-center gap-2 bg-danger-soft px-4 py-3 text-sm text-danger"><span className="flex-1">{error}</span><button type="button" disabled={guardando} className="min-h-11 px-2" onClick={() => { setError(""); window.dispatchEvent(new Event("ambie:datos-actualizados")); }}>Reintentar</button><button type="button" className="min-h-11 px-2" onClick={() => setError("")}>Cerrar</button></div>}
+    {error && <div role="alert" className="flex shrink-0 items-center gap-2 bg-danger-soft px-4 py-3 text-sm text-danger"><span className="flex-1">{error}</span><button type="button" disabled={guardando} className="min-h-11 px-2" onClick={() => { setError(""); window.dispatchEvent(new Event("synchronic:datos-actualizados")); }}>Reintentar</button><button type="button" className="min-h-11 px-2" onClick={() => setError("")}>Cerrar</button></div>}
     <fieldset disabled={guardando} className="contents">{children}</fieldset>
   </div></OperacionesContext.Provider>;
 }

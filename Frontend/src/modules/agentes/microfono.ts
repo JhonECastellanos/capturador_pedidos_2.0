@@ -42,14 +42,14 @@ export async function abrirMicrofono(texto: (valor: string) => void, estado: (va
           const mensaje = JSON.parse(evento.data);
           if (mensaje.tipo === "listo") terminar();
           else if (mensaje.tipo === "error") { const error = new Error(typeof mensaje.mensaje === "string" ? mensaje.mensaje : "No se pudo procesar el audio"); terminar(error); cerrar(); estado(error.message); }
-          else if (mensaje.tipo === "hablando") { window.speechSynthesis?.cancel(); window.dispatchEvent(new CustomEvent("ambie:agente-hablando", { detail: false })); }
+          else if (mensaje.tipo === "hablando") { window.speechSynthesis?.cancel(); window.dispatchEvent(new CustomEvent("synchronic:agente-hablando", { detail: false })); }
           else if (mensaje.tipo === "texto" && typeof mensaje.texto === "string" && mensaje.texto.trim() && mensaje.texto.length <= 6000) vistaPrevia?.(mensaje.texto.trim());
           else if (mensaje.tipo === "instruccion" && typeof mensaje.texto === "string" && mensaje.texto.trim() && mensaje.texto.length <= 6000) texto(mensaje.texto.trim());
         } catch { estado("Se recibió un mensaje de audio que no se pudo interpretar"); }
       };
     });
     if (cerrada) return cerrar;
-    capturador = new AudioWorkletNode(contexto, "captura-ambie");
+    capturador = new AudioWorkletNode(contexto, "captura-synchronic");
     capturador.port.onmessage = evento => {
       if (cerrada || socket.readyState !== WebSocket.OPEN) return;
       if (socket.bufferedAmount > 128000) { cerrar(); estado("La conexión está lenta. Puedes volver a iniciar el micrófono"); return; }

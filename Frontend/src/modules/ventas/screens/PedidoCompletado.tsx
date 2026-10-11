@@ -9,7 +9,7 @@ import { formatoMoneda } from "../../../utils/formato";
 import { formatoFechaHora } from "../../../utils/fechas";
 import { DetalleProductosPedido } from "../components/DetalleProductosPedido";
 import { useQuery } from "@tanstack/react-query";
-import type { Envelope } from "@ambie/contrato";
+import type { Envelope } from "@synchronic-jo/contrato";
 import { useRegistroApi } from "../../../data/usePaginaApi";
 import type { Pedido, Cliente } from "../../../types";
 import { respuestaRed, usaApi } from "../../../data/api";

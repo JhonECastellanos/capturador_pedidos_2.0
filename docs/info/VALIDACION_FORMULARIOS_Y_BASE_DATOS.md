@@ -380,3 +380,31 @@ Validación de esta revisión (11/10/2026): contrato de 14 enums, API, tipos, fr
 Prueba reproducible: `node Backend/scripts/probar-sesion-ui.cjs --api-real`. Requiere API QA en 8180 y PostgreSQL QA en 5433, base `ambie_test`, con el administrador ficticio de pruebas. Se aprobaron 12 casos: seis de transporte controlado (anticipación, respuestas tardías, revocación, caída de red, cancelación y reintento de guardado) y seis con API/PostgreSQL reales (sin cookies, cookies inexistentes, sesión revocada, renovación vencida, acceso vencido y solo cookie de renovación). Se verifican cookies HttpOnly, nuevo ingreso y cierre. Solo modifica sesiones ficticias; conserva documentos del negocio.
 
 Ejercicio manual: recarga `http://127.0.0.1:8180`, inicia sesión, navega a un módulo y vuelve a recargar. Debe conservar una sesión válida. Al salir, la recarga debe mostrar el ingreso sin llamar a renovación. Usa el mismo dominio durante la prueba: `localhost` y `127.0.0.1` conservan cookies diferentes. Un 401 directo de `/auth/refresh` sigue siendo correcto si la sesión fue revocada, venció o no existe; no se permite recuperar una sesión inválida ni se oculta ese rechazo.
+
+
+## V8P4 · Marca, acceso, apariencia e instalación
+
+Prueba: `node Backend/scripts/probar-v8p4.cjs` contra API QA 8180, PostgreSQL QA 5433 (`ambie_test`) y Chrome. Comprueba 13 grupos: acceso system por correo y rechazo de duplicados; roles; apariencia persistida y modificación exclusiva del administrador; validación de contraste y firmas de imágenes; retiro conservando cantidad, responsable y fecha del conteo; protección de system; permisos individuales y revocación; interfaz 390×844, 768×1024, 1440×900 y acceso con scroll 320×320; vendedor dirigido a su pantalla y conteo diario; manifiesto/iconos/service worker válidos para instalación, sin CacheStorage privado y recuperación tras desconexión. Incluye guardar una imagen propia desde el formulario y comprobar su persistencia al recargar. El perfil PWA es normal: Chrome no instala en incógnito.
+
+Se aprobaron también los 12 casos de sesión, caché y reintentos (23 solicitudes para cuatro operaciones distintas). Los datos de prueba permanecen en QA; la apariencia de QA se restaura al terminar. La instalación física en Android/iOS y la cámara física requieren validación del usuario.
+
+Ejercicios de negocio: ingresar con `system` o su correo usando la contraseña de la instalación; crear administrador del negocio; crear dos colaboradores de inventario y abrir el mismo conteo general desde sus celulares. Cada producto debe reservarse a un único colaborador; guardar cero conserva el cero. Al retirar al colaborador, su trabajo debe seguir apareciendo con su nombre en el detalle. Un vendedor ve ventas y conteo diario; no puede consultar administración ni conteo general.
+
+Ejercicio visual: Configuración → Apariencia → cambiar una paleta, código de color, fuente y portada → Guardar apariencia → recargar o abrir otro dispositivo. Ambos deben conservar la elección. Descartar cambios solo revierte la vista previa. Un color ilegible o archivo inválido debe explicar el problema y conservar lo guardado.
+
+Consultas de lectura:
+
+```sql
+SELECT codigo, nombre, rol, activo, "eliminadoEn", "permisosDenegados"
+FROM usuarios ORDER BY "creadoEn" DESC;
+SELECT id, "actualizadoEn", configuracion - 'imagen' AS apariencia
+FROM "configuracionesVisuales";
+SELECT c.id AS conteo, p.nombre AS producto, l."stockFisico", l."contadoEn",
+       u.nombre AS responsable, u."eliminadoEn" AS usuario_retirado
+FROM "conteoLineas" l JOIN "conteosInventario" c ON c.id=l."conteoId"
+JOIN productos p ON p.id=l."productoId"
+LEFT JOIN usuarios u ON u.id=l."contadoPorId"
+WHERE l."contadoEn" IS NOT NULL ORDER BY l."contadoEn" DESC;
+```
+
+Validación adicional V8P4 con imágenes Docker y servicios QA reales (11/10/2026): los 18 casos de integración aprobaron permisos, renovación, reserva/stock, pagos, FIFO, caja, cancelación, compras, archivos e historial. El recorrido completo de paneles en Chrome aprobó filtros, borradores, sincronización y desplazamiento; comprobó formularios de cliente y venta contra PostgreSQL, totales y precios históricos. Los 32 casos de agentes son pruebas controladas: no equivalen a audios físicos ni a una respuesta de un proveedor externo.

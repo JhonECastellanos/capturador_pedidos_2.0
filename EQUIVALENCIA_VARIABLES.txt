@@ -1,6 +1,6 @@
 ================================================================================
 EQUIVALENCIA DE VARIABLES · FRONTEND / API / BASE DE DATOS
-Proyecto AMBIÉ · Capturador de pedidos
+Proyecto Synchronic.JO
 APP_VERSION: Frontend/src/config.ts muestra V4P2; no cambia el formato de datos.
 ================================================================================
 
@@ -747,7 +747,7 @@ Para regenerar la lista de enums verificados: npm run contrato:verificar
 ================================================================================
   /auth/me.data.expiraEn       RequestAutenticado.expiraAccesoEn  JWT verificado exp; fecha ISO, sin nuevo campo en BD
   expiraEn/revisionAcceso      Frontend data/api.ts               Solo RAM; renovacion previa con margen de 30 segundos
-  sesionExpirada              ambie:sesion-expirada               Bloquea lecturas tras revocacion/logout; login habilita de nuevo
+  sesionExpirada              synchronic:sesion-expirada               Bloquea lecturas tras revocacion/logout; login habilita de nuevo
 
 V5P3 — Conteos diarios y páginas adaptadas al dispositivo
   Conteo.fechaDiaria          fechaDiaria                   conteosInventario.fechaDiaria (DATE Bogotá, nullable)
@@ -843,7 +843,7 @@ Audio híbrido: VADParams.stop_secs=2.0 y SpeechTimeoutUserTurnStopStrategy.user
 
 conversacionId (frontend en memoria) -> POST /agentes/interpretar -> x-opencode-session (proveedor): UUID de conversación, distinto del ID del borrador; no se persiste. Audio tipo=hablando -> speechSynthesis.cancel(): permite interrumpir la respuesta sin interpretar el evento como texto.
 
-RobotAsistente.estado <- escuchando/ocupado/ambie:agente-hablando (frontend); abrirMicrofono.nivel <- RMS AudioContext -> CSS --nivel, sin persistencia ni envío adicional. SpeechSynthesisUtterance.onstart/onend/onerror -> ambie:agente-hablando. RobotAsistente.posicion vive en memoria y no cambia datos del negocio.
+RobotAsistente.estado <- escuchando/ocupado/synchronic:agente-hablando (frontend); abrirMicrofono.nivel <- RMS AudioContext -> CSS --nivel, sin persistencia ni envío adicional. SpeechSynthesisUtterance.onstart/onend/onerror -> synchronic:agente-hablando. RobotAsistente.posicion vive en memoria y no cambia datos del negocio.
 
 
 V7P4 · lectura de productos y conteos (11/10/2026)
@@ -863,6 +863,16 @@ Sincronización: codigosProducto usa invalidar_sincronizacion diferido; mismas l
 
 RECUPERACIÓN DE SESIÓN V7P4 (11/10/2026)
 /auth/me.renovable -> AuthService.puedeRenovar -> sesiones.tokenHash / revocadoEn / expiraEn / usuarios.activo.
-Cookie existente sin sesión vigente -> renovable=false, data=null, cookies retiradas -> expirarSesion -> ambie:sesion-expirada -> limpieza de consultas y usuario.
+Cookie existente sin sesión vigente -> renovable=false, data=null, cookies retiradas -> expirarSesion -> synchronic:sesion-expirada -> limpieza de consultas y usuario.
 JWT vencido con renovación vigente -> data=null, renovable=true -> POST /auth/refresh -> nueva sesión y cookies HttpOnly -> consulta de usuario.
 SesionOpcional permite consultar estado sin acceso válido; las demás rutas conservan AuthGuard y permisos.
+
+
+SYNCHRONIC.JO V8P4
+APP_NOMBRE / APP_VERSION -> pestaña, acceso, encabezado, manifest -> Synchronic.JO / V8P4.
+AparienciaEsquema -> PUT /apariencia -> configuracionesVisuales.configuracion -> AparienciaProvider -> tokens CSS de todos los módulos.
+GET /apariencia es público y no almacena documentos ni credenciales. Imagen pública hasta 300 KB; portadas predeterminadas SVG propias.
+Usuario.permisosDenegados -> DTO / AuthGuard / RutaProtegida / navegación; cambiar permisos revoca sesiones.
+DELETE /usuarios/:id -> activo=false / eliminadoEn / auditoría; conserva contadoPorId y responsable histórico.
+COMPOSE_PROJECT_NAME -> identifica los volúmenes del negocio; las instalaciones anteriores conservan su valor privado al actualizar.
+PWA manifest display=standalone; sw.js solo ofrece retorno seguro ante desconexión, sin CacheStorage privado ni guardados diferidos.

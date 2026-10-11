@@ -3,7 +3,7 @@ require('dotenv').config({ quiet: true });
 const assert = require('node:assert/strict');
 const { randomUUID, randomBytes } = require('node:crypto');
 const { spawnSync } = require('node:child_process');
-const { ConfiguracionAgenteInicial } = require('@ambie/contrato');
+const { ConfiguracionAgenteInicial } = require('@synchronic-jo/contrato');
 const url = new URL('postgresql://127.0.0.1:5433/ambie_test?schema=public');
 url.username = process.env.POSTGRES_USER || 'ambie';
 url.password = process.env.POSTGRES_PASSWORD || '';

@@ -1,4 +1,4 @@
-import type { Envelope, EnvelopeLista } from "@ambie/contrato";
+import type { Envelope, EnvelopeLista } from "@synchronic-jo/contrato";
 import { consultas, claveConsulta } from "./query";
 import { claveGuardado, resolverGuardado } from "./guardados";
 
@@ -19,7 +19,7 @@ function registrarAcceso(cuerpo: { data?: { expiraEn?: string } } | null, renova
 function expirarSesion() {
   if (sesionExpirada) return;
   sesionExpirada = true; expiraEn = 0; revisionAcceso++;
-  window.dispatchEvent(new Event("ambie:sesion-expirada"));
+  window.dispatchEvent(new Event("synchronic:sesion-expirada"));
 }
 
 function renovarAcceso() {
@@ -53,7 +53,7 @@ async function enviar(ruta: string, metodo: string, datos?: unknown, signal?: Ab
 
 export async function respuestaRed<T>(ruta: string, metodo = "GET", datos?: unknown, signal?: AbortSignal): Promise<T> {
   const sesionInicial = claveConsulta(ruta)[1];
-  const protegida = ruta !== "/salud" && (!ruta.startsWith("/auth/") || ruta === "/auth/me" || ruta === "/auth/logout");
+  const protegida = ruta !== "/salud" && (ruta !== "/apariencia" || metodo !== "GET") && (!ruta.startsWith("/auth/") || ruta === "/auth/me" || ruta === "/auth/logout");
   if (protegida && ruta !== "/auth/me" && sesionExpirada) throw new ErrorApi("La sesión terminó. Vuelve a iniciar sesión.", 401);
   // Se renueva antes de leer o guardar, también al volver de una pestaña suspendida.
   if (protegida && ruta !== "/auth/me" && expiraEn && Date.now() >= expiraEn - 30_000) {

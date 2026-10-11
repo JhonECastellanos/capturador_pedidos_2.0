@@ -5,8 +5,8 @@
 
 // ─── Enumeraciones ────────────────────────────────────────────────
 
-export type { MetodoPago, EstadoPedido, RolUsuario, EstadoCuenta } from "@ambie/contrato";
-import type { MetodoPago, EstadoPedido, RolUsuario, EstadoCuenta, PedidoDTO, UsuarioDTO, TipoConteo } from "@ambie/contrato";
+export type { MetodoPago, EstadoPedido, RolUsuario, EstadoCuenta } from "@synchronic-jo/contrato";
+import type { MetodoPago, EstadoPedido, RolUsuario, EstadoCuenta, PedidoDTO, UsuarioDTO, TipoConteo } from "@synchronic-jo/contrato";
 /** Periodicidad pactada de pago para el crédito del cliente. */
 export type TipoCredito = "diario" | "semanal" | "quincenal" | "mensual";
 
@@ -194,7 +194,7 @@ export interface MovimientoCaja {
 
 // ─── Usuarios ─────────────────────────────────────────────────────
 
-export interface UsuarioSistema extends Pick<UsuarioDTO, "esSistema"> {
+export interface UsuarioSistema extends Pick<UsuarioDTO, "esSistema" | "permisosDenegados"> {
   id: string;
   nombre: string;
   email: string;

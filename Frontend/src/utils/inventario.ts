@@ -1,4 +1,4 @@
-import type { ConteoInventarioDTO } from "@ambie/contrato";
+import type { ConteoInventarioDTO } from "@synchronic-jo/contrato";
 import type { ConteoInventario } from "../types";
 
 /** Un cero digitado es distinto de una línea que todavía no se ha contado. */

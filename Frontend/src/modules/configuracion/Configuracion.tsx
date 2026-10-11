@@ -1,3 +1,5 @@
+import { PanelApariencia } from "./PanelApariencia";
+import { InstalarAplicacion } from "../../components/InstalarAplicacion";
 import { Link } from "react-router-dom";
 import { PanelAgentes } from "../agentes/PanelAgentes";
 
@@ -17,6 +19,8 @@ export function Configuracion() {
             <Link to="/admin/auditoria" className="rounded-xl border border-line px-4 py-3 text-sm font-semibold text-ink">Consultar auditoría</Link>
           </div>
         </section>
+        <PanelApariencia />
+        <div className="mt-4"><InstalarAplicacion /></div>
         <PanelAgentes />
       </main>
     </div>

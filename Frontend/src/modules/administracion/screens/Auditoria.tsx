@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { AuditoriaEventoDTO } from "@ambie/contrato";
+import type { AuditoriaEventoDTO } from "@synchronic-jo/contrato";
 import { usaApi } from "../../../data/api";
 import { usePaginaApi } from "../../../data/usePaginaApi";
 import { ListaVacia } from "../../../components/ListaVacia";

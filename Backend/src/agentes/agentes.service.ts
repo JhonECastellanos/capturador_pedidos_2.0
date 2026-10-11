@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, randomUUID } from "node:crypto";
 import { Prisma, RolUsuario, Usuario } from "@prisma/client";
-import { ConfiguracionAgenteEsquema, ConfiguracionAgenteInicial, problemaConexionAgente, InstruccionAgenteEsquema, type ContextoAgente, type ConfiguracionAgente, type ConfiguracionAgentePublica, type InstruccionAgente, type RevisionAgente, type UsoAgente } from "@ambie/contrato";
+import { ConfiguracionAgenteEsquema, ConfiguracionAgenteInicial, problemaConexionAgente, InstruccionAgenteEsquema, type ContextoAgente, type ConfiguracionAgente, type ConfiguracionAgentePublica, type InstruccionAgente, type RevisionAgente, type UsoAgente } from "@synchronic-jo/contrato";
 import { PrismaService } from "../common/prisma.module";
 import { ErrorDominio } from "../common/errores";
 import { TokensService } from "../common/tokens";

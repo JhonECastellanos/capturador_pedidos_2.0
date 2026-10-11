@@ -1,4 +1,4 @@
-# Contrato de API — AMBIÉ
+# Contrato de API — Synchronic.JO
 
 Base URL: `/api/v1`. Respuesta estándar:
 

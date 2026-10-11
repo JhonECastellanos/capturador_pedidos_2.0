@@ -1,6 +1,6 @@
 /* global AudioWorkletProcessor, sampleRate, registerProcessor */
 /* La salida permanece en silencio; solo se envía PCM mono a 16 kHz. */
-class CapturaAmbie extends AudioWorkletProcessor {
+class CapturaSynchronic extends AudioWorkletProcessor {
   constructor() {
     super(); this.pendiente = []; this.fase = 0; this.suma = 0; this.muestras = 0;
   }
@@ -23,4 +23,4 @@ class CapturaAmbie extends AudioWorkletProcessor {
     return true;
   }
 }
-registerProcessor("captura-ambie", CapturaAmbie);
+registerProcessor("captura-synchronic", CapturaSynchronic);

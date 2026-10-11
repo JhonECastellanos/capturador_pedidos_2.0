@@ -1,4 +1,4 @@
-// Esquema de datos de AMBIÉ (PostgreSQL).
+// Esquema de datos de Synchronic.JO (PostgreSQL).
 // Convención: nombres de campo en camelCase para que frontend, backend y base
 // compartan la misma nomenclatura. Los nombres de tabla son plurales camelCase.
 // Dinero: Decimal(18,2) · Cantidades: Int · Instantes UTC: timestamp(3) · Días: date.
@@ -20,6 +20,14 @@ model ConfiguracionAgente {
   version Int @default(1)
   actualizadoEn DateTime @updatedAt
   @@map("configuracionesAgente")
+}
+
+// Apariencia pública de una instalación, sin documentos ni credenciales.
+model ConfiguracionVisual {
+  id String @id @default("principal")
+  configuracion Json
+  actualizadoEn DateTime @updatedAt
+  @@map("configuracionesVisuales")
 }
 
 // ─── Enumeraciones ────────────────────────────────────────────────
@@ -120,6 +128,8 @@ model Usuario {
   rol           RolUsuario
   activo        Boolean    @default(true)
   esSistema     Boolean    @default(false)
+  permisosDenegados String[] @default([])
+  eliminadoEn DateTime?
   creadoEn      DateTime   @default(now())
   actualizadoEn DateTime   @updatedAt
   ultimoAccesoEn DateTime?

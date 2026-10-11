@@ -4,7 +4,7 @@ import { PrismaService } from "../common/prisma.module";
 import { ErrorDominio } from "../common/errores";
 import { siguienteCodigo, numero } from "../common/consecutivos";
 import { Prisma, RolUsuario } from "@prisma/client";
-import { NuevoProductoEsquema, type ImportarProductosDTO, type ResultadoImportacionProductosDTO } from "@ambie/contrato";
+import { NuevoProductoEsquema, type ImportarProductosDTO, type ResultadoImportacionProductosDTO } from "@synchronic-jo/contrato";
 import { InventarioService } from "../inventario/inventario.service";
 
 export const NuevoProductoSchema = NuevoProductoEsquema;

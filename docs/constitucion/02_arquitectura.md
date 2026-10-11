@@ -1,6 +1,6 @@
 # 02 · Arquitectura y estructura
 
-> Constitución de AMBIÉ · Capturador de pedidos — archivo 2 de 4.
+> Constitución de Synchronic.JO — archivo 2 de 4.
 > Última revisión: 30/09/2026.
 > Responde a: «¿dónde va cada cosa y cómo se conecta?». Todo lo aquí descrito existe hoy en el código.
 
@@ -8,8 +8,8 @@
 
 ```text
 Capturador_pedidos_2.0/
-├── Frontend/    SPA React + Vite (workspace `capturador-pedido`)
-├── Compartido/  Contrato (workspace `@ambie/contrato`): enums, DTO y esquemas
+├── Frontend/    SPA React + Vite (workspace `synchronic-jo-frontend`)
+├── Compartido/  Contrato (workspace `@synchronic-jo/contrato`): enums, DTO y esquemas
 ├── scripts/     Verificadores: contrato, repositorio (seguridad), caché
 ├── docs/        constitucion/ (normas) + info/ (documentación técnica e histórica)
 └── .github/     Workflow de verificación y despliegue continuo
@@ -86,7 +86,7 @@ Flujo obligatorio de un enum nuevo o modificado: `schema.prisma` → `enums.ts` 
 
 - **TanStack Query**: claves por sesión/ruta/página/filtros; escrituras invalidan lecturas; login/logout/expiración cancelan y limpian; no persistir respuestas privadas en `localStorage`.
 - **Redis** interno (TTL 5 min): la clave incluye la revisión de `versionesCache`; los resultados antiguos caducan solos, sin `FLUSHALL`. Fallos de Redis → PostgreSQL.
-- **Sincronización**: `GET /api/v1/sincronizacion/revision` (autenticado, sin caché HTTP) cada 2 segundos con la pestaña visible; sin solicitudes superpuestas; reconexión y visibilidad reanudan. Un cambio confirmado dispara `ambie:datos-actualizados`.
+- **Sincronización**: `GET /api/v1/sincronizacion/revision` (autenticado, sin caché HTTP) cada 2 segundos con la pestaña visible; sin solicitudes superpuestas; reconexión y visibilidad reanudan. Un cambio confirmado dispara `synchronic:datos-actualizados`.
 - Una actualización **mantiene el snapshot de la misma sesión**, sin desmontar pantallas ni perder scroll/borradores. Los placeholders de consultas paginadas solo pertenecen a la misma sesión y recurso.
 
 ## 7. Paginación y límites visuales

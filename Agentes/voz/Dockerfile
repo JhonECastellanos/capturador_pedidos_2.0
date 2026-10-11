@@ -4,9 +4,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg libsndfi
 WORKDIR /app
 COPY Agentes/voz/requirements.txt .
 RUN pip install --no-cache-dir 'torch==2.11.0+cpu' 'torchaudio==2.11.0+cpu' --index-url https://download.pytorch.org/whl/cpu && pip install --no-cache-dir -r requirements.txt
-RUN useradd --uid 10001 --create-home ambie && mkdir -p /data/modelos && chown -R ambie:ambie /data /app
-COPY --chown=ambie:ambie Agentes/voz/*.py .
-USER ambie
+RUN useradd --uid 10001 --create-home synchronic && mkdir -p /data/modelos && chown -R synchronic:synchronic /data /app
+COPY --chown=synchronic:synchronic Agentes/voz/*.py .
+USER synchronic
 EXPOSE 7860
 HEALTHCHECK --interval=20s --timeout=5s --retries=3 CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:7860/salud', timeout=4)"
 CMD ["uvicorn", "servidor:app", "--host", "0.0.0.0", "--port", "7860", "--no-access-log"]
@@ -19,4 +19,4 @@ USER root
 COPY --from=ollama-cpu /opt/cpu/ollama /usr/local/bin/ollama
 COPY --from=ollama-cpu /opt/cpu/lib/ /usr/lib/ollama/
 ENV OLLAMA_HOST=0.0.0.0:11434 OLLAMA_MODELS=/data/modelos/ollama OLLAMA_LLM_LIBRARY=cpu OLLAMA_MAX_LOADED_MODELS=1 OLLAMA_NUM_PARALLEL=1
-USER ambie
+USER synchronic

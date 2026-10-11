@@ -112,7 +112,7 @@ async function exigir<T = unknown>(
 type Usuario = { id: string; codigo: string; nombre: string; rol: string; permisos: string[] };
 
 async function main() {
-  console.log(negrita(`\nAMBIÉ · prueba de humo → ${BASE}\n`));
+  console.log(negrita(`\nSynchronic.JO · prueba de humo → ${BASE}\n`));
 
   await paso("la sonda de salud responde sin credenciales", async () => {
     const res = await llamar<{ data?: { estado?: string; baseDeDatos?: string } }>("GET", "/api/v1/salud", undefined, {
