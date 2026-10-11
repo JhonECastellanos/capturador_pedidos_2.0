@@ -1,3 +1,4 @@
+import { FichaProductoCodigo } from "../../../components/FichaProductoCodigo";
 import { useEffect, useMemo, useState } from "react";
 import { BarraInferior } from "../../../components/BarraInferior";
 import { Boton } from "../../../components/Boton";
@@ -342,6 +343,7 @@ export function InventarioAdmin() {
         <div className="flex flex-1 flex-col min-h-0 mt-2.5">
           {mostrarProducto ? (
             <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar py-2">
+              {usaApi ? <FichaProductoCodigo onCerrar={() => setMostrarProducto(false)} onGuardado={r => { setMostrarProducto(false); mostrarAviso(r.aviso ?? `Producto ${r.producto.nombre} listo`, r.aviso ? "error" : "exito"); }} /> : (
               <FormularioProducto
                 alCancelar={() => setMostrarProducto(false)}
                 alGuardar={async (datos, archivo) => {
@@ -353,6 +355,7 @@ export function InventarioAdmin() {
                   return true;
                 }}
               />
+              )}
             </div>
           ) : (
             <>

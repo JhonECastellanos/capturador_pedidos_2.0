@@ -152,6 +152,10 @@ export interface CodigoProductoDTO {
 }
 
 export interface ProductoDTO {
+  productoBaseId?: string | null;
+  extension?: string;
+  rowid?: string;
+  rowid_ext?: string;
   precioPendiente?: boolean;
   codigosLectura?: string[];
   id: string;

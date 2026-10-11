@@ -27,7 +27,7 @@ function ean(base12) {
 }
 (async()=>{
   const browser = await chromium.launch({channel:'chrome',headless:true,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream']});
-  const errores=[],casos=[];
+  const errores=[],casos=[],lecturas=[];
   try {
     const admin=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
     async function pedir(ctx,ruta,method='GET',data,status=method==='POST'?201:200) {
@@ -54,6 +54,7 @@ function ean(base12) {
     await page.getByText('Venta abierta · cliente ocasional',{exact:true}).click();
     async function figura(pagina,dibujo) { await pagina.evaluate(d=>{window.__figuraCamara=d;},dibujo); }
     async function escanear(dibujo,nombre) {
+      const inicio=performance.now();
       await figura(page,dibujo);await page.getByRole('button',{name:'Escanear código',exact:true}).click();
       await page.getByRole('dialog',{name:'Escanear producto'}).waitFor({state:'hidden',timeout:20000});
       await page.getByPlaceholder('Buscar producto o código').waitFor();
@@ -61,6 +62,7 @@ function ean(base12) {
       await page.getByRole('button',{name:'Disminuir cantidad'}).first().waitFor();
       assert.equal(await page.getByRole('button',{name:'Disminuir cantidad'}).count(),1);
       assert.ok(await page.evaluate(()=>window.__pistasCamara.every(p=>p.readyState==='ended')));
+      lecturas.push({nombre,milisegundos:Math.round(performance.now()-inicio)});
     }
     await escanear(qr(codigoQR),p1.nombre);await escanear(barras.figura,p2.nombre);
     await figura(page,qr(codigoQR));await page.getByRole('button',{name:'Escanear código',exact:true}).click();await page.getByRole('dialog',{name:'Escanear producto'}).waitFor({state:'hidden'});
@@ -76,6 +78,15 @@ function ean(base12) {
     const precioGuardado=page.waitForResponse(r=>r.url().endsWith('/precio')&&r.request().method()==='POST');await page.getByRole('button',{name:'Guardar precio',exact:true}).click();assert.equal((await precioGuardado).status(),201);
     const parametrizado=await pedir(admin,`/productos/${p1.id}`);assert.equal(parametrizado.precioVenta,2600);assert.equal(parametrizado.costoActual,1100);assert.equal(parametrizado.stockMinimo,4);assert.equal(parametrizado.stockFisico,20);
     casos.push('Formulario de Precios: confirma precio, costo y mínimo con los mismos campos persistidos; conserva las veinte unidades');
+    await page.goto(base+'/admin/inventario');await page.getByText('Stock general',{exact:true}).first().click();await page.getByRole('button',{name:'+ Producto',exact:true}).click();
+    await figura(page,qr(marca+'-etiqueta-nueva'));await page.getByRole('button',{name:'Escanear código',exact:true}).click();await page.getByRole('dialog',{name:'Escanear producto'}).waitFor({state:'hidden',timeout:20000}).catch(async e=>{await page.screenshot({path:'.local/pruebas-v8/lector-fallo.png'});console.error(await page.locator('video').evaluate(v=>({ancho:v.videoWidth,alto:v.videoHeight,estado:v.readyState,pausado:v.paused})));console.error(await page.getByRole('dialog').innerText());throw e;});
+    assert.equal(await page.getByLabel('Código de barras o QR',{exact:true}).inputValue(),marca+'-etiqueta-nueva');
+    await page.getByLabel('Nombre del producto',{exact:true}).fill(p1.nombre);
+    await page.getByRole('option',{name:p1.nombre+' · '+p1.codigoInterno,exact:true}).click();
+    const vinculo=page.waitForResponse(r=>r.url().endsWith('/codigos')&&r.request().method()==='POST');
+    await page.getByRole('button',{name:'Usar producto existente',exact:true}).click();assert.equal((await vinculo).status(),201);
+    const mismo=await pedir(admin,`/productos/${p1.id}`);assert.equal(mismo.stockFisico,20);assert.ok(mismo.codigosLectura.includes(codigoQR)&&mismo.codigosLectura.includes(marca+'-etiqueta-nueva'));
+    casos.push('Stock general: alta con cámara, coincidencia por nombre y segunda etiqueta del mismo producto sin duplicar stock');
     const general=await pedir(admin,'/inventario/conteos','POST',{tipo:'general',turno:'Escáner móvil'});
     const email=marca+'@pruebas.invalid';await pedir(admin,'/usuarios','POST',{nombre:'Lector de prueba',email,password:'SoloPruebas2026!',rol:'inventario'});
     const inv=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});await inv.addInitScript(camaraFalsa);await pedir(inv,'/auth/login','POST',{identifier:email,password:'SoloPruebas2026!'},200);
@@ -95,6 +106,7 @@ function ean(base12) {
     await contar.reload();await contar.getByText('Inventario general · en curso',{exact:true}).first().click();await contar.getByPlaceholder('Buscar producto del conteo').fill(marca);await contar.getByText('Contado: 0',{exact:false}).waitFor();
     await contar.screenshot({path:'.local/pruebas-v7/inventario-escaner-390.png'});
     casos.push('Colaborador en móvil: cámara → cero → guardar → cámara → trece → guardar; ambas cantidades persisten al recargar');
+    const diariosPrevios=await pedir(admin,'/inventario/compartidos?tipo=aleatorio');for(const c of diariosPrevios.filter(c=>c.tipo==='aleatorio'&&c.estado==='en-curso'))await pedir(admin,`/inventario/conteos/${c.id}/cancelar`,'POST');
     const correoVendedor = marca + '-vendedor@pruebas.invalid';
     await pedir(admin,'/usuarios','POST',{nombre:'Vendedor lector de prueba',email:correoVendedor,password:'SoloPruebas2026!',rol:'vendedor'});
     const vendedor = await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});await vendedor.addInitScript(camaraFalsa);
@@ -105,26 +117,35 @@ function ean(base12) {
     const pendientesDiarios = await pedir(vendedor,`/inventario/compartidos/${diarioActual.id}/lineas`);const pendienteDiario=pendientesDiarios.find(l=>l.stockFisico===null&&!l.asignadoPorId);
     assert.ok(pendienteDiario,'Un producto del diario disponible');
     await figura(diarioVista,qr(pendienteDiario.codigo));await diarioVista.getByRole('button',{name:'Contar con cámara',exact:true}).click();await diarioVista.getByLabel('Cantidad contada').waitFor({timeout:20000});
-    await figura(diarioVista,[]);await diarioVista.getByLabel('Cantidad contada').fill('0');await diarioVista.getByRole('button',{name:'Guardar cantidad',exact:true}).click();
-    await diarioVista.getByRole('dialog',{name:'Escanear producto'}).waitFor();await diarioVista.getByRole('button',{name:'Cerrar',exact:true}).click();
+    await figura(diarioVista,[]);await diarioVista.getByLabel('Cantidad contada').fill('0');const cantidadDiariaGuardada=diarioVista.waitForResponse(r=>r.url().includes(`/inventario/conteos/${diarioActual.id}/lineas/`)&&r.request().method()==='PATCH');await diarioVista.getByRole('button',{name:'Guardar cantidad',exact:true}).click();assert.equal((await cantidadDiariaGuardada).status(),200);
     const verificacionDiaria=await pedir(vendedor,`/inventario/compartidos/${diarioActual.id}/lineas`);assert.equal(verificacionDiaria.find(l=>l.productoId===pendienteDiario.productoId).stockFisico,0);
+    if(verificacionDiaria.some(l=>l.stockFisico===null)){await diarioVista.getByRole('dialog',{name:'Escanear producto'}).waitFor();await diarioVista.getByRole('button',{name:'Cerrar',exact:true}).click();}
     await diarioVista.screenshot({path:'.local/pruebas-v7/vendedor-diario-390.png'});casos.push('Vendedor tiene entrada visible al diario, escanea uno de los cinco y guarda cero; el historial administrativo permanece oculto');
     const robotContext=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});await pedir(robotContext,'/auth/login','POST',{identifier:'qa-admin@pruebas.invalid',password:'SoloPruebas2026!'},200);
     await robotContext.route('**/agentes/estado',r=>r.fulfill({json:{data:{habilitado:true,modo:'hibrido',configurado:true,audio:{idioma:'es-CO',velocidad:1,volumen:0,voz:'',modeloStt:'base',stt:'whisper'}}}}));
     await robotContext.route('**/agentes/audio/sesion',r=>r.fulfill({json:{data:{ticket:'prueba-ui'}}}));
-    await robotContext.routeWebSocket('**/agentes/audio/conversar?*',ws=>{setTimeout(()=>ws.send(JSON.stringify({tipo:'listo'})),50);ws.onMessage(()=>{});});
+    let socketRobot;
+    await robotContext.routeWebSocket('**/agentes/audio/conversar?*',ws=>{socketRobot=ws;setTimeout(()=>ws.send(JSON.stringify({tipo:'listo'})),50);ws.onMessage(()=>{});});
     const robot=await robotContext.newPage();robot.on('pageerror',e=>errores.push(e.message));await robot.goto(base+'/admin/precios');const boton=robot.getByRole('button',{name:'Asistente',exact:true});await boton.click();
     await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.getAttribute('aria-pressed')==='true');
     assert.equal(await robot.getByRole('button',{name:'Hablar',exact:true}).count(),0);assert.equal(await robot.getByRole('button',{name:'Detener',exact:true}).count(),0);
     await robot.getByLabel('Ancho del texto del asistente').evaluate(e=>{const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;setter.call(e,'440');e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));});
     assert.equal(await robot.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
     await robot.getByRole('heading',{name:'Precios y márgenes',exact:true}).click();assert.equal(await robot.getByLabel('Ancho del texto del asistente').count(),0);assert.equal(await boton.getAttribute('aria-pressed'),'true');
-    await boton.click();assert.equal(await boton.getAttribute('aria-pressed'),'false');
+    await robot.waitForTimeout(350);await boton.click();assert.equal(await boton.getAttribute('aria-pressed'),'false');
+    await robot.waitForTimeout(350);await boton.click();await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.getAttribute('aria-pressed')==='true');
+    await robot.waitForTimeout(350);await boton.dblclick({delay:80});assert.equal(await boton.getAttribute('aria-pressed'),'false');assert.equal(await boton.getAttribute('aria-expanded'),'false');
+    const revisionPendiente=await pedir(admin,'/agentes/revisar','POST',{id:randomUUID(),version:1,instruccion:{operacion:'precio',producto:p1.nombre,precio:2800}});
+    await robotContext.route('**/agentes/interpretar',async r=>{await new Promise(resolve=>setTimeout(resolve,850));await r.fulfill({json:{data:revisionPendiente}});});
+    await robot.waitForTimeout(350);await boton.click();await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.getAttribute('aria-pressed')==='true');
+    socketRobot.send(JSON.stringify({tipo:'instruccion',texto:'Cambia el precio del producto a 2800'}));await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.dataset.estado==='pensando');
+    await robot.waitForTimeout(350);await boton.click();assert.equal(await boton.getAttribute('aria-pressed'),'false');await robot.getByText('Confirmar cambio',{exact:true}).waitFor();
+    casos.push('Detener micrófono durante interpretación conserva la respuesta y abre la confirmación; doble toque apaga sin guardar');
     casos.push('Robot con transporte simulado: un toque escucha, otro detiene; tocar fuera cierra solo la burbuja; ancho ajustable y sin botones Hablar/Detener');
     const escritorio=await admin.newPage();escritorio.on('pageerror',e=>errores.push(e.message));await escritorio.setViewportSize({width:1440,height:900});await escritorio.goto(base+'/admin/inventario');await escritorio.getByText('Conteo guiado',{exact:true}).first().click();await escritorio.getByText('Inventario general · en curso',{exact:true}).first().click();
     assert.equal(await escritorio.getByRole('heading',{name:'Historial y progreso de inventarios',exact:true}).count(),0);
     await escritorio.getByRole('button',{name:'← Historial',exact:true}).click();await escritorio.getByRole('heading',{name:'Historial y progreso de inventarios',exact:true}).waitFor();
     await escritorio.screenshot({path:'.local/pruebas-v7/historial-1440.png'});casos.push('Administrador: lista de historial y detalle separados, paginación compacta en 390 y 1440');
-    assert.deepEqual(errores,[]);for(const c of casos)console.log('✓ '+c);writeFileSync('.local/pruebas-v7/escaner-ui.json',JSON.stringify({fecha:new Date().toISOString(),casos,errores},null,2));
+    assert.deepEqual(errores,[]);for(const c of casos)console.log('✓ '+c);writeFileSync('.local/pruebas-v7/escaner-ui.json',JSON.stringify({fecha:new Date().toISOString(),casos,lecturas,errores},null,2));
   } finally {await browser.close();}
 })().catch(e=>{console.error(e.stack);process.exitCode=1;});

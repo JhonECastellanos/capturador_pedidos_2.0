@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import "./robot-asistente.css";
 
-type Props = { abierto: boolean; escuchando: boolean; hablando: boolean; ocupado: boolean; robotRef: RefObject<HTMLButtonElement | null>; alternar: () => void; cerrarBurbuja: () => void; ancho: number; children: ReactNode };
+type Props = { abierto: boolean; escuchando: boolean; hablando: boolean; ocupado: boolean; robotRef: RefObject<HTMLButtonElement | null>; alternar: () => void; apagar: () => void; cerrarBurbuja: () => void; ancho: number; children: ReactNode };
 
-export function RobotAsistente({ abierto, escuchando, hablando, ocupado, robotRef, alternar, cerrarBurbuja, ancho, children }: Props) {
+export function RobotAsistente({ abierto, escuchando, hablando, ocupado, robotRef, alternar, apagar, cerrarBurbuja, ancho, children }: Props) {
   const contenedor = useRef<HTMLElement | null>(null);
   useEffect(() => {
     if (!abierto) return;
@@ -14,6 +14,7 @@ export function RobotAsistente({ abierto, escuchando, hablando, ocupado, robotRe
   const [posicion, setPosicion] = useState<{ x: number; y: number } | null>(null);
   const arrastre = useRef<{ x: number; y: number; inicioX: number; inicioY: number; movido: boolean } | null>(null);
   const movido = useRef(false);
+  const ultimoToque = useRef(0);
   useEffect(() => {
     const ajustar = () => setPosicion(p => p ? { x: Math.max(8, Math.min(window.innerWidth - 64, p.x)), y: Math.max(8, Math.min(window.innerHeight - 64, p.y)) } : null);
     window.addEventListener("resize", ajustar);
@@ -25,7 +26,7 @@ export function RobotAsistente({ abierto, escuchando, hablando, ocupado, robotRe
   const estado = hablando ? "hablando" : ocupado ? "pensando" : escuchando ? "escuchando" : "reposo";
   return <aside ref={contenedor} aria-label="Asistente de operaciones" className="fixed z-50" style={posicion ? { left: posicion.x, top: posicion.y } : { right: 12, bottom: 12 }}>
     {abierto && <div className="absolute bottom-full mb-2" style={{ left: izquierdaBurbuja, ...(posicion && posicion.y < 220 ? { top: "100%", bottom: "auto", marginTop: 8 } : {}) }}>{children}</div>}
-    <button ref={robotRef} type="button" aria-label="Asistente" aria-expanded={abierto} aria-pressed={escuchando} title="Toca para activar o detener · arrastra para mover" data-estado={estado} className="robot-asistente" onPointerDown={e => {
+    <button ref={robotRef} type="button" aria-label="Asistente" aria-expanded={abierto} aria-pressed={escuchando} title="Toca para activar o detener el micrófono · dos toques para apagar · arrastra para mover" data-estado={estado} className="robot-asistente" onPointerDown={e => {
       const r = e.currentTarget.getBoundingClientRect();
       arrastre.current = { x: r.left, y: r.top, inicioX: e.clientX, inicioY: e.clientY, movido: false }; movido.current = false;
       e.currentTarget.setPointerCapture(e.pointerId);
@@ -36,7 +37,7 @@ export function RobotAsistente({ abierto, escuchando, hablando, ocupado, robotRe
       if (!a.movido) return;
       movido.current = true;
       setPosicion({ x: Math.max(8, Math.min(window.innerWidth - 64, a.x + dx)), y: Math.max(8, Math.min(window.innerHeight - 64, a.y + dy)) });
-    }} onPointerUp={() => { arrastre.current = null; }} onPointerCancel={() => { arrastre.current = null; movido.current = true; }} onClick={() => { if (!movido.current) alternar(); }}>
+    }} onPointerUp={() => { arrastre.current = null; }} onPointerCancel={() => { arrastre.current = null; movido.current = true; }} onClick={() => { if (!movido.current) { const ahora = Date.now(); if (ahora - ultimoToque.current < 320) { ultimoToque.current = 0; apagar(); } else { ultimoToque.current = ahora; alternar(); } } }}>
       <svg viewBox="0 0 64 64" aria-hidden="true" className="robot-dibujo">
         <circle className="robot-halo" cx="32" cy="34" r="27" fill="none" stroke="currentColor" strokeWidth="2" />
         <path d="M32 13V8" stroke="currentColor" strokeWidth="3" /><circle cx="32" cy="6" r="3" fill="currentColor" />

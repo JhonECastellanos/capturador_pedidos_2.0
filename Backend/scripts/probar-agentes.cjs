@@ -419,3 +419,10 @@ test('si fallan principal y respaldo, informa ambas causas sin exponer respuesta
     await assert.rejects(instancia.interpretar('Prueba', pedido, usuario), e => e.codigo === 'AGENTE_PROVEEDORES' && e.getStatus() === 502 && /PROVEEDOR_CREDENCIALES/.test(e.message) && /PROVEEDOR_RESPUESTA/.test(e.message) && !e.message.includes('contenido-privado-no-publicar'));
   } finally { codigo = 200; cuerpoProveedor = undefined; }
 });
+
+test('cliente ocasional literal se normaliza sin confundir una persona registrada', () => {
+  const { limpiarInstruccionProveedor } = require('../dist/agentes/proveedores');
+  assert.deepEqual(limpiarInstruccionProveedor({ operacion: 'pedido', cliente: 'Cliente ocasional' }), { operacion: 'pedido', ocasional: true });
+  assert.deepEqual(limpiarInstruccionProveedor({ operacion: 'pedido', cliente: 'María' }), { operacion: 'pedido', cliente: 'María' });
+  assert.equal(limpiarInstruccionProveedor({ operacion: 'pedido', cliente: 'cliente ocasional', ocasional: false }).ocasional, false);
+});

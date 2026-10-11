@@ -212,6 +212,8 @@ services:
 
 volumes:
   voz_modelos:
+    name: ${VOICE_MODELS_VOLUME:-${COMPOSE_PROJECT_NAME:-synchronic_jo}_voz_modelos}
+    external: ${VOICE_MODELS_EXTERNAL:-false}
   postgres_data:
   minio_data:
 

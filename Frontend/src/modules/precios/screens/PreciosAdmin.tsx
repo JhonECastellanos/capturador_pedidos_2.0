@@ -30,6 +30,9 @@ export function PreciosAdmin() {
   const POR_PAGINA = useTamanoPagina();
   const { inventario, cambiosPrecio, actualizarPrecioProducto, nombreUsuario } = useOperaciones();
   const [crear, setCrear] = useState<string | null>(null);
+  const [basePresentacion, setBasePresentacion] = useState<Producto | null>(null);
+  const [nombre, setNombre] = useState<string | null>(null);
+  const [extension, setExtension] = useState<string | null>(null);
   const [camara, setCamara] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
@@ -57,14 +60,14 @@ export function PreciosAdmin() {
 
   function abrirProducto(id: string) {
     const p = (usaApi ? remoto.items : inventario).find((x) => x.id === id);
-    setCosto(null); setMinimo(null);
+    setCosto(null); setMinimo(null); setNombre(null); setExtension(null);
     setProductoId(id);
     setPrecio(p ? String(p.precioVenta) : "");
     setPaso(1);
   }
 
   function cerrarProceso() {
-    setCosto(null); setMinimo(null);
+    setCosto(null); setMinimo(null); setNombre(null); setExtension(null);
     setProductoId(null);
     setPrecio("");
     setPaso(1);
@@ -74,34 +77,34 @@ export function PreciosAdmin() {
     if (!producto) return false;
     if (!precio.trim() || (costo !== null && !costo.trim()) || (minimo !== null && !minimo.trim())) { mostrarAviso("Completa precio, costo y stock mínimo, incluyendo 0 cuando corresponda", "info"); return false; }
     const nuevo = Number(precio) || 0;
-    if (!Number.isFinite(nuevo) || nuevo < 0 || await actualizarPrecioProducto(producto.id, nuevo, usaApi ? { costoActual: costo === null ? undefined : Number(costo), stockMinimo: minimo === null ? undefined : Number(minimo) } : undefined) === false) return false;
+    if (!Number.isFinite(nuevo) || nuevo < 0 || await actualizarPrecioProducto(producto.id, nuevo, usaApi ? { costoActual: costo === null ? undefined : Number(costo), stockMinimo: minimo === null ? undefined : Number(minimo), nombre: nombre ?? undefined, extension: extension ?? undefined } : undefined) === false) return false;
     mostrarAviso(`${producto.nombre} → ${formatoMoneda(nuevo)} guardado`, "exito");
     cerrarProceso();
     return true;
   }
 
   const confirmarPrecioCompartido = useOperacionAgente("precio", r => {
-    setCosto(null); setMinimo(null);
+    setCosto(null); setMinimo(null); setNombre(null); setExtension(null);
     setProductoId(typeof r.datos.productoId === "string" ? r.datos.productoId : null);
     setPrecio(r.instruccion.precio === undefined ? "" : String(r.instruccion.precio));
     setPaso(2);
   }, guardarPrecio, () => ({ operacion: "precio", producto: producto?.nombre, ...(precio.trim() ? { precio: Number(precio) } : {}) }));
 
-  if (crear !== null) return <PantallaCompletaAdmin><div className="flex-1 overflow-y-auto p-3"><FichaProductoCodigo codigoInicial={crear} onCerrar={() => setCrear(null)} onGuardado={r => { setCrear(null); setProductoId(r.producto.id); setPrecio(String(r.producto.precioVenta)); setPaso(1); mostrarAviso("Producto guardado", "exito"); }} /></div></PantallaCompletaAdmin>;
+  if (crear !== null) return <PantallaCompletaAdmin><div className="flex-1 overflow-y-auto p-3"><FichaProductoCodigo productoBase={basePresentacion ?? undefined} codigoInicial={crear} onCerrar={() => { setCrear(null); setBasePresentacion(null); }} onGuardado={r => { setCrear(null); setBasePresentacion(null); setNombre(null); setExtension(null); setProductoId(r.producto.id); setPrecio(String(r.producto.precioVenta)); setPaso(1); mostrarAviso(r.aviso ?? "Producto guardado", r.aviso ? "error" : "exito"); }} /></div></PantallaCompletaAdmin>;
 
   // ─── Proceso paso a paso: cambiar precio ───
   if (producto) {
     const nuevo = Number(precio) || 0;
     const margenAntes = calcularMargen(producto.precioVenta, producto.costoActual);
     const margenDespues = calcularMargen(nuevo, costo === null ? producto.costoActual : Number(costo));
-    const cambia = nuevo !== producto.precioVenta || !!producto.precioPendiente || (costo !== null && Number(costo) !== producto.costoActual) || (minimo !== null && Number(minimo) !== producto.stockMinimo);
-    const validos = precio.trim() !== "" && Number.isFinite(nuevo) && nuevo >= 0 && (costo === null || (costo.trim() !== "" && Number.isFinite(Number(costo)) && Number(costo) >= 0)) && (minimo === null || (minimo.trim() !== "" && Number.isSafeInteger(Number(minimo)) && Number(minimo) >= 0));
+    const cambia = nuevo !== producto.precioVenta || !!producto.precioPendiente || (costo !== null && Number(costo) !== producto.costoActual) || (minimo !== null && Number(minimo) !== producto.stockMinimo) || (nombre !== null && nombre !== producto.nombre) || (extension !== null && extension !== producto.extension);
+    const validos = (nombre === null || nombre.trim().length >= 2) && (extension === null || extension.trim().length > 0) && precio.trim() !== "" && Number.isFinite(nuevo) && nuevo >= 0 && (costo === null || (costo.trim() !== "" && Number.isFinite(Number(costo)) && Number(costo) >= 0)) && (minimo === null || (minimo.trim() !== "" && Number.isSafeInteger(Number(minimo)) && Number(minimo) >= 0));
     const historial = usaApi ? historialRemoto.data ?? [] : cambiosPrecio.filter((c) => c.productoId === producto.id).slice(0, 3);
 
     return (
       <PantallaCompletaAdmin>
         <BarraSuperior
-          titulo={paso === 1 ? "Nuevo precio" : "Confirmar cambio"}
+          titulo={paso === 1 ? "Editar producto" : "Confirmar cambio"}
           subtitulo={`${producto.nombre} · Paso ${paso} de 2`}
           onVolver={() => (paso === 2 ? setPaso(1) : cerrarProceso())}
           paso={{ actual: paso, total: 2 }}
@@ -116,6 +119,9 @@ export function PreciosAdmin() {
                   <p className="mt-0.5 truncate font-display text-[16px] font-semibold text-ink">{producto.nombre}</p>
                   <p className="text-[11.5px] text-ink-soft">{producto.codigoInterno} · {producto.categoria}</p>
 
+                  <label className="mt-3 block text-xs">Nombre del producto<input aria-label="Nombre del producto" value={nombre ?? producto.nombre} disabled={!!producto.productoBaseId} maxLength={200} onChange={e => setNombre(e.target.value)} className="mt-1 w-full rounded-lg border border-line bg-paper p-2" /></label>
+                  {producto.productoBaseId ? <label className="mt-2 block text-xs">Presentación o extensión<input aria-label="Presentación o extensión" value={extension ?? producto.extension ?? ""} maxLength={80} onChange={e => setExtension(e.target.value)} className="mt-1 w-full rounded-lg border border-line bg-paper p-2" /></label> : <button type="button" className="mt-2 min-h-10 text-xs text-teal underline" onClick={() => { setBasePresentacion(producto); setCrear(""); }}>Crear presentación de este producto</button>}
+                  <p className="mt-2 break-all text-[10px] text-ink-soft">Producto: {producto.rowid ?? producto.id} · Presentación: {producto.rowid_ext ?? producto.id}</p>
                   <div className="ticket-edge -mx-4 my-3.5" />
 
                   <div className="grid grid-cols-2 gap-2.5">
@@ -182,6 +188,7 @@ export function PreciosAdmin() {
                   <p className="text-[10.5px] font-semibold uppercase tracking-wide text-ink-faint">Resumen del cambio</p>
                   <p className="mt-0.5 truncate font-display text-[15.5px] font-semibold text-ink">{producto.nombre}</p>
 
+                  {(nombre !== null || extension !== null) && <p className="mt-2 text-sm text-teal">Nuevo nombre: {producto.productoBaseId && extension !== null ? `${producto.nombre.slice(0, -(producto.extension?.length ?? 0) - 3)} · ${extension}` : nombre ?? producto.nombre}</p>}
                   <div className="mt-3 space-y-2">
                     <div className="flex items-center justify-between rounded-xl bg-paper px-3.5 py-2.5">
                       <span className="text-[12.5px] text-ink-soft">Antes</span>

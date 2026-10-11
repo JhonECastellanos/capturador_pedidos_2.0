@@ -119,6 +119,8 @@ export const VincularCodigoEsquema = z.object({ codigo: CodigoLecturaEsquema, co
 export const ProductoInicialEsquema = z.object({ nombre: z.string().trim().min(2).max(200), unidad: z.string().trim().min(1).max(40), codigo: CodigoLecturaEsquema.optional(), productoId: z.string().uuid().optional() });
 
 export const NuevoProductoEsquema = z.object({
+  productoBaseId: z.string().uuid().optional(),
+  extension: texto.max(80).optional(),
   codigosLectura: z.array(CodigoLecturaEsquema).max(20).optional(),
   nombre: texto.min(2, "El nombre es obligatorio"),
   categoria: texto.optional(),
@@ -130,6 +132,8 @@ export const NuevoProductoEsquema = z.object({
 });
 
 export const CambiarPrecioEsquema = z.object({
+  nombre: texto.min(2).max(200).optional(),
+  extension: texto.max(80).optional(),
   costoActual: monto.min(0).optional(),
   stockMinimo: cantidad.min(0).optional(),
   nuevoPrecio: monto.min(0, "El precio no puede ser negativo"),

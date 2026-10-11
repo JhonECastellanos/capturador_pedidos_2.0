@@ -37,7 +37,7 @@ export class ProductosService {
         if (existente) {
           const homonimos = await tx.$queryRaw<Array<{id:string}>>`SELECT id FROM productos WHERE id <> ${existente.id} AND lower(regexp_replace(btrim(nombre), '\\s+', ' ', 'g')) = lower(${nombre})`;
           if (nombre !== existente.nombre && homonimos.length) throw new ErrorDominio("PRODUCTO_REPETIDO", `Fila ${indice + 2}: el nombre ${nombre} pertenece a otro producto`);
-          await this.actualizarPrecio(existente.id, fila.precioVenta, usuarioId);
+          await this.actualizarPrecio(existente.id, fila.precioVenta, usuarioId, { nombre });
           const categoriaId = fila.categoria ? (await tx.categoria.upsert({ where: { nombre: fila.categoria }, update: {}, create: { codigo: `CAT-${fila.categoria.slice(0,8).toUpperCase()}`, nombre: fila.categoria } })).id : undefined;
           await tx.producto.update({ where: { id: existente.id }, data: { nombre, categoriaId, unidad: fila.unidad || undefined, costoActual: fila.costoActual, stockMinimo: fila.stockMinimo, version: { increment: 1 } } });
           id = existente.id; actualizados++;
@@ -99,15 +99,20 @@ export class ProductosService {
     const producto = await this.prisma.enTransaccion(async (tx) => {
       // La creación y el punto de partida comparten el mismo candado.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('inventario:inicial'))`;
+      const base = datos.productoBaseId ? await tx.producto.findUnique({ where: { id: datos.productoBaseId } }) : null;
+      const extension = datos.extension?.trim().replace(/\s+/g, " ") ?? "";
+      if (datos.productoBaseId && (!base || base.productoBaseId || !base.activo || !extension)) throw new ErrorDominio("PRESENTACION_INVALIDA", "Elige un producto principal activo y escribe su presentación", 409);
+      if (!base && extension) throw new ErrorDominio("PRESENTACION_INVALIDA", "Elige el producto principal para esta presentación");
+      const nombre = base ? `${base.nombre} · ${extension}` : datos.nombre.trim().replace(/\s+/g, " ");
       const categoria = datos.categoria ? await tx.categoria.upsert({ where: { nombre: datos.categoria }, update: {}, create: { codigo: `CAT-${datos.categoria.slice(0,8).toUpperCase()}`, nombre: datos.categoria } }) : null;
       const total = await tx.producto.count();
-      const iguales = await tx.$queryRaw<Array<{id:string}>>`SELECT id FROM productos WHERE lower(regexp_replace(btrim(nombre), '\\s+', ' ', 'g')) = lower(${datos.nombre.trim().replace(/\s+/g, " ")})`;
+      const iguales = await tx.$queryRaw<Array<{id:string}>>`SELECT id FROM productos WHERE lower(regexp_replace(btrim(nombre), '\\s+', ' ', 'g')) = lower(${nombre})`;
       if (iguales.length) throw new ErrorDominio("PRODUCTO_EXISTENTE", "Ya existe un producto con ese nombre. Usa su código para actualizarlo", 409);
       const codigoInterno = await siguienteCodigo(tx, "PROD");
       const creado = await tx.producto.create({
         data: {
           codigoInterno,
-          nombre: datos.nombre.trim(),
+          nombre, productoBaseId: base?.id, extension,
           categoriaId: categoria?.id ?? null,
           unidad: datos.unidad?.trim() || "unidad",
           precioVenta: datos.precioVenta,
@@ -170,26 +175,28 @@ export class ProductosService {
     };
   }
 
-  async actualizarPrecio(productoId: string, nuevoPrecio: number, usuarioId: string, parametros?: { costoActual?: number; stockMinimo?: number }) {
-    const producto = await this.prisma.producto.findUnique({ where: { id: productoId } });
-    if (!producto) throw new ErrorDominio("NO_ENCONTRADO", "Producto no encontrado", 404);
-    if (numero(producto.precioVenta) === nuevoPrecio && !producto.precioPendiente && parametros?.costoActual === undefined && parametros?.stockMinimo === undefined) return this.obtener(productoId);
-
-    await this.prisma.$transaction([
-      ...(numero(producto.precioVenta) !== nuevoPrecio || producto.precioPendiente ? [this.prisma.cambioPrecio.create({
-        data: {
-          productoId,
-          valorAnterior: producto.precioVenta,
-          valorNuevo: nuevoPrecio,
-          usuarioId,
-        },
-      })] : []),
-      this.prisma.producto.update({
-        where: { id: productoId },
-        data: { precioVenta: nuevoPrecio, precioPendiente: false, costoActual: parametros?.costoActual, stockMinimo: parametros?.stockMinimo, version: { increment: 1 } },
-      }),
-    ]);
-
+  async actualizarPrecio(productoId: string, nuevoPrecio: number, usuarioId: string, parametros?: { costoActual?: number; stockMinimo?: number; nombre?: string; extension?: string }) {
+    await this.prisma.enTransaccion(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('inventario:inicial'))`;
+      const producto = await tx.producto.findUnique({ where: { id: productoId } });
+      if (!producto) throw new ErrorDominio("NO_ENCONTRADO", "Producto no encontrado", 404);
+      const base = producto.productoBaseId ? await tx.producto.findUniqueOrThrow({ where: { id: producto.productoBaseId } }) : null;
+      const extension = parametros?.extension?.trim().replace(/\s+/g, " ") ?? producto.extension;
+      if ((!base && extension) || (base && !extension)) throw new ErrorDominio("PRESENTACION_INVALIDA", "La presentación necesita un producto principal y un nombre");
+      const nombre = base ? `${base.nombre} · ${extension}` : (parametros?.nombre ?? producto.nombre).trim().replace(/\s+/g, " ");
+      if (base && parametros?.nombre && parametros.nombre.trim() !== producto.nombre && parametros.nombre.trim() !== nombre) throw new ErrorDominio("NOMBRE_PRESENTACION", "Cambia el nombre desde el producto principal; aquí puedes editar la presentación");
+      const repetido = await tx.producto.findFirst({ where: { id: { not: productoId }, nombre: { equals: nombre, mode: "insensitive" } } });
+      if (repetido) throw new ErrorDominio("PRODUCTO_EXISTENTE", "Ya existe este producto o presentación", 409);
+      const hijos = !base && nombre !== producto.nombre ? await tx.producto.findMany({ where: { productoBaseId: producto.id } }) : [];
+      for (const hijo of hijos) {
+        const nuevoNombre = `${nombre} · ${hijo.extension}`;
+        if (await tx.producto.findFirst({ where: { id: { not: hijo.id }, nombre: { equals: nuevoNombre, mode: "insensitive" } } })) throw new ErrorDominio("PRODUCTO_EXISTENTE", "El cambio coincide con otro producto; revisa sus presentaciones", 409);
+        await tx.producto.update({ where: { id: hijo.id }, data: { nombre: nuevoNombre, version: { increment: 1 } } });
+      }
+      if (numero(producto.precioVenta) !== nuevoPrecio || producto.precioPendiente) await tx.cambioPrecio.create({ data: { productoId, valorAnterior: producto.precioVenta, valorNuevo: nuevoPrecio, usuarioId } });
+      await tx.producto.update({ where: { id: productoId }, data: { nombre, extension, precioVenta: nuevoPrecio, precioPendiente: false, costoActual: parametros?.costoActual, stockMinimo: parametros?.stockMinimo, version: { increment: 1 } } });
+      if (nombre !== producto.nombre || extension !== producto.extension) await tx.auditoriaEvento.create({ data: { entidadTipo: "producto", entidadId: productoId, accion: "editar-producto", usuarioId, datosAntes: { nombre: producto.nombre, extension: producto.extension }, datosDespues: { nombre, extension } } });
+    });
     return this.obtener(productoId);
   }
 
@@ -250,6 +257,8 @@ export class ProductosService {
   private dto(p: {
     id: string;
     codigoInterno: string;
+    productoBaseId: string | null;
+    extension: string;
     nombre: string;
     unidad: string;
     precioVenta: Prisma.Decimal;
@@ -266,6 +275,7 @@ export class ProductosService {
   }) {
     return {
       id: p.id,
+      productoBaseId: p.productoBaseId, extension: p.extension, rowid: p.productoBaseId ?? p.id, rowid_ext: p.id,
       codigoInterno: p.codigoInterno,
       nombre: p.nombre,
       categoria: p.categoria?.nombre ?? "",

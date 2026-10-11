@@ -410,3 +410,36 @@ WHERE l."contadoEn" IS NOT NULL ORDER BY l."contadoEn" DESC;
 Validación adicional V8P4 con imágenes Docker y servicios QA reales (11/10/2026): los 18 casos de integración aprobaron permisos, renovación, reserva/stock, pagos, FIFO, caja, cancelación, compras, archivos e historial. El recorrido completo de paneles en Chrome aprobó filtros, borradores, sincronización y desplazamiento; comprobó formularios de cliente y venta contra PostgreSQL, totales y precios históricos. Los 32 casos de agentes son pruebas controladas: no equivalen a audios físicos ni a una respuesta de un proveedor externo.
 
 Producción V8P4 comprobada el 11/10/2026: frontend y API llevan la etiqueta V8P4; PostgreSQL, Redis, MinIO, API y frontend saludables, migración con salida 0. El respaldo previo de 168.998 bytes se leyó completamente con pg_restore sin ejecutarlo ni restaurarlo. Antes y después coinciden 15 pedidos (también sus identificadores), 371.600 en total de documentos, ocho clientes, 32 productos, 857 unidades físicas, 20 reservadas, tres conteos, diez pagos y dos usuarios. El acceso system por correo funcionó en localhost y en el túnel HTTPS; las cookies externas son Secure y HttpOnly. Las ventas, número de pedidos y el historial se conciliaron contra PostgreSQL. Chrome recorrió Inicio, Pedidos, Inventario, Precios, Usuarios y Configuración en 390/768/1440 desde ambos orígenes, sin desbordamiento horizontal ni errores de ejecución; manifestó cero obstáculos de instalación PWA y ninguna caché privada. No se crearon operaciones comerciales de prueba en producción. El enlace temporal cambia al reiniciar el túnel: usar un dominio estable para una instalación permanente.
+
+### Ejercicios de etiquetas y presentaciones — ajustes V8P4
+1. Inventario → Stock general → + Producto: escanea una etiqueta nueva, escribe parte del nombre. Si el producto ya existe, selecciónalo y vincula la etiqueta: su código interno, stock e historial se conservan. Si no existe, completa nombre, unidad, costo, precio y mínimo; cantidades por Compras o inventario inicial. En el inventario inicial no se solicitan costo ni precio. La fotografía mantiene el proceso existente.
+2. Precios: abre un producto, cambia su nombre y confirma el resumen. Desde Crear presentación registra, por ejemplo, 250 ml y 1 litro; cada una tendrá su código y existencias. Una misma presentación repetida, incluso con mayúsculas diferentes, se rechaza. Retira una etiqueta antigua desde Códigos después de verificar que la nueva lee correctamente.
+3. Listas: usa la paginación en móvil/tablet/escritorio. La lista completa de esa página se desplaza con la pantalla, sin scroll interno; los cuadros de formulario y escáner mantienen el desplazamiento necesario para acceder a sus campos.
+4. Robot: un toque inicia escucha, otro corta solamente el micrófono y conserva el procesamiento/respuesta pendiente. Dos toques rápidos apagan escucha, respuesta y solicitud pendiente. Tocar fuera cierra solo el texto. Se conservan los límites de duración y volumen del servicio de audio; al terminar una sesión puedes volver a tocar el robot. Detener el micrófono no descarta una operación que ya se está interpretando. Durante la voz sintetizada no se envía sonido al reconocedor, para evitar autoescucha.
+
+Pruebas reproducibles solo en contenedores QA: `node Backend/scripts/probar-presentaciones.cjs`, `node Backend/scripts/probar-escaner-ui.cjs`. Las etiquetas QR y EAN-13 se generan en la prueba y se presentan mediante un video sintético en Chrome: el lector real las decodifica. Esta prueba no sustituye la cámara física de un celular. No se descarga un modelo nuevo ni se utiliza un servidor de desarrollo.
+
+```sql
+-- Un producto comercial y sus presentaciones.
+SELECT rowid, rowid_ext, "codigoInterno", nombre, extension
+FROM "identidadesProducto" WHERE rowid='ID_PRINCIPAL' ORDER BY extension;
+-- Stock y valor actuales por presentación, sin duplicar el principal.
+SELECT COALESCE("productoBaseId",id) AS rowid, id AS rowid_ext,
+       nombre, "stockFisico", "stockReservado", "precioVenta", "costoActual"
+FROM productos WHERE id='ID_PRINCIPAL' OR "productoBaseId"='ID_PRINCIPAL';
+-- Unidades e importes históricos por producto/presentación (ventas no canceladas).
+SELECT COALESCE(p."productoBaseId",p.id) AS rowid, p.id AS rowid_ext,
+       SUM(l.cantidad) AS unidades, SUM(l.subtotal) AS ventas
+FROM "pedidoLineas" l JOIN productos p ON p.id=l."productoId"
+JOIN pedidos d ON d.id=l."pedidoId"
+WHERE d.estado<>'cancelado' AND d."fechaOperacion" BETWEEN '2026-10-01' AND '2026-10-31'
+GROUP BY COALESCE(p."productoBaseId",p.id),p.id;
+-- Debe devolver cero filas: presentaciones repetidas y etiquetas duplicadas.
+SELECT "productoBaseId", lower(btrim(extension)), COUNT(*) FROM productos
+WHERE "productoBaseId" IS NOT NULL GROUP BY 1,2 HAVING COUNT(*)>1;
+SELECT codigo,COUNT(*) FROM "codigosProducto" GROUP BY codigo HAVING COUNT(*)>1;
+```
+
+Resultado de los ajustes V8P4 (11/10/2026): compilación/contrato/tipos/lint aprobados; 18 casos de integración y 33 pruebas controladas de agentes aprobados. Los ejercicios de presentaciones comprobaron alias idempotentes, retiro de etiqueta, dos IDs, stock independiente, duplicados concurrentes y factura histórica. Chrome aprobó ocho grupos del escáner/robot, incluida respuesta pendiente conservada después de detener el micrófono. La lectura sintética QR inicial tardó 1.543 ms y EAN-13 posterior 154 ms en esta ejecución; no representan una garantía de latencia en cámaras físicas. Dos audios existentes se transcribieron con Whisper base (25.388 ms inicial y 4.683 ms siguiente). El WebSocket real confirmó listo → voz → texto → instrucción en 20.018 ms, incluyendo la duración del audio de prueba. No se descargaron modelos y no se arrancó Vite ni otro servidor de desarrollo.
+
+Prueba externa autorizada: OpenCode Zen/space-bunny-free rechazó sus credenciales o permisos en QA; no se guardó un pedido. Gemini de producción respondió a la orden ficticia en 1.051 ms y preparó un borrador; inicialmente omitió cliente ocasional. Se añadió descripción de ese campo y normalización del literal cliente ocasional, manteniendo intactos los clientes registrados y los valores false explícitos. La conexión de producción sigue siendo la elegida por el administrador. Los límites de recursos del servidor de audio se conservaron.

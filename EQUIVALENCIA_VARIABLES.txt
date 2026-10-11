@@ -876,3 +876,5 @@ Usuario.permisosDenegados -> DTO / AuthGuard / RutaProtegida / navegación; camb
 DELETE /usuarios/:id -> activo=false / eliminadoEn / auditoría; conserva contadoPorId y responsable histórico.
 COMPOSE_PROJECT_NAME -> identifica los volúmenes del negocio; las instalaciones anteriores conservan su valor privado al actualizar.
 PWA manifest display=standalone; sw.js solo ofrece retorno seguro ante desconexión, sin CacheStorage privado ni guardados diferidos.
+
+Ajustes V8P4: Producto.productoBaseId → productos.productoBaseId (FK al principal); extension → productos.extension; API/vista SQL rowid = COALESCE(productoBaseId,id), rowid_ext = id; precio admite nombre/extension para edición transaccional. VOICE_MODELS_VOLUME/VOICE_MODELS_EXTERNAL permiten reutilizar un volumen existente de reconocimiento sin descargar modelos.

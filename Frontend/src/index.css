@@ -260,3 +260,16 @@ body {
 }
 
 .bg-accent.text-ink { color: var(--color-accent-ink); }
+
+/* La paginación limita los registros; las listas se desplazan con la pantalla. */
+.lista-datos, .admin-pantalla .lista-datos, .lista-productos, .admin-pantalla .lista-productos {
+  height: auto !important;
+  max-height: none !important;
+  overflow-y: visible !important;
+  flex: none;
+}
+.admin-pantalla .overflow-y-auto:has(.lista-datos), .admin-pantalla .overflow-y-auto:has(.lista-productos) {
+  overflow-y: visible;
+  height: auto;
+  flex: none;
+}

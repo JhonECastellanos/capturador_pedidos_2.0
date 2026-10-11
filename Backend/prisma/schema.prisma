@@ -298,6 +298,10 @@ model Cliente {
 
 
 model Producto {
+  productoBaseId String?
+  extension String @default("")
+  productoBase Producto? @relation("PresentacionesProducto", fields: [productoBaseId], references: [id], onDelete: Restrict)
+  presentaciones Producto[] @relation("PresentacionesProducto")
   id             String   @id @default(uuid())
   codigoInterno  String   @unique
   precioPendiente Boolean @default(false)
@@ -326,6 +330,7 @@ model Producto {
   reservasStock       ReservaStock[]
 
   @@index([nombre])
+  @@index([productoBaseId], map: "productos_productoBaseId_idx")
   @@map("productos")
 }
 

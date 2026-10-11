@@ -1,20 +1,18 @@
 import { api, baseApi } from "../../data/api";
 
-export async function abrirMicrofono(texto: (valor: string) => void, estado: (valor: string) => void, registrar: (detener: () => void) => void, pausado: () => boolean = () => false, vistaPrevia?: (valor: string) => void, nivel?: (valor: number) => void) {
-  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) throw new Error("El micrófono necesita HTTPS o localhost. Abre la aplicación mediante HTTPS para dictar");
-  const contexto = new AudioContext();
-  await contexto.resume();
+export async function abrirMicrofono(texto: (valor: string) => void, estado: (valor: string) => void, registrar: (detener: () => void) => void, pausado: () => boolean = () => false, vistaPrevia?: (valor: string) => void, nivel?: (valor: number) => void, contextoPreparado?: AudioContext) {
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) { void contextoPreparado?.close().catch(() => {}); throw new Error("El micrófono necesita HTTPS o localhost. Abre la aplicación mediante HTTPS para dictar"); }
+  const contexto = contextoPreparado ?? new AudioContext();
+  void contexto.resume().catch(() => {});
   let medios: MediaStream | undefined;
   let conexion: WebSocket | undefined;
   let capturador: AudioWorkletNode | undefined;
   let cerrada = false;
   let animacion = 0;
-  let temporizador: ReturnType<typeof setTimeout> | undefined;
   function cerrar() {
     if (cerrada) return;
     cerrada = true;
     cancelAnimationFrame(animacion); nivel?.(0);
-    clearTimeout(temporizador);
     medios?.getTracks().forEach(pista => pista.stop());
     capturador?.disconnect(); conexion?.close();
     void contexto.close();
@@ -72,7 +70,7 @@ export async function abrirMicrofono(texto: (valor: string) => void, estado: (va
     }
     capturador.connect(contexto.destination);
     estado("Escuchando. Puedes dictar la operación completa");
-    temporizador = setTimeout(cerrar, 120000);
+    // El usuario controla el micrófono; el servicio conserva sus límites de sesión.
     return cerrar;
   } catch (error) {
     cerrar();
