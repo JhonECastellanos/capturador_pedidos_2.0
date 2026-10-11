@@ -56,7 +56,7 @@ export async function respuestaRed<T>(ruta: string, metodo = "GET", datos?: unkn
   const protegida = ruta !== "/salud" && (!ruta.startsWith("/auth/") || ruta === "/auth/me" || ruta === "/auth/logout");
   if (protegida && ruta !== "/auth/me" && sesionExpirada) throw new ErrorApi("La sesión terminó. Vuelve a iniciar sesión.", 401);
   // Se renueva antes de leer o guardar, también al volver de una pestaña suspendida.
-  if (protegida && expiraEn && Date.now() >= expiraEn - 30_000) {
+  if (protegida && ruta !== "/auth/me" && expiraEn && Date.now() >= expiraEn - 30_000) {
     if (!await renovarAcceso()) throw new ErrorApi(sesionExpirada ? "La sesión terminó. Vuelve a iniciar sesión." : "No se pudo renovar la sesión. Intenta de nuevo.", sesionExpirada ? 401 : 0);
   }
   signal?.throwIfAborted();
@@ -88,7 +88,10 @@ export async function respuestaRed<T>(ruta: string, metodo = "GET", datos?: unkn
   }
   if (cuerpo === null) throw new ErrorApi("No se pudo confirmar la respuesta del guardado. Reintenta con los mismos datos para comprobarlo.", 0);
   if (ruta === "/auth/login") registrarAcceso(cuerpo);
-  if (ruta === "/auth/me" && revisionInicial === revisionAcceso) registrarAcceso(cuerpo, false);
+  if (ruta === "/auth/me") {
+    if (cuerpo.data === null) expirarSesion();
+    else if (revisionInicial === revisionAcceso) registrarAcceso(cuerpo, false);
+  }
   if (ruta === "/auth/logout") { sesionExpirada = true; expiraEn = 0; revisionAcceso++; }
   resolverGuardado(guardado);
   return cuerpo as T;

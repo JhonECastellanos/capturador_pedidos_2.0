@@ -859,3 +859,10 @@ POST /productos/:productoId/precio: nuevoPrecio, costoActual?, stockMinimo?; con
 CSV codigosLectura: varios códigos separados por |; campo opcional, cantidades vacías/0 mantienen su significado existente.
 ambie:ui:ancho-asistente: preferencia local de ancho (200–440 px, limitada al viewport), sin guardar transcripciones ni datos privados.
 Sincronización: codigosProducto usa invalidar_sincronizacion diferido; mismas lecturas agrupadas 250 ms e intervalo frontend dos segundos.
+
+
+RECUPERACIÓN DE SESIÓN V7P4 (11/10/2026)
+/auth/me.renovable -> AuthService.puedeRenovar -> sesiones.tokenHash / revocadoEn / expiraEn / usuarios.activo.
+Cookie existente sin sesión vigente -> renovable=false, data=null, cookies retiradas -> expirarSesion -> ambie:sesion-expirada -> limpieza de consultas y usuario.
+JWT vencido con renovación vigente -> data=null, renovable=true -> POST /auth/refresh -> nueva sesión y cookies HttpOnly -> consulta de usuario.
+SesionOpcional permite consultar estado sin acceso válido; las demás rutas conservan AuthGuard y permisos.

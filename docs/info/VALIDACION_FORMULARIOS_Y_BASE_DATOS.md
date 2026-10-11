@@ -371,3 +371,12 @@ Una escritura responde tras COMMIT. La revisión agrupa lecturas durante 250 ms;
 
 
 Validación de esta revisión (11/10/2026): contrato de 14 enums, API, tipos, frontend y lint terminaron correctamente. Se comprobaron instalación inicial vacía, alias, conflictos con rollback, cero, roles, rotación, QR/EAN-13 sobre video sintético y vistas 390/768/1440. La regresión de tres colaboradores pasó, al igual que caché y reintentos: 23 solicitudes produjeron cuatro pedidos confirmados distintos según las cuatro intenciones, con un único cobro por clave. Se conservan advertencias de lint anteriores; este resultado no certifica carga máxima ni micrófono físico. La revisión de secretos del repositorio pasó.
+
+
+### Recuperación de sesión en V7P4 (11/10/2026)
+
+`GET /auth/me` es una consulta opcional: devuelve usuario válido o `data: null`. Para indicar `renovable: true`, verifica el hash de la cookie en `sesiones`, su vencimiento, revocación y el estado activo del usuario. Si la sesión terminó, elimina las cookies antiguas; el frontend limpia la sesión y presenta el ingreso sin intentar renovar una cookie inválida. Un acceso JWT vencido puede recuperarse si su renovación sigue vigente. Esta respuesta no autoriza operaciones privadas.
+
+Prueba reproducible: `node Backend/scripts/probar-sesion-ui.cjs --api-real`. Requiere API QA en 8180 y PostgreSQL QA en 5433, base `ambie_test`, con el administrador ficticio de pruebas. Se aprobaron 12 casos: seis de transporte controlado (anticipación, respuestas tardías, revocación, caída de red, cancelación y reintento de guardado) y seis con API/PostgreSQL reales (sin cookies, cookies inexistentes, sesión revocada, renovación vencida, acceso vencido y solo cookie de renovación). Se verifican cookies HttpOnly, nuevo ingreso y cierre. Solo modifica sesiones ficticias; conserva documentos del negocio.
+
+Ejercicio manual: recarga `http://127.0.0.1:8180`, inicia sesión, navega a un módulo y vuelve a recargar. Debe conservar una sesión válida. Al salir, la recarga debe mostrar el ingreso sin llamar a renovación. Usa el mismo dominio durante la prueba: `localhost` y `127.0.0.1` conservan cookies diferentes. Un 401 directo de `/auth/refresh` sigue siendo correcto si la sesión fue revocada, venció o no existe; no se permite recuperar una sesión inválida ni se oculta ese rechazo.

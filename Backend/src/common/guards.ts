@@ -12,6 +12,7 @@ import { Usuario, RolUsuario } from "@prisma/client";
 import { PrismaService } from "./prisma.module";
 import { hashToken } from "./crypto";
 import { TokensService } from "./tokens";
+import { ErrorDominio } from "./errores";
 
 export const IS_PUBLIC_KEY = "isPublic";
 export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
@@ -57,11 +58,17 @@ export class AuthGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<RequestAutenticado>();
     const token = this.extraerToken(request);
-    if (!token && this.reflector.getAllAndOverride<boolean>("sesionOpcional", [context.getHandler(), context.getClass()])) return true;
+    const opcional = this.reflector.getAllAndOverride<boolean>("sesionOpcional", [context.getHandler(), context.getClass()]);
+    if (!token && opcional) return true;
     if (!token) throw new UnauthorizedException("No autenticado");
 
     // El token de acceso es un JWT firmado: se valida sin tocar la base.
-    const claims = this.tokens.verificarAcceso(token);
+    let claims: ReturnType<TokensService["verificarAcceso"]>;
+    try { claims = this.tokens.verificarAcceso(token); }
+    catch (error) {
+      if (opcional && error instanceof ErrorDominio && error.getStatus() === 401) return true;
+      throw error;
+    }
 
     // La sesión sigue siendo la fuente de verdad para revocar un acceso.
     const sesion = await this.prisma.sesion.findUnique({
@@ -69,10 +76,12 @@ export class AuthGuard implements CanActivate {
       include: { usuario: true },
     });
 
-    if (!sesion || sesion.revocadoEn || sesion.expiraEn < new Date()) {
+    if (!sesion || sesion.revocadoEn || sesion.expiraEn <= new Date()) {
+      if (opcional) return true;
       throw new UnauthorizedException("Sesión inválida o expirada");
     }
     if (!sesion.usuario.activo) {
+      if (opcional) return true;
       throw new UnauthorizedException("Este usuario se encuentra inactivo");
     }
 

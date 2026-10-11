@@ -90,7 +90,7 @@ export class AuthService {
       include: { usuario: true },
     });
 
-    if (!sesion || sesion.revocadoEn || sesion.expiraEn < new Date()) {
+    if (!sesion || sesion.revocadoEn || sesion.expiraEn <= new Date()) {
       throw new ErrorDominio("REFRESH_INVALIDO", "La sesión expiró, vuelve a iniciar sesión", 401);
     }
     if (!sesion.usuario.activo) {
@@ -108,6 +108,16 @@ export class AuthService {
     });
 
     return { ...emitido, usuario: await this.dtoUsuario(sesion.usuario) };
+  }
+
+  /** La presencia de una cookie no demuestra que su sesión siga vigente. */
+  async puedeRenovar(refreshToken: string | undefined): Promise<boolean> {
+    if (!refreshToken) return false;
+    const sesion = await this.prisma.sesion.findUnique({
+      where: { tokenHash: hashToken(refreshToken) },
+      select: { revocadoEn: true, expiraEn: true, usuario: { select: { activo: true } } },
+    });
+    return Boolean(sesion && !sesion.revocadoEn && sesion.expiraEn > new Date() && sesion.usuario.activo);
   }
 
   /** Cierra la sesión actual. Si es `todas`, cierra todas las del usuario. */

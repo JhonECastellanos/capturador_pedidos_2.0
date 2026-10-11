@@ -124,8 +124,15 @@ export class AuthController {
 
   @Get("me")
   @SesionOpcional()
-  async me(@UsuarioActual() usuario: Usuario, @Req() req: FastifyRequest) {
-    if (!usuario) return { data: null, renovable: Boolean((req as unknown as RequestAutenticado).cookies?.[COOKIE_REFRESH]) };
+  async me(@UsuarioActual() usuario: Usuario, @Req() req: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
+    if (!usuario) {
+      const renovable = await this.auth.puedeRenovar((req as unknown as RequestAutenticado).cookies?.[COOKIE_REFRESH]);
+      if (!renovable) {
+        reply.clearCookie(COOKIE_ACCESO, { path: "/" });
+        reply.clearCookie(COOKIE_REFRESH, { path: "/" });
+      }
+      return { data: null, renovable };
+    }
     return { data: { ...await this.auth.me(usuario.id), expiraEn: (req as unknown as RequestAutenticado).expiraAccesoEn } };
   }
 
