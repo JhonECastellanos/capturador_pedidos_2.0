@@ -418,7 +418,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
             <section className="mt-4">
               <p className="mb-2.5 text-[12px] font-semibold uppercase tracking-wide text-ink-soft">Forma de pago</p>
               <SelectorPago metodo={metodo} onChange={setMetodo} permitirCredito={!ocasional} />
-              {metodo === "credito" && (
+              {metodo === "credito" && !ocasional && (
                 <div className="mt-3 rounded-xl border border-danger/20 bg-danger-soft p-3">
                   <p className="text-[13px] font-semibold text-danger">Saldo pendiente: {formatoMoneda(total)}</p>
                   <p className="mt-1 text-[12px] leading-relaxed text-ink-soft">
@@ -426,6 +426,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
                   </p>
                 </div>
               )}
+              {ocasional && metodo === "credito" && <p role="alert" className="mt-3 rounded-xl bg-danger-soft px-3 py-2.5 text-[12px] text-danger">La venta ocasional no admite crédito. Elige efectivo o billetera para continuar.</p>}
               {metodo !== "credito" && entrega === "pendiente" && (
                 <p className="mt-3 rounded-xl bg-paper-sunken px-3 py-2.5 text-[12px] leading-relaxed text-ink-soft">
                   El pago queda registrado ahora y el pedido permanece por preparar. Podrás marcarlo como entregado desde el detalle sin cobrarlo nuevamente.
@@ -435,8 +436,8 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
 
           </main>
           <BarraInferior>
-            <Boton onClick={confirmarPedidoCompartido}>
-              {metodo === "credito" ? "Registrar crédito" : "Confirmar pedido"} · {formatoMoneda(total)}
+            <Boton disabled={ocasional && metodo === "credito"} onClick={confirmarPedidoCompartido}>
+              {ocasional && metodo === "credito" ? "Elige efectivo o billetera" : metodo === "credito" ? "Registrar crédito" : "Confirmar pedido"} · {formatoMoneda(total)}
             </Boton>
           </BarraInferior>
         </>

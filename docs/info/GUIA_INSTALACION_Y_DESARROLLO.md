@@ -523,3 +523,20 @@ Ejercicios rápidos en desarrollo (recargar 127.0.0.1:8180):
 Para validar voz real, adjuntar tres audios de 10–25 segundos (WAV, MP3, M4A, OGG o WebM, hasta 5 MB): saludo seguido de una operación; pedido con varios productos y pausas normales; corrección de cantidad o pago. Acompañar cada archivo con la frase pretendida y productos exactos del catálogo, sin datos personales ni claves. Comparar transcripción, detalle y tiempo desde la última palabra; no confirmar hasta que cuadre. Los audios adjuntos prueban reconocimiento, pero la interrupción de altavoces exige una prueba en vivo en el dispositivo.
 
 Validación final: 29 pruebas del asistente, seis de autorización, compilación completa y dos de caché aprobadas. Con `conversacionId` estable, el pedido de café/aguas obtuvo $8.500 y su corrección a tres cafés/billetera conservó los demás campos y obtuvo $15.500. Las llamadas medidas tardaron 14.139 y 5.295 ms; no se considera respuesta instantánea. Tras ampliar el vocabulario, el WebSocket de audio sintético recibió completa la chocolatina Jet y 600 ml sin los errores de marca anteriores. No se confirmó ninguna transacción ni se publicaron cambios en producción.
+
+### Configuración y pedidos variados · V6P4 · 10/10/2026
+
+Se reprodujo en Chrome el 400 `RESPALDO_INVALIDO`: al elegir como principal la conexión que era respaldo, ambos campos quedaban iguales. Ahora seleccionar ese proveedor elimina únicamente su selección como respaldo. Se conserva la validación de la API y las conexiones guardadas. La misma acción pasó a responder 200 y permitió consultar modelos; después se restauró la selección original Go con Zen de respaldo.
+
+La venta ocasional ofrece solo efectivo y billetera. Si una instrucción pide crédito, se conservan sus productos para corregirla, aparece el aviso y el botón de guardado queda deshabilitado. La API también rechaza esta operación. En Chrome, confirmar el borrador incompleto no envió ningún guardado; cambiar únicamente a billetera mantuvo dos sándwiches de pollo y $23.000, habilitando la confirmación.
+
+Ejercicios con el proveedor real y catálogo QA, sin confirmar ventas:
+
+| Instrucción | Resultado esperado y comprobado |
+| --- | --- |
+| Dos jugos naturales de mango y tres maníes salados de 50 g, efectivo, para preparar | $18.600; cantidades, precios y método correctos. |
+| Un sándwich de jamón y queso, dos Pepsi de 400 ml y cuatro Cheetos de 75 g, billetera, entregado | Detectó que solo había una Pepsi. Corregir a una conservó el resto: $27.700. |
+| Un yogur de fresa de 200 ml, dos de durazno de 200 ml, tres empanadas de carne y una limonada natural, efectivo | $24.100; cuatro productos y sus cantidades correctos. |
+| Cliente ocasional, dos sándwiches de pollo, crédito, para preparar | Solicitó cliente registrado para crédito. Corregir solamente a billetera dejó $23.000 y ningún dato faltante. |
+
+Las interpretaciones medidas tardaron aproximadamente 7–11 segundos. El primer ejercicio de Pepsi falló en la expectativa de la prueba porque solicitaba más existencias de las disponibles; se ajustó para comprobar el bloqueo y su corrección, y pasó. No se confunde esto con respuesta instantánea ni con prueba de micrófono físico. Pasaron las 29 pruebas del asistente y `npm run verificar` (con advertencias de React existentes). Cambios disponibles en desarrollo, http://127.0.0.1:8180; producción no se modificó.
