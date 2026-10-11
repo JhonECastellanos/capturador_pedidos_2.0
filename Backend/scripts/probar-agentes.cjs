@@ -407,3 +407,15 @@ test('conversación conserva la sesión del proveedor sin reutilizar identificad
     assert.deepEqual(sesiones, ['sesion-conversacion', 'sesion-conversacion']); assert.notEqual(primero.id, segundo.id);
   } finally { modulo.interpretarProveedor = original; }
 });
+
+
+test('si fallan principal y respaldo, informa ambas causas sin exponer respuestas privadas', async () => {
+  await listo;
+  const instancia = new AgentesService({});
+  instancia.estado = async () => ({ habilitado: true });
+  instancia.leer = async () => ({ configuracion: { modo: 'hibrido', respaldoId: 'autorizado' } });
+  instancia.proveedor = async id => { codigo = id ? 503 : 403; cuerpoProveedor = { error: { message: 'contenido-privado-no-publicar' } }; return { nombre: 'Prueba', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' }; };
+  try {
+    await assert.rejects(instancia.interpretar('Prueba', pedido, usuario), e => e.codigo === 'AGENTE_PROVEEDORES' && e.getStatus() === 502 && /PROVEEDOR_CREDENCIALES/.test(e.message) && /PROVEEDOR_RESPUESTA/.test(e.message) && !e.message.includes('contenido-privado-no-publicar'));
+  } finally { codigo = 200; cuerpoProveedor = undefined; }
+});

@@ -96,7 +96,13 @@ export class AgentesService {
       const configuracion = (await this.leer()).configuracion;
       if (configuracion.modo !== "hibrido" || !configuracion.respaldoId) throw error;
       proveedor = await this.proveedor(configuracion.respaldoId); respaldo = true;
-      llamada = await interpretarProveedor({ ...proveedor, sesion: conversacionId ?? id }, mensajes, medida => { uso = medida; });
+      try { llamada = await interpretarProveedor({ ...proveedor, sesion: conversacionId ?? id }, mensajes, medida => { uso = medida; }); }
+      catch (falloRespaldo) {
+        if (error instanceof ErrorDominio && falloRespaldo instanceof ErrorDominio) {
+          throw new ErrorDominio("AGENTE_PROVEEDORES", `Principal (${error.codigo}): ${error.message}. Respaldo (${falloRespaldo.codigo}): ${falloRespaldo.message}. La operación no se ha guardado`, falloRespaldo.getStatus());
+        }
+        throw falloRespaldo;
+      }
     }
     const instruccion = InstruccionAgenteEsquema.parse(limpiarInstruccionProveedor(llamada));
     if (contexto && ["conteo", "finalizar-conteo", "aplicar-conteo"].includes(instruccion.operacion)) {
