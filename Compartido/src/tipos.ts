@@ -146,7 +146,13 @@ export interface CarteraDTO {
 
 // ─── Productos ────────────────────────────────────────────────────
 
+export interface CodigoProductoDTO {
+  id: string; codigo: string; productoId: string; creadoEn: string; retiradoEn: string | null;
+}
+
 export interface ProductoDTO {
+  precioPendiente?: boolean;
+  codigosLectura?: string[];
   id: string;
   codigoInterno: string;
   nombre: string;

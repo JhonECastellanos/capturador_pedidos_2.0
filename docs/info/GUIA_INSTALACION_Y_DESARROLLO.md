@@ -561,3 +561,12 @@ La documentación oficial consultada en https://docs.opencode.ai/docs/go/#where-
 
 Prueba actual con proveedor configurado: dos sándwiches de pollo, cliente ocasional y crédito quedaron bloqueados; corregir únicamente a billetera conservó los productos y $23.000, con respuestas en 1.951 y 1.551 ms. No se confirmó ninguna venta. No se garantiza disponibilidad del proveedor ni se modificó producción.
 Validación actual: 32 pruebas del asistente aprobadas, incluida la combinación principal 403 y respaldo 503; ambas causas permanecen visibles y el cuerpo privado no se publica.
+
+
+### V7P4 · robot, cámara y conteos · 11/10/2026
+
+Esta revisión reemplaza los botones Hablar/Detener de la burbuja: tocar el robot controla el audio y tocar fuera solo oculta el texto. El ancho se personaliza, la transcripción ocupa dos líneas y el robot sigue siendo movible. Las instrucciones completas, correcciones y confirmaciones conservan los formularios existentes.
+
+El lector de QR/barras se integra al buscador de ventas y conteos, con bip y liberación de la cámara al volver. General/diario alternan cámara y cantidad al confirmar; inicial permite registrar productos y varias etiquetas del mismo producto. Precios incluye creación y parametrización sin cantidades, gestión de etiquetas y CSV compatible con códigos opcionales. Historial administrativo usa listas, paginación responsive y detalle separado. Consultar [modelo de datos](modelo-datos.md) y [ejercicios y SQL](VALIDACION_FORMULARIOS_Y_BASE_DATOS.md#ejercicios-v7p4--robot-y-lectura-de-códigos).
+
+No incluye VibeVoice, descargas de modelos locales ni cambio de la rama principal o despliegue del negocio. Antes de publicar en producción: respaldo, migración no destructiva, compilación, salud de servicios y prueba HTTPS en un teléfono físico. Las pruebas de cámara sintética y transporte simulado se distinguen de esa prueba.

@@ -143,7 +143,7 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
     cancelarConteoActivo: (id) => accion(`/inventario/conteos/${id}/cancelar`),
     aplicarAjusteDeConteo: (id) => accion(`/inventario/conteos/${id}/aplicar-ajuste`),
     registrarAjusteManual: (productoId, stockFisico, motivo, comentario) => accion("/inventario/ajustes", { productoId, stockFisico, motivo, comentario }),
-    actualizarPrecioProducto: (id, nuevoPrecio) => accion(`/productos/${id}/precio`, { nuevoPrecio }),
+    actualizarPrecioProducto: (id, nuevoPrecio, parametros) => accion(`/productos/${id}/precio`, { nuevoPrecio, ...parametros }),
     trasladarPedidoAHoy: (id) => accion(`/pedidos/${id}/trasladar`),
     registrarCierre: (c) => ejecutar<CierreDia>(`/cierres/${c.fecha}`, "POST", { conteoEfectivo: c.conteoEfectivo, conteoBilletera: c.conteoBilletera }),
     registrarAbono: (id, monto, metodo, comentario) => ejecutar<AbonoCredito>(`/clientes/${id}/abonos`, "POST", { monto, metodo, comentario }),

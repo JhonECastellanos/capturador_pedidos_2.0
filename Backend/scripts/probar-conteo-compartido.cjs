@@ -51,7 +51,7 @@ const password = 'SoloPruebas2026!';
     assert.equal((await llamada(admin,`/inventario/compartidos/${id}/lineas?page=1`)).body.data.length,30);
     assert.ok((await llamada(admin,`/inventario/compartidos/${id}/lineas?page=2`)).body.data.length>0);
     // La API rechaza operaciones comerciales aunque se conozca la ruta.
-    for(const ruta of ['/pedidos','/clientes','/productos','/usuarios','/dashboard/resumen','/inventario/inicial']) assert.equal((await llamada(colaboradores[0].contexto,ruta)).status,403,ruta);
+    for(const ruta of ['/pedidos','/clientes','/usuarios','/dashboard/resumen','/inventario/inicial']) assert.equal((await llamada(colaboradores[0].contexto,ruta)).status,403,ruta);
     assert.equal((await llamada(colaboradores[0].contexto,`/inventario/conteos/${id}/finalizar`,'POST',{})).status,403);
     assert.equal((await llamada(colaboradores[0].contexto,`/inventario/conteos/${id}/aplicar-ajuste`,'POST',{})).status,403);
     assert.equal((await llamada(colaboradores[0].contexto,'/sincronizacion/revision')).status,200);
@@ -72,10 +72,11 @@ const password = 'SoloPruebas2026!';
     const escritura=page.waitForResponse(r=>r.url().includes('/lineas/') && r.request().method()==='PATCH');
     await page.getByRole('button',{name:'Guardar cantidad',exact:true}).click();
     assert.equal((await escritura).status(),200);
-    await page.getByText('Cantidad guardada. Puedes tomar el siguiente producto.',{exact:true}).waitFor();
+    await page.getByText('Cantidad guardada. Revisa el progreso del conteo.',{exact:true}).waitFor();
     await page.reload(); await page.getByText('Inventario general · en curso',{exact:true}).first().click();
     await page.getByText('4/',{exact:false}).first().waitFor();
     await page.screenshot({path:'.local/pruebas-ui/conteo-colaborador-390.png'});
+    await page.getByRole('button',{name:'← Conteos',exact:true}).click();
     await page.getByRole('heading',{name:'Conteos disponibles',exact:true}).scrollIntoViewIfNeeded();
     assert.ok(await page.getByRole('heading',{name:'Conteos disponibles',exact:true}).isVisible(),'El historial debe alcanzarse desplazando la pantalla');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth),false);
@@ -103,10 +104,11 @@ const password = 'SoloPruebas2026!';
     assert.equal(sql(`SELECT count(*) FROM "participantesConteo" WHERE "conteoId"='${id}';`),4,'Se mantienen los tres colaboradores aunque corrija el administrador');
     // Confirmar sin duplicar la participación y conservar el precio observado.
     const documento=(await llamada(admin,`/inventario/conteos/${id}`)).body.data;
-    for(const l of documento.lineas.filter(l=>l.stockFisico===null)) assert.equal((await llamada(admin,`/inventario/conteos/${id}/lineas/${l.productoId}?resumen=true`,'PATCH',{stockFisico:l.stockTeorico})).status,200);
+    // General admite conteo parcial: cerrar no obliga a escribir el catálogo entero.
+    const contadasAntes = documento.lineas.filter(l => l.stockFisico !== null).length;
     assert.equal((await llamada(admin,`/inventario/conteos/${id}/finalizar`,'POST',{})).status,201);
     const cerrado=(await llamada(admin,`/inventario/compartidos/${id}`)).body.data;
-    assert.equal(cerrado.contadas,cerrado.total); assert.equal(cerrado.colaboradores,4); assert.ok(cerrado.finalizadoEn);
+    assert.equal(cerrado.contadas,contadasAntes); assert.ok(cerrado.total>=cerrado.contadas); assert.equal(cerrado.colaboradores,4); assert.ok(cerrado.finalizadoEn);
     assert.equal((await llamada(colaboradores[0].contexto,`/inventario/compartidos/${id}/lineas`)).status,403);
     const diario=(await llamada(admin,'/inventario/compartidos','POST',{tipo:'aleatorio',turno:'Prueba diaria'})).body.data;
     assert.equal((await llamada(admin,`/inventario/compartidos/${diario.id}`)).body.data.total,5);

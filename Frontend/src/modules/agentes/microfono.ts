@@ -1,7 +1,7 @@
 import { api, baseApi } from "../../data/api";
 
 export async function abrirMicrofono(texto: (valor: string) => void, estado: (valor: string) => void, registrar: (detener: () => void) => void, pausado: () => boolean = () => false, vistaPrevia?: (valor: string) => void, nivel?: (valor: number) => void) {
-  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) throw new Error("El micrófono necesita HTTPS o localhost. Puedes usar un archivo de audio o escribir la instrucción");
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) throw new Error("El micrófono necesita HTTPS o localhost. Abre la aplicación mediante HTTPS para dictar");
   const contexto = new AudioContext();
   await contexto.resume();
   let medios: MediaStream | undefined;
@@ -32,7 +32,7 @@ export async function abrirMicrofono(texto: (valor: string) => void, estado: (va
     url.searchParams.set("ticket", ticket);
     const socket = conexion = new WebSocket(url);
     await new Promise<void>((resolve, reject) => {
-      const limite = setTimeout(() => reject(new Error("El servicio de audio no respondió. Puedes continuar con texto")), 45000);
+      const limite = setTimeout(() => reject(new Error("El servicio de audio no respondió. Revisa Configuración y vuelve a tocar el robot")), 45000);
       const terminar = (error?: Error) => { clearTimeout(limite); if (error) reject(error); else resolve(); };
       socket.onerror = () => terminar(new Error("No se pudo conectar el audio. Revisa la conexión"));
       socket.onclose = () => { terminar(new Error("La conexión de audio terminó")); cerrar(); };
@@ -76,7 +76,7 @@ export async function abrirMicrofono(texto: (valor: string) => void, estado: (va
     return cerrar;
   } catch (error) {
     cerrar();
-    if (error instanceof DOMException && error.name === "NotAllowedError") throw new Error("Permite el acceso al micrófono para dictar. También puedes escribir la instrucción");
+    if (error instanceof DOMException && error.name === "NotAllowedError") throw new Error("Permite el acceso al micrófono para dictar. Después vuelve a tocar el robot");
     throw error;
   }
 }

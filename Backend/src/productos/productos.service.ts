@@ -3,19 +3,11 @@ import { z } from "zod";
 import { PrismaService } from "../common/prisma.module";
 import { ErrorDominio } from "../common/errores";
 import { siguienteCodigo, numero } from "../common/consecutivos";
-import { Prisma } from "@prisma/client";
-import type { ImportarProductosDTO, ResultadoImportacionProductosDTO } from "@ambie/contrato";
+import { Prisma, RolUsuario } from "@prisma/client";
+import { NuevoProductoEsquema, type ImportarProductosDTO, type ResultadoImportacionProductosDTO } from "@ambie/contrato";
 import { InventarioService } from "../inventario/inventario.service";
 
-export const NuevoProductoSchema = z.object({
-  nombre: z.string().min(1),
-  categoria: z.string().optional(),
-  unidad: z.string().optional(),
-  precioVenta: z.number().min(0),
-  costoActual: z.number().min(0).optional(),
-  stock: z.number().int().min(0).optional(),
-  stockMinimo: z.number().int().min(0).optional(),
-});
+export const NuevoProductoSchema = NuevoProductoEsquema;
 
 const COLORES = ["#e88f2a", "#3c6b3a", "#7d5a38", "#d97b96", "#304d25", "#b5442e"];
 
@@ -50,10 +42,11 @@ export class ProductosService {
           await tx.producto.update({ where: { id: existente.id }, data: { nombre, categoriaId, unidad: fila.unidad || undefined, costoActual: fila.costoActual, stockMinimo: fila.stockMinimo, version: { increment: 1 } } });
           id = existente.id; actualizados++;
         } else {
-          const producto = await this.crear({ ...fila, nombre });
+          const producto = await this.crear(NuevoProductoSchema.parse({ ...fila, nombre }));
           id = producto.id; creados++;
         }
         usados.add(id);
+        for (const codigo of fila.codigosLectura ?? []) await this.vincularCodigo(id, codigo);
         if (fila.stock !== undefined) cantidades.set(id, fila.stock);
       }
       let conteoInicialId: string | null = null;
@@ -68,7 +61,7 @@ export class ProductosService {
   }
 
   async listar(q?: string, categoria?: string, stockEstado?: string, pagina = 1, porPagina = 20, orden = "reciente", activo = false) {
-    const filtro = q ? Prisma.sql`AND (p.nombre ILIKE ${'%'+q+'%'} OR p."codigoInterno" ILIKE ${'%'+q+'%'} OR c.nombre ILIKE ${'%'+q+'%'})` : Prisma.empty;
+    const filtro = q ? Prisma.sql`AND (p.nombre ILIKE ${'%'+q+'%'} OR p."codigoInterno" ILIKE ${'%'+q+'%'} OR EXISTS(SELECT 1 FROM "codigosProducto" cp WHERE cp."productoId"=p.id AND cp."retiradoEn" IS NULL AND cp.codigo ILIKE ${'%'+q+'%'}) OR c.nombre ILIKE ${'%'+q+'%'})` : Prisma.empty;
     const categoriaFiltro = categoria && categoria !== "Todas" ? Prisma.sql`AND c.nombre = ${categoria}` : Prisma.empty;
     const stockFiltro = stockEstado === "alerta" ? Prisma.sql`AND p."stockFisico"-p."stockReservado" <= p."stockMinimo"` : stockEstado === "ok" ? Prisma.sql`AND p."stockFisico"-p."stockReservado" > p."stockMinimo"` : Prisma.empty;
     const base = Prisma.sql`FROM productos p LEFT JOIN categorias c ON c.id = p."categoriaId" WHERE TRUE ${activo ? Prisma.sql`AND p.activo=true` : Prisma.empty} ${filtro} ${categoriaFiltro} ${stockFiltro}`;
@@ -77,7 +70,7 @@ export class ProductosService {
       const total = Number(cuenta.total), actual = Math.min(pagina, Math.max(1, Math.ceil(total / porPagina)));
       const ordenSql = orden === "alertas" ? Prisma.sql`(p."stockFisico"-p."stockReservado" <= p."stockMinimo") DESC, p.nombre, p.id` : orden === "nombre" ? Prisma.sql`p.nombre,p.id` : Prisma.sql`p."creadoEn" DESC, p.id DESC`;
       const ids = await tx.$queryRaw<Array<{id:string}>>(Prisma.sql`SELECT p.id ${base} ORDER BY ${ordenSql} LIMIT ${porPagina} OFFSET ${(actual-1)*porPagina}`);
-      const productos = await tx.producto.findMany({where: {id: {in: ids.map(p=>p.id)}}, include: {categoria:true}});
+      const productos = await tx.producto.findMany({where: {id: {in: ids.map(p=>p.id)}}, include: {categoria:true,codigosLectura: {where:{retiradoEn:null},select:{codigo:true}}}});
       const fotos = await tx.archivoAdjunto.findMany({where: {productoId: {in: ids.map(p=>p.id)}, eliminadoEn:null}, orderBy: {creadoEn:"desc"}, select:{id:true,productoId:true}});
       const [alertas] = await tx.$queryRaw<Array<{total:bigint}>>`SELECT COUNT(*) AS total FROM productos WHERE "stockFisico"-"stockReservado" <= "stockMinimo"`;
       const porId = new Map(productos.map(p=>[p.id,p]));
@@ -88,7 +81,7 @@ export class ProductosService {
   async obtener(productoId: string) {
     const producto = await this.prisma.producto.findUnique({
       where: { id: productoId },
-      include: { categoria: true },
+      include: { categoria: true, codigosLectura: { where: { retiradoEn: null }, select: { codigo: true } } },
     });
     if (!producto) throw new ErrorDominio("NO_ENCONTRADO", "Producto no encontrado", 404);
     return this.dto(producto);
@@ -102,20 +95,12 @@ export class ProductosService {
     return { data: cambios.map((c) => ({ ...c, valorAnterior: numero(c.valorAnterior), valorNuevo: numero(c.valorNuevo) })), meta: { pagina, porPagina, total } };
   }
 
-  async crear(datos: z.infer<typeof NuevoProductoSchema>) {
-    const categoria = datos.categoria
-      ? await this.prisma.categoria.upsert({
-          where: { nombre: datos.categoria },
-          update: {},
-          create: { codigo: `CAT-${datos.categoria.slice(0, 8).toUpperCase()}`, nombre: datos.categoria },
-        })
-      : null;
-
-    const total = await this.prisma.producto.count();
-
-    const producto = await this.prisma.$transaction(async (tx) => {
-      // El catálogo permanece estable mientras se aplica el punto de partida.
+  async crear(datos: z.infer<typeof NuevoProductoSchema>, precioPendiente = false) {
+    const producto = await this.prisma.enTransaccion(async (tx) => {
+      // La creación y el punto de partida comparten el mismo candado.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('inventario:inicial'))`;
+      const categoria = datos.categoria ? await tx.categoria.upsert({ where: { nombre: datos.categoria }, update: {}, create: { codigo: `CAT-${datos.categoria.slice(0,8).toUpperCase()}`, nombre: datos.categoria } }) : null;
+      const total = await tx.producto.count();
       const iguales = await tx.$queryRaw<Array<{id:string}>>`SELECT id FROM productos WHERE lower(regexp_replace(btrim(nombre), '\\s+', ' ', 'g')) = lower(${datos.nombre.trim().replace(/\s+/g, " ")})`;
       if (iguales.length) throw new ErrorDominio("PRODUCTO_EXISTENTE", "Ya existe un producto con ese nombre. Usa su código para actualizarlo", 409);
       const codigoInterno = await siguienteCodigo(tx, "PROD");
@@ -126,6 +111,7 @@ export class ProductosService {
           categoriaId: categoria?.id ?? null,
           unidad: datos.unidad?.trim() || "unidad",
           precioVenta: datos.precioVenta,
+          precioPendiente,
           costoActual: datos.costoActual ?? 0,
           stockFisico: datos.stock ?? 0,
           stockMinimo: datos.stockMinimo ?? 0,
@@ -144,6 +130,13 @@ export class ProductosService {
           motivo: "Creación de producto",
         },
       });
+      const inicialAbierto = await tx.conteoInventario.findFirst({ where: { tipo: "INICIAL", estado: "EN_CURSO" }, select: { id: true } });
+      if (inicialAbierto) {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`conteo:${inicialAbierto.id}`}))`;
+        const vigente = await tx.conteoInventario.findUnique({ where: { id: inicialAbierto.id }, select: { estado: true } });
+        if (vigente?.estado === "EN_CURSO") await tx.conteoLinea.create({ data: { conteoId: inicialAbierto.id, productoId: creado.id, stockTeorico: creado.stockFisico } });
+      }
+      for (const codigo of datos.codigosLectura ?? []) await this.vincularCodigo(creado.id, codigo);
       return creado;
     });
 
@@ -177,27 +170,81 @@ export class ProductosService {
     };
   }
 
-  async actualizarPrecio(productoId: string, nuevoPrecio: number, usuarioId: string) {
+  async actualizarPrecio(productoId: string, nuevoPrecio: number, usuarioId: string, parametros?: { costoActual?: number; stockMinimo?: number }) {
     const producto = await this.prisma.producto.findUnique({ where: { id: productoId } });
     if (!producto) throw new ErrorDominio("NO_ENCONTRADO", "Producto no encontrado", 404);
-    if (numero(producto.precioVenta) === nuevoPrecio) return this.obtener(productoId);
+    if (numero(producto.precioVenta) === nuevoPrecio && !producto.precioPendiente && parametros?.costoActual === undefined && parametros?.stockMinimo === undefined) return this.obtener(productoId);
 
     await this.prisma.$transaction([
-      this.prisma.cambioPrecio.create({
+      ...(numero(producto.precioVenta) !== nuevoPrecio || producto.precioPendiente ? [this.prisma.cambioPrecio.create({
         data: {
           productoId,
           valorAnterior: producto.precioVenta,
           valorNuevo: nuevoPrecio,
           usuarioId,
         },
-      }),
+      })] : []),
       this.prisma.producto.update({
         where: { id: productoId },
-        data: { precioVenta: nuevoPrecio, version: { increment: 1 } },
+        data: { precioVenta: nuevoPrecio, precioPendiente: false, costoActual: parametros?.costoActual, stockMinimo: parametros?.stockMinimo, version: { increment: 1 } },
       }),
     ]);
 
     return this.obtener(productoId);
+  }
+
+  async resolverCodigo(codigo: string) {
+    const externo = await this.prisma.codigoProducto.findUnique({ where: { codigo }, include: { producto: { select: { activo: true } } } });
+    if (externo?.retiradoEn) throw new ErrorDominio("CODIGO_RETIRADO", "Este código fue retirado. Busca el producto por nombre", 409);
+    const interno = externo ? null : await this.prisma.producto.findUnique({ where: { codigoInterno: codigo }, select: { id: true, activo: true } });
+    const id = externo?.productoId ?? interno?.id;
+    if (!id) return null;
+    if (!(externo?.producto.activo ?? interno?.activo)) throw new ErrorDominio("PRODUCTO_INACTIVO", "Este producto está inactivo", 409);
+    return this.obtener(id);
+  }
+
+  async vincularCodigo(productoId: string, codigo: string) {
+    return this.prisma.enTransaccion(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`codigo:${codigo}`}))`;
+      const producto = await tx.producto.findUnique({ where: { id: productoId } });
+      if (!producto?.activo) throw new ErrorDominio("PRODUCTO_INVALIDO", "Elige un producto activo", 404);
+      const interno = await tx.producto.findUnique({ where: { codigoInterno: codigo } });
+      if (/^PROD-\d+$/i.test(codigo) && interno?.id !== productoId) throw new ErrorDominio("CODIGO_INTERNO", "Ese formato está reservado para el consecutivo del negocio. Usa el código de la etiqueta", 409);
+      if (interno && interno.id !== productoId) throw new ErrorDominio("CODIGO_EXISTENTE", "Ese código identifica otro producto", 409);
+      const existente = await tx.codigoProducto.findUnique({ where: { codigo } });
+      if (existente && existente.productoId !== productoId) throw new ErrorDominio("CODIGO_EXISTENTE", "Este código ya pertenece a otro producto. No se cambió su relación", 409);
+      if (existente?.retiradoEn) throw new ErrorDominio("CODIGO_RETIRADO", "El administrador retiró este código. Usa un código vigente", 409);
+      return existente ?? tx.codigoProducto.create({ data: { productoId, codigo } });
+    });
+  }
+
+  async codigos(productoId: string) {
+    return this.prisma.codigoProducto.findMany({ where: { productoId }, orderBy: [{ creadoEn: "desc" }, { id: "asc" }] });
+  }
+
+  async retirarCodigo(productoId: string, codigoId: string) {
+    const codigo = await this.prisma.codigoProducto.findFirst({ where: { id: codigoId, productoId } });
+    if (!codigo) throw new ErrorDominio("NO_ENCONTRADO", "Código no encontrado", 404);
+    return this.prisma.codigoProducto.update({ where: { id: codigoId }, data: { retiradoEn: codigo.retiradoEn ?? new Date() } });
+  }
+
+  async productoInicial(conteoId: string, datos: { nombre: string; unidad: string; codigo?: string; productoId?: string }, usuarioId: string, rol: RolUsuario) {
+    return this.prisma.enTransaccion(async tx => {
+      await this.inventario.verificarAcceso(conteoId, rol);
+      // Mismo orden de bloqueos que creación/importación y aplicación inicial.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('inventario:inicial'))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`conteo:${conteoId}`}))`;
+      const conteo = await tx.conteoInventario.findUnique({ where: { id: conteoId } });
+      if (conteo?.tipo !== "INICIAL" || conteo.estado !== "EN_CURSO") throw new ErrorDominio("CONTEO_CERRADO", "Solo puedes registrar productos en un inventario inicial abierto", 409);
+      const producto = datos.productoId ? await this.obtener(datos.productoId) : await this.crear(NuevoProductoSchema.parse({ nombre: datos.nombre, unidad: datos.unidad, precioVenta: 0 }), true);
+      if (!producto.activo) throw new ErrorDominio("PRODUCTO_INACTIVO", "El producto está inactivo", 409);
+      if (datos.codigo) await this.vincularCodigo(producto.id, datos.codigo);
+      await tx.conteoLinea.upsert({ where: { conteoId_productoId: { conteoId, productoId: producto.id } }, update: {}, create: { conteoId, productoId: producto.id, stockTeorico: producto.stockFisico } });
+      const linea = await tx.conteoLinea.findUniqueOrThrow({ where: { conteoId_productoId: { conteoId, productoId: producto.id } } });
+      const yaContado = linea.stockFisico !== null;
+      const asignacion = yaContado ? null : await this.inventario.asignar(conteoId, usuarioId, false, producto.id);
+      return { producto, asignacion, yaContado };
+    });
   }
 
   private dto(p: {
@@ -212,6 +259,8 @@ export class ProductosService {
     stockMinimo: number;
     colorEtiqueta: string;
     activo: boolean;
+    precioPendiente: boolean;
+    codigosLectura?: Array<{codigo:string}>;
     creadoEn: Date;
     categoria: { nombre: string } | null;
   }) {
@@ -230,6 +279,8 @@ export class ProductosService {
       stockMinimo: p.stockMinimo,
       colorEtiqueta: p.colorEtiqueta,
       activo: p.activo,
+      precioPendiente: p.precioPendiente,
+      codigosLectura: p.codigosLectura?.map(c => c.codigo) ?? [],
       creadoEn: p.creadoEn,
     };
   }

@@ -48,6 +48,7 @@ function Contenido() {
 
           {/* ─── Flujo del vendedor (app móvil) ─── */}
           <Route path="/inventario" element={<RutaProtegida roles={["inventario"]}><ConteoColaborador /></RutaProtegida>} />
+          <Route path="/vendedor/conteo" element={<RutaProtegida roles={["vendedor"]}><ConteoColaborador /></RutaProtegida>} />
           <Route path="/vendedor" element={<RutaProtegida roles={["vendedor"]}><VendedorInicio /></RutaProtegida>} />
           <Route path="/vendedor/pedido" element={<RutaProtegida roles={["vendedor"]}><VendedorPedido /></RutaProtegida>} />
           <Route path="/vendedor/pedido/completado" element={<RutaProtegida roles={["vendedor"]}><VendedorPedidoCompletado /></RutaProtegida>} />

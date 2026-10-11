@@ -307,3 +307,67 @@ Los 18 casos integrales y las dos pruebas de caché aprobaron. El gráfico de di
 Se comprobó también la actualización del progreso del administrador tras guardar desde otra sesión, sin recargar. La corrección administrativa desde el formulario conserva colaboradores y rechaza repetir una modificación usando la fecha de lectura anterior.
 
 Producción local activada el 10/10/2026: respaldo binario previo, cinco servicios saludables y migraciones sin borrado. Las huellas de las 23 tablas comerciales coinciden antes/después: 14 pedidos, 32 productos, 8 clientes y 9 pagos. Conciliación sin errores en líneas, totales y reservas ni ajustes duplicados. El acceso local y el túnel temporal HTTPS se comprobaron con inicio de sesión real, historial de fechas anteriores, CSV, conteos compartidos, opción de rol Inventario y gráfico de descuadres; sin errores de consola ni respuestas 401 durante estos recorridos. Las cinco tarjetas mensuales coinciden con PostgreSQL (ventas 330.600 y 14 pedidos en esa instantánea). No se cargaron registros comerciales de prueba en producción.
+
+
+## Ejercicios V7P4 · robot y lectura de códigos
+
+Se trabaja en V7P4; V6P4 quedó publicada antes de los ajustes. La instalación del negocio de 8080 no se migra ni reinicia con estas pruebas. El desarrollo se consulta en http://127.0.0.1:8180. El lector es ZXing Browser, cargado solo al abrir la cámara; documentación: https://github.com/zxing-js/browser. Para cámara/micrófono en un celular se necesita HTTPS y autorización del dispositivo; HTTP por IP de la red permite consultar la aplicación, pero no garantiza acceso a cámara.
+
+1. En Precios, crear un producto con nombre, unidad, costo, precio y mínimo. Escanear una etiqueta nueva, buscar el nombre y seleccionar la coincidencia: al guardar debe conservar el mismo PROD y sus existencias. En la sección de códigos se puede retirar una etiqueta tras confirmar, conservando las otras.
+2. En una instalación vacía, abrir Inventario → Conteo guiado → Inventario inicial. Escanear un código nuevo, crear nombre/unidad (sin costo/precio), guardar el producto y contar 0 o cualquier cantidad entera. Otro colaborador no puede repetirlo. Cerrar/aplicar requiere administrador y revisar todas las líneas. Parametrizar el precio después conserva la cantidad inicial.
+3. En Ventas, paso Agregar productos, tocar la cámara del buscador. Leer QR y barras: bip, regreso, nombre en el filtro y una unidad seleccionada. Escanear la misma etiqueta otra vez suma una unidad. No se confirma la venta por escanear.
+4. En general, entrar desde dos usuarios Inventario: escanear el mismo producto simultáneamente. Solo uno recibe la asignación; el otro ve el aviso. Guardar 0 → cámara → siguiente etiqueta → guardar 13. Recargar y revisar cantidades, responsable, fechas y diferencias desde administrador.
+5. Entrar como vendedor: Conteo diario → Abrir conteo de hoy. Solo aparecen los cinco seleccionados (o todo el catálogo si hay menos de cinco). Leer una etiqueta ajena al diario debe mostrar un aviso sin cambiar cantidades. El rol Inventario no puede abrir diarios; vendedor no puede abrir generales ni consultar historial cerrado.
+6. Robot: tocar una vez inicia audio; tocar fuera oculta solo su burbuja; tocar otra vez detiene. El deslizador cambia el ancho, limitado a la pantalla, y la transcripción conserva dos líneas. Arrastrar mueve el robot sin activar/desactivar el micrófono. Confirmar operaciones sigue usando voz o el formulario del negocio.
+7. CSV: `codigosLectura` es opcional; `7701234567890|7701234567891` vincula ambas etiquetas. No usar fórmulas ni separadores de miles. `cantidadInicial` vacía significa sin contar; 0 significa cero unidades. Los archivos anteriores siguen funcionando sin añadir esta columna.
+
+Pruebas reproducibles desde la raíz, con PostgreSQL QA 5433 y API/frontend QA disponibles:
+
+```powershell
+npm.cmd run verificar
+node Backend/scripts/probar-codigos-inventario.cjs
+node Backend/scripts/probar-conteo-compartido.cjs
+node Backend/scripts/probar-escaner-ui.cjs
+```
+
+La prueba de códigos crea una base nueva `ambie_v7_pruebas_<fecha>` dentro de PostgreSQL QA y una API temporal 3110, que detiene al terminar; conserva los resultados y la base. La prueba de interfaz usa Chrome real con cámara sintética: decodifica imágenes QR/EAN-13 mediante el lector real y guarda conteos en QA. El robot utiliza transporte de audio simulado para comprobar sus controles, sin afirmar reconocimiento acústico real. No equivale a probar cámaras, altavoces, conexión HTTPS ni proveedor de voz en celulares físicos. Informes y capturas quedan en `.local/pruebas-v7/`.
+
+### Consultas de lectura
+
+Usar la conexión del inicio de esta guía; reemplazar PROD y conteo por los que muestra la pantalla. Estas consultas no modifican datos.
+
+```sql
+-- Un producto interno, varias etiquetas. Los retirados permanecen relacionados.
+SELECT p.id, p."codigoInterno", p.nombre, p.unidad, p."precioPendiente",
+       c.codigo, c."creadoEn", c."retiradoEn"
+FROM productos p LEFT JOIN "codigosProducto" c ON c."productoId"=p.id
+WHERE p."codigoInterno"='PROD-0001'
+ORDER BY c."creadoEn";
+
+-- Relación única garantizada también por el índice UNIQUE.
+SELECT codigo, COUNT(*) FROM "codigosProducto" GROUP BY codigo HAVING COUNT(*)>1;
+
+-- Estado del conteo, cantidad (incluyendo cero), responsable y fecha exacta.
+SELECT c.id, c.tipo, c.estado, c."iniciadoEn", c."finalizadoEn",
+       p."codigoInterno", p.nombre, l."stockTeorico", l."stockFisico",
+       l.diferencia, u.nombre AS responsable, l."contadoEn",
+       l."asignadoPorId", l."asignadoHasta"
+FROM "conteosInventario" c JOIN "conteoLineas" l ON l."conteoId"=c.id
+JOIN productos p ON p.id=l."productoId"
+LEFT JOIN usuarios u ON u.id=l."contadoPorId"
+WHERE c.id='ID_DEL_CONTEO' ORDER BY p.nombre;
+
+-- Comparar el detalle administrativo: progreso, participantes y valor al costo registrado.
+SELECT c.id, COUNT(l.id) AS productos, COUNT(l."stockFisico") AS contados,
+       COALESCE(SUM(l."stockFisico"),0) AS unidades,
+       COALESCE(SUM(GREATEST(-l.diferencia,0)*l."costoUnitarioConteo"),0) AS faltantes,
+       COALESCE(SUM(GREATEST(l.diferencia,0)*l."costoUnitarioConteo"),0) AS sobrantes,
+       (SELECT COUNT(*) FROM "participantesConteo" pc WHERE pc."conteoId"=c.id) AS colaboradores
+FROM "conteosInventario" c LEFT JOIN "conteoLineas" l ON l."conteoId"=c.id
+WHERE c.id='ID_DEL_CONTEO' GROUP BY c.id;
+```
+
+Una escritura responde tras COMMIT. La revisión agrupa lecturas durante 250 ms; las otras pantallas consultan cada dos segundos más latencia. Si ocurre un 429, esperar el tiempo indicado y reintentar con la misma operación; no crear otra venta porque una tarjeta tarde en actualizarse.
+
+
+Validación de esta revisión (11/10/2026): contrato de 14 enums, API, tipos, frontend y lint terminaron correctamente. Se comprobaron instalación inicial vacía, alias, conflictos con rollback, cero, roles, rotación, QR/EAN-13 sobre video sintético y vistas 390/768/1440. La regresión de tres colaboradores pasó, al igual que caché y reintentos: 23 solicitudes produjeron cuatro pedidos confirmados distintos según las cuatro intenciones, con un único cobro por clave. Se conservan advertencias de lint anteriores; este resultado no certifica carga máxima ni micrófono físico. La revisión de secretos del repositorio pasó.

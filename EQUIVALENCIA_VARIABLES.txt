@@ -844,3 +844,18 @@ Audio híbrido: VADParams.stop_secs=2.0 y SpeechTimeoutUserTurnStopStrategy.user
 conversacionId (frontend en memoria) -> POST /agentes/interpretar -> x-opencode-session (proveedor): UUID de conversación, distinto del ID del borrador; no se persiste. Audio tipo=hablando -> speechSynthesis.cancel(): permite interrumpir la respuesta sin interpretar el evento como texto.
 
 RobotAsistente.estado <- escuchando/ocupado/ambie:agente-hablando (frontend); abrirMicrofono.nivel <- RMS AudioContext -> CSS --nivel, sin persistencia ni envío adicional. SpeechSynthesisUtterance.onstart/onend/onerror -> ambie:agente-hablando. RobotAsistente.posicion vive en memoria y no cambia datos del negocio.
+
+
+V7P4 · lectura de productos y conteos (11/10/2026)
+ProductoDTO.precioPendiente ↔ productos.precioPendiente: nuevo producto del inicial sin precio; solo Precios/CSV habilita su venta.
+ProductoDTO.codigosLectura[] ↔ codigosProducto.codigo WHERE retiradoEn IS NULL: alias del mismo productoId; no sustituyen codigoInterno.
+codigosProducto: id, codigo (único, texto conserva ceros), productoId (FK productos), creadoEn, retiradoEn (retiro administrativo sin borrar historia).
+GET /productos/codigo/lectura?codigo=... ↔ alias activo o codigoInterno exacto; desconocido retorna null, retirado/inactivo devuelve conflicto.
+POST /productos/inicial/:conteoId ↔ producto + alias + línea + asignación, en una transacción. No recibe precios ni costo ni cantidades; el conteo usa su PATCH actual.
+POST /inventario/compartidos/:conteoId/asignar {productoId?}: reserva de cinco minutos, bloqueada por conteo. Sin productoId conserva el siguiente producto habitual.
+Conteo diario: tipo aleatorio, fechaDiaria America/Bogota, cinco productos; selección rota también jornadas abiertas anteriores, conservadas en historial.
+VENDEDOR ↔ conteo diario abierto; INVENTARIO ↔ inicial/general abiertos y catálogo sin existencias/costos; ADMINISTRADOR ↔ historial, cierre, ajuste y retiro de códigos.
+POST /productos/:productoId/precio: nuevoPrecio, costoActual?, stockMinimo?; conserva cantidades e históricos de documentos.
+CSV codigosLectura: varios códigos separados por |; campo opcional, cantidades vacías/0 mantienen su significado existente.
+ambie:ui:ancho-asistente: preferencia local de ancho (200–440 px, limitada al viewport), sin guardar transcripciones ni datos privados.
+Sincronización: codigosProducto usa invalidar_sincronizacion diferido; mismas lecturas agrupadas 250 ms e intervalo frontend dos segundos.

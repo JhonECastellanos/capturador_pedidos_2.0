@@ -34,7 +34,7 @@ export function leerProductosCSV(texto: string): ImportarProductosDTO["productos
       if (!valor || !/^\d+(?:[.,]\d{1,2})?$/.test(valor)) throw new Error(`Fila ${i + 2}: ${campo} debe ser un número positivo o cero, sin separador de miles.`);
       return Number(valor.replace(",", "."));
     };
-    return { codigoInterno: datos.codigoInterno || undefined, nombre: datos.nombre, categoria: datos.categoria || undefined, unidad: datos.unidad || undefined, precioVenta: numerico("precioVenta", true), costoActual: numerico("costoActual"), stock: numerico("cantidadInicial"), stockMinimo: numerico("stockMinimo") };
+    return { codigosLectura: datos.codigosLectura ? datos.codigosLectura.split("|").map(c => c.trim()).filter(Boolean) : undefined, codigoInterno: datos.codigoInterno || undefined, nombre: datos.nombre, categoria: datos.categoria || undefined, unidad: datos.unidad || undefined, precioVenta: numerico("precioVenta", true), costoActual: numerico("costoActual"), stock: numerico("cantidadInicial"), stockMinimo: numerico("stockMinimo") };
   });
   const validacion = ImportarProductosEsquema.safeParse({ prepararInicial: false, productos });
   if (!validacion.success) throw new Error(`Revisa el archivo: ${validacion.error.issues[0]?.message ?? "datos inválidos"}.`);

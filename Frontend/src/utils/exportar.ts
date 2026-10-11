@@ -15,9 +15,9 @@ export function descargarCSV(encabezados: string[], filas: string[][], archivo: 
   document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
 
-export const COLUMNAS_PRODUCTOS_CSV = ["codigoInterno", "nombre", "categoria", "unidad", "precioVenta", "costoActual", "cantidadInicial", "stockMinimo"];
+export const COLUMNAS_PRODUCTOS_CSV = ["codigoInterno", "nombre", "categoria", "unidad", "precioVenta", "costoActual", "cantidadInicial", "stockMinimo", "codigosLectura"];
 export function exportarProductosCSV(productos: ProductoDTO[]): void {
-  descargarCSV(COLUMNAS_PRODUCTOS_CSV, productos.map(p => [p.codigoInterno, p.nombre, p.categoria, p.unidad, String(p.precioVenta), String(p.costoActual), String(p.stockFisico ?? p.stock), String(p.stockMinimo)]), "productos.csv");
+  descargarCSV(COLUMNAS_PRODUCTOS_CSV, productos.map(p => [p.codigoInterno, p.nombre, p.categoria, p.unidad, String(p.precioVenta), String(p.costoActual), String(p.stockFisico ?? p.stock), String(p.stockMinimo), (p.codigosLectura ?? []).join("|")]), "productos.csv");
 }
 
 export function exportarPedidosCSV(pedidos: Pedido[], nombreCliente: (clienteId: string) => string): void {

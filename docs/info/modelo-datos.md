@@ -171,3 +171,18 @@ FROM "configuracionesAgente";
 ```
 
 V6P4: dentro del JSON configuracion, proveedores[].maxTokens guarda el límite de salida por solicitud (256..8192; 2000 predeterminado) y respaldoId conserva el UUID de otra conexión autorizada o null. Los registros anteriores reciben esos valores predeterminados al validar; no se requiere otra tabla ni se modifican documentos comerciales. Las métricas de una interpretación se devuelven en RevisionAgente.conexion sin guardar texto, claves ni una estimación de saldo.
+
+
+## V7P4 · etiquetas y primera instalación
+
+`productos` conserva su UUID y `codigoInterno` único. `precioPendiente` indica que el producto se creó durante el inventario inicial sin precio: permanece fuera de ventas hasta confirmar su parametrización en Precios o importar un precio explícito por CSV. Un precio cero confirmado sí es válido.
+
+`codigosProducto` relaciona varias etiquetas con un solo producto. Campos: `id` UUID, `codigo` texto único de hasta 128 caracteres validado por API (incluye ceros iniciales), `productoId` FK restrictiva, `creadoEn` fecha de vinculación y `retiradoEn` fecha opcional de retiro. La API reserva el formato PROD para los consecutivos internos. Un código no puede trasladarse a otro producto. Los códigos retirados se conservan y no se reutilizan; el administrador puede retirarlos cuando dejen de circular. No hay borrado automático por antigüedad.
+
+La lectura acepta códigos de barras y contenido literal de QR, sin abrir enlaces del QR. Busca un alias vigente o el consecutivo exacto. Cuando no existe, el inicial ofrece crear el producto o vincularlo a una coincidencia por nombre. Crear desde Precios exige costo, precio y mínimo, con cantidad cero; las existencias llegan por Compras o por aplicación del inicial.
+
+No se añadieron tablas de stock, participantes o historiales duplicadas. Se reutilizan `conteosInventario`, `conteoLineas`, `participantesConteo`, `ajustesInventario` y `movimientosInventario`. Crear un producto mientras el inicial está abierto añade su línea pendiente bajo los mismos bloqueos. Registrar una etiqueta adicional de un producto ya contado conserva la cantidad anterior.
+
+Escanear para contar reserva la línea elegida cinco minutos bajo el bloqueo del conteo. Otro colaborador recibe un conflicto si la línea está ocupada o contada. Guardar usa el PATCH existente, confirma la transacción y libera la reserva antes de abrir la siguiente cámara. Cero es un conteo válido. Cerrar y aplicar siguen siendo decisiones del administrador; el conteo no ajusta stock automáticamente.
+
+El vendedor solo accede a diarios abiertos; el colaborador Inventario solo a iniciales/generales abiertos. Este último consulta nombres, códigos y unidades, con costos y existencias teóricas ocultos para evitar influir en su conteo. El administrador/system conserva historial, responsables, fechas y diferencias. Un diario pendiente anterior se conserva, pero no bloquea la selección de otra jornada; la rotación utiliza las selecciones de jornadas no canceladas hasta cubrir el catálogo y comienza otro ciclo.

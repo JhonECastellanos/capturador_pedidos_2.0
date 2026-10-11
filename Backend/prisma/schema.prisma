@@ -290,6 +290,8 @@ model Cliente {
 model Producto {
   id             String   @id @default(uuid())
   codigoInterno  String   @unique
+  precioPendiente Boolean @default(false)
+  codigosLectura CodigoProducto[]
   nombre         String
   categoriaId    String?
   unidad         String   @default("unidad")
@@ -779,4 +781,17 @@ model ParticipacionConteo {
   usuario Usuario @relation(fields: [usuarioId], references: [id])
   @@id([conteoId, usuarioId])
   @@map("participantesConteo")
+}
+
+
+// Los códigos del fabricante son alias: nunca reemplazan el consecutivo interno.
+model CodigoProducto {
+  id String @id @default(uuid())
+  codigo String @unique
+  productoId String
+  creadoEn DateTime @default(now())
+  retiradoEn DateTime?
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Restrict)
+  @@index([productoId, retiradoEn])
+  @@map("codigosProducto")
 }

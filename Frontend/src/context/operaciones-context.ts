@@ -63,7 +63,7 @@ export interface OperacionesContextValue {
   cancelarConteoActivo: (conteoId: string) => Accion;
   aplicarAjusteDeConteo: (conteoId: string) => Accion;
   registrarAjusteManual: (productoId: string, stockFisico: number, motivo: string, comentario?: string) => Accion;
-  actualizarPrecioProducto: (productoId: string, nuevoPrecio: number) => Accion;
+  actualizarPrecioProducto: (productoId: string, nuevoPrecio: number, parametros?: { costoActual?: number; stockMinimo?: number }) => Accion;
   trasladarPedidoAHoy: (pedidoId: string) => Accion;
   registrarCierre: (datos: Omit<CierreDia, "id" | "usuarioId" | "creadoEn">) => Resultado<CierreDia>;
   registrarAbono: (clienteId: string, monto: number, metodo: AbonoCredito["metodo"], comentario?: string) => Resultado<AbonoCredito>;

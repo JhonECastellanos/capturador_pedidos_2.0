@@ -190,6 +190,7 @@ export class PedidosService {
         where: { id: { in: ids }, activo: true },
         orderBy: { id: "asc" },
       });
+      if (productos.some(p => p.precioPendiente)) throw new ErrorDominio("PRECIO_PENDIENTE", "Configura el precio de los productos nuevos antes de venderlos", 409);
       if (productos.length !== ids.length) throw new ErrorDominio("PRODUCTO_INVALIDO", "Hay productos inexistentes o inactivos");
 
       let subtotal = 0;

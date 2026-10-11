@@ -7,9 +7,12 @@
 
 import { z } from "zod";
 
+export const CodigoLecturaEsquema = z.string().trim().min(1).max(128).regex(/^[^\x00-\x1f\x7f]+$/, "El código contiene caracteres inválidos");
+
 export const ImportarProductosEsquema = z.object({
   prepararInicial: z.boolean(),
   productos: z.array(z.object({
+    codigosLectura: z.array(CodigoLecturaEsquema).max(20).optional(),
     codigoInterno: z.string().trim().max(40).optional(),
     nombre: z.string().trim().min(1).max(200),
     categoria: z.string().trim().max(100).optional(),
@@ -112,7 +115,11 @@ export const FiltroClientesEsquema = z.object({
 
 // ─── Productos ────────────────────────────────────────────────────
 
+export const VincularCodigoEsquema = z.object({ codigo: CodigoLecturaEsquema, conteoId: z.string().uuid().optional() });
+export const ProductoInicialEsquema = z.object({ nombre: z.string().trim().min(2).max(200), unidad: z.string().trim().min(1).max(40), codigo: CodigoLecturaEsquema.optional(), productoId: z.string().uuid().optional() });
+
 export const NuevoProductoEsquema = z.object({
+  codigosLectura: z.array(CodigoLecturaEsquema).max(20).optional(),
   nombre: texto.min(2, "El nombre es obligatorio"),
   categoria: texto.optional(),
   unidad: texto.default("unidad"),
@@ -123,6 +130,8 @@ export const NuevoProductoEsquema = z.object({
 });
 
 export const CambiarPrecioEsquema = z.object({
+  costoActual: monto.min(0).optional(),
+  stockMinimo: cantidad.min(0).optional(),
   nuevoPrecio: monto.min(0, "El precio no puede ser negativo"),
 });
 

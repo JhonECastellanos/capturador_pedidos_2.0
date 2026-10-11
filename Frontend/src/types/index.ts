@@ -102,6 +102,8 @@ export function inicialesDe(nombre: string): string {
 // ─── Productos ────────────────────────────────────────────────────
 
 export interface Producto {
+  precioPendiente?: boolean;
+  codigosLectura?: string[];
   id: string;
   /** Código interno propio del negocio (PROD-001). */
   codigoInterno: string;

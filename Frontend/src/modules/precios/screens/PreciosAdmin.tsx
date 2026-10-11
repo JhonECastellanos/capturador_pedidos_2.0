@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { BarraInferior } from "../../../components/BarraInferior";
 import { BarraSuperior } from "../../../components/BarraSuperior";
 import { Boton } from "../../../components/Boton";
+import { FichaProductoCodigo } from "../../../components/FichaProductoCodigo";
+import { BotonEscaner } from "../../../components/BotonEscaner";
+import { EscanerCodigo } from "../../../components/EscanerCodigo";
+import { CodigosProducto } from "../components/CodigosProducto";
 import { BuscadorInput } from "../../../components/BuscadorInput";
 import { GuiaAyuda } from "../../../components/GuiaAyuda";
 import { ListaVacia } from "../../../components/ListaVacia";
@@ -14,7 +18,7 @@ import { useOperaciones } from "../../../context/operaciones";
 import { calcularMargen } from "../../../dominio/servicios";
 import { formatoMoneda } from "../../../utils/formato";
 import type { Producto, CambioPrecio } from "../../../types";
-import { usaApi } from "../../../data/api";
+import { api, usaApi } from "../../../data/api";
 import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
 import { IntercambioProductosCSV } from "../components/IntercambioProductosCSV";
 import { useOperacionAgente } from "../../agentes/operacion-agente";
@@ -25,12 +29,16 @@ type Paso = 1 | 2;
 export function PreciosAdmin() {
   const POR_PAGINA = useTamanoPagina();
   const { inventario, cambiosPrecio, actualizarPrecioProducto, nombreUsuario } = useOperaciones();
+  const [crear, setCrear] = useState<string | null>(null);
+  const [camara, setCamara] = useState(false);
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
   const remoto = usePaginaApi<Producto>(`/productos?page=${pagina}&pageSize=${POR_PAGINA}&orden=nombre&q=${encodeURIComponent(busqueda)}`);
   const [productoId, setProductoId] = useState<string | null>(null);
   const [paso, setPaso] = useState<Paso>(1);
   const [precio, setPrecio] = useState("");
+  const [costo, setCosto] = useState<string | null>(null);
+  const [minimo, setMinimo] = useState<string | null>(null);
   const { aviso, mostrarAviso, cerrarAviso } = useAviso();
 
   useEffect(() => { setPagina(1); }, [busqueda]);
@@ -49,12 +57,14 @@ export function PreciosAdmin() {
 
   function abrirProducto(id: string) {
     const p = (usaApi ? remoto.items : inventario).find((x) => x.id === id);
+    setCosto(null); setMinimo(null);
     setProductoId(id);
     setPrecio(p ? String(p.precioVenta) : "");
     setPaso(1);
   }
 
   function cerrarProceso() {
+    setCosto(null); setMinimo(null);
     setProductoId(null);
     setPrecio("");
     setPaso(1);
@@ -62,25 +72,30 @@ export function PreciosAdmin() {
 
   async function guardarPrecio() {
     if (!producto) return false;
+    if (!precio.trim() || (costo !== null && !costo.trim()) || (minimo !== null && !minimo.trim())) { mostrarAviso("Completa precio, costo y stock mínimo, incluyendo 0 cuando corresponda", "info"); return false; }
     const nuevo = Number(precio) || 0;
-    if (!Number.isFinite(nuevo) || nuevo < 0 || await actualizarPrecioProducto(producto.id, nuevo) === false) return false;
+    if (!Number.isFinite(nuevo) || nuevo < 0 || await actualizarPrecioProducto(producto.id, nuevo, usaApi ? { costoActual: costo === null ? undefined : Number(costo), stockMinimo: minimo === null ? undefined : Number(minimo) } : undefined) === false) return false;
     mostrarAviso(`${producto.nombre} → ${formatoMoneda(nuevo)} guardado`, "exito");
     cerrarProceso();
     return true;
   }
 
   const confirmarPrecioCompartido = useOperacionAgente("precio", r => {
+    setCosto(null); setMinimo(null);
     setProductoId(typeof r.datos.productoId === "string" ? r.datos.productoId : null);
     setPrecio(r.instruccion.precio === undefined ? "" : String(r.instruccion.precio));
     setPaso(2);
   }, guardarPrecio, () => ({ operacion: "precio", producto: producto?.nombre, ...(precio.trim() ? { precio: Number(precio) } : {}) }));
 
+  if (crear !== null) return <PantallaCompletaAdmin><div className="flex-1 overflow-y-auto p-3"><FichaProductoCodigo codigoInicial={crear} onCerrar={() => setCrear(null)} onGuardado={r => { setCrear(null); setProductoId(r.producto.id); setPrecio(String(r.producto.precioVenta)); setPaso(1); mostrarAviso("Producto guardado", "exito"); }} /></div></PantallaCompletaAdmin>;
+
   // ─── Proceso paso a paso: cambiar precio ───
   if (producto) {
     const nuevo = Number(precio) || 0;
     const margenAntes = calcularMargen(producto.precioVenta, producto.costoActual);
-    const margenDespues = calcularMargen(nuevo, producto.costoActual);
-    const cambia = nuevo !== producto.precioVenta;
+    const margenDespues = calcularMargen(nuevo, costo === null ? producto.costoActual : Number(costo));
+    const cambia = nuevo !== producto.precioVenta || !!producto.precioPendiente || (costo !== null && Number(costo) !== producto.costoActual) || (minimo !== null && Number(minimo) !== producto.stockMinimo);
+    const validos = precio.trim() !== "" && Number.isFinite(nuevo) && nuevo >= 0 && (costo === null || (costo.trim() !== "" && Number.isFinite(Number(costo)) && Number(costo) >= 0)) && (minimo === null || (minimo.trim() !== "" && Number.isSafeInteger(Number(minimo)) && Number(minimo) >= 0));
     const historial = usaApi ? historialRemoto.data ?? [] : cambiosPrecio.filter((c) => c.productoId === producto.id).slice(0, 3);
 
     return (
@@ -128,6 +143,7 @@ export function PreciosAdmin() {
                     className="mt-1.5 w-full rounded-2xl border-2 border-ink bg-paper px-4 py-3.5 text-center font-mono text-[26px] font-bold tabular-nums text-ink focus:border-accent focus:outline-none"
                   />
 
+                  {usaApi && <div className="mt-3 grid grid-cols-2 gap-2"><label className="text-xs">Costo actual<input aria-label="Costo actual" type="number" min="0" step="0.01" value={costo ?? producto.costoActual} onChange={e => setCosto(e.target.value)} className="mt-1 w-full rounded-lg border border-line bg-paper p-2"/></label><label className="text-xs">Stock mínimo<input aria-label="Stock mínimo" type="number" min="0" step="1" value={minimo ?? producto.stockMinimo} onChange={e => setMinimo(e.target.value)} className="mt-1 w-full rounded-lg border border-line bg-paper p-2"/></label></div>}
                   {cambia && (
                     <div className="mt-3 flex items-center justify-between rounded-xl bg-paper-sunken px-3 py-2.5 text-[12.5px]">
                       <span className="text-ink-soft">
@@ -143,6 +159,8 @@ export function PreciosAdmin() {
                   </p>
                 </div>
 
+                {usaApi && <CodigosProducto productoId={producto.id} />}
+                {producto.precioPendiente && <p className="mt-2 text-xs text-danger">Precio pendiente: confirma el precio para habilitar la venta.</p>}
                 {historial.length > 0 && (
                   <div className="mt-3 rounded-2xl border border-line bg-paper-raised p-3.5">
                     <p className="text-[10.5px] font-semibold uppercase tracking-wide text-ink-faint">Cambios recientes</p>
@@ -187,6 +205,7 @@ export function PreciosAdmin() {
                       </p>
                     </div>
                   </div>
+                  {usaApi && <p className="mt-2 text-xs text-ink-soft">Costo {formatoMoneda(costo === null ? producto.costoActual : Number(costo))} · stock mínimo {minimo ?? producto.stockMinimo}. Las existencias se conservan.</p>}
                   <p className="mt-2.5 text-[11px] leading-relaxed text-ink-faint">
                     Queda auditado con valor anterior, nuevo, usuario y fecha.
                   </p>
@@ -198,7 +217,7 @@ export function PreciosAdmin() {
 
         <BarraInferior>
           {paso === 1 ? (
-            <Boton disabled={!cambia} onClick={() => setPaso(2)}>
+            <Boton disabled={!cambia || !validos} onClick={() => setPaso(2)}>
               Revisar y confirmar →
             </Boton>
           ) : (
@@ -236,8 +255,9 @@ export function PreciosAdmin() {
       </div>
 
       <div className="flex-shrink-0 pt-2.5">
-        {usaApi && <IntercambioProductosCSV />}
-        <BuscadorInput value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre, código o categoría" />
+        {usaApi && <><button type="button" onClick={() => setCrear("")} className="min-h-9 text-xs font-semibold text-teal">Crear producto o vincular código</button><IntercambioProductosCSV /></>}
+        <BuscadorInput value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre, código o categoría" accion={usaApi ? <BotonEscaner onClick={() => setCamara(true)} /> : undefined} />
+        {camara && <EscanerCodigo onCerrar={() => setCamara(false)} onCodigo={codigo => { setCamara(false); void api<Producto | null>(`/productos/codigo/lectura?codigo=${encodeURIComponent(codigo)}`).then(p => { if (p) { setProductoId(p.id); setPrecio(String(p.precioVenta)); setPaso(1); } else setCrear(codigo); }).catch(e => mostrarAviso(e instanceof Error ? e.message : "No se pudo leer el producto", "info")); }} />}
       </div>
 
       <Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil((usaApi ? remoto.total : filtrados.length) / POR_PAGINA))} total={usaApi ? remoto.total : filtrados.length} porPagina={POR_PAGINA} onChange={setPagina} />

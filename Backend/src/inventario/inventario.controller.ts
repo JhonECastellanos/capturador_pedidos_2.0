@@ -3,6 +3,8 @@ import { Usuario, RolUsuario } from "@prisma/client";
 import { InventarioService } from "./inventario.service";
 import { Roles, UsuarioActual } from "../common/guards";
 import { IniciarConteoEsquema, ContarLineaEsquema, AjusteManualEsquema } from "@ambie/contrato";
+import { ErrorDominio } from "../common/errores";
+import { z } from "zod";
 import { paginacion } from "../common/paginacion";
 
 @Roles(RolUsuario.ADMINISTRADOR)
@@ -10,33 +12,42 @@ import { paginacion } from "../common/paginacion";
 export class InventarioController {
   constructor(private readonly inventario: InventarioService) {}
 
-  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO)
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO, RolUsuario.VENDEDOR)
   @Get("compartidos")
-  compartidos(@UsuarioActual() usuario: Usuario, @Query("page") page?: string, @Query("abiertos") abiertos?: string) {
-    return this.inventario.resumenes(paginacion(page, "30").pagina, 30, abiertos === "true", usuario.rol === RolUsuario.ADMINISTRADOR);
+  compartidos(@UsuarioActual() usuario: Usuario, @Query("page") page?: string, @Query("abiertos") abiertos?: string, @Query("pageSize") pageSize?: string) {
+    return this.inventario.resumenes(paginacion(page, pageSize ?? "30").pagina, Math.min(30, paginacion(page, pageSize ?? "30").porPagina), abiertos === "true", usuario.rol === RolUsuario.ADMINISTRADOR, undefined, usuario.rol);
   }
 
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.VENDEDOR)
   @Post("compartidos")
   async iniciarCompartido(@Body() body: unknown, @UsuarioActual() usuario: Usuario) {
-    return { data: await this.inventario.iniciarCompartido(IniciarConteoEsquema.parse(body).tipo, usuario.id) };
+    const datos = IniciarConteoEsquema.parse(body);
+    if (usuario.rol === RolUsuario.VENDEDOR && datos.tipo !== "aleatorio") throw new ErrorDominio("SIN_PERMISO", "El vendedor solo puede iniciar el conteo diario", 403);
+    const resultado = await this.inventario.iniciarCompartido(datos.tipo, usuario.id);
+    if (usuario.rol === RolUsuario.VENDEDOR) await this.inventario.verificarAcceso(resultado.id, usuario.rol);
+    return { data: resultado };
   }
 
-  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO)
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO, RolUsuario.VENDEDOR)
   @Get("compartidos/:conteoId")
   async resumenCompartido(@Param("conteoId") id: string, @UsuarioActual() usuario: Usuario) {
-    return { data: (await this.inventario.resumenes(1, 1, false, usuario.rol === RolUsuario.ADMINISTRADOR, id)).data[0] ?? null };
+    await this.inventario.verificarAcceso(id, usuario.rol);
+    return { data: (await this.inventario.resumenes(1, 1, false, usuario.rol === RolUsuario.ADMINISTRADOR, id, usuario.rol)).data[0] ?? null };
   }
 
-  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO)
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO, RolUsuario.VENDEDOR)
   @Get("compartidos/:conteoId/lineas")
-  lineasCompartidas(@Param("conteoId") id: string, @UsuarioActual() usuario: Usuario, @Query("page") page?: string, @Query("q") q = "") {
-    return this.inventario.lineasCompartidas(id, paginacion(page, "30").pagina, 30, q.trim().slice(0, 100), usuario.rol === RolUsuario.ADMINISTRADOR);
+  async lineasCompartidas(@Param("conteoId") id: string, @UsuarioActual() usuario: Usuario, @Query("page") page?: string, @Query("q") q = "", @Query("pageSize") pageSize?: string) {
+    await this.inventario.verificarAcceso(id, usuario.rol);
+    return this.inventario.lineasCompartidas(id, paginacion(page, pageSize ?? "30").pagina, Math.min(30, paginacion(page, pageSize ?? "30").porPagina), q.trim().slice(0, 100), usuario.rol === RolUsuario.ADMINISTRADOR);
   }
 
-  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO)
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO, RolUsuario.VENDEDOR)
   @Post("compartidos/:conteoId/asignar")
-  async asignar(@Param("conteoId") id: string, @UsuarioActual() usuario: Usuario, @Query("liberar") liberar?: string) {
-    return { data: await this.inventario.asignar(id, usuario.id, liberar === "true") };
+  async asignar(@Param("conteoId") id: string, @UsuarioActual() usuario: Usuario, @Query("liberar") liberar?: string, @Body() body?: unknown) {
+    await this.inventario.verificarAcceso(id, usuario.rol);
+    const datos = z.object({ productoId: z.string().uuid().optional() }).parse(body ?? {});
+    return { data: await this.inventario.asignar(id, usuario.id, liberar === "true", datos.productoId) };
   }
 
   @Get("inicial")
@@ -77,7 +88,7 @@ export class InventarioController {
     };
   }
 
-  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO)
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO, RolUsuario.VENDEDOR)
   @Patch("conteos/:conteoId/lineas/:productoId")
   async actualizarLinea(
     @Param("conteoId") conteoId: string,
@@ -86,6 +97,7 @@ export class InventarioController {
     @UsuarioActual() usuario: Usuario,
     @Query("resumen") resumen?: string,
   ) {
+    await this.inventario.verificarAcceso(conteoId, usuario.rol);
     const datos = ContarLineaEsquema.parse(body);
     return { data: await this.inventario.actualizarLinea(conteoId, productoId, datos.stockFisico, usuario.id, resumen !== "true" && usuario.rol === RolUsuario.ADMINISTRADOR, datos.contadoEnEsperado) };
   }

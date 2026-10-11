@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { BarraInferior } from "../../../components/BarraInferior";
 import { BarraSuperior } from "../../../components/BarraSuperior";
 import { Boton } from "../../../components/Boton";
+import { BotonEscaner } from "../../../components/BotonEscaner";
+import { EscanerCodigo } from "../../../components/EscanerCodigo";
 import { BuscadorInput } from "../../../components/BuscadorInput";
 import { IconChevronRight, IconMapPin } from "../../../components/Icons";
 import { ListaVacia } from "../../../components/ListaVacia";
@@ -18,7 +20,7 @@ import { categorias } from "../../../data/semilla";
 import { construirPago } from "../../../dominio/servicios";
 import { SelectorPago } from "../../clientes-pedido/components/SelectorPago";
 import type { EstadoPedido, LineaPedido, MetodoPago, Pedido, Producto, Cliente } from "../../../types";
-import { usaApi } from "../../../data/api";
+import { api, usaApi } from "../../../data/api";
 import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
 import { formatoMoneda } from "../../../utils/formato";
 
@@ -63,6 +65,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
   const [busquedaCliente, setBusquedaCliente] = useState("");
   const [busquedaProducto, setBusquedaProducto] = useState("");
   const [categoria, setCategoria] = useState<string>("Todas");
+  const [camara, setCamara] = useState(false);
   const [productosElegidos, setProductosElegidos] = useState<Record<string, Producto>>({});
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
   const [entrega, setEntrega] = useState<ModoEntrega>("entregado");
@@ -133,8 +136,9 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
   const total = lineas.reduce((suma, linea) => suma + linea.subtotal, 0);
   const unidades = lineas.reduce((suma, linea) => suma + linea.cantidad, 0);
 
-  function cambiarCantidad(productoId: string, delta: number) {
-    const producto = productosFiltrados.find((p) => p.id === productoId) ?? productosElegidos[productoId];
+  function cambiarCantidad(productoId: string, delta: number, encontrado?: Producto) {
+    const producto = encontrado ?? productosFiltrados.find((p) => p.id === productoId) ?? productosElegidos[productoId];
+    if (producto?.precioPendiente) { mostrarAviso("Configura su precio antes de vender este producto", "info"); return; }
     if (producto) setProductosElegidos(actuales => ({...actuales,[productoId]:producto}));
     const tope = producto?.stock ?? 0;
     setCantidades((actuales) => {
@@ -276,7 +280,8 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
       {paso === 2 && (
         <>
           <div className="flex-shrink-0 space-y-2 px-5 pt-3 md:px-6">
-            <BuscadorInput value={busquedaProducto} onChange={setBusquedaProducto} placeholder="Buscar producto o código" />
+            <BuscadorInput value={busquedaProducto} onChange={setBusquedaProducto} placeholder="Buscar producto o código" accion={usaApi ? <BotonEscaner onClick={() => setCamara(true)} /> : undefined} />
+            {camara && <EscanerCodigo onCerrar={() => setCamara(false)} onCodigo={codigo => { setCamara(false); void api<Producto | null>(`/productos/codigo/lectura?codigo=${encodeURIComponent(codigo)}`).then(p => { if (!p) { mostrarAviso("Código sin registrar. Crea o vincula el producto en Precios o Inventario inicial", "info"); return; } if (p.precioPendiente || p.stock <= 0) { mostrarAviso(p.precioPendiente ? "Este producto aún no tiene precio configurado" : "Este producto no tiene unidades disponibles", "info"); return; } setBusquedaProducto(p.nombre); setCategoria("Todas"); cambiarCantidad(p.id, 1, p); }).catch(e => mostrarAviso(e instanceof Error ? e.message : "No se pudo consultar el producto", "info")); }} />}
             <SegmentoControl
               desborda
               valor={categoria}
