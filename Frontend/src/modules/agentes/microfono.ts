@@ -1,6 +1,6 @@
 import { api, baseApi } from "../../data/api";
 
-export async function abrirMicrofono(texto: (valor: string) => void, estado: (valor: string) => void, registrar: (detener: () => void) => void, pausado: () => boolean = () => false, vistaPrevia?: (valor: string) => void) {
+export async function abrirMicrofono(texto: (valor: string) => void, estado: (valor: string) => void, registrar: (detener: () => void) => void, pausado: () => boolean = () => false, vistaPrevia?: (valor: string) => void, nivel?: (valor: number) => void) {
   if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) throw new Error("El micrófono necesita HTTPS o localhost. Puedes usar un archivo de audio o escribir la instrucción");
   const contexto = new AudioContext();
   await contexto.resume();
@@ -8,10 +8,12 @@ export async function abrirMicrofono(texto: (valor: string) => void, estado: (va
   let conexion: WebSocket | undefined;
   let capturador: AudioWorkletNode | undefined;
   let cerrada = false;
+  let animacion = 0;
   let temporizador: ReturnType<typeof setTimeout> | undefined;
   function cerrar() {
     if (cerrada) return;
     cerrada = true;
+    cancelAnimationFrame(animacion); nivel?.(0);
     clearTimeout(temporizador);
     medios?.getTracks().forEach(pista => pista.stop());
     capturador?.disconnect(); conexion?.close();
@@ -40,7 +42,7 @@ export async function abrirMicrofono(texto: (valor: string) => void, estado: (va
           const mensaje = JSON.parse(evento.data);
           if (mensaje.tipo === "listo") terminar();
           else if (mensaje.tipo === "error") { const error = new Error(typeof mensaje.mensaje === "string" ? mensaje.mensaje : "No se pudo procesar el audio"); terminar(error); cerrar(); estado(error.message); }
-          else if (mensaje.tipo === "hablando") window.speechSynthesis?.cancel();
+          else if (mensaje.tipo === "hablando") { window.speechSynthesis?.cancel(); window.dispatchEvent(new CustomEvent("ambie:agente-hablando", { detail: false })); }
           else if (mensaje.tipo === "texto" && typeof mensaje.texto === "string" && mensaje.texto.trim() && mensaje.texto.length <= 6000) vistaPrevia?.(mensaje.texto.trim());
           else if (mensaje.tipo === "instruccion" && typeof mensaje.texto === "string" && mensaje.texto.trim() && mensaje.texto.length <= 6000) texto(mensaje.texto.trim());
         } catch { estado("Se recibió un mensaje de audio que no se pudo interpretar"); }
@@ -53,7 +55,21 @@ export async function abrirMicrofono(texto: (valor: string) => void, estado: (va
       if (socket.bufferedAmount > 128000) { cerrar(); estado("La conexión está lenta. Puedes volver a iniciar el micrófono"); return; }
       socket.send(pausado() ? new ArrayBuffer(evento.data.byteLength) : evento.data);
     };
-    contexto.createMediaStreamSource(medios).connect(capturador);
+    const fuente = contexto.createMediaStreamSource(medios);
+    fuente.connect(capturador);
+    if (nivel) {
+      const analizador = contexto.createAnalyser(); analizador.fftSize = 256;
+      fuente.connect(analizador);
+      const muestras = new Float32Array(analizador.fftSize);
+      const actualizar = () => {
+        if (cerrada) return;
+        analizador.getFloatTimeDomainData(muestras);
+        const energia = Math.sqrt(muestras.reduce((total, n) => total + n * n, 0) / muestras.length);
+        nivel(pausado() ? 0 : Math.min(1, energia * 8));
+        animacion = requestAnimationFrame(actualizar);
+      };
+      actualizar();
+    }
     capturador.connect(contexto.destination);
     estado("Escuchando. Puedes dictar la operación completa");
     temporizador = setTimeout(cerrar, 120000);

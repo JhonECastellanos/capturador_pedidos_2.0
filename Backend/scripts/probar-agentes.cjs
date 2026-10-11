@@ -192,10 +192,12 @@ test('Responses utiliza su ruta y llamada estructurada sin conservar conversaci�
   } finally { cuerpoProveedor = undefined; }
 });
 
-test('respaldo requiere autorización y se limita a fallos transitorios', async () => {
+test('respaldo requiere autorización y no repite la solicitud al proveedor rechazado', async () => {
   const { ErrorDominio } = require('../dist/common/errores');
-  assert.equal(permiteRespaldo(new ErrorDominio('PROVEEDOR_CREDENCIALES', 'Rechazada', 422)), false);
-  assert.equal(permiteRespaldo(new ErrorDominio('MODELO_HERRAMIENTAS', 'Inválida', 502)), false);
+  assert.equal(permiteRespaldo(new ErrorDominio('PROVEEDOR_CREDENCIALES', 'Rechazada', 422)), true);
+  assert.equal(permiteRespaldo(new ErrorDominio('MODELO_HERRAMIENTAS', 'Inválida', 502)), true);
+  assert.equal(permiteRespaldo(new ErrorDominio('MODELO_SALIDA_LIMITADA', 'Incompleta', 422)), true);
+  assert.equal(permiteRespaldo(new ErrorDominio('PROVEEDOR_PARAMETROS', 'Inválida', 422)), false);
   assert.equal(permiteRespaldo(new ErrorDominio('PROVEEDOR_LIMITE', 'Límite', 429)), true);
   const instancia = new AgentesService({});
   instancia.estado = async () => ({ habilitado: true });
@@ -214,6 +216,52 @@ test('respaldo requiere autorización y se limita a fallos transitorios', async 
     assert.equal(consultas, 3);
   } finally { codigo = 200; }
 });
+test('corrección incompleta usa el respaldo autorizado conservando borrador y sesión', async () => {
+  await listo; codigo = 200;
+  const instancia = new AgentesService({});
+  instancia.estado = async () => ({ habilitado: true });
+  instancia.leer = async () => ({ configuracion: { modo: 'hibrido', respaldoId: 'autorizado' } });
+  const visitas = [];
+  instancia.proveedor = async id => {
+    visitas.push(id ?? 'principal');
+    cuerpoProveedor = id ? undefined : { choices: [{ finish_reason: 'length', message: {} }] };
+    respuesta = { ...pedido, lineas: [...pedido.lineas, { producto: 'Limonada', cantidad: 1 }] };
+    return { nombre: id ? 'Respaldo' : 'Principal', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' };
+  };
+  instancia.revisar = async instruccion => ({ instruccion, faltantes: [] });
+  try {
+    const r = await instancia.interpretar('Agrega una limonada', pedido, usuario, 'borrador', 2, undefined, 'sesion');
+    assert.equal(r.conexion.respaldo, true);
+    assert.equal(r.instruccion.lineas.length, 4);
+    assert.equal(r.instruccion.metodo, pedido.metodo);
+    assert.match(ultimoCuerpo.messages[0].content, /Arepa de queso/);
+    assert.deepEqual(visitas, ['principal', 'autorizado']);
+  } finally { cuerpoProveedor = undefined; respuesta = { operacion: 'gasto', concepto: 'Transporte', monto: 1, metodo: 'efectivo' }; }
+});
+
+test('rechazo de acceso usa solo otro proveedor autorizado, sin volver a enviar a la clave rechazada', async () => {
+  await listo;
+  const instancia = new AgentesService({});
+  instancia.estado = async () => ({ habilitado: true });
+  let respaldoId = null;
+  instancia.leer = async () => ({ configuracion: { modo: 'hibrido', respaldoId } });
+  const visitas = [];
+  instancia.proveedor = async id => {
+    visitas.push(id ?? 'principal'); codigo = id ? 200 : 401; cuerpoProveedor = undefined;
+    respuesta = { ...pedido };
+    return { nombre: id ? 'Respaldo' : 'Principal', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' };
+  };
+  instancia.revisar = async instruccion => ({ instruccion, faltantes: [] });
+  try {
+    await assert.rejects(instancia.interpretar('Prueba', pedido, usuario), e => e.codigo === 'PROVEEDOR_CREDENCIALES');
+    assert.deepEqual(visitas, ['principal']);
+    visitas.length = 0; respaldoId = 'autorizado';
+    const r = await instancia.interpretar('Agrega un producto', pedido, usuario);
+    assert.equal(r.conexion.respaldo, true);
+    assert.deepEqual(visitas, ['principal', 'autorizado']);
+  } finally { codigo = 200; respuesta = { operacion: 'gasto', concepto: 'Transporte', monto: 1, metodo: 'efectivo' }; }
+});
+
 test('límite de salida y métricas provienen de la solicitud y respuesta reales', async () => {
   await listo; codigo = 200;
   cuerpoProveedor = { choices: [{ message: { tool_calls: [{ function: { name: 'preparar_operacion', arguments: JSON.stringify({ operacion: 'gasto', concepto: 'Prueba', monto: 1 }) } }] } }], usage: { prompt_tokens: 40, completion_tokens: 12, total_tokens: 52 } };
@@ -276,7 +324,7 @@ test('micrófono muestra texto parcial sin interpretar y envía silencio durante
   const fuente = fs.readFileSync('Frontend/src/modules/agentes/microfono.ts', 'utf8').replaceAll('import.meta.url', '"https://pruebas.invalid/captura.js"');
   const codigo = ts.transpileModule(fuente, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   let socket, capturador, pausado = false, paradas = 0, cierres = 0, interrupciones = 0;
-  const parciales = [], finales = [], enviados = [];
+  const parciales = [], finales = [], enviados = [], niveles = [];
   class Conexion {
     static OPEN = 1;
     constructor() { socket = this; this.readyState = 1; this.bufferedAmount = 0; queueMicrotask(() => this.onmessage({ data: JSON.stringify({ tipo: 'listo' }) })); }
@@ -287,11 +335,13 @@ test('micrófono muestra texto parcial sin interpretar y envía silencio durante
     constructor() { this.audioWorklet = { addModule: async () => {} }; }
     async resume() {} async close() { cierres++; }
     createMediaStreamSource() { return { connect() {} }; }
+    createAnalyser() { return { fftSize: 256, getFloatTimeDomainData: datos => datos.fill(.05) }; }
   }
   class Capturador { constructor() { capturador = this; this.port = {}; } connect() {} disconnect() {} }
   const modulo = { exports: {} };
-  vm.runInNewContext(codigo, { module: modulo, exports: modulo.exports, require: () => ({ api: async () => ({ ticket: 'ticket-ficticio' }), baseApi: '/api/v1' }), window: { isSecureContext: true, location: { href: 'https://pruebas.invalid/' }, speechSynthesis: { speaking: true, cancel: () => { interrupciones++; } } }, navigator: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [{ stop: () => { paradas++; } }] }) } }, AudioContext: Contexto, AudioWorkletNode: Capturador, WebSocket: Conexion, URL, setTimeout, clearTimeout, ArrayBuffer });
-  const detener = await modulo.exports.abrirMicrofono(v => finales.push(v), () => {}, () => {}, () => pausado, v => parciales.push(v));
+  vm.runInNewContext(codigo, { module: modulo, exports: modulo.exports, require: () => ({ api: async () => ({ ticket: 'ticket-ficticio' }), baseApi: '/api/v1' }), CustomEvent: class { constructor(tipo, opciones) { this.type = tipo; this.detail = opciones.detail; } }, requestAnimationFrame: () => 1, cancelAnimationFrame: () => {}, window: { dispatchEvent: () => {}, isSecureContext: true, location: { href: 'https://pruebas.invalid/' }, speechSynthesis: { speaking: true, cancel: () => { interrupciones++; } } }, navigator: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [{ stop: () => { paradas++; } }] }) } }, AudioContext: Contexto, AudioWorkletNode: Capturador, WebSocket: Conexion, URL, setTimeout, clearTimeout, ArrayBuffer });
+  const detener = await modulo.exports.abrirMicrofono(v => finales.push(v), () => {}, () => {}, () => pausado, v => parciales.push(v), v => niveles.push(v));
+  assert.ok(niveles[0] > 0 && niveles[0] <= 1);
   try {
     socket.onmessage({ data: JSON.stringify({ tipo: 'texto', texto: 'Dos arepas con queso' }) });
     assert.deepEqual(parciales, ['Dos arepas con queso']); assert.equal(finales.length, 0);
@@ -302,7 +352,7 @@ test('micrófono muestra texto parcial sin interpretar y envía silencio durante
     pausado = true; capturador.port.onmessage({ data: pcm.buffer }); assert.deepEqual([...enviados.at(-1)], [0, 0]);
     pausado = false; capturador.port.onmessage({ data: pcm.buffer }); assert.deepEqual([...enviados.at(-1)], [25, -40]);
   } finally { detener(); }
-  detener(); assert.equal(paradas, 1); assert.equal(cierres, 1);
+  detener(); assert.equal(niveles.at(-1), 0); assert.equal(paradas, 1); assert.equal(cierres, 1);
   socket.onmessage({ data: JSON.stringify({ tipo: 'instruccion', texto: 'No debe enviarse' }) }); assert.equal(finales.length, 1);
 });
 

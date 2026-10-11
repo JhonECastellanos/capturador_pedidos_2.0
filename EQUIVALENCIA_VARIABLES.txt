@@ -842,3 +842,5 @@ Whisper.Settings.hotwords <- VOCABULARIO_AUDIO compartido para archivos y WebSoc
 Audio híbrido: VADParams.stop_secs=2.0 y SpeechTimeoutUserTurnStopStrategy.user_speech_timeout=0.6 agrupan pausas breves antes de enviar tipo=instruccion. tipo=texto muestra la transcripción sin ejecutar la interpretación.
 
 conversacionId (frontend en memoria) -> POST /agentes/interpretar -> x-opencode-session (proveedor): UUID de conversación, distinto del ID del borrador; no se persiste. Audio tipo=hablando -> speechSynthesis.cancel(): permite interrumpir la respuesta sin interpretar el evento como texto.
+
+RobotAsistente.estado <- escuchando/ocupado/ambie:agente-hablando (frontend); abrirMicrofono.nivel <- RMS AudioContext -> CSS --nivel, sin persistencia ni envío adicional. SpeechSynthesisUtterance.onstart/onend/onerror -> ambie:agente-hablando. RobotAsistente.posicion vive en memoria y no cambia datos del negocio.

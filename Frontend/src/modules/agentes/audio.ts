@@ -10,8 +10,12 @@ export async function transcribirArchivo(archivo: Blob, audio: ConfiguracionAgen
 export function hablar(texto: string, audio: ConfiguracionAgente["audio"]) {
   if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
+  window.dispatchEvent(new CustomEvent("ambie:agente-hablando", { detail: false }));
   const mensaje = new SpeechSynthesisUtterance(texto);
   mensaje.lang = audio.idioma; mensaje.rate = audio.velocidad; mensaje.volume = audio.volumen;
   const voz = window.speechSynthesis.getVoices().find(v => v.voiceURI === audio.voz); if (voz) mensaje.voice = voz;
+  mensaje.onstart = () => window.dispatchEvent(new CustomEvent("ambie:agente-hablando", { detail: true }));
+  const terminar = () => window.dispatchEvent(new CustomEvent("ambie:agente-hablando", { detail: false }));
+  mensaje.onend = terminar; mensaje.onerror = terminar;
   window.speechSynthesis.speak(mensaje);
 }
