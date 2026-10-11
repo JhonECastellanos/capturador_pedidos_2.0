@@ -9,6 +9,8 @@ import { InventarioService } from "../inventario/inventario.service";
 
 export const NuevoProductoSchema = NuevoProductoEsquema;
 
+const nombrePrincipal = (p: { nombre: string; extension: string }) => p.extension && p.nombre.endsWith(` · ${p.extension}`) ? p.nombre.slice(0, -(p.extension.length + 3)) : p.nombre;
+
 const COLORES = ["#e88f2a", "#3c6b3a", "#7d5a38", "#d97b96", "#304d25", "#b5442e"];
 
 @Injectable()
@@ -102,8 +104,8 @@ export class ProductosService {
       const base = datos.productoBaseId ? await tx.producto.findUnique({ where: { id: datos.productoBaseId } }) : null;
       const extension = datos.extension?.trim().replace(/\s+/g, " ") ?? "";
       if (datos.productoBaseId && (!base || base.productoBaseId || !base.activo || !extension)) throw new ErrorDominio("PRESENTACION_INVALIDA", "Elige un producto principal activo y escribe su presentación", 409);
-      if (!base && extension) throw new ErrorDominio("PRESENTACION_INVALIDA", "Elige el producto principal para esta presentación");
-      const nombre = base ? `${base.nombre} · ${extension}` : datos.nombre.trim().replace(/\s+/g, " ");
+      const principal = base ? nombrePrincipal(base) : datos.nombre.trim().replace(/\s+/g, " ");
+      const nombre = extension ? `${principal} · ${extension}` : principal;
       const categoria = datos.categoria ? await tx.categoria.upsert({ where: { nombre: datos.categoria }, update: {}, create: { codigo: `CAT-${datos.categoria.slice(0,8).toUpperCase()}`, nombre: datos.categoria } }) : null;
       const total = await tx.producto.count();
       const iguales = await tx.$queryRaw<Array<{id:string}>>`SELECT id FROM productos WHERE lower(regexp_replace(btrim(nombre), '\\s+', ' ', 'g')) = lower(${nombre})`;
@@ -113,7 +115,7 @@ export class ProductosService {
         data: {
           codigoInterno,
           nombre, productoBaseId: base?.id, extension,
-          categoriaId: categoria?.id ?? null,
+          categoriaId: categoria?.id ?? base?.categoriaId ?? null,
           unidad: datos.unidad?.trim() || "unidad",
           precioVenta: datos.precioVenta,
           precioPendiente,
@@ -182,14 +184,15 @@ export class ProductosService {
       if (!producto) throw new ErrorDominio("NO_ENCONTRADO", "Producto no encontrado", 404);
       const base = producto.productoBaseId ? await tx.producto.findUniqueOrThrow({ where: { id: producto.productoBaseId } }) : null;
       const extension = parametros?.extension?.trim().replace(/\s+/g, " ") ?? producto.extension;
-      if ((!base && extension) || (base && !extension)) throw new ErrorDominio("PRESENTACION_INVALIDA", "La presentación necesita un producto principal y un nombre");
-      const nombre = base ? `${base.nombre} · ${extension}` : (parametros?.nombre ?? producto.nombre).trim().replace(/\s+/g, " ");
+      if (base && !extension) throw new ErrorDominio("PRESENTACION_INVALIDA", "La presentación necesita un producto principal y un nombre");
+      const principal = base ? nombrePrincipal(base) : (parametros?.nombre ?? nombrePrincipal(producto)).trim().replace(/\s+/g, " ");
+      const nombre = extension ? `${principal} · ${extension}` : principal;
       if (base && parametros?.nombre && parametros.nombre.trim() !== producto.nombre && parametros.nombre.trim() !== nombre) throw new ErrorDominio("NOMBRE_PRESENTACION", "Cambia el nombre desde el producto principal; aquí puedes editar la presentación");
       const repetido = await tx.producto.findFirst({ where: { id: { not: productoId }, nombre: { equals: nombre, mode: "insensitive" } } });
       if (repetido) throw new ErrorDominio("PRODUCTO_EXISTENTE", "Ya existe este producto o presentación", 409);
       const hijos = !base && nombre !== producto.nombre ? await tx.producto.findMany({ where: { productoBaseId: producto.id } }) : [];
       for (const hijo of hijos) {
-        const nuevoNombre = `${nombre} · ${hijo.extension}`;
+        const nuevoNombre = `${principal} · ${hijo.extension}`;
         if (await tx.producto.findFirst({ where: { id: { not: hijo.id }, nombre: { equals: nuevoNombre, mode: "insensitive" } } })) throw new ErrorDominio("PRODUCTO_EXISTENTE", "El cambio coincide con otro producto; revisa sus presentaciones", 409);
         await tx.producto.update({ where: { id: hijo.id }, data: { nombre: nuevoNombre, version: { increment: 1 } } });
       }
@@ -275,7 +278,7 @@ export class ProductosService {
   }) {
     return {
       id: p.id,
-      productoBaseId: p.productoBaseId, extension: p.extension, rowid: p.productoBaseId ?? p.id, rowid_ext: p.id,
+      productoBaseId: p.productoBaseId, extension: p.extension, nombreBase: nombrePrincipal(p), rowid: p.productoBaseId ?? p.id, rowid_ext: p.id,
       codigoInterno: p.codigoInterno,
       nombre: p.nombre,
       categoria: p.categoria?.nombre ?? "",

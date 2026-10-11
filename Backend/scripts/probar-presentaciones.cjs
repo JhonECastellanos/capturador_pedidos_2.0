@@ -9,9 +9,10 @@ const db=new PrismaClient({datasourceUrl:url.href});const origen='http://127.0.0
  async function api(ruta,method='GET',data,status=method==='POST'?201:200){const r=await ctx.request.fetch(origen+'/api/v1'+ruta,{method,data,headers:method==='GET'?{}:{'Idempotency-Key':randomUUID()}});const j=await r.json();assert.equal(r.status(),status,`${method} ${ruta}: ${j.message||''}`);return j.data;}
  try{
  await api('/auth/login','POST',{identifier:'system',password:process.env.SYSTEM_PASSWORD||process.env.BOOTSTRAP_PASSWORD},200);
- const base=await api('/productos','POST',{nombre:marca+' Jugo',precioVenta:2000,costoActual:700,stock:10,codigosLectura:[marca+'-viejo']});
+ const base=await api('/productos','POST',{nombre:marca+' Jugo',categoria:'Bebidas',precioVenta:2000,costoActual:700,stock:10,codigosLectura:[marca+'-viejo']});
  const a=await api('/productos','POST',{nombre:base.nombre,productoBaseId:base.id,extension:'250 ml',unidad:'botella',precioVenta:2500,costoActual:800,stock:5,codigosLectura:[marca+'-250']});
  const b=await api('/productos','POST',{nombre:base.nombre,productoBaseId:base.id,extension:'1 litro',unidad:'botella',precioVenta:7000,costoActual:2000,stock:4});
+ assert.equal(a.categoria,base.categoria);assert.equal(b.categoria,base.categoria);
  assert.equal(a.rowid,base.id);assert.equal(b.rowid,base.id);assert.equal(a.rowid_ext,a.id);assert.notEqual(a.id,b.id);
  assert.deepEqual((await db.$queryRaw`SELECT rowid,rowid_ext FROM "identidadesProducto" WHERE rowid_ext=${a.id}`)[0],{rowid:base.id,rowid_ext:a.id});
  await api('/productos','POST',{nombre:base.nombre,productoBaseId:base.id,extension:'250 ML',precioVenta:4},409);
@@ -32,8 +33,18 @@ const db=new PrismaClient({datasourceUrl:url.href});const origen='http://127.0.0
  await api('/productos/'+a.id+'/precio','POST',{nuevoPrecio:2500,extension:'300 ml'});assert.equal((await api('/productos/'+a.id)).nombre,nuevo+' · 300 ml');
  await api('/productos/'+a.id+'/precio','POST',{nuevoPrecio:2500,extension:'1 litro'},409);assert.equal((await api('/productos/'+a.id)).extension,'300 ml');
  casos.push('Edición real en Precios: renombra principal y presentaciones, conserva factura/precios históricos y stock; colisión revierte');
+ await api('/productos/'+base.id+'/precio','POST',{nuevoPrecio:2000,extension:'Individual'});
+ const principalEditado=await api('/productos/'+base.id);assert.equal(principalEditado.nombre,nuevo+' · Individual');assert.equal(principalEditado.nombreBase,nuevo);assert.equal(principalEditado.id,base.id);assert.equal((await api('/productos/'+b.id)).nombre,nuevo+' · 1 litro');
+ await api('/productos','POST',{nombre:nuevo,productoBaseId:base.id,extension:'Individual',precioVenta:1},409);
+ await api('/productos/'+base.id+'/precio','POST',{nuevoPrecio:2000,extension:'1 litro'},409);
+ const otra=await api('/productos','POST',{nombre:nuevo,productoBaseId:base.id,extension:'500 ml',precioVenta:4000});assert.equal(otra.nombre,nuevo+' · 500 ml');assert.equal(otra.rowid,base.id);
+ casos.push('El producto existente admite su primera presentación sin cambiar ID, stock o el nombre de otras variantes; combinación duplicada rechazada');
  const concurrentes=await Promise.all([1,2].map(()=>ctx.request.post(origen+'/api/v1/productos',{data:{nombre:nuevo,productoBaseId:base.id,extension:'2 litros',precioVenta:10000},headers:{'Idempotency-Key':randomUUID()}})));assert.deepEqual(concurrentes.map(r=>r.status()).sort(),[201,409]);
  casos.push('Dos creaciones simultáneas de la misma presentación: una confirmación y ningún duplicado');
+ await page.goto(origen+'/admin/precios');await page.getByPlaceholder('Buscar por nombre, código o categoría').fill(nuevo+' · Individual');await page.getByText(nuevo+' · Individual',{exact:true}).first().click();await page.getByRole('button',{name:'Crear presentación de este producto',exact:true}).click();
+ assert.equal(await page.getByLabel('Nombre del producto',{exact:true}).inputValue(),nuevo);assert.equal(await page.getByLabel('Categoría',{exact:true}).inputValue(),'Bebidas');await page.getByLabel('Presentación o extensión',{exact:true}).fill('Paquete de 6');await page.getByLabel('Costo del producto',{exact:true}).fill('6000');await page.getByLabel('Precio de venta',{exact:true}).fill('12000');
+ const creada=page.waitForResponse(r=>r.url().endsWith('/productos')&&r.request().method()==='POST');await page.getByRole('button',{name:'Crear producto',exact:true}).click();const respuesta=await creada;assert.equal(respuesta.status(),201);const nueva=(await respuesta.json()).data;assert.equal(nueva.productoBaseId,base.id);assert.equal(nueva.nombre,nuevo+' · Paquete de 6');assert.equal(nueva.categoria,'Bebidas');assert.equal(nueva.stockFisico,0);
+ casos.push('Formulario crea una variante desde el producto ya presentado, muestra nombre principal y conserva categoría, costo y precio');
  for(const tamaño of [{width:390,height:844},{width:768,height:1024},{width:1440,height:900}]){await page.setViewportSize(tamaño);for(const ruta of ['pedidos','creditos','inventario','compras','precios','caja','cierre','usuarios','auditoria','configuracion']){
   await page.goto(origen+'/admin/'+ruta,{waitUntil:'networkidle'});if(ruta==='inventario')await page.getByText('Stock general',{exact:true}).first().click();const listas=await page.locator('.lista-datos,.lista-productos').evaluateAll(es=>es.map(e=>({desbordado:e.scrollHeight>e.clientHeight+1,overflow:getComputedStyle(e).overflowY})));assert.ok(listas.every(l=>!['auto','scroll'].includes(l.overflow)),ruta+' '+tamaño.width);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  }}casos.push('Listas paginadas sin scroll interno en diez módulos y tres tamaños');assert.deepEqual(errores,[]);

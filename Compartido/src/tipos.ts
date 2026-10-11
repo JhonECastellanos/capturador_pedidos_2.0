@@ -152,6 +152,7 @@ export interface CodigoProductoDTO {
 }
 
 export interface ProductoDTO {
+  nombreBase?: string;
   productoBaseId?: string | null;
   extension?: string;
   rowid?: string;

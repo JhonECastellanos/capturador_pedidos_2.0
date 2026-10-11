@@ -45,7 +45,7 @@ React 19, TypeScript, Vite, Tailwind 4 y React Router 7. `main.tsx` contiene ra�
 
 Preservar pantalla → contexto/fachada (`OperacionesContext.tsx`) → dominio (`dominio/servicios.ts`) → repositorios/API. `OperacionesApiContext.tsx` implementa fachada remota. Reutilizar `modules/ventas/screens/RutasVentas.tsx` entre roles.
 
-Reutilizar BuscadorInput, SegmentoControl, ListaVacia, TarjetaClicable, SelectorOpciones, TarjetaAccion, MetricaFiltro, PantallaCompletaAdmin y utilidades `utils/fechas.ts`, `utils/estados.ts`. Conservar tokens de `index.css`, interfaz mobile-first, áreas táctiles, pies fijos y scroll interno. Login debe desplazarse con poca altura: conservar overflow-y-auto, contenido sin encogimiento y márgenes automáticos; evitar centrado que recorte formularios.
+Reutilizar BuscadorInput, SegmentoControl, ListaVacia, TarjetaClicable, SelectorOpciones, TarjetaAccion, MetricaFiltro, PantallaCompletaAdmin y utilidades `utils/fechas.ts`, `utils/estados.ts`. Conservar tokens de `index.css`, interfaz mobile-first, áreas táctiles y desplazamiento de formularios. Las listas paginadas no tienen scroll interno: se desplazan con la pantalla; mantener sus cinco registros en móvil y la continuación debajo de productos. Login debe desplazarse con poca altura: conservar overflow-y-auto, contenido sin encogimiento y márgenes automáticos; evitar centrado que recorte formularios.
 
 Hooks separados de proveedores para Fast Refresh, utilidades fuera de módulos de componentes. Nombres intermedios con guion (`auth-context.ts`), porque Windows no distingue mayúsculas. Revisar composición/HMR ante errores de hooks fuera de Provider.
 

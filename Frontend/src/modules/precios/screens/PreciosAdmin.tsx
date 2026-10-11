@@ -97,8 +97,8 @@ export function PreciosAdmin() {
     const nuevo = Number(precio) || 0;
     const margenAntes = calcularMargen(producto.precioVenta, producto.costoActual);
     const margenDespues = calcularMargen(nuevo, costo === null ? producto.costoActual : Number(costo));
-    const cambia = nuevo !== producto.precioVenta || !!producto.precioPendiente || (costo !== null && Number(costo) !== producto.costoActual) || (minimo !== null && Number(minimo) !== producto.stockMinimo) || (nombre !== null && nombre !== producto.nombre) || (extension !== null && extension !== producto.extension);
-    const validos = (nombre === null || nombre.trim().length >= 2) && (extension === null || extension.trim().length > 0) && precio.trim() !== "" && Number.isFinite(nuevo) && nuevo >= 0 && (costo === null || (costo.trim() !== "" && Number.isFinite(Number(costo)) && Number(costo) >= 0)) && (minimo === null || (minimo.trim() !== "" && Number.isSafeInteger(Number(minimo)) && Number(minimo) >= 0));
+    const cambia = nuevo !== producto.precioVenta || !!producto.precioPendiente || (costo !== null && Number(costo) !== producto.costoActual) || (minimo !== null && Number(minimo) !== producto.stockMinimo) || (nombre !== null && nombre !== (producto.nombreBase ?? producto.nombre)) || (extension !== null && extension !== producto.extension);
+    const validos = (nombre === null || nombre.trim().length >= 2) && (extension === null || !producto.productoBaseId || extension.trim().length > 0) && precio.trim() !== "" && Number.isFinite(nuevo) && nuevo >= 0 && (costo === null || (costo.trim() !== "" && Number.isFinite(Number(costo)) && Number(costo) >= 0)) && (minimo === null || (minimo.trim() !== "" && Number.isSafeInteger(Number(minimo)) && Number(minimo) >= 0));
     const historial = usaApi ? historialRemoto.data ?? [] : cambiosPrecio.filter((c) => c.productoId === producto.id).slice(0, 3);
 
     return (
@@ -119,8 +119,9 @@ export function PreciosAdmin() {
                   <p className="mt-0.5 truncate font-display text-[16px] font-semibold text-ink">{producto.nombre}</p>
                   <p className="text-[11.5px] text-ink-soft">{producto.codigoInterno} · {producto.categoria}</p>
 
-                  <label className="mt-3 block text-xs">Nombre del producto<input aria-label="Nombre del producto" value={nombre ?? producto.nombre} disabled={!!producto.productoBaseId} maxLength={200} onChange={e => setNombre(e.target.value)} className="mt-1 w-full rounded-lg border border-line bg-paper p-2" /></label>
-                  {producto.productoBaseId ? <label className="mt-2 block text-xs">Presentación o extensión<input aria-label="Presentación o extensión" value={extension ?? producto.extension ?? ""} maxLength={80} onChange={e => setExtension(e.target.value)} className="mt-1 w-full rounded-lg border border-line bg-paper p-2" /></label> : <button type="button" className="mt-2 min-h-10 text-xs text-teal underline" onClick={() => { setBasePresentacion(producto); setCrear(""); }}>Crear presentación de este producto</button>}
+                  <label className="mt-3 block text-xs">Nombre del producto<input aria-label="Nombre del producto" value={nombre ?? producto.nombreBase ?? producto.nombre} disabled={!!producto.productoBaseId} maxLength={200} onChange={e => setNombre(e.target.value)} className="mt-1 w-full rounded-lg border border-line bg-paper p-2" /></label>
+                  {<label className="mt-2 block text-xs">Presentación o extensión<input aria-label="Presentación o extensión" value={extension ?? producto.extension ?? ""} maxLength={80} onChange={e => setExtension(e.target.value)} className="mt-1 w-full rounded-lg border border-line bg-paper p-2" /></label>}
+                  {!producto.productoBaseId && <button type="button" className="mt-2 min-h-10 text-xs text-teal underline" onClick={() => { setBasePresentacion(producto); setCrear(""); }}>Crear presentación de este producto</button>}
                   <p className="mt-2 break-all text-[10px] text-ink-soft">Producto: {producto.rowid ?? producto.id} · Presentación: {producto.rowid_ext ?? producto.id}</p>
                   <div className="ticket-edge -mx-4 my-3.5" />
 
@@ -188,7 +189,7 @@ export function PreciosAdmin() {
                   <p className="text-[10.5px] font-semibold uppercase tracking-wide text-ink-faint">Resumen del cambio</p>
                   <p className="mt-0.5 truncate font-display text-[15.5px] font-semibold text-ink">{producto.nombre}</p>
 
-                  {(nombre !== null || extension !== null) && <p className="mt-2 text-sm text-teal">Nuevo nombre: {producto.productoBaseId && extension !== null ? `${producto.nombre.slice(0, -(producto.extension?.length ?? 0) - 3)} · ${extension}` : nombre ?? producto.nombre}</p>}
+                  {(nombre !== null || extension !== null) && <p className="mt-2 text-sm text-teal">Nuevo nombre: {(extension ?? producto.extension) ? `${nombre ?? producto.nombreBase ?? producto.nombre} · ${extension ?? producto.extension}` : nombre ?? producto.nombreBase ?? producto.nombre}</p>}
                   <div className="mt-3 space-y-2">
                     <div className="flex items-center justify-between rounded-xl bg-paper px-3.5 py-2.5">
                       <span className="text-[12.5px] text-ink-soft">Antes</span>

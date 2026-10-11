@@ -102,6 +102,7 @@ export function inicialesDe(nombre: string): string {
 // ─── Productos ────────────────────────────────────────────────────
 
 export interface Producto {
+  nombreBase?: string;
   productoBaseId?: string | null;
   extension?: string;
   rowid?: string;

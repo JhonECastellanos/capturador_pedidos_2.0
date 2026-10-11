@@ -878,3 +878,5 @@ COMPOSE_PROJECT_NAME -> identifica los volúmenes del negocio; las instalaciones
 PWA manifest display=standalone; sw.js solo ofrece retorno seguro ante desconexión, sin CacheStorage privado ni guardados diferidos.
 
 Ajustes V8P4: Producto.productoBaseId → productos.productoBaseId (FK al principal); extension → productos.extension; API/vista SQL rowid = COALESCE(productoBaseId,id), rowid_ext = id; precio admite nombre/extension para edición transaccional. VOICE_MODELS_VOLUME/VOICE_MODELS_EXTERNAL permiten reutilizar un volumen existente de reconocimiento sin descargar modelos.
+
+Presentación principal V8P4: extension es opcional también en el producto principal; nombreBase se deriva del nombre sin el sufijo. El índice único cubre COALESCE(productoBaseId,id) + extension normalizada. No se cambia el ID al editar su presentación; categorías se conservan/heredan.
