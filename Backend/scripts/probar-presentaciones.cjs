@@ -38,6 +38,7 @@ const db=new PrismaClient({datasourceUrl:url.href});const origen='http://127.0.0
  await api('/productos','POST',{nombre:nuevo,productoBaseId:base.id,extension:'Individual',precioVenta:1},409);
  await api('/productos/'+base.id+'/precio','POST',{nuevoPrecio:2000,extension:'1 litro'},409);
  const otra=await api('/productos','POST',{nombre:nuevo,productoBaseId:base.id,extension:'500 ml',precioVenta:4000});assert.equal(otra.nombre,nuevo+' · 500 ml');assert.equal(otra.rowid,base.id);
+ await api('/productos/importar','POST',{prepararInicial:false,productos:[{codigoInterno:base.codigoInterno,nombre:principalEditado.nombre,precioVenta:2000,costoActual:700}]});assert.equal((await api('/productos/'+base.id)).nombre,principalEditado.nombre);assert.equal((await api('/productos/'+base.id)).stockFisico,10);
  casos.push('El producto existente admite su primera presentación sin cambiar ID, stock o el nombre de otras variantes; combinación duplicada rechazada');
  const concurrentes=await Promise.all([1,2].map(()=>ctx.request.post(origen+'/api/v1/productos',{data:{nombre:nuevo,productoBaseId:base.id,extension:'2 litros',precioVenta:10000},headers:{'Idempotency-Key':randomUUID()}})));assert.deepEqual(concurrentes.map(r=>r.status()).sort(),[201,409]);
  casos.push('Dos creaciones simultáneas de la misma presentación: una confirmación y ningún duplicado');

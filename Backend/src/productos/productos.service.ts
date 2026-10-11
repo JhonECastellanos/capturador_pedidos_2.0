@@ -39,9 +39,9 @@ export class ProductosService {
         if (existente) {
           const homonimos = await tx.$queryRaw<Array<{id:string}>>`SELECT id FROM productos WHERE id <> ${existente.id} AND lower(regexp_replace(btrim(nombre), '\\s+', ' ', 'g')) = lower(${nombre})`;
           if (nombre !== existente.nombre && homonimos.length) throw new ErrorDominio("PRODUCTO_REPETIDO", `Fila ${indice + 2}: el nombre ${nombre} pertenece a otro producto`);
-          await this.actualizarPrecio(existente.id, fila.precioVenta, usuarioId, { nombre });
+          const parametrizado = await this.actualizarPrecio(existente.id, fila.precioVenta, usuarioId, { nombre });
           const categoriaId = fila.categoria ? (await tx.categoria.upsert({ where: { nombre: fila.categoria }, update: {}, create: { codigo: `CAT-${fila.categoria.slice(0,8).toUpperCase()}`, nombre: fila.categoria } })).id : undefined;
-          await tx.producto.update({ where: { id: existente.id }, data: { nombre, categoriaId, unidad: fila.unidad || undefined, costoActual: fila.costoActual, stockMinimo: fila.stockMinimo, version: { increment: 1 } } });
+          await tx.producto.update({ where: { id: existente.id }, data: { nombre: parametrizado.nombre, categoriaId, unidad: fila.unidad || undefined, costoActual: fila.costoActual, stockMinimo: fila.stockMinimo, version: { increment: 1 } } });
           id = existente.id; actualizados++;
         } else {
           const producto = await this.crear(NuevoProductoSchema.parse({ ...fila, nombre }));
@@ -185,7 +185,7 @@ export class ProductosService {
       const base = producto.productoBaseId ? await tx.producto.findUniqueOrThrow({ where: { id: producto.productoBaseId } }) : null;
       const extension = parametros?.extension?.trim().replace(/\s+/g, " ") ?? producto.extension;
       if (base && !extension) throw new ErrorDominio("PRESENTACION_INVALIDA", "La presentación necesita un producto principal y un nombre");
-      const principal = base ? nombrePrincipal(base) : (parametros?.nombre ?? nombrePrincipal(producto)).trim().replace(/\s+/g, " ");
+      const principal = base ? nombrePrincipal(base) : nombrePrincipal({ nombre: (parametros?.nombre ?? producto.nombre).trim().replace(/\s+/g, " "), extension: producto.extension });
       const nombre = extension ? `${principal} · ${extension}` : principal;
       if (base && parametros?.nombre && parametros.nombre.trim() !== producto.nombre && parametros.nombre.trim() !== nombre) throw new ErrorDominio("NOMBRE_PRESENTACION", "Cambia el nombre desde el producto principal; aquí puedes editar la presentación");
       const repetido = await tx.producto.findFirst({ where: { id: { not: productoId }, nombre: { equals: nombre, mode: "insensitive" } } });
