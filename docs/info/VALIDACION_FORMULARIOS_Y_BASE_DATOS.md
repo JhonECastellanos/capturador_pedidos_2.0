@@ -23,6 +23,8 @@ Pruebas de esta revisión: `node Backend/scripts/probar-escaner-ui.cjs` aprobó 
 
 Regresión del negocio: dieciocho casos de integración aprobados, más el recorrido de paneles en Chrome QA: etiquetas táctiles, cinco productos/continuación, roles, cliente y venta persistidos, factura con precios históricos y totales conciliados contra PostgreSQL. Todas las escrituras de ejercicios permanecen en QA aislada; no se inició el servidor de desarrollo.
 
+Publicación comprobada el 11/10/2026: producción local y el enlace HTTPS vigente sirven V8P4, con el asistente habilitado. Se conservaron los IDs de los 20 pedidos, 35 productos, 8 clientes, 15 pagos, 6 conteos y 2 usuarios previos; conciliación de stock, reservas y totales: cero diferencias. El respaldo previo se leyó completo sin restaurarlo. Revisión visual de producción a 393 px: margen de 8 px, cinco productos, sin desbordamiento horizontal y lista sin scroll interno; formulario con cámara/nombre/presentación y diálogo de salida del inventario inicial existente comprobados sin guardar ni cancelar operaciones. QA se retira sin borrar volúmenes. La prueba física de cámara/micrófono del celular sigue correspondiendo al usuario.
+
 Para comparar salida y cancelación, consulta antes y después el mismo ID. Salir mantiene `en-curso` y las líneas contadas; solo la asignación propia debe desaparecer. Cancelar definitivamente mantiene las líneas contadas, deja `cancelado` y cero asignaciones. Ninguna acción crea un movimiento de stock:
 
 ```sql
