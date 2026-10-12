@@ -33,7 +33,7 @@ async function main() {
       }
       await page.screenshot({ path: carpeta + '/pedidos-' + ancho + '.png' });
       casos.push('Pedidos ' + ancho + ': forma, mayúscula inicial, filtros reales y scroll horizontal contenido');
-      for (const modulo of ['creditos', 'inventario', 'compras', 'precios', 'caja', 'cierre', 'usuarios', 'auditoria', 'configuracion']) {
+      for (const modulo of ['', 'creditos', 'inventario', 'compras', 'precios', 'caja', 'cierre', 'usuarios', 'auditoria', 'configuracion']) {
         await page.goto(base + '/admin/' + modulo);
         const ayuda = page.getByRole('button', { name: /^Ayuda de/ }).first(); await ayuda.waitFor();
         assert.ok(await page.locator('.titulo-modulo').evaluateAll(es => es.every(e => e.getBoundingClientRect().width <= 1)), modulo + ': título solo accesible');
@@ -66,7 +66,7 @@ async function main() {
           await page.getByLabel('Nombre del producto', { exact: true }).waitFor();
         }
       }
-      casos.push('Nueve módulos ' + ancho + ': ayuda, título sin redundancia, navegación y total de crédito conservados');
+      casos.push('Diez módulos ' + ancho + ': ayuda, título sin redundancia, navegación y total de crédito conservados');
       await contexto.request.post(base + '/api/v1/auth/logout', { data: {} }); await contexto.close();
     }
     assert.deepEqual(errores, []);
