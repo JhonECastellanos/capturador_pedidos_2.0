@@ -130,7 +130,6 @@ export function ConteosCompartidos({ inicialId }: { inicialId?: string | null })
     {administrador && !seleccion && <div className="flex flex-wrap gap-2">
       <Boton ancho="auto" disabled={ocupado || !!asignacion} onClick={() => void iniciar("general")}>Inventario general</Boton>
       <Boton ancho="auto" disabled={ocupado || !!asignacion} onClick={() => void iniciar("aleatorio")}>Conteo diario · 5 productos</Boton>
-      <Boton ancho="auto" variante="fantasma" disabled={ocupado || !!asignacion} onClick={() => void iniciar("inicial")}>Inventario inicial</Boton>
     </div>}
     {usuario?.rol === "vendedor" && !seleccion && <Boton ancho="auto" disabled={ocupado} onClick={() => void iniciar("aleatorio")}>Abrir conteo de hoy · 5 productos</Boton>}
     <p className="text-xs text-ink-soft">{administrador ? "Crea usuarios con rol Inventario y comparte este conteo. Solo tú puedes cerrarlo y aplicar las cantidades." : usuario?.rol === "vendedor" ? "Cuenta los cinco productos del día. Las cantidades se comparten con el administrador." : "Abre un inventario inicial o general iniciado por el administrador y toma un producto disponible."} El conteo diario rota los productos hasta cubrir el catálogo; si hay menos de cinco, incluye todos.</p>
