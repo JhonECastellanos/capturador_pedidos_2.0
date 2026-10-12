@@ -29,7 +29,7 @@ Un enum nuevo/modificado va primero en `Backend/prisma/schema.prisma` y luego en
 
 Un módulo por área con controlador, servicio y módulo. Lógica de negocio en servicios; controladores validan con Zod y devuelven `{ data }` o envelope paginado con `meta`. Usar `ErrorDominio` y `FiltroErrores`. Agregaciones con SQL parametrizado/`Prisma.sql`, sin traer todo el historial a JavaScript.
 
-`AuthGuard` exige cookie `ambie_access` o Bearer salvo `@Public()`. Verifica firma y consulta sesión/usuario para aplicar revocaciones, actividad y rol actual. Operaciones administrativas llevan `@Roles(RolUsuario.ADMINISTRADOR)`: usuarios, cierres, egresos, ajustes, precios, compras y gastos. Ocultar controles no sustituye autorización. Auditoría guarda metadatos, nunca cuerpos, contraseñas ni tokens.
+`AuthGuard` exige cookie `ambie_access` o Bearer salvo `@Public()`. Verifica firma y consulta sesión/usuario para aplicar revocaciones, actividad y rol actual. Operaciones administrativas llevan `@Roles(RolUsuario.ADMINISTRADOR)`: usuarios, cierres, egresos, ajustes, valores de venta, compras y gastos. Ocultar controles no sustituye autorización. Auditoría guarda metadatos, nunca cuerpos, contraseñas ni tokens.
 
 ### Cuenta system
 
@@ -52,6 +52,8 @@ Hooks separados de proveedores para Fast Refresh, utilidades fuera de módulos d
 Esperar confirmación de escritura antes de cerrar formularios. Si falla la lectura posterior, indicar que ya se guardó, para evitar duplicados. Conservar borradores y filtros al recibir actualizaciones remotas.
 
 ## Persistencia e invariantes
+
+Alta de productos únicamente desde Productos o Compras > Nueva recepción, con la ficha compartida de códigos. Inventario administra cantidades y conteos; no ofrece alta ni un endpoint especial para crear productos del inicial. Stock general abre la corrección al tocar el nombre y permite ir a la edición existente en Productos. Usar stockFisico para la corrección, sin confundirlo con disponible tras reservas. Descuadres reúne ajustes manuales aplicados y conteos confirmados, excluye el inicial y no duplica un conteo al aplicarlo.
 
 PostgreSQL es la fuente de verdad en API. Imágenes/comprobantes en MinIO privado, con autenticación y validación de formato/tamaño. Semilla crea accesos y catálogos, sin datos comerciales demo.
 
@@ -117,7 +119,7 @@ No ejecutar docker:limpiar, down -v, podas de volúmenes ni restauraciones sobre
 
 ## Activos
 
-La factura usa todas las líneas persistidas y sus precios históricos; PedidoCompletado puede consultar el documento individual.
+La factura usa todas las líneas persistidas y sus valores de venta históricos; PedidoCompletado puede consultar el documento individual.
 
 - [Imágenes de productos](Frontend/public/assets/productos/README.md)
 - [Comprobantes](Frontend/public/assets/comprobantes/README.md)

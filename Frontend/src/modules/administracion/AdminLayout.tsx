@@ -30,7 +30,7 @@ const navegacionPrincipal: ItemNavegacion[] = [
   { to: "/admin/creditos", etiqueta: "Créditos", icono: IconChartBar },
   { to: "/admin/inventario", etiqueta: "Inventario", icono: IconPackage },
   { to: "/admin/compras", etiqueta: "Compras", icono: IconTruck },
-  { to: "/admin/precios", etiqueta: "Precios", icono: IconTag },
+  { to: "/admin/productos", etiqueta: "Productos", icono: IconTag },
   { to: "/admin/caja", etiqueta: "Caja", icono: IconCash },
   { to: "/admin/cierre", etiqueta: "Cierre", icono: IconLock },
   { to: "/admin/usuarios", etiqueta: "Usuarios", icono: IconUser },

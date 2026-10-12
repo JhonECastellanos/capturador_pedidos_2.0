@@ -336,7 +336,7 @@ Claves e índices declarados: `@@index([clienteId])`; `@@index([fechaOperacion])
 
 ## pedidoLineas (PedidoLinea)
 
-Productos vendidos con cantidades y precios/costos históricos. Cambiar el catálogo no modifica estas líneas.
+Productos vendidos con cantidades y valores de venta/costos históricos. Cambiar el catálogo no modifica estas líneas.
 
 | Columna | Tipo Prisma / almacenamiento especial | Nulo | Generación y restricciones | Significado |
 |---|---|---|---|---|
@@ -554,7 +554,7 @@ Una línea por producto del conteo. Los valores nulos distinguen lo todavía no 
 | `productoId` | String  | No | Sin default; lo proporciona el servicio | Producto relacionado. |
 | `cicloDiario` | Int / integer | Sí | Debe ser positivo cuando existe; índice con productoId | Ciclo de cobertura al que pertenece esta línea diaria. |
 | `contadoPorId` | String / text | Sí | FK usuarios(id), ON DELETE SET NULL | Usuario autenticado que guardó la última cantidad; no se recibe del formulario. |
-| `costoUnitarioConteo` | Decimal / numeric(18,2) | Sí | CHECK >= 0; sin default | Costo del catálogo guardado al digitar la cantidad. No cambia al editar precios o costos después. NULL identifica registros anteriores sin valoración conocida. |
+| `costoUnitarioConteo` | Decimal / numeric(18,2) | Sí | CHECK >= 0; sin default | Costo del catálogo guardado al digitar la cantidad. No cambia al editar valores de venta o costos después. NULL identifica registros anteriores sin valoración conocida. |
 | `stockTeorico` | Int  | No | Sin default; lo proporciona el servicio | Físico que se tomó como referencia al abrir el conteo o ajuste. |
 | `stockFisico` | Int  | Sí | Sin default; lo proporciona el servicio | Existencias físicas. En conteos es la cantidad digitada, nula mientras no se cuenta. |
 | `diferencia` | Int  | Sí | Sin default; lo proporciona el servicio | Físico menos teórico; en cierre contado menos esperado. |

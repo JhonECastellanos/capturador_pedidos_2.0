@@ -4,7 +4,7 @@ Contenido trasladado del README el 10/10/2026. Se conserva íntegro como referen
 
 # Synchronic.JO
 
-Aplicación para llevar el día a día de un negocio de ventas: clientes, productos, pedidos, cobros, inventario, compras, precios y caja.
+Aplicación para llevar el día a día de un negocio de ventas: clientes, productos, pedidos, cobros, inventario, compras, valores de venta y caja.
 
 La interfaz está pensada como una app móvil dentro del navegador: pasos claros, botones grandes, scroll interno y acciones siempre accesibles.
 
@@ -173,7 +173,7 @@ El acceso usa dos tokens:
 
 La firma del JWT se verifica localmente; además, cada solicitud consulta sesión y usuario para aplicar revocaciones, actividad y rol actual. El token de refresco es opaco, se almacena hasheado y se rota en cada uso.
 
-Las rutas de administración exigen rol de administrador: usuarios, cierre del día, egresos, ajustes de inventario, cambio de precios, compras y gastos.
+Las rutas de administración exigen rol de administrador: usuarios, cierre del día, egresos, ajustes de inventario, cambio de valores de venta, compras y gastos.
 
 ## Probar la API
 
@@ -207,7 +207,7 @@ Una instalación nueva arranca vacía, con el acceso técnico system y los catá
 - Consultar la serie diaria y los productos y clientes con más movimiento.
 - Consultar ventas, gastos, compras, compras más gastos y ticket promedio del mes calendario en Inicio. El detalle de los gráficos aparece al pasar el mouse o enfocar un punto.
 - Registrar una sola vez el inventario inicial desde Inventario, usando el conteo guiado y la confirmación existentes; comparar cantidades y costos de partida con el stock y sus movimientos.
-- Administrar pedidos, créditos, inventario, compras, precios, caja, cierre y usuarios.
+- Administrar pedidos, créditos, inventario, compras, valores de venta, caja, cierre y usuarios.
 
 El [diccionario de datos](DICCIONARIO_DATOS_V4P2.md) describe cada tabla y campo. El [flujo de guardado y conciliación](GUARDADO_Y_CONCILIACION_V4P2.md) explica los reintentos sin duplicar documentos, las transacciones y las consultas SQL para contrastar la información visible con PostgreSQL.
 
@@ -378,7 +378,7 @@ docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.prue
 
 La venta ocasional registra un pedido y una factura sin crear un cliente. Solo admite efectivo o billetera; el crédito se bloquea en la API y PostgreSQL.
 
-La pantalla final y el detalle muestran todas las líneas, cantidades, precios unitarios y subtotales guardados. No recalculan facturas históricas con precios nuevos del catálogo. Si falla la lectura posterior al guardado, se reintenta sin registrar otro pedido.
+La pantalla final y el detalle muestran todas las líneas, cantidades, valores de venta unitarios y subtotales guardados. No recalculan facturas históricas con valores de venta nuevos del catálogo. Si falla la lectura posterior al guardado, se reintenta sin registrar otro pedido.
 
 Configuración conserva su ruta administrativa y permite acceder a Usuarios y Auditoría.
 
@@ -392,7 +392,7 @@ La primera etapa utiliza Híbrido: reconocimiento local de audio y un proveedor 
 
 Configuración > Agentes IA permite agregar proveedores, conservar o retirar claves, consultar modelos, probar llamadas con herramientas, seleccionar voz del navegador, transcribir archivos y ensayar instrucciones sin crear documentos comerciales. Las claves se cifran en el servidor y no regresan al navegador. El asistente solo solicita el micrófono al pulsar Hablar; cerrar el panel o terminar la sesión detiene la captura.
 
-El texto interpretado abre el detalle de los formularios existentes. Las correcciones mantienen el borrador y la confirmación utiliza sus mismos guardados. La API vuelve a resolver productos, permisos y precios antes de confirmar. Si un precio cambia entre revisión y escritura, devuelve 409 sin registrar el pedido; debe revisarse nuevamente. Los pedidos manuales también aprovechan esta comprobación.
+El texto interpretado abre el detalle de los formularios existentes. Las correcciones mantienen el borrador y la confirmación utiliza sus mismos guardados. La API vuelve a resolver productos, permisos y valores de venta antes de confirmar. Si un precio cambia entre revisión y escritura, devuelve 409 sin registrar el pedido; debe revisarse nuevamente. Los pedidos manuales también aprovechan esta comprobación.
 
 ### Orden de validación
 
@@ -424,7 +424,7 @@ El servicio de voz QA confirmó salud HTTP 200, rechazo 401 sin autorización pr
 
 Scripts adicionales: `node Backend/scripts/probar-configuracion-agentes-db.cjs` usa exclusivamente PostgreSQL QA en 127.0.0.1:5433; `node Backend/scripts/probar-audio-agentes.cjs` usa exclusivamente audio QA en 127.0.0.1:7861 y un token privado dentro de `.local/`. No ejecutarlos contra producción ni reutilizar sus claves de pruebas para el negocio.
 
-La prueba HTTP QA confirmó que la revisión usa los identificadores y precios reales del catálogo PostgreSQL; cambiar efectivo por billetera mantuvo las líneas y el total, sin crear pedidos. La regresión de guardados realizó 23 solicitudes de QA: confirmó cuatro intenciones legítimas y un solo pedido/cobro por clave. La inicialización real de Pipecat, Silero, Smart Turn y su agregador terminó correctamente a 16 kHz; todavía no equivale a transcripción de un audio ni a conversación con un proveedor real.
+La prueba HTTP QA confirmó que la revisión usa los identificadores y valores de venta reales del catálogo PostgreSQL; cambiar efectivo por billetera mantuvo las líneas y el total, sin crear pedidos. La regresión de guardados realizó 23 solicitudes de QA: confirmó cuatro intenciones legítimas y un solo pedido/cobro por clave. La inicialización real de Pipecat, Silero, Smart Turn y su agregador terminó correctamente a 16 kHz; todavía no equivale a transcripción de un audio ni a conversación con un proveedor real.
 
 Se comprobó además el arranque del motor Ollama CPU en un contenedor temporal: respondió con una lista vacía de modelos. Se retiró el contenedor sin descargar modelos. Esto comprueba el motor preparado, no su capacidad de interpretar órdenes; esa prueba requiere instalar voluntariamente un modelo después del circuito Híbrido.
 
@@ -452,7 +452,7 @@ El frontend de trabajo conserva la dirección `http://127.0.0.1:8180/admin/confi
 
 Consulta la [tabla oficial de OpenCode Zen](https://opencode.ai/docs/zen/#endpoints) para elegir protocolo: los modelos que usan `/chat/completions` corresponden a Chat Completions; `/responses` a Responses; `/messages` a Anthropic y `/models/<id>` a Gemini. Las rutas especializadas como `/systemone` no tienen adaptador comercial y no deben tratarse como Chat Completions. La lista del proveedor informa existencia, pero solo una prueba de herramientas válida demuestra disponibilidad para esta operación y esta clave, en ese momento.
 
-Ejercicio inicial: elegir Zen, conservar su URL base, escoger `big-pickle` si sigue en el catálogo y utilizar Chat Completions. Guardar y probar conexión. Una marca blanca significa sin probar; verde significa que respondió con una herramienta válida; amarillo indica límite temporal y rojo una prueba fallida. El proveedor puede cambiar sus modelos, precios, permisos y cuotas. Las mediciones de tokens solo se muestran cuando el proveedor las informa; no se estiman costos ni saldo disponible.
+Ejercicio inicial: elegir Zen, conservar su URL base, escoger `big-pickle` si sigue en el catálogo y utilizar Chat Completions. Guardar y probar conexión. Una marca blanca significa sin probar; verde significa que respondió con una herramienta válida; amarillo indica límite temporal y rojo una prueba fallida. El proveedor puede cambiar sus modelos, valores de venta, permisos y cuotas. Las mediciones de tokens solo se muestran cuando el proveedor las informa; no se estiman costos ni saldo disponible.
 
 Para una URL incorrecta, la pantalla muestra el campo que debe corregirse antes del PUT. La API también valida formato y combinación conocida de protocolo/host. Si otro administrador guardó cambios, «Recargar ajustes guardados» recupera la versión actual y descarta las ediciones no guardadas. Durante un guardado o prueba se bloquean los controles para evitar sobrescribir ediciones hechas a mitad de la solicitud.
 
@@ -468,8 +468,8 @@ La pantalla utiliza un único selector de proveedor, clave y catálogo buscable.
 - Gemini: se corrigió la declaración de herramientas para enviar `parametersJsonSchema`. El campo anterior `parameters` rechazaba `additionalProperties` con HTTP 400. El catálogo híbrido excluye modelos que únicamente admiten audio Live.
 - OpenCode Go: es distinto de Zen; base `https://opencode.ai/zen/go/v1`. Envía identificación real `AMBIE/1.0` y `x-opencode-session`, estable al corregir el mismo borrador. La conexión QA conserva su clave cifrada y utiliza `mimo-v2.6-pro`, que completó un gasto ficticio y corrigió su pago. `glm-5.3-flash` respondió al transporte, pero omitió datos del ejercicio completo; no se considera validado para ese ejercicio.
 - Zen: base `https://opencode.ai/zen/v1`. La clave probada corresponde a Go y Zen rechazó su acceso; el catálogo público no demuestra autorización. No se cambian claves entre servicios automáticamente.
-- OpenRouter: el filtro inicial muestra modelos gratuitos según precios publicados de entrada, salida y solicitud; la búsqueda permite encontrar los demás. Se consultaron 458 modelos, 19 gratuitos en ese momento. Los que declaran no admitir herramientas quedan deshabilitados. La prueba real aprobó `apodex/apodex-1.1-mini:free`.
-- OpenCode complementa el catálogo con metadatos públicos de Models.dev, sin enviar claves ni datos comerciales. Caché de cinco minutos, límite de ocho MB y diez segundos; si falla, el catálogo principal sigue disponible y los ajustes avanzados permiten revisar el protocolo. Solo se marca incluido en Go si figura en sus metadatos. Las cuotas, modelos y precios pueden cambiar.
+- OpenRouter: el filtro inicial muestra modelos gratuitos según valores de venta publicados de entrada, salida y solicitud; la búsqueda permite encontrar los demás. Se consultaron 458 modelos, 19 gratuitos en ese momento. Los que declaran no admitir herramientas quedan deshabilitados. La prueba real aprobó `apodex/apodex-1.1-mini:free`.
+- OpenCode complementa el catálogo con metadatos públicos de Models.dev, sin enviar claves ni datos comerciales. Caché de cinco minutos, límite de ocho MB y diez segundos; si falla, el catálogo principal sigue disponible y los ajustes avanzados permiten revisar el protocolo. Solo se marca incluido en Go si figura en sus metadatos. Las cuotas, modelos y valores de venta pueden cambiar.
 
 La lista muestra hasta 30 coincidencias; busca por nombre o identificador. Blanco significa sin probar, verde significa ejercicio estructurado completo, amarillo significa límite de uso y rojo significa prueba fallida. Rojo no afirma una falla permanente; amarillo no afirma que la cuota diaria se agotó. La prueba exige concepto, importe y forma de pago del ejercicio, no solo una respuesta HTTP exitosa.
 
@@ -478,7 +478,7 @@ Ejercicio rápido en `http://127.0.0.1:8180/admin/configuracion`: seleccionar pr
 Evidencia actual: Gemini, OpenRouter y Go completaron un borrador ficticio y la corrección del pago mediante la API real. Una repetición de Gemini recibió HTTP 503 temporal del proveedor; una respuesta previa exitosa no garantiza disponibilidad continua. Las pruebas no enviaron productos ni datos del negocio a servicios externos y no llamaron rutas de guardado comercial. Producción permanece sin cambios y Ollama sin modelos descargados. Las pruebas de audio real y API Live continúan pendientes de sus etapas.
 
 
-Comprobación posterior en navegador: OpenRouter completó el ejercicio mediante Guardar y probar conversación. Go con `mimo-v2.6-pro` aprobó un borrador y una corrección por API, pero algunas repeticiones desde la pantalla no devolvieron herramienta; no se afirma estabilidad de ese modelo. La alternativa `mimo-v2.6-flash` sí completó el ejercicio desde el frontend y queda como selección inicial para una conexión Go nueva. El límite configurado de Go en QA se amplió a 8192; es un máximo por respuesta, no una garantía de disponibilidad. Si el proveedor indica `finish_reason=length`, ahora se muestra el límite de salida en lugar de atribuirlo a una clave inválida. Las 23 regresiones actuales aprobaron, incluyendo precios gratuitos explícitos, conservación de campos y respuestas truncadas. Interfaz comprobada a 390×844 y 1440×900, sin desbordamiento horizontal y con ajustes avanzados plegados.
+Comprobación posterior en navegador: OpenRouter completó el ejercicio mediante Guardar y probar conversación. Go con `mimo-v2.6-pro` aprobó un borrador y una corrección por API, pero algunas repeticiones desde la pantalla no devolvieron herramienta; no se afirma estabilidad de ese modelo. La alternativa `mimo-v2.6-flash` sí completó el ejercicio desde el frontend y queda como selección inicial para una conexión Go nueva. El límite configurado de Go en QA se amplió a 8192; es un máximo por respuesta, no una garantía de disponibilidad. Si el proveedor indica `finish_reason=length`, ahora se muestra el límite de salida en lugar de atribuirlo a una clave inválida. Las 23 regresiones actuales aprobaron, incluyendo valores de venta gratuitos explícitos, conservación de campos y respuestas truncadas. Interfaz comprobada a 390×844 y 1440×900, sin desbordamiento horizontal y con ajustes avanzados plegados.
 
 
 Límite observado: una repetición posterior de Go Flash por API tampoco devolvió herramienta. Su prueba visible aprobada no garantiza todas las instrucciones ni correcciones; Go sigue sujeto a esa irregularidad y no se presenta como integración estable. Gemini también repitió HTTP 503 del proveedor después de una prueba aprobada. OpenRouter queda como conexión principal de QA para continuar la validación; no se autoriza un respaldo automático ni se alteran datos comerciales. Conviene comprobar cada modelo con el ejercicio antes de usarlo y confirmar siempre el detalle.
@@ -534,7 +534,7 @@ Ejercicios con el proveedor real y catálogo QA, sin confirmar ventas:
 
 | Instrucción | Resultado esperado y comprobado |
 | --- | --- |
-| Dos jugos naturales de mango y tres maníes salados de 50 g, efectivo, para preparar | $18.600; cantidades, precios y método correctos. |
+| Dos jugos naturales de mango y tres maníes salados de 50 g, efectivo, para preparar | $18.600; cantidades, valores de venta y método correctos. |
 | Un sándwich de jamón y queso, dos Pepsi de 400 ml y cuatro Cheetos de 75 g, billetera, entregado | Detectó que solo había una Pepsi. Corregir a una conservó el resto: $27.700. |
 | Un yogur de fresa de 200 ml, dos de durazno de 200 ml, tres empanadas de carne y una limonada natural, efectivo | $24.100; cuatro productos y sus cantidades correctos. |
 | Cliente ocasional, dos sándwiches de pollo, crédito, para preparar | Solicitó cliente registrado para crédito. Corregir solamente a billetera dejó $23.000 y ningún dato faltante. |
@@ -567,7 +567,7 @@ Validación actual: 32 pruebas del asistente aprobadas, incluida la combinación
 
 Esta revisión reemplaza los botones Hablar/Detener de la burbuja: tocar el robot controla el audio y tocar fuera solo oculta el texto. El ancho se personaliza, la transcripción ocupa dos líneas y el robot sigue siendo movible. Las instrucciones completas, correcciones y confirmaciones conservan los formularios existentes.
 
-El lector de QR/barras se integra al buscador de ventas y conteos, con bip y liberación de la cámara al volver. General/diario alternan cámara y cantidad al confirmar; inicial permite registrar productos y varias etiquetas del mismo producto. Precios incluye creación y parametrización sin cantidades, gestión de etiquetas y CSV compatible con códigos opcionales. Historial administrativo usa listas, paginación responsive y detalle separado. Consultar [modelo de datos](modelo-datos.md) y [ejercicios y SQL](VALIDACION_FORMULARIOS_Y_BASE_DATOS.md#ejercicios-v7p4--robot-y-lectura-de-códigos).
+El lector de QR/barras se integra al buscador de ventas y conteos, con bip y liberación de la cámara al volver. General/diario alternan cámara y cantidad al confirmar; inicial permite registrar productos y varias etiquetas del mismo producto. Productos incluye creación y parametrización sin cantidades, gestión de etiquetas y CSV compatible con códigos opcionales. Historial administrativo usa listas, paginación responsive y detalle separado. Consultar [modelo de datos](modelo-datos.md) y [ejercicios y SQL](VALIDACION_FORMULARIOS_Y_BASE_DATOS.md#ejercicios-v7p4--robot-y-lectura-de-códigos).
 
 No incluye VibeVoice, descargas de modelos locales ni cambio de la rama principal o despliegue del negocio. Antes de publicar en producción: respaldo, migración no destructiva, compilación, salud de servicios y prueba HTTPS en un teléfono físico. Las pruebas de cámara sintética y transporte simulado se distinguen de esa prueba.
 

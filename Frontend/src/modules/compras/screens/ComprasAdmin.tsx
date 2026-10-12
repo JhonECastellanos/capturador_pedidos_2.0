@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { BarraInferior } from "../../../components/BarraInferior";
 import { BarraSuperior } from "../../../components/BarraSuperior";
+import { FichaProductoCodigo } from "../../../components/FichaProductoCodigo";
 import { Boton } from "../../../components/Boton";
 import { BuscadorInput } from "../../../components/BuscadorInput";
 import { ConfirmarAccion } from "../../../components/ConfirmarAccion";
@@ -606,7 +607,7 @@ export function ComprasAdmin() {
               </button>
             </div>
 
-            {mostrarCrearProd && (
+            {mostrarCrearProd && (usaApi ? <FichaProductoCodigo categoriaInicial="Abarrotes" onCerrar={() => setMostrarCrearProd(false)} onGuardado={r => { setMostrarCrearProd(false); setBusquedaProd(r.producto.nombre); mostrarToast(r.aviso ?? `Producto ${r.producto.nombre} listo · agrega cantidad y costo`, r.aviso ? "error" : "exito"); }} /> : (
               <form onSubmit={guardarProductoInline} className="rounded-xl border border-line bg-paper-sunken p-3">
                 <div className="grid grid-cols-2 gap-2">
                   <input
@@ -635,7 +636,7 @@ export function ComprasAdmin() {
                   Crear producto (código auto)
                 </Boton>
               </form>
-            )}
+            ))}
           </div>
 
           <Paginacion pagina={paginaProducto} totalPaginas={Math.max(1,Math.ceil((usaApi ? productosRemotos.total : productosFiltrados.length)/POR_PAGINA))} total={usaApi ? productosRemotos.total : productosFiltrados.length} porPagina={POR_PAGINA} onChange={setPaginaProducto}/>

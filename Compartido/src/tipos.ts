@@ -458,6 +458,26 @@ export interface LineaAjusteDTO {
   diferencia: number;
 }
 
+/** Historial único de diferencias, sin duplicar los ajustes de un conteo. */
+export interface DescuadreInventarioDTO {
+  id: string;
+  conteoId: string | null;
+  productoId: string;
+  nombre: string;
+  stockTeorico: number;
+  stockFisico: number;
+  diferencia: number;
+  turno: string;
+  usuarioId: string;
+  usuario?: string;
+  finalizadoEn: string;
+  yaAjustado: boolean;
+  tipo: "conteo" | "manual";
+  comentario?: string | null;
+  costoUnitario?: number | null;
+  valorDiferencia?: number | null;
+}
+
 export interface AjusteInventarioDTO {
   id: string;
   /** `null` cuando el ajuste fue manual (no proviene de un conteo). */

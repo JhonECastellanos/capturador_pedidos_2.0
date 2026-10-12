@@ -774,7 +774,7 @@ V5P3 — Conteos diarios y páginas adaptadas al dispositivo
   pedido seleccionado        GET /pedidos/:id              detalle independiente de la pagina visible
   proveedor seleccionado     GET /proveedores/:id          seleccionado independiente de busqueda y pagina
   producto seleccionado      carrito en RAM                lineas conservadas al paginar; API valida precio y stock al guardar
-  precio historial           /productos/:id/precios        limite=3; solo cambios del producto elegido
+  precio historial           /productos/:id/historial        limite=3; solo cambios del producto elegido
   stockEstado=alerta/ok       /productos?stockEstado        fisico-reservado frente a minimo; filtro antes de LIMIT
   vendedorNombre             JOIN usuarios del pedido      nombre de visualizacion; no nueva columna duplicada
   historial.usuarioNombre    JOIN usuarios del historial   responsable de cambio; no descarga global de usuarios
@@ -785,7 +785,7 @@ V5P3 — Conteos diarios y páginas adaptadas al dispositivo
 
   CSV.codigoInterno          codigoInterno                productos.codigoInterno; vacío en nuevos -> siguienteCodigo(PROD)
   CSV.nombre                 nombre                       productos.nombre; coincidencia sin código ignora mayúsculas y espacios repetidos
-  CSV.precioVenta            precioVenta                  productos.precioVenta y cambiosPrecio; precios históricos de pedidoLineas intactos
+  CSV.precioVenta            precioVenta                  productos.precioVenta y cambiosPrecio; valores de venta históricos de pedidoLineas intactos
   CSV.costoActual            costoActual                  productos.costoActual; el costo inicial confirmado no se recalcula
   CSV.cantidadInicial        productos[].stock            nuevo: stockFisico + movimiento inicial; existente: conteoLineas.stockFisico antes de aplicar
   CSV.stockMinimo            stockMinimo                  productos.stockMinimo
@@ -856,11 +856,11 @@ RobotAsistente.estado <- escuchando/ocupado/synchronic:agente-hablando (frontend
 
 
 V7P4 · lectura de productos y conteos (11/10/2026)
-ProductoDTO.precioPendiente ↔ productos.precioPendiente: nuevo producto del inicial sin precio; solo Precios/CSV habilita su venta.
+ProductoDTO.precioPendiente ↔ productos.precioPendiente: legado de productos sin importe parametrizado; Productos/CSV confirma el importe. Las altas actuales requieren un importe explícito, incluso cero.
 ProductoDTO.codigosLectura[] ↔ codigosProducto.codigo WHERE retiradoEn IS NULL: alias del mismo productoId; no sustituyen codigoInterno.
 codigosProducto: id, codigo (único, texto conserva ceros), productoId (FK productos), creadoEn, retiradoEn (retiro administrativo sin borrar historia).
 GET /productos/codigo/lectura?codigo=... ↔ alias activo o codigoInterno exacto; desconocido retorna null, retirado/inactivo devuelve conflicto.
-POST /productos/inicial/:conteoId ↔ producto + alias + línea + asignación, en una transacción. No recibe precios ni costo ni cantidades; el conteo usa su PATCH actual.
+Alta de productos -> POST /productos (administrador), exclusivamente desde Compras o Productos. Inventario solo asigna y cuenta productos ya registrados.
 POST /inventario/compartidos/:conteoId/asignar {productoId?}: reserva de cinco minutos, bloqueada por conteo. Sin productoId conserva el siguiente producto habitual.
 Conteo diario: tipo aleatorio, fechaDiaria America/Bogota, cinco productos; selección rota también jornadas abiertas anteriores, conservadas en historial.
 VENDEDOR ↔ conteo diario abierto; INVENTARIO ↔ inicial/general abiertos y catálogo sin existencias/costos; ADMINISTRADOR ↔ historial, cierre, ajuste y retiro de códigos.

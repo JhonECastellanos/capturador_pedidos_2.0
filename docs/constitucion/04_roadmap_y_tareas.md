@@ -20,7 +20,7 @@ Consolidar la rama **V3** como versión estable desplegable (reglas, contrato, c
 - [x] API NestJS + Fastify + Prisma/PostgreSQL con módulos por área, `AuthGuard` global, roles, auditoría de metadatos y envelope `{data,meta}`.
 - [x] Autenticación por sesión: access 15 min, refresh opaco 7 días hasheado y rotado; revocación y rol consultados en cada solicitud.
 - [x] Cuenta **system** idempotente, con protecciones verificadas en API y PostgreSQL; creación del primer administrador desde Usuarios.
-- [x] Operación completa: pedidos en 4 pasos, reservas/consumo de stock, abonos FIFO, cobro directo, caja reversible, cierres, inventario por conteos, compras, precios, usuarios y venta ocasional (sin cliente, solo efectivo/billetera).
+- [x] Operación completa: pedidos en 4 pasos, reservas/consumo de stock, abonos FIFO, cobro directo, caja reversible, cierres, inventario por conteos, compras, valores de venta, usuarios y venta ocasional (sin cliente, solo efectivo/billetera).
 - [x] React Query en RAM (30 s / 5 min) + caché Redis versionada por revisión transaccional + sincronización cada 2 s (`synchronic:datos-actualizados`).
 - [x] Paginación remota en pantallas principales con `POR_PAGINA=30`; UI validada a 390×844 y 1440 px (y login en poca altura).
 - [x] Frontend compilado con Nginx en Docker (8080); QA aislada `ambie-integracion` (8180/3100) con los 12 paneles aprobados.

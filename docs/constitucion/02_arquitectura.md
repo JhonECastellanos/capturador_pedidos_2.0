@@ -24,7 +24,7 @@ pantalla → contexto/fachada → dominio → repositorios/API
 ```
 
 - Las **pantallas no llevan reglas de negocio**. Si una regla afecta pedidos, stock, caja o créditos, pasa por el dominio.
-- `Frontend/src/modules/<área>/screens/` — pantallas por módulo (`ventas`, `pedidos`, `inventario`, `caja`, `compras`, `precios`, `créditos`, `usuarios`, `administracion`…).
+- `Frontend/src/modules/<área>/screens/` — pantallas por módulo (`ventas`, `pedidos`, `inventario`, `caja`, `compras`, `productos`, `créditos`, `usuarios`, `administracion`…).
 - `Frontend/src/components/` — componentes reutilizables. Revisar antes de crear uno nuevo.
 - `Frontend/src/context/` — fachada de operaciones: `OperacionesContext.tsx` (modo local) y `OperacionesApiContext.tsx` (fachada remota). Los hooks y los proveedores viven en archivos separados (Fast Refresh).
 - `Frontend/src/dominio/` — reglas puras (`servicios.ts`): construir pedidos, distribuir abonos, etc.

@@ -25,7 +25,7 @@ Pruebas realizadas el 6 de octubre de 2026 sobre la instalación aislada `ambie-
 | Tarjetas del mes | Texto visible en Chrome, API y sumas SQL por fecha operativa de Bogotá | Coinciden ventas, gastos, compras y ticket promedio; compras más gastos coincide con la suma |
 | Etiquetas de gráficos | Hover, salida del mouse y foco de teclado | Visibles solo durante la interacción |
 | Recorrido de paneles | Doce módulos, tres actualizaciones por módulo, filtros, borradores y retroceso | Conserva los nodos de las pantallas y el scroll; sin errores de ejecución |
-| Factura móvil | Venta real QA de dos productos, cantidades 2/3, total $22.600; cambio posterior de precios y recarga | Conserva líneas y precios de la venta original |
+| Factura móvil | Venta real QA de dos productos, cantidades 2/3, total $22.600; cambio posterior de valores de venta y recarga | Conserva líneas y valores de venta de la venta original |
 | Diccionario del modelo | Nombres de tablas, columnas y nulabilidad del esquema comparados con PostgreSQL | 38 tablas y 335 columnas coinciden |
 
 ## Tiempo de confirmación y actualización

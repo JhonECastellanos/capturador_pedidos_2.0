@@ -303,7 +303,7 @@ test('indicador verde exige conservar el importe y el pago del ejercicio', async
   } finally { respuesta = anterior; }
 });
 
-test('gratuito requiere precios explícitos en cero, no valores ausentes o vacíos', () => {
+test('gratuito requiere valores de venta explícitos en cero, no valores ausentes o vacíos', () => {
   const { precioGratuito } = require('../dist/agentes/proveedores');
   assert.equal(precioGratuito({ prompt: '0', completion: '0' }), true);
   assert.equal(precioGratuito({ prompt: '0.000', completion: '0', request: '0' }), true);

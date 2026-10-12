@@ -4,7 +4,7 @@ import { ProductosService, NuevoProductoSchema } from "./productos.service";
 import { Roles, UsuarioActual } from "../common/guards";
 import { ErrorDominio } from "../common/errores";
 import { paginacion } from "../common/paginacion";
-import { ImportarProductosEsquema, CodigoLecturaEsquema, VincularCodigoEsquema, ProductoInicialEsquema, CambiarPrecioEsquema } from "@synchronic-jo/contrato";
+import { ImportarProductosEsquema, CodigoLecturaEsquema, VincularCodigoEsquema, CambiarPrecioEsquema } from "@synchronic-jo/contrato";
 
 @Controller("productos")
 export class ProductosController {
@@ -41,13 +41,6 @@ export class ProductosController {
     return { data: producto ? this.catalogoPermitido(producto, usuario.rol) : null };
   }
 
-  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO)
-  @Post("inicial/:conteoId")
-  async crearInicial(@Param("conteoId") conteoId: string, @Body() body: unknown, @UsuarioActual() usuario: Usuario) {
-    const resultado = await this.productos.productoInicial(conteoId, ProductoInicialEsquema.parse(body), usuario.id, usuario.rol);
-    return { data: { ...resultado, producto: this.catalogoPermitido(resultado.producto, usuario.rol) } };
-  }
-
   @Roles(RolUsuario.ADMINISTRADOR)
   @Get(":productoId/codigos")
   async codigos(@Param("productoId") id: string) { return { data: await this.productos.codigos(id) }; }
@@ -77,9 +70,10 @@ export class ProductosController {
     return { data: await this.productos.importar(datos.data, usuario.id) };
   }
 
-  @Get(":productoId/precios")
-  async historialPrecios(@Param("productoId") productoId: string, @Query("limite") limite?: string) {
-    return this.productos.historialPrecios(productoId, paginacion("1", limite ?? "50").porPagina);
+  @Roles(RolUsuario.ADMINISTRADOR)
+  @Get(":productoId/historial")
+  async historialProducto(@Param("productoId") productoId: string, @Query("limite") limite?: string) {
+    return this.productos.historialProducto(productoId, paginacion("1", limite ?? "50").porPagina);
   }
 
   @Roles(RolUsuario.ADMINISTRADOR)

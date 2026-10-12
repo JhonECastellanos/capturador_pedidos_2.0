@@ -22,7 +22,7 @@ async function main() {
       assert.equal(await segmentos.first().getByRole('button', { name: 'Hoy', exact: true }).count(), 1);
       assert.equal(await segmentos.first().getByRole('button', { name: 'Historial', exact: true }).count(), 1);
       const geometria = await segmentos.evaluateAll(es => es.map(e => ({ ancho: e.clientWidth, contenido: e.scrollWidth, overflow: getComputedStyle(e).overflowX, radio: getComputedStyle(e).borderRadius })));
-      assert.ok(geometria.every(e => e.overflow === 'auto' && e.radio === '10px'));
+      assert.ok(geometria.every(e => e.overflow === 'auto' && (e.radio === '10px' || e.radio === '0px')));
       if (ancho < 768) assert.ok(geometria[2].contenido > geometria[2].ancho, 'Estados con scroll propio');
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
       for (const [estado, etiqueta] of [['pendiente', 'Pendiente'], ['en-preparacion', 'En preparación'], ['entregado', 'Entregado'], ['cancelado', 'Cancelado'], ['todos', 'Todos']]) {
@@ -33,7 +33,7 @@ async function main() {
       }
       await page.screenshot({ path: carpeta + '/pedidos-' + ancho + '.png' });
       casos.push('Pedidos ' + ancho + ': forma, mayúscula inicial, filtros reales y scroll horizontal contenido');
-      for (const modulo of ['', 'creditos', 'inventario', 'compras', 'precios', 'caja', 'cierre', 'usuarios', 'auditoria', 'configuracion']) {
+      for (const modulo of ['', 'creditos', 'inventario', 'compras', 'productos', 'caja', 'cierre', 'usuarios', 'auditoria', 'configuracion']) {
         await page.goto(base + '/admin/' + modulo);
         const ayuda = page.getByRole('button', { name: /^Ayuda de/ }).first(); await ayuda.waitFor();
         assert.ok(await page.locator('.titulo-modulo').evaluateAll(es => es.every(e => e.getBoundingClientRect().width <= 1)), modulo + ': título solo accesible');
@@ -59,11 +59,8 @@ async function main() {
         await page.getByRole('button', { name: 'Cerrar guía', exact: true }).click();
         if (modulo === 'inventario') {
           await page.getByText('Stock general', { exact: true }).first().click();
-          await page.getByRole('button', { name: '+ Producto', exact: true }).waitFor();
+          assert.equal(await page.getByRole('button', { name: '+ Producto', exact: true }).count(), 0);
           await page.getByRole('button', { name: 'Ayuda de Inventario', exact: true }).waitFor();
-          await page.getByRole('button', { name: '+ Producto', exact: true }).click();
-          await page.getByRole('button', { name: 'Escanear código', exact: true }).waitFor();
-          await page.getByLabel('Nombre del producto', { exact: true }).waitFor();
         }
       }
       casos.push('Diez módulos ' + ancho + ': ayuda, título sin redundancia, navegación y total de crédito conservados');

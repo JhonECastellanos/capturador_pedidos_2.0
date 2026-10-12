@@ -199,7 +199,7 @@ async function main() {
     assert.equal(respuesta.status, 200); assert.equal(respuesta.headers.get("content-type"), "image/png"); assert.ok((await respuesta.arrayBuffer()).byteLength > 0);
     assert.equal((await http(`/archivos/productos/${producto.id}`, "POST", { nombre: "invalido.png", dataUrl: "data:image/png;base64,ZmFsc28=" })).status, 400);
   });
-  await caso("compras, gastos y precios se reflejan en caja e historial", async () => {
+  await caso("compras, gastos y valores de venta se reflejan en caja e historial", async () => {
     const proveedor = await pedir<{ id: string }>("/proveedores", "POST", { nombre: `${marca} proveedor` });
     await pedir("/recepciones-compra", "POST", { proveedorId: proveedor.id, lineas: [{ productoId: producto.id, cantidad: 2, costoUnitario: 45 }], descontarCaja: true });
     assert.equal((await pedir<Producto>(`/productos/${producto.id}`)).stockFisico, 8);
@@ -268,7 +268,7 @@ async function main() {
     const hoy = await todos<Pedido & { fechaOperacion: string }>(`/pedidos?desde=${dia}&hasta=${dia}`);
     assert.ok(hoy.length > 0); assert.ok(hoy.every((p) => p.fechaOperacion.slice(0, 10) === dia));
   });
-  await caso("factura conserva productos, cantidades y precios históricos", async () => {
+  await caso("factura conserva productos, cantidades y valores de venta históricos", async () => {
     const productos = await Promise.all([
       pedir<{ id: string }>("/productos", "POST", { nombre: `${marca} Coca-Cola 400 ml`, precioVenta: 3500, costoActual: 2000, stock: 10 }),
       pedir<{ id: string }>("/productos", "POST", { nombre: `${marca} Doritos queso`, precioVenta: 5200, costoActual: 3000, stock: 10 }),

@@ -43,7 +43,7 @@ export function useOperacionAgente(operacion: InstruccionAgente["operacion"], ap
           if (propia.faltantes.length) { avisoAgente(propia.resumen); return false; }
           const actual = await api<RevisionAgente>("/agentes/revisar", "POST", { instruccion: funciones.current.leer?.() ?? propia.instruccion, id: propia.id, version: propia.version + 1 });
           if (revisionAgente() !== anterior) { avisoAgente("La operación cambió mientras se validaba. Revisa el detalle actual"); return false; }
-          if (actual.faltantes.length || actual.huella !== propia.huella) { cambiarRevisionAgente(actual); avisoAgente(actual.faltantes.length ? actual.resumen : "Los datos o precios cambiaron. Revisa el detalle actualizado y vuelve a confirmar"); return false; }
+          if (actual.faltantes.length || actual.huella !== propia.huella) { cambiarRevisionAgente(actual); avisoAgente(actual.faltantes.length ? actual.resumen : "Los datos o valores de venta cambiaron. Revisa el detalle actualizado y vuelve a confirmar"); return false; }
         }
         escriturasPendientes++;
         let resultado: boolean;

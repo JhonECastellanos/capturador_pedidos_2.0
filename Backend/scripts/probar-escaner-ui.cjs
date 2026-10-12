@@ -76,13 +76,13 @@ function ean(base12) {
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
     mkdirSync('.local/pruebas-v7',{recursive:true});await page.screenshot({path:'.local/pruebas-v7/venta-escaner-390.png'});
     casos.push('QR y EAN-13 decodificados desde video: regresan a la venta, buscan el nombre y agregan una unidad; escanear otra vez suma una sola unidad; cámara liberada');
-    await page.goto(base+'/admin/precios');await page.getByPlaceholder('Buscar por nombre, código o categoría').fill(p1.nombre);
+    await page.goto(base+'/admin/productos');await page.getByPlaceholder('Buscar por nombre, código o categoría').fill(p1.nombre);
     await page.getByText(p1.nombre,{exact:true}).first().click();
     await page.getByRole('spinbutton').first().fill('2600');await page.getByLabel('Costo actual',{exact:true}).fill('1100');await page.getByLabel('Stock mínimo',{exact:true}).fill('4');
     await page.getByRole('button',{name:'Revisar y confirmar →',exact:true}).click();
     const precioGuardado=page.waitForResponse(r=>r.url().endsWith('/precio')&&r.request().method()==='POST');await page.getByRole('button',{name:'Guardar precio',exact:true}).click();assert.equal((await precioGuardado).status(),201);
     const parametrizado=await pedir(admin,`/productos/${p1.id}`);assert.equal(parametrizado.precioVenta,2600);assert.equal(parametrizado.costoActual,1100);assert.equal(parametrizado.stockMinimo,4);assert.equal(parametrizado.stockFisico,20);
-    casos.push('Formulario de Precios: confirma precio, costo y mínimo con los mismos campos persistidos; conserva las veinte unidades');
+    casos.push('Formulario de Productos: confirma precio, costo y mínimo con los mismos campos persistidos; conserva las veinte unidades');
     await page.goto(base+'/admin/inventario');await page.getByText('Stock general',{exact:true}).first().click();await page.getByRole('button',{name:'+ Producto',exact:true}).click();
     await figura(page,qr(marca+'-etiqueta-nueva'));await page.getByRole('button',{name:'Escanear código',exact:true}).click();await page.getByRole('dialog',{name:'Escanear producto'}).waitFor({state:'hidden',timeout:20000}).catch(async e=>{await page.screenshot({path:'.local/pruebas-v8/lector-fallo.png'});console.error(await page.locator('video').evaluate(v=>({ancho:v.videoWidth,alto:v.videoHeight,estado:v.readyState,pausado:v.paused})));console.error(await page.getByRole('dialog').innerText());throw e;});
     assert.equal(await page.getByLabel('Código de barras o QR',{exact:true}).inputValue(),marca+'-etiqueta-nueva');
@@ -145,12 +145,12 @@ function ean(base12) {
     await robotContext.route('**/agentes/audio/sesion',r=>r.fulfill({json:{data:{ticket:'prueba-ui'}}}));
     let socketRobot,conexionesAudio=0;
     await robotContext.routeWebSocket('**/agentes/audio/conversar?*',ws=>{socketRobot=ws;conexionesAudio++;setTimeout(()=>ws.send(JSON.stringify({tipo:'listo'})),50);ws.onMessage(()=>{});});
-    const robot=await robotContext.newPage();robot.on('pageerror',e=>errores.push(e.message));await robot.goto(base+'/admin/precios');const boton=robot.getByRole('button',{name:'Asistente',exact:true});await boton.click();
+    const robot=await robotContext.newPage();robot.on('pageerror',e=>errores.push(e.message));await robot.goto(base+'/admin/productos');const boton=robot.getByRole('button',{name:'Asistente',exact:true});await boton.click();
     await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.getAttribute('aria-pressed')==='true');
     assert.equal(await robot.getByRole('button',{name:'Hablar',exact:true}).count(),0);assert.equal(await robot.getByRole('button',{name:'Detener',exact:true}).count(),0);
     await robot.getByLabel('Ancho del texto del asistente').evaluate(e=>{const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;setter.call(e,'440');e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));});
     assert.equal(await robot.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
-    await robot.getByRole('heading',{name:'Precios y márgenes',exact:true}).click();assert.equal(await robot.getByLabel('Ancho del texto del asistente').count(),0);assert.equal(await boton.getAttribute('aria-pressed'),'true');
+    await robot.getByPlaceholder('Buscar por nombre, código o categoría').click();assert.equal(await robot.getByLabel('Ancho del texto del asistente').count(),0);assert.equal(await boton.getAttribute('aria-pressed'),'true');
     await robot.waitForTimeout(350);await boton.click();assert.equal(await boton.getAttribute('aria-pressed'),'false');
     await robot.waitForTimeout(350);await boton.click();await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.getAttribute('aria-pressed')==='true');
     await robot.waitForTimeout(350);await boton.dblclick({delay:80});assert.equal(await boton.getAttribute('aria-pressed'),'false');assert.equal(await boton.getAttribute('aria-expanded'),'false');
@@ -166,7 +166,7 @@ function ean(base12) {
     cancelaciones=await robot.evaluate(()=>window.__cancelacionesVoz);assert.ok(cancelaciones>0);assert.ok(!(await robot.locator('aside[aria-label="Asistente de operaciones"]').innerText()).includes('Hola, soy'));
     await robot.locator('body').dispatchEvent('pointerdown');assert.equal(await boton.getAttribute('aria-pressed'),'true');assert.equal(await robot.getByLabel('Ancho del texto del asistente').count(),0);await robot.waitForTimeout(350);await boton.dblclick({delay:80});
     casos.push('Reactivar micrófono interrumpe TTS y reanuda sin repetir saludo; cerrar nube no apaga la escucha');
-    await robot.goto(base+'/admin/precios');await robot.waitForTimeout(350);await boton.click();await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.getAttribute('aria-pressed')==='true');
+    await robot.goto(base+'/admin/productos');await robot.waitForTimeout(350);await boton.click();await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.getAttribute('aria-pressed')==='true');
     const correccionPendiente=await pedir(admin,'/agentes/revisar','POST',{id:revisionPendiente.id,version:2,instruccion:{operacion:'precio',producto:p1.nombre,precio:3200}});const instruccionesRecibidas=[];
     await robotContext.route('**/agentes/interpretar',async r=>{const cuerpo=r.request().postDataJSON();instruccionesRecibidas.push(cuerpo);await new Promise(resolve=>setTimeout(resolve,cuerpo.texto.includes('3200')?100:1100));await r.fulfill({json:{data:cuerpo.texto.includes('3200')?correccionPendiente:revisionPendiente}});});
     socketRobot.send(JSON.stringify({tipo:'instruccion',texto:'Pon el precio a 2800'}));await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.dataset.estado==='pensando');
@@ -174,7 +174,7 @@ function ean(base12) {
     await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.dataset.estado==='reposo'||document.querySelector('button[aria-label="Asistente"]')?.dataset.estado==='escuchando');
     assert.equal(instruccionesRecibidas.length,2);assert.equal(instruccionesRecibidas[1].anterior.precio,2800);assert.ok((await robot.locator('body').innerText()).includes('3.200'));assert.equal((await pedir(admin,`/productos/${p1.id}`)).precioVenta,2600);
     await robot.waitForTimeout(350);await boton.dblclick({delay:80});casos.push('Corrección dictada durante razonamiento se procesa después con el borrador anterior, cambia a 3200 y no guarda sin confirmar');
-    await robot.goto(base+'/admin/precios');await robot.waitForTimeout(350);await boton.click();await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.getAttribute('aria-pressed')==='true');const conexionesAntes=conexionesAudio;
+    await robot.goto(base+'/admin/productos');await robot.waitForTimeout(350);await boton.click();await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.getAttribute('aria-pressed')==='true');const conexionesAntes=conexionesAudio;
     await robot.waitForTimeout(350);await boton.click();assert.equal(await boton.getAttribute('aria-pressed'),'false');assert.ok(await robot.evaluate(()=>window.__pistasMicrofono.every(t=>!t.enabled)));
     socketRobot.send(JSON.stringify({tipo:'texto',texto:'Pon el precio a 2800'}));socketRobot.send(JSON.stringify({tipo:'instruccion',texto:'Pon el precio a 2800'}));await robot.getByText('Confirmar cambio',{exact:true}).waitFor();assert.equal(await boton.getAttribute('aria-pressed'),'false');
     await robot.waitForTimeout(350);await boton.click();assert.equal(await boton.getAttribute('aria-pressed'),'true');assert.equal(conexionesAudio,conexionesAntes);assert.ok(await robot.evaluate(()=>window.__pistasMicrofono.every(t=>t.enabled)));

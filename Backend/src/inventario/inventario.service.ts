@@ -367,12 +367,29 @@ export class InventarioService {
   }
 
   async listarDescuadres(pagina = 1, porPagina = 20, q = "") {
-    const where: Prisma.ConteoLineaWhereInput = { diferencia: { not: 0 }, stockFisico: { not: null }, conteo: { estado: EstadoConteo.CONFIRMADO }, ...(q ? { OR: [{ producto: { nombre: { contains: q, mode: "insensitive" } } }, { conteo: { turno: { contains: q, mode: "insensitive" } } }] } : {}) };
-    const total = await this.prisma.conteoLinea.count({ where });
-    const pendientes = await this.prisma.conteoLinea.count({where:{...where,conteo:{estado:EstadoConteo.CONFIRMADO,ajustes:{none:{}}}}});
-    const actual = Math.min(pagina, Math.max(1, Math.ceil(total / porPagina)));
-    const lineas = await this.prisma.conteoLinea.findMany({ where, skip: (actual - 1) * porPagina, take: porPagina, orderBy: [{ conteo: { finalizadoEn: "desc" } }, { id: "desc" }], include: { producto: true, conteo: { include: { usuario:{select:{nombre:true}}, ajustes: { select: { id: true } } } } } });
-    return { data: lineas.map(l => ({ id: l.id, conteoId: l.conteoId, productoId: l.productoId, nombre: l.producto.nombre, stockTeorico: l.stockTeorico, stockFisico: l.stockFisico, diferencia: l.diferencia, turno: l.conteo.turno, usuarioId: l.conteo.usuarioId, usuario:l.conteo.usuario.nombre, finalizadoEn: l.conteo.finalizadoEn, yaAjustado: l.conteo.ajustes.length > 0 })), meta: { total, pendientes, pagina: actual, porPagina } };
+    // Conteos confirmados y ajustes manuales comparten la misma lista; aplicar un conteo no lo duplica.
+    const base = Prisma.sql`WITH diferencias AS (
+      SELECT l.id, l."conteoId", l."productoId", p.nombre, l."stockTeorico", l."stockFisico", l.diferencia,
+        c.turno, c."usuarioId", u.nombre AS usuario, c."finalizadoEn", l."costoUnitarioConteo" AS "costoUnitario",
+        EXISTS(SELECT 1 FROM "ajustesInventario" a WHERE a."conteoId"=c.id) AS "yaAjustado",
+        'conteo'::text AS tipo, NULL::text AS comentario
+      FROM "conteoLineas" l JOIN "conteosInventario" c ON c.id=l."conteoId"
+        JOIN productos p ON p.id=l."productoId" JOIN usuarios u ON u.id=c."usuarioId"
+      WHERE c.estado='confirmado' AND c.tipo<>'inicial' AND l."stockFisico" IS NOT NULL AND l.diferencia<>0
+      UNION ALL
+      SELECT l.id, NULL::text, l."productoId", p.nombre, l."stockTeorico", l."stockFisico", l.diferencia,
+        a.motivo, a."usuarioId", u.nombre, a."creadoEn", l."costoUnitario", true, 'manual'::text, a.comentario
+      FROM "ajusteLineas" l JOIN "ajustesInventario" a ON a.id=l."ajusteInventarioId"
+        JOIN productos p ON p.id=l."productoId" JOIN usuarios u ON u.id=a."usuarioId"
+      WHERE a."conteoId" IS NULL AND a.estado='aplicado' AND l.diferencia<>0
+    ) SELECT * FROM diferencias
+      WHERE TRUE ${q ? Prisma.sql`AND (nombre ILIKE ${'%'+q+'%'} OR turno ILIKE ${'%'+q+'%'})` : Prisma.empty}`;
+    return this.prisma.$transaction(async tx => {
+      const [cuenta] = await tx.$queryRaw<Array<{total: bigint; pendientes: bigint}>>(Prisma.sql`SELECT COUNT(*) AS total, COUNT(*) FILTER(WHERE NOT "yaAjustado") AS pendientes FROM (${base}) d`);
+      const total = Number(cuenta.total), actual = Math.min(pagina, Math.max(1, Math.ceil(total / porPagina)));
+      const lineas = await tx.$queryRaw<Array<{ id: string; conteoId: string | null; productoId: string; nombre: string; stockTeorico: number; stockFisico: number; diferencia: number; turno: string; usuarioId: string; usuario: string; finalizadoEn: Date; costoUnitario: Prisma.Decimal | null; yaAjustado: boolean; tipo: string; comentario: string | null }>>(Prisma.sql`SELECT * FROM (${base}) d ORDER BY "finalizadoEn" DESC,id DESC LIMIT ${porPagina} OFFSET ${(actual-1)*porPagina}`);
+      return { data: lineas.map(l => ({ ...l, finalizadoEn: l.finalizadoEn.toISOString(), costoUnitario: l.costoUnitario === null ? null : numero(l.costoUnitario), valorDiferencia: l.costoUnitario === null ? null : numero(l.costoUnitario) * l.diferencia })), meta: {total, pendientes: Number(cuenta.pendientes), pagina: actual, porPagina} };
+    }, {isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead});
   }
 
   async obtener(conteoId: string) {

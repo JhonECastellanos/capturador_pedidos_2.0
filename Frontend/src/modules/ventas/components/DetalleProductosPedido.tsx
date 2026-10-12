@@ -1,7 +1,7 @@
 import type { LineaPedido } from "../../../types";
 import { formatoMoneda } from "../../../utils/formato";
 
-/** Siempre usa las líneas persistidas; no recalcula con precios vivos del catálogo. */
+/** Siempre usa las líneas persistidas; no recalcula con valores de venta vivos del catálogo. */
 export function DetalleProductosPedido({ lineas }: { lineas: LineaPedido[] }) {
   return <section aria-label="Detalle de productos" className="text-left">
     <h2 className="mb-2 text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Detalle de productos</h2>

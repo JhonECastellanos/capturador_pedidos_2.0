@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { BarraInferior } from "../../../components/BarraInferior";
 import { BarraSuperior } from "../../../components/BarraSuperior";
 import { Boton } from "../../../components/Boton";
@@ -26,7 +27,8 @@ import { useOperacionAgente } from "../../agentes/operacion-agente";
 /** Paso 1: nuevo precio · Paso 2: confirmar */
 type Paso = 1 | 2;
 
-export function PreciosAdmin() {
+export function ProductosAdmin() {
+  const [parametros] = useSearchParams();
   const POR_PAGINA = useTamanoPagina();
   const { inventario, cambiosPrecio, actualizarPrecioProducto, nombreUsuario } = useOperaciones();
   const [crear, setCrear] = useState<string | null>(null);
@@ -37,9 +39,9 @@ export function PreciosAdmin() {
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
   const remoto = usePaginaApi<Producto>(`/productos?page=${pagina}&pageSize=${POR_PAGINA}&orden=nombre&q=${encodeURIComponent(busqueda)}`);
-  const [productoId, setProductoId] = useState<string | null>(null);
+  const [productoId, setProductoId] = useState<string | null>(() => parametros.get("producto"));
   const [paso, setPaso] = useState<Paso>(1);
-  const [precio, setPrecio] = useState("");
+  const [precio, setPrecio] = useState<string | null>(null);
   const [costo, setCosto] = useState<string | null>(null);
   const [minimo, setMinimo] = useState<string | null>(null);
   const { aviso, mostrarAviso, cerrarAviso } = useAviso();
@@ -55,8 +57,10 @@ export function PreciosAdmin() {
   }, [busqueda, inventario, remoto.items]);
 
   const detalleRemoto=useRegistroApi<Producto>(`/productos/${productoId}`,!!productoId);
-  const historialRemoto = useRegistroApi<Array<CambioPrecio & { usuario: { nombre: string } }>>(`/productos/${productoId}/precios?limite=3`,!!productoId);
+  const historialRemoto = useRegistroApi<Array<CambioPrecio & { usuario: { nombre: string } }>>(`/productos/${productoId}/historial?limite=3`,!!productoId);
   const producto = productoId ? detalleRemoto.data ?? (usaApi ? remoto.items : inventario).find((p) => p.id === productoId) ?? null : null;
+
+  const precioEditado = precio ?? (producto ? String(producto.precioVenta) : "");
 
   function abrirProducto(id: string) {
     const p = (usaApi ? remoto.items : inventario).find((x) => x.id === id);
@@ -75,8 +79,8 @@ export function PreciosAdmin() {
 
   async function guardarPrecio() {
     if (!producto) return false;
-    if (!precio.trim() || (costo !== null && !costo.trim()) || (minimo !== null && !minimo.trim())) { mostrarAviso("Completa precio, costo y stock mínimo, incluyendo 0 cuando corresponda", "info"); return false; }
-    const nuevo = Number(precio) || 0;
+    if (!precioEditado.trim() || (costo !== null && !costo.trim()) || (minimo !== null && !minimo.trim())) { mostrarAviso("Completa precio, costo y stock mínimo, incluyendo 0 cuando corresponda", "info"); return false; }
+    const nuevo = Number(precioEditado) || 0;
     if (!Number.isFinite(nuevo) || nuevo < 0 || await actualizarPrecioProducto(producto.id, nuevo, usaApi ? { costoActual: costo === null ? undefined : Number(costo), stockMinimo: minimo === null ? undefined : Number(minimo), nombre: nombre ?? undefined, extension: extension ?? undefined } : undefined) === false) return false;
     mostrarAviso(`${producto.nombre} → ${formatoMoneda(nuevo)} guardado`, "exito");
     cerrarProceso();
@@ -88,17 +92,17 @@ export function PreciosAdmin() {
     setProductoId(typeof r.datos.productoId === "string" ? r.datos.productoId : null);
     setPrecio(r.instruccion.precio === undefined ? "" : String(r.instruccion.precio));
     setPaso(2);
-  }, guardarPrecio, () => ({ operacion: "precio", producto: producto?.nombre, ...(precio.trim() ? { precio: Number(precio) } : {}) }));
+  }, guardarPrecio, () => ({ operacion: "precio", producto: producto?.nombre, ...(precioEditado.trim() ? { precio: Number(precioEditado) } : {}) }));
 
   if (crear !== null) return <PantallaCompletaAdmin><div className="flex-1 overflow-y-auto p-3"><FichaProductoCodigo productoBase={basePresentacion ?? undefined} codigoInicial={crear} onCerrar={() => { setCrear(null); setBasePresentacion(null); }} onGuardado={r => { setCrear(null); setBasePresentacion(null); setNombre(null); setExtension(null); setProductoId(r.producto.id); setPrecio(String(r.producto.precioVenta)); setPaso(1); mostrarAviso(r.aviso ?? "Producto guardado", r.aviso ? "error" : "exito"); }} /></div></PantallaCompletaAdmin>;
 
   // ─── Proceso paso a paso: cambiar precio ───
   if (producto) {
-    const nuevo = Number(precio) || 0;
+    const nuevo = Number(precioEditado) || 0;
     const margenAntes = calcularMargen(producto.precioVenta, producto.costoActual);
     const margenDespues = calcularMargen(nuevo, costo === null ? producto.costoActual : Number(costo));
     const cambia = nuevo !== producto.precioVenta || !!producto.precioPendiente || (costo !== null && Number(costo) !== producto.costoActual) || (minimo !== null && Number(minimo) !== producto.stockMinimo) || (nombre !== null && nombre !== (producto.nombreBase ?? producto.nombre)) || (extension !== null && extension !== producto.extension);
-    const validos = (nombre === null || nombre.trim().length >= 2) && (extension === null || !producto.productoBaseId || extension.trim().length > 0) && precio.trim() !== "" && Number.isFinite(nuevo) && nuevo >= 0 && (costo === null || (costo.trim() !== "" && Number.isFinite(Number(costo)) && Number(costo) >= 0)) && (minimo === null || (minimo.trim() !== "" && Number.isSafeInteger(Number(minimo)) && Number(minimo) >= 0));
+    const validos = (nombre === null || nombre.trim().length >= 2) && (extension === null || !producto.productoBaseId || extension.trim().length > 0) && precioEditado.trim() !== "" && Number.isFinite(nuevo) && nuevo >= 0 && (costo === null || (costo.trim() !== "" && Number.isFinite(Number(costo)) && Number(costo) >= 0)) && (minimo === null || (minimo.trim() !== "" && Number.isSafeInteger(Number(minimo)) && Number(minimo) >= 0));
     const historial = usaApi ? historialRemoto.data ?? [] : cambiosPrecio.filter((c) => c.productoId === producto.id).slice(0, 3);
 
     return (
@@ -144,7 +148,7 @@ export function PreciosAdmin() {
                     min={0}
                     inputMode="numeric"
                     autoFocus
-                    value={precio}
+                    value={precioEditado}
                     onChange={(e) => setPrecio(e.target.value)}
                     placeholder="0"
                     className="mt-1.5 w-full rounded-2xl border-2 border-ink bg-paper px-4 py-3.5 text-center font-mono text-[26px] font-bold tabular-nums text-ink focus:border-accent focus:outline-none"
@@ -250,9 +254,9 @@ export function PreciosAdmin() {
     <div className="flex h-full flex-col min-h-0">
       <div className="flex-shrink-0 flex items-center justify-between gap-3 border-b border-line pb-2.5">
         <div className="cabecera-modulo flex items-center gap-2">
-          <h2 className="titulo-modulo sr-only">Precios y márgenes</h2>
+          <h2 className="titulo-modulo sr-only">Productos</h2>
           <GuiaAyuda
-            pantalla="Precios y márgenes"
+            pantalla="Productos"
             pasos={[
               { titulo: "1 · Elegir producto", texto: "Busca por nombre, código o categoría y toca el producto que quieres actualizar." },
               { titulo: "2 · Nuevo precio", texto: "Escribe el precio nuevo y mira el margen en vivo contra el último costo, antes de continuar." },
@@ -275,7 +279,7 @@ export function PreciosAdmin() {
         {filtrados.length === 0 ? (
           <ListaVacia
             titulo={busqueda ? "No se encontraron productos para esta búsqueda." : "Aún no hay productos."}
-            texto={!busqueda ? "Créalos desde Inventario para poder cambiar sus precios." : undefined}
+            texto={!busqueda ? "Créalos aquí o desde una nueva recepción en Compras." : undefined}
           />
         ) : (
           (usaApi ? filtrados : paginar(filtrados, pagina, POR_PAGINA).items).map((p) => {

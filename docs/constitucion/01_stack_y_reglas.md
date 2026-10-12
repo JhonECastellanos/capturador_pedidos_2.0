@@ -6,7 +6,7 @@
 
 ## 1. Qué es Synchronic.JO
 
-Aplicación para el día a día de un negocio de ventas: clientes, productos, pedidos, cobros, inventario, compras, precios y caja. Interfaz pensada como app móvil dentro del navegador: pasos claros, botones grandes, scroll interno y acciones siempre accesibles.
+Aplicación para el día a día de un negocio de ventas: clientes, productos, pedidos, cobros, inventario, compras, valores de venta y caja. Interfaz pensada como app móvil dentro del navegador: pasos claros, botones grandes, scroll interno y acciones siempre accesibles.
 
 **Una instalación sirve a una sola empresa.** No hay tenants ni administración multiempresa; no se deben introducir.
 
@@ -51,7 +51,7 @@ Aplicación para el día a día de un negocio de ventas: clientes, productos, pe
 
 ### 3.3 Seguridad y cuentas
 
-14. La autorización real vive en el servidor (`AuthGuard` global + `@Roles(RolUsuario.ADMINISTRADOR)`) para: usuarios, cierres, egresos, ajustes de inventario, precios, compras y gastos. Ocultar un control en la UI **no** autoriza nada.
+14. La autorización real vive en el servidor (`AuthGuard` global + `@Roles(RolUsuario.ADMINISTRADOR)`) para: usuarios, cierres, egresos, ajustes de inventario, valores de venta, compras y gastos. Ocultar un control en la UI **no** autoriza nada.
 15. Cuenta **system**: única, técnica, con autenticación normal (sin bypass). NUNCA desactivarla, degradarla, eliminarla ni convertir otra cuenta por coincidencia de correo; API y PostgreSQL lo bloquean. Desde Usuarios se crea el primer administrador del negocio.
 16. Secretos solo en `.env` (nunca versionado) y en `.env.example` como placeholders. NUNCA en Git, en el bundle ni en variables `VITE_*` (son públicas). `SYSTEM_PASSWORD` y `BOOTSTRAP_*` pertenecen a migración/semilla, jamás al frontend; editar `.env` no rota una contraseña ya guardada.
 

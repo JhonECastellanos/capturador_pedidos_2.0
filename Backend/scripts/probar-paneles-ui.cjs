@@ -123,7 +123,7 @@ async function main() {
     await page.getByRole('button', { name: 'Volver', exact: true }).click(); await reposo();
     console.log('✓ Compras: nueva recepción → historial sin guardar');
 
-    await abrir('Precios', '/admin/precios'); await estable('Precios');
+    await abrir('Productos', '/admin/productos'); await estable('Productos');
     await filtro('Buscar por nombre, código o categoría', 'Pepsi', 'Pepsi 400 ml');
     await page.getByPlaceholder('Buscar por nombre, código o categoría').fill('Pepsi 400'); await reposo();
     await page.locator('.admin-pantalla .overflow-y-auto button').filter({ hasText: 'Pepsi 400 ml' }).first().click();
@@ -132,7 +132,7 @@ async function main() {
     await page.getByRole('button', { name: 'Volver', exact: true }).click();
     assert.equal(await page.locator('input[type=number][placeholder="0"]').inputValue(), '3700');
     await page.getByRole('button', { name: 'Volver', exact: true }).click(); await reposo();
-    console.log('✓ Precios: revisión → edición conserva el precio, sin escritura');
+    console.log('✓ Productos: revisión → edición conserva el precio, sin escritura');
 
     await abrir('Caja', '/admin/caja'); await estable('Caja');
     await page.locator('.admin-pantalla button').filter({ has: page.getByText('Efectivo', { exact: true }) }).click(); await reposo();
@@ -172,13 +172,13 @@ async function main() {
     await abrir('Inicio', '/admin'); console.log('✓ Configuración general y regreso');
 
     for (const viewport of [{ width: 390, height: 844 }, { width: 390, height: 320 }, { width: 1440, height: 320 }]) {
-      await page.setViewportSize(viewport); await abrir('Precios', '/admin/precios');
+      await page.setViewportSize(viewport); await abrir('Productos', '/admin/productos');
       const tarjeta = page.locator('.admin-pantalla .overflow-y-auto button').first();
       const altura = (await tarjeta.boundingBox()).height; assert.ok(altura >= 64, 'La tarjeta no se aplasta');
       const lista = await tarjeta.evaluate(el => el.parentElement.clientHeight); assert.ok(lista >= 160, 'La lista conserva altura mínima');
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Sin desborde horizontal');
       if (viewport.height === 320) assert.ok(await page.locator('.admin-contenido').evaluate(el => el.scrollHeight > el.clientHeight), 'Ventana baja desplaza el panel');
-      await page.screenshot({ path: resolve('.local/pruebas-ui', `precios-${viewport.width}x${viewport.height}.png`) });
+      await page.screenshot({ path: resolve('.local/pruebas-ui', `valores de venta-${viewport.width}x${viewport.height}.png`) });
     }
     console.log('✓ 390×844, 390×320 y 1440×320: tarjetas ≥64 px, lista ≥160 px y scroll del panel');
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -207,7 +207,7 @@ async function main() {
       await barras.tap();
       await tactil.screenshot({ path: resolve('.local/pruebas-ui', 'grafica-toque.png') });
       console.log('✓ Gráficos: toque muestra y segundo toque oculta las etiquetas en móvil');
-      for (const ruta of ['pedidos', 'creditos', 'inventario', 'compras', 'precios', 'caja', 'cierre']) {
+      for (const ruta of ['pedidos', 'creditos', 'inventario', 'compras', 'productos', 'caja', 'cierre']) {
         await tactil.goto(base + '/admin/' + ruta);
         if (ruta === 'inventario') await tactil.getByRole('button', { name: /Stock general/ }).click();
         const lista = tactil.locator('.lista-datos').first();
@@ -327,7 +327,7 @@ async function main() {
     await page.reload(); await detalleFactura.waitFor();
     assert.ok(!(await detalleFactura.innerText()).includes('9.000'));
     await page.screenshot({ path: resolve('.local/pruebas-ui', 'factura-real-qa.png') });
-    console.log('✓ Factura móvil: venta real QA de dos productos, cantidades 2/3, persistencia y precios históricos tras cambio y recarga');
+    console.log('✓ Factura móvil: venta real QA de dos productos, cantidades 2/3, persistencia y valores de venta históricos tras cambio y recarga');
     const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
     const resumen = (await (await context.request.get(base + `/api/v1/dashboard/resumen?desde=${hoy}&hasta=${hoy}`)).json()).data;
     const totalesBd = sql(`SELECT json_build_object('ventas', COALESCE(SUM(total),0), 'pedidos', COUNT(*)) FROM pedidos WHERE "fechaOperacion"='${hoy}'::date AND estado<>'cancelado';`);

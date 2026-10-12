@@ -29,7 +29,9 @@ async function main() {
   mkdirSync('.local/pruebas-v7', { recursive: true });
   salida = openSync('.local/pruebas-v7/api-aislada.log','w');
   servidor = spawn(process.execPath, ['Backend/dist/main.js'], { env, stdio: ['ignore',salida,salida], windowsHide: true });
-  for (let i=0;i<100;i++) { try { if ((await fetch(base+'/salud')).ok) break; } catch {} await esperar(100); }
+  let saludable = false;
+  for (let i=0;i<600;i++) { try { if ((await fetch(base+'/salud', {signal:AbortSignal.timeout(1000)})).ok) { saludable = true; break; } } catch {} await esperar(100); }
+  assert.ok(saludable, 'La API aislada de QA no terminó de arrancar');
   const pedir = async (actor, ruta, metodo = 'GET', datos, esperado = metodo === 'POST' ? 201 : 200, idempotencia = randomUUID()) => {
     const r = await fetch(base+ruta, { method: metodo, headers: { ...(actor ? { Authorization: 'Bearer '+actor.token } : {}), ...(datos === undefined ? {} : { 'Content-Type':'application/json' }), ...(metodo === 'GET' ? {} : { 'Idempotency-Key': idempotencia }) }, body: datos === undefined ? undefined : JSON.stringify(datos), signal: AbortSignal.timeout(30000) });
     const json = await r.json(); assert.equal(r.status, esperado, `${metodo} ${ruta}: ${JSON.stringify(json)}`); return json.data;
@@ -40,19 +42,22 @@ async function main() {
   assert.equal((await pedir(admin,`/inventario/compartidos/${inicial.id}`)).total,0);
   const dato = { nombre:'Chocorramo de prueba',unidad:'paquete',codigo:'7701234567890' };
   const claveOperacion = randomUUID();
-  const primera = await pedir(a,`/productos/inicial/${inicial.id}`,'POST',dato,201,claveOperacion);
-  const reintento = await pedir(a,`/productos/inicial/${inicial.id}`,'POST',dato,201,claveOperacion);
-  assert.equal(primera.producto.id,reintento.producto.id); assert.equal(primera.producto.precioPendiente,true);
+  await pedir(a,'/productos','POST',{nombre:dato.nombre,precioVenta:0},403);
+  const productoAlta = {...dato,precioVenta:0,codigosLectura:[dato.codigo]};
+  const primera = {producto:await pedir(admin,'/productos','POST',productoAlta,201,claveOperacion)};
+  const reintento = {producto:await pedir(admin,'/productos','POST',productoAlta,201,claveOperacion)};
+  await pedir(a,`/inventario/compartidos/${inicial.id}/asignar`,'POST',{productoId:primera.producto.id});
+  assert.equal(primera.producto.id,reintento.producto.id); assert.equal(primera.producto.precioPendiente,false);
   assert.equal(await bd.producto.count(),1); assert.equal(await bd.conteoLinea.count(),1);
   await pedir(b,`/inventario/compartidos/${inicial.id}/asignar`,'POST',{productoId:primera.producto.id},409);
   await pedir(a,`/inventario/conteos/${inicial.id}/lineas/${primera.producto.id}?resumen=true`,'PATCH',{stockFisico:0});
   assert.equal((await bd.conteoLinea.findFirst()).stockFisico,0);
   assert.ok((await bd.conteoLinea.findFirst()).contadoEn);
-  const nuevo = await pedir(b,`/productos/inicial/${inicial.id}`,'POST',{...dato,codigo:'7701234567891',productoId:primera.producto.id});
-  assert.equal(nuevo.yaContado,true); assert.equal(nuevo.asignacion,null);
+  await pedir(admin,`/productos/${primera.producto.id}/codigos`,'POST',{codigo:'7701234567891'});
+  await pedir(b,`/inventario/compartidos/${inicial.id}/asignar`,'POST',{productoId:primera.producto.id},409);
   for (const codigo of [dato.codigo,'7701234567891']) assert.equal((await pedir(admin,'/productos/codigo/lectura?codigo='+codigo)).id,primera.producto.id);
   assert.equal(await bd.producto.count(),1); assert.equal(await bd.codigoProducto.count(),2);
-  casos.push('Instalación vacía, creación sin costo/precio, reintento único, cero persistido y dos códigos del mismo producto sin repetir el conteo');
+  casos.push('Instalación vacía, alta administrativa con precio cero explícito, reintento único, cero contado y dos códigos del mismo producto');
   // Vista real contra la API aislada: captura de un código desconocido en inicial.
   let cerrandoVista = false; const erroresPuente = [];
   const navegador = await chromium.launch({ channel: 'chrome', headless: true });
@@ -76,14 +81,13 @@ async function main() {
     await pagina.getByRole('button', { name: 'Contar con cámara', exact: true }).click();
     await pagina.getByLabel('Código manual').fill('7700000000111');
     await pagina.getByRole('button', { name: 'Usar', exact: true }).click();
-    await pagina.getByLabel('Código de barras o QR').waitFor();
-    assert.equal(await pagina.getByLabel('Código de barras o QR').inputValue(), '7700000000111');
-    assert.equal(await pagina.getByLabel('Costo del producto').count(), 0); assert.equal(await pagina.getByLabel('Precio de venta', { exact: true }).count(), 0);
-    assert.ok(await pagina.getByLabel('Nombre del producto').isVisible()); assert.ok(await pagina.getByLabel('Unidad o presentación').isVisible());
+    await pagina.getByRole('alert').filter({hasText:'Código sin registrar. Pide al administrador que lo vincule al producto en Productos.'}).waitFor();
+    assert.equal(await pagina.getByLabel('Nombre del producto').count(),0);
+    assert.equal(await pagina.getByRole('button',{name:'Crear o buscar producto',exact:true}).count(),0);
     assert.equal(await pagina.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     assert.deepEqual(erroresVista, []); assert.deepEqual(erroresPuente, []);
     await pagina.screenshot({ path: '.local/pruebas-v7/inicial-768.png' });
-    casos.push('Inicial en tablet, API real aislada: código desconocido vuelve al formulario con nombre/unidad y sin campos de costo/precio; permiso denegado tiene alternativa manual');
+    casos.push('Inicial en tablet, API real aislada: código desconocido informa que debe registrarse en Productos; sin alta dentro de inicial y con alternativa manual');
   } finally { cerrandoVista = true; await navegador.close(); }
   const revAntes = await pedir(a,'/sincronizacion/revision');
   await pedir(admin,`/productos/${primera.producto.id}/codigos`,'POST',{codigo:'7701234567892'});
@@ -95,7 +99,8 @@ async function main() {
   assert.equal(await bd.producto.count({where:{nombre:'Producto que no debe quedar'}}),0);
   casos.push('Un código no puede cambiar de producto; conflicto revierte creación y ledger; sincronización incluye los alias');
   await pedir(admin,`/inventario/compartidos/${inicial.id}/asignar`,'POST',{productoId:primera.producto.id},409);
-  const segundo = await pedir(b,`/productos/inicial/${inicial.id}`,'POST',{ nombre:otro.nombre,unidad:otro.unidad,productoId:otro.id });
+  await pedir(b,`/inventario/compartidos/${inicial.id}/asignar`,'POST',{productoId:otro.id});
+  const segundo = {producto:otro};
   await pedir(b,`/inventario/conteos/${inicial.id}/lineas/${segundo.producto.id}?resumen=true`,'PATCH',{stockFisico:7});
   const resumen = await pedir(admin,`/inventario/compartidos/${inicial.id}`);
   assert.equal(resumen.contadas,2); assert.equal(resumen.colaboradores,2); assert.equal(resumen.unidades,7);
@@ -104,10 +109,10 @@ async function main() {
   await pedir(admin,`/inventario/conteos/${inicial.id}/aplicar-ajuste`,'POST',{});
   assert.equal((await bd.producto.findUnique({where:{id:otro.id}})).stockFisico,7);
   assert.equal((await pedir(admin,'/inventario/inicial')).diferencias,0);
-  await pedir(admin,`/productos/inicial/${inicial.id}`,'POST',dato,409);
+  await pedir(admin,`/productos/inicial/${inicial.id}`,'POST',dato,404);
   await pedir(a,`/inventario/compartidos/${inicial.id}/lineas`, 'GET',undefined,403);
   casos.push('Participantes y fechas reales; historial solo administrador; aplicar inicial establece siete unidades una sola vez y concilia el ledger');
-  await pedir(admin,'/pedidos','POST',{lineas:[{productoId:primera.producto.id,cantidad:1}],metodo:'efectivo',momentoCobro:'inmediato',estadoInicial:'entregado'},409);
+  await pedir(admin,'/pedidos','POST',{lineas:[{productoId:primera.producto.id,cantidad:1}],metodo:'efectivo',momentoCobro:'inmediato',estadoInicial:'entregado'},400);
   await pedir(admin,`/productos/${primera.producto.id}/precio`,'POST',{nuevoPrecio:3000,costoActual:1700,stockMinimo:3});
   const parametrizado = await bd.producto.findUnique({where:{id:primera.producto.id}});
   assert.equal(parametrizado.precioPendiente,false); assert.equal(Number(parametrizado.costoActual),1700); assert.equal(parametrizado.stockFisico,0);
@@ -115,7 +120,7 @@ async function main() {
   assert.equal(lista[0].costoActual,0); assert.equal(lista[0].stockFisico,0);
   const lecturaCiega = await pedir(a,`/productos/${otro.id}`); assert.equal(lecturaCiega.stockFisico,0); assert.equal(lecturaCiega.costoActual,0); assert.equal(lecturaCiega.precioVenta,0);
   await pedir(a,'/pedidos','GET',undefined,403); await pedir(a,'/productos','POST',{nombre:'No permitido',precioVenta:1},403);
-  casos.push('Producto pendiente no se vende; configurar precio/costo/mínimo conserva stock; colaborador no accede a operaciones comerciales ni existencias teóricas');
+  casos.push('Producto sin stock no se vende; configurar precio/costo/mínimo conserva stock; colaborador no accede a operaciones comerciales ni existencias teóricas');
   for (let i=0;i<6;i++) await pedir(admin,'/productos','POST',{ nombre:`Bebida de prueba ${i}`,unidad:'botella',precioVenta:1800,stock:5,codigosLectura:[`990000000000${i}`] });
   const general = await pedir(admin,'/inventario/compartidos','POST',{tipo:'general',turno:'Varios celulares'});
   const solicitudes = await Promise.all([a,b].map(actor => fetch(base+`/inventario/compartidos/${general.id}/asignar`,{ method:'POST',headers:{Authorization:'Bearer '+actor.token,'Content-Type':'application/json','Idempotency-Key':randomUUID()},body:JSON.stringify({productoId:otro.id}) })));

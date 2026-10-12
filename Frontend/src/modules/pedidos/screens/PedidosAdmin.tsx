@@ -187,6 +187,7 @@ export function PedidosAdmin() {
         {segmento === "historial" && (
           <SegmentoControl
             valor={periodo}
+            desborda
             onChange={setPeriodo}
             opciones={PERIODOS.map((p) => ({ valor: p, etiqueta: ETIQUETA_PERIODO[p] }))}
           />
@@ -195,6 +196,7 @@ export function PedidosAdmin() {
         {/* Chips estado */}
         <SegmentoControl
           valor={filtroEstado}
+          desborda
           onChange={setFiltroEstado}
           opciones={[
             { valor: "todos", etiqueta: "Todos" },

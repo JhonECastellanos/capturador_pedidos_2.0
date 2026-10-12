@@ -3,7 +3,7 @@ import { z } from "zod";
 import { PrismaService } from "../common/prisma.module";
 import { ErrorDominio } from "../common/errores";
 import { siguienteCodigo, numero } from "../common/consecutivos";
-import { Prisma, RolUsuario } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { NuevoProductoEsquema, type ImportarProductosDTO, type ResultadoImportacionProductosDTO } from "@synchronic-jo/contrato";
 import { InventarioService } from "../inventario/inventario.service";
 
@@ -21,7 +21,7 @@ export class ProductosService {
     return this.prisma.enTransaccion(async tx => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('inventario:inicial'))`;
       const inicial = datos.prepararInicial ? await tx.conteoInventario.findFirst({ where: { tipo: "INICIAL", estado: { not: "CANCELADO" } } }) : null;
-      if (inicial && inicial.estado !== "EN_CURSO") throw new ErrorDominio("INVENTARIO_INICIAL_CERRADO", "El inventario inicial ya está confirmado. Desmarca Preparar inventario inicial para importar solo el catálogo y los precios", 409);
+      if (inicial && inicial.estado !== "EN_CURSO") throw new ErrorDominio("INVENTARIO_INICIAL_CERRADO", "El inventario inicial ya está confirmado. Desmarca Preparar inventario inicial para importar solo el catálogo y los valores de venta", 409);
       const usados = new Set<string>(), cantidades = new Map<string, number>();
       let creados = 0, actualizados = 0;
       for (const [indice, fila] of datos.productos.entries()) {
@@ -97,7 +97,7 @@ export class ProductosService {
     return { data: cambios.map((c) => ({ ...c, valorAnterior: numero(c.valorAnterior), valorNuevo: numero(c.valorNuevo) })), meta: { pagina, porPagina, total } };
   }
 
-  async crear(datos: z.infer<typeof NuevoProductoSchema>, precioPendiente = false) {
+  async crear(datos: z.infer<typeof NuevoProductoSchema>) {
     const producto = await this.prisma.enTransaccion(async (tx) => {
       // La creación y el punto de partida comparten el mismo candado.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('inventario:inicial'))`;
@@ -118,7 +118,7 @@ export class ProductosService {
           categoriaId: categoria?.id ?? base?.categoriaId ?? null,
           unidad: datos.unidad?.trim() || "unidad",
           precioVenta: datos.precioVenta,
-          precioPendiente,
+          precioPendiente: false,
           costoActual: datos.costoActual ?? 0,
           stockFisico: datos.stock ?? 0,
           stockMinimo: datos.stockMinimo ?? 0,
@@ -155,7 +155,7 @@ export class ProductosService {
    * Permite reconstruir a qué precio se vendió cada pedido en el pasado,
    * porque el precio actual no dice nada sobre pedidos ya cerrados.
    */
-  async historialPrecios(productoId: string, limite = 50) {
+  async historialProducto(productoId: string, limite = 50) {
     const cambios = await this.prisma.cambioPrecio.findMany({
       where: { productoId },
       orderBy: { fecha: "desc" },
@@ -236,25 +236,6 @@ export class ProductosService {
     const codigo = await this.prisma.codigoProducto.findFirst({ where: { id: codigoId, productoId } });
     if (!codigo) throw new ErrorDominio("NO_ENCONTRADO", "Código no encontrado", 404);
     return this.prisma.codigoProducto.update({ where: { id: codigoId }, data: { retiradoEn: codigo.retiradoEn ?? new Date() } });
-  }
-
-  async productoInicial(conteoId: string, datos: { nombre: string; unidad: string; codigo?: string; productoId?: string }, usuarioId: string, rol: RolUsuario) {
-    return this.prisma.enTransaccion(async tx => {
-      await this.inventario.verificarAcceso(conteoId, rol);
-      // Mismo orden de bloqueos que creación/importación y aplicación inicial.
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('inventario:inicial'))`;
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`conteo:${conteoId}`}))`;
-      const conteo = await tx.conteoInventario.findUnique({ where: { id: conteoId } });
-      if (conteo?.tipo !== "INICIAL" || conteo.estado !== "EN_CURSO") throw new ErrorDominio("CONTEO_CERRADO", "Solo puedes registrar productos en un inventario inicial abierto", 409);
-      const producto = datos.productoId ? await this.obtener(datos.productoId) : await this.crear(NuevoProductoSchema.parse({ nombre: datos.nombre, unidad: datos.unidad, precioVenta: 0 }), true);
-      if (!producto.activo) throw new ErrorDominio("PRODUCTO_INACTIVO", "El producto está inactivo", 409);
-      if (datos.codigo) await this.vincularCodigo(producto.id, datos.codigo);
-      await tx.conteoLinea.upsert({ where: { conteoId_productoId: { conteoId, productoId: producto.id } }, update: {}, create: { conteoId, productoId: producto.id, stockTeorico: producto.stockFisico } });
-      const linea = await tx.conteoLinea.findUniqueOrThrow({ where: { conteoId_productoId: { conteoId, productoId: producto.id } } });
-      const yaContado = linea.stockFisico !== null;
-      const asignacion = yaContado ? null : await this.inventario.asignar(conteoId, usuarioId, false, producto.id);
-      return { producto, asignacion, yaContado };
-    });
   }
 
   private dto(p: {

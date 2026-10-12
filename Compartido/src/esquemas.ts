@@ -116,7 +116,6 @@ export const FiltroClientesEsquema = z.object({
 // ─── Productos ────────────────────────────────────────────────────
 
 export const VincularCodigoEsquema = z.object({ codigo: CodigoLecturaEsquema, conteoId: z.string().uuid().optional() });
-export const ProductoInicialEsquema = z.object({ nombre: z.string().trim().min(2).max(200), unidad: z.string().trim().min(1).max(40), codigo: CodigoLecturaEsquema.optional(), productoId: z.string().uuid().optional() });
 
 export const NuevoProductoEsquema = z.object({
   productoBaseId: z.string().uuid().optional(),

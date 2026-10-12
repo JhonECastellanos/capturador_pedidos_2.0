@@ -8,7 +8,6 @@ import { ConfirmarAccion } from "../../../components/ConfirmarAccion";
 import { IconX } from "../../../components/Icons";
 import { BotonEscaner } from "../../../components/BotonEscaner";
 import { EscanerCodigo } from "../../../components/EscanerCodigo";
-import { FichaProductoCodigo } from "../../../components/FichaProductoCodigo";
 import { BuscadorInput } from "../../../components/BuscadorInput";
 import { Paginacion } from "../../../components/Paginacion";
 import { useTamanoPagina } from "../../../utils/paginacion";
@@ -25,7 +24,6 @@ export function ConteosCompartidos({ inicialId }: { inicialId?: string | null })
   const administrador = usuario?.rol === "administrador";
   const [camara, setCamara] = useState(false);
   const [continuo, setContinuo] = useState(false);
-  const [nuevoCodigo, setNuevoCodigo] = useState<string | null>(null);
   const [pagina, setPagina] = useState(1);
   const [paginaLineas, setPaginaLineas] = useState(1);
   const [seleccion, setSeleccion] = useState<string | null>(inicialId ?? null);
@@ -60,15 +58,9 @@ export function ConteosCompartidos({ inicialId }: { inicialId?: string | null })
     await ejecutar(async () => {
       const producto = await api<ProductoDTO | null>(`/productos/codigo/lectura?codigo=${encodeURIComponent(codigo)}`);
       if (!producto) {
-        if (conteo?.tipo === "inicial") { setNuevoCodigo(codigo); return; }
-        throw new Error("Código sin registrar. Pide al administrador que lo vincule al producto en Precios.");
+        throw new Error("Código sin registrar. Pide al administrador que lo vincule al producto en Productos.");
       }
-      let recibido: Asignacion | null;
-      if (conteo?.tipo === "inicial") {
-        const resultado = await api<{ asignacion: Asignacion | null }>(`/productos/inicial/${seleccion}`, "POST", { nombre: producto.nombre, unidad: producto.unidad, productoId: producto.id });
-        recibido = resultado.asignacion;
-        if (!recibido) setMensaje("Este producto ya fue contado. Continúa con otro; su cantidad se conserva.");
-      } else recibido = await api<Asignacion | null>(`/inventario/compartidos/${seleccion}/asignar`, "POST", { productoId: producto.id });
+      const recibido = await api<Asignacion | null>(`/inventario/compartidos/${seleccion}/asignar`, "POST", { productoId: producto.id });
       setAsignacion(recibido); setCantidad(""); setBusqueda(producto.nombre); setPaginaLineas(1);
     });
   }
@@ -105,12 +97,12 @@ export function ConteosCompartidos({ inicialId }: { inicialId?: string | null })
   });
   async function guardarConfirmacion(accion: "finalizar" | "aplicar-ajuste" | "cancelar") {
     if (!administrador || !seleccion) return false;
-    return ejecutar(async () => { await api(`/inventario/conteos/${seleccion}/${accion}`, "POST", {}); setConfirmacion(null); if (accion === "cancelar") { setAsignacion(null); setCantidad(""); setContinuo(false); setCamara(false); setNuevoCodigo(null); void detalle.refetch(); } setMensaje("Operación guardada correctamente."); });
+    return ejecutar(async () => { await api(`/inventario/conteos/${seleccion}/${accion}`, "POST", {}); setConfirmacion(null); if (accion === "cancelar") { setAsignacion(null); setCantidad(""); setContinuo(false); setCamara(false); void detalle.refetch(); } setMensaje("Operación guardada correctamente."); });
   }
   async function salirDelConteo() {
     await ejecutar(async () => {
       if (asignacion && !("contadoEnEsperado" in asignacion)) await api(`/inventario/compartidos/${seleccion}/asignar?liberar=true`, "POST", {});
-      setAsignacion(null); setCantidad(""); setContinuo(false); setCamara(false); setNuevoCodigo(null); setSeleccion(null); setConfirmacion(null);
+      setAsignacion(null); setCantidad(""); setContinuo(false); setCamara(false); setSeleccion(null); setConfirmacion(null);
       setMensaje("Puedes continuar después. Las cantidades guardadas y los demás colaboradores se conservan.");
     });
   }
@@ -120,7 +112,7 @@ export function ConteosCompartidos({ inicialId }: { inicialId?: string | null })
   const confirmarAplicacionCompartida = useOperacionAgente("aplicar-conteo", r => {
     setSeleccion(r.instruccion.conteoId ?? null); setConfirmacion("aplicar-ajuste"); setMensaje(r.resumen);
   }, () => guardarConfirmacion("aplicar-ajuste"));
-  function abrir(id: string) { setContinuo(false); setNuevoCodigo(null); setSeleccion(id); setPaginaLineas(1); setAsignacion(null); setCantidad(""); setBusqueda(""); setMensaje(""); setError(""); }
+  function abrir(id: string) { setContinuo(false); setSeleccion(id); setPaginaLineas(1); setAsignacion(null); setCantidad(""); setBusqueda(""); setMensaje(""); setError(""); }
   return <section className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pb-4" aria-label="Conteos compartidos">
     {administrador && !seleccion && <div className="flex flex-wrap gap-2">
       <Boton ancho="auto" disabled={ocupado || !!asignacion} onClick={() => void iniciar("general")}>Inventario general</Boton>
@@ -132,7 +124,7 @@ export function ConteosCompartidos({ inicialId }: { inicialId?: string | null })
     {(error || historial.error || lineas.error || detalle.error?.message) && <p role="alert" className="text-sm text-danger">{error || historial.error || lineas.error || detalle.error?.message} <button type="button" onClick={() => { historial.actualizar(); lineas.actualizar(); }}>Reintentar lectura</button></p>}
     {mensaje && <p role="status" className="text-sm text-success">{mensaje}</p>}
     {seleccion && <div className="space-y-3 rounded-xl border border-line bg-paper-raised p-3">
-      <div className="flex items-center justify-between gap-2"><h3 className="min-w-0 font-semibold">{conteo ? nombreTipo(conteo.tipo) : "Detalle del conteo"}</h3><div className="flex shrink-0 items-center gap-1"><button type="button" disabled={ocupado} onClick={() => { if (asignacion || nuevoCodigo !== null) setConfirmacion("salir"); else { setSeleccion(null); setContinuo(false); } }} className="text-sm text-teal">{administrador ? "← Historial" : "← Conteos"}</button>{conteo?.estado === "en-curso" && <button type="button" aria-label="Salir del conteo y continuar después" title="Salir y continuar después" disabled={ocupado} onClick={() => setConfirmacion("salir")} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-soft hover:bg-paper-sunken"><IconX width={18} height={18} /></button>}</div></div>
+      <div className="flex items-center justify-between gap-2"><h3 className="min-w-0 font-semibold">{conteo ? nombreTipo(conteo.tipo) : "Detalle del conteo"}</h3><div className="flex shrink-0 items-center gap-1"><button type="button" disabled={ocupado} onClick={() => { if (asignacion) setConfirmacion("salir"); else { setSeleccion(null); setContinuo(false); } }} className="text-sm text-teal">{administrador ? "← Historial" : "← Conteos"}</button>{conteo?.estado === "en-curso" && <button type="button" aria-label="Salir del conteo y continuar después" title="Salir y continuar después" disabled={ocupado} onClick={() => setConfirmacion("salir")} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-soft hover:bg-paper-sunken"><IconX width={18} height={18} /></button>}</div></div>
       {conteo && <>
         <p role="status" className="text-sm font-semibold">{conteo.contadas}/{conteo.total} productos contados · {conteo.ocupadas} en conteo · {conteo.colaboradores} colaboradores</p>
         <progress aria-label="Progreso del conteo" value={conteo.contadas} max={Math.max(1, conteo.total)} className="w-full accent-teal" />
@@ -143,16 +135,15 @@ export function ConteosCompartidos({ inicialId }: { inicialId?: string | null })
           {conteo.sinCosto > 0 && <p className="col-span-2 text-ink-soft">{conteo.sinCosto} registros históricos sin costo guardado; su valoración no se estima.</p>}
         </div>}
       </>}
-      {nuevoCodigo !== null && conteo?.tipo === "inicial" && <FichaProductoCodigo codigoInicial={nuevoCodigo} conteoId={seleccion} onCerrar={() => setNuevoCodigo(null)} onGuardado={r => { setNuevoCodigo(null); setAsignacion(r.asignacion ?? null); setCantidad(""); setMensaje(r.yaContado ? "Código vinculado. Este producto ya fue contado; su cantidad se conserva." : "Producto listo. Ingresa las unidades contadas."); refrescar(); }} />}
-      {conteo?.estado === "en-curso" && nuevoCodigo === null && <>
+      {conteo?.estado === "en-curso" && <>
         {asignacion ? <form onSubmit={e => { e.preventDefault(); void confirmarCantidadCompartida(); }} className="space-y-2 rounded-lg bg-teal-soft p-3">
           <p className="font-semibold">{asignacion.nombre}</p><p className="text-xs">{asignacion.codigo} · {asignacion.unidad} · {asignacion.asignadoHasta ? `asignado hasta ${new Date(asignacion.asignadoHasta).toLocaleTimeString("es-CO")}` : "Corrección administrativa"}</p>
           <label className="block text-sm">Cantidad contada<input autoFocus aria-label="Cantidad contada" type="number" inputMode="numeric" min="0" step="1" value={cantidad} onChange={e => setCantidad(e.target.value)} className="mt-1 w-full rounded-lg border border-line bg-paper p-3" /></label>
           <div className="flex flex-wrap gap-2"><Boton type="submit" ancho="auto" disabled={ocupado}>Guardar cantidad</Boton><Boton ancho="auto" variante="fantasma" disabled={ocupado} onClick={() => { if ("contadoEnEsperado" in asignacion) { setAsignacion(null); setCantidad(""); } else void solicitar(true); }}>{"contadoEnEsperado" in asignacion ? "Cancelar corrección" : "Liberar producto"}</Boton>{!("contadoEnEsperado" in asignacion) && <button type="button" disabled={ocupado} onClick={() => void ejecutar(async () => { const renovada = await api<Asignacion | null>(`/inventario/compartidos/${seleccion}/asignar`, "POST", {}); if (renovada?.productoId === asignacion.productoId) setAsignacion(renovada); else { setAsignacion(renovada); setCantidad(""); setMensaje("La asignación anterior venció; revisa el producto asignado."); } })} className="text-sm text-teal">Renovar tiempo</button>}</div>
-        </form> : <div className="flex flex-wrap gap-2"><Boton ancho="auto" disabled={ocupado} onClick={() => { setContinuo(false); void solicitar(); }}>Tomar siguiente producto</Boton><Boton ancho="auto" variante="fantasma" disabled={ocupado} onClick={() => { setContinuo(true); setCamara(true); }}>Contar con cámara</Boton>{conteo.tipo === "inicial" && <Boton ancho="auto" variante="fantasma" disabled={ocupado} onClick={() => { setContinuo(false); setNuevoCodigo(""); }}>Crear o buscar producto</Boton>}</div>}
+        </form> : <div className="flex flex-wrap gap-2"><Boton ancho="auto" disabled={ocupado} onClick={() => { setContinuo(false); void solicitar(); }}>Tomar siguiente producto</Boton><Boton ancho="auto" variante="fantasma" disabled={ocupado} onClick={() => { setContinuo(true); setCamara(true); }}>Contar con cámara</Boton></div>}
         {continuo && <p className="text-xs text-teal">Modo escáner: guardar cantidad abre la cámara del siguiente producto. <button type="button" disabled={ocupado} onClick={() => setContinuo(false)} className="min-h-8 underline">Salir del modo escáner</button></p>}
       </>}
-      <BuscadorInput value={busqueda} onChange={v => { setBusqueda(v); setPaginaLineas(1); }} placeholder="Buscar producto del conteo" accion={conteo?.estado === "en-curso" && !asignacion && nuevoCodigo === null ? <BotonEscaner disabled={ocupado} onClick={() => { setContinuo(true); setCamara(true); }} /> : undefined} />
+      <BuscadorInput value={busqueda} onChange={v => { setBusqueda(v); setPaginaLineas(1); }} placeholder="Buscar producto del conteo" accion={conteo?.estado === "en-curso" && !asignacion ? <BotonEscaner disabled={ocupado} onClick={() => { setContinuo(true); setCamara(true); }} /> : undefined} />
       <Paginacion pagina={paginaLineas} totalPaginas={Math.max(1, Math.ceil(lineas.total / porPagina))} total={lineas.total} porPagina={porPagina} onChange={setPaginaLineas} />
       <div className="lista-datos min-h-[320px] max-h-[420px] overflow-y-auto space-y-1" inert={lineas.actualizando}>
         {lineas.items.map(l => <article key={l.productoId} className="min-h-16 rounded-lg border border-line p-2 text-xs">

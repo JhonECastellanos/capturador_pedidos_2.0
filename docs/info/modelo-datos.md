@@ -109,7 +109,7 @@ La asignación ocurre dentro de la misma transacción que inserta la entidad
 - `aplicado` se deriva de la existencia de un ajuste; no es otra columna de estado ni una segunda copia del stock.
 - Tipo `inicial`: un punto de partida aplicado por instalación; conserva nombre/costo y acumulado del ledger en `conteoLineas`. La confirmación usa los ajustes existentes y no genera gasto ni duplica el stock.
 - `ajustesInventario` + `ajusteLineas` (`conteoId` nulo = ajuste manual; no existe `"manual"`).
-- `cambiosPrecio`: historial de precios.
+- `cambiosPrecio`: historial de valores de venta.
 
 ### Compras y cierres
 
@@ -177,11 +177,11 @@ V6P4: dentro del JSON configuracion, proveedores[].maxTokens guarda el límite d
 
 ## V7P4 · etiquetas y primera instalación
 
-`productos` conserva su UUID y `codigoInterno` único. `precioPendiente` indica que el producto se creó durante el inventario inicial sin precio: permanece fuera de ventas hasta confirmar su parametrización en Precios o importar un precio explícito por CSV. Un precio cero confirmado sí es válido.
+`productos` conserva su UUID y `codigoInterno` único. `precioPendiente` conserva compatibilidad con productos históricos aún sin parametrizar: permanecen fuera de ventas hasta confirmar su importe en Productos o importar un importe explícito por CSV. Las altas actuales requieren un importe explícito; cero confirmado también es válido. Inventario no da de alta productos.
 
 `codigosProducto` relaciona varias etiquetas con un solo producto. Campos: `id` UUID, `codigo` texto único de hasta 128 caracteres validado por API (incluye ceros iniciales), `productoId` FK restrictiva, `creadoEn` fecha de vinculación y `retiradoEn` fecha opcional de retiro. La API reserva el formato PROD para los consecutivos internos. Un código no puede trasladarse a otro producto. Los códigos retirados se conservan y no se reutilizan; el administrador puede retirarlos cuando dejen de circular. No hay borrado automático por antigüedad.
 
-La lectura acepta códigos de barras y contenido literal de QR, sin abrir enlaces del QR. Busca un alias vigente o el consecutivo exacto. Cuando no existe, el inicial ofrece crear el producto o vincularlo a una coincidencia por nombre. Crear desde Precios exige costo, precio y mínimo, con cantidad cero; las existencias llegan por Compras o por aplicación del inicial.
+La lectura acepta códigos de barras y contenido literal de QR, sin abrir enlaces del QR. Busca un alias vigente o el consecutivo exacto. Si el código no existe, Inventario solicita registrarlo en Productos o Compras; no crea productos. Ambas opciones usan la misma ficha con coincidencias por nombre, unidad, costo, precio y mínimo, con cantidad cero; las existencias llegan por una recepción o por aplicación del inicial.
 
 No se añadieron tablas de stock, participantes o historiales duplicadas. Se reutilizan `conteosInventario`, `conteoLineas`, `participantesConteo`, `ajustesInventario` y `movimientosInventario`. Crear un producto mientras el inicial está abierto añade su línea pendiente bajo los mismos bloqueos. Registrar una etiqueta adicional de un producto ya contado conserva la cantidad anterior.
 
@@ -201,4 +201,4 @@ El vendedor solo accede a diarios abiertos; el colaborador Inventario solo a ini
 
 La API y la vista SQL `identidadesProducto` exponen `rowid = COALESCE(productoBaseId,id)` y `rowid_ext = id`. No se duplican identificadores almacenados. `codigoInterno` mantiene su consecutivo único para cada presentación. Los códigos comerciales están en `codigosProducto`: varias etiquetas pueden apuntar a la misma presentación, pero cada etiqueta solo puede pertenecer a un registro. Retirar una etiqueta conserva su relación histórica e impide lecturas futuras; no elimina inventario.
 
-nombreBase en la API identifica el nombre principal sin el sufijo de presentación. Cambiar el nombre principal actualiza sus presentaciones dentro de la misma transacción. Editar una presentación modifica su extensión. Los nombres, cantidades y precios históricos de `pedidoLineas` permanecen intactos. Cada presentación tiene stock y precio independientes; los informes por producto agrupan por `rowid`, los informes detallados por `rowid_ext`.
+nombreBase en la API identifica el nombre principal sin el sufijo de presentación. Cambiar el nombre principal actualiza sus presentaciones dentro de la misma transacción. Editar una presentación modifica su extensión. Los nombres, cantidades y valores de venta históricos de `pedidoLineas` permanecen intactos. Cada presentación tiene stock y precio independientes; los informes por producto agrupan por `rowid`, los informes detallados por `rowid_ext`.

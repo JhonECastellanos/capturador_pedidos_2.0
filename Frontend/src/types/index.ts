@@ -102,6 +102,9 @@ export function inicialesDe(nombre: string): string {
 // ─── Productos ────────────────────────────────────────────────────
 
 export interface Producto {
+  /** La API separa físico y reservado; modo local conserva stock. */
+  stockFisico?: number;
+  stockReservado?: number;
   nombreBase?: string;
   productoBaseId?: string | null;
   extension?: string;
@@ -291,7 +294,7 @@ export interface AjusteInventario {
   creadoEn: string;
 }
 
-// ─── Precios (Fase 4) ─────────────────────────────────────────────
+// ─── Productos (Fase 4) ─────────────────────────────────────────────
 
 export interface CambioPrecio {
   id: string;

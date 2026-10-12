@@ -1,6 +1,6 @@
 # Synchronic.JO
 
-Aplicación para administrar un negocio desde computador o celular: pedidos, cobros, crédito, inventario, compras, gastos, precios y caja. Una empresa por instalación, con accesos de administrador, vendedor y colaboradores de inventario.
+Aplicación para administrar un negocio desde computador o celular: pedidos, cobros, crédito, inventario, compras, gastos, productos y caja. Una empresa por instalación, con accesos de administrador, vendedor y colaboradores de inventario.
 
 Versión de producción: **V8P4**. Personaliza colores, fuente y portada desde Configuración. Puede instalarse como aplicación en un navegador compatible mediante HTTPS (localhost también permite probarla).
 
@@ -39,7 +39,7 @@ Las pruebas operativas se ejecutan en QA aislada, nunca sobre los datos reales. 
 
 ## Funcionamiento esperado
 
-Cada formulario espera la confirmación de guardado en PostgreSQL. Pedidos, pagos, caja e inventario se actualizan mediante transacciones; la sincronización mantiene las pantallas al día. El historial conserva documentos y precios anteriores. Precios permite exportar/importar CSV; Inventario permite revisar el inicio del negocio y conteos. Inicio muestra ventas, compras, gastos y descuadres por período al costo guardado.
+Cada formulario espera la confirmación de guardado en PostgreSQL. Pedidos, pagos, caja e inventario se actualizan mediante transacciones; la sincronización mantiene las pantallas al día. El historial conserva documentos y valores de venta anteriores. Productos permite exportar/importar CSV; Inventario permite revisar el inicio del negocio y conteos. Inicio muestra ventas, compras, gastos y descuadres por período al costo guardado.
 
 - [Guía completa de instalación y desarrollo](docs/info/GUIA_INSTALACION_Y_DESARROLLO.md).
 - [Modelo, consultas y ejemplos de CSV](docs/info/GUARDADO_Y_CONCILIACION_V4P2.md).

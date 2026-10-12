@@ -535,7 +535,7 @@ export function aplicarAjusteEnInventario(inventario: Producto[], ajuste: Ajuste
   });
 }
 
-// ─── Precios ──────────────────────────────────────────────────────
+// ─── Productos ──────────────────────────────────────────────────────
 
 export function construirCambioPrecio(
   productoId: string,

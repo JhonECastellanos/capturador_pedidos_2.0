@@ -1,5 +1,5 @@
-import { FichaProductoCodigo } from "../../../components/FichaProductoCodigo";
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { BarraInferior } from "../../../components/BarraInferior";
 import { Boton } from "../../../components/Boton";
 import { BuscadorInput } from "../../../components/BuscadorInput";
@@ -17,10 +17,9 @@ import { VistaImagenProducto } from "../../../components/VistaImagenProducto";
 import { useOperaciones } from "../../../context/operaciones";
 import { lineasContadasDe, resumenConteo } from "../../../dominio/servicios";
 import { formatoMoneda } from "../../../utils/formato";
-import { FormularioProducto } from "../components/FormularioProducto";
 import { InventarioInicial } from "../components/InventarioInicial";
-import type { TipoConteo, ConteoInventarioDTO, CabeceraConteoCompartidoDTO } from "@synchronic-jo/contrato";
-import type { Producto, AjusteInventario, LineaConteo } from "../../../types";
+import type { TipoConteo, ConteoInventarioDTO, CabeceraConteoCompartidoDTO, DescuadreInventarioDTO } from "@synchronic-jo/contrato";
+import type { Producto, AjusteInventario } from "../../../types";
 import { ConteosCompartidos } from "../components/ConteosCompartidos";
 import { api, usaApi } from "../../../data/api";
 import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
@@ -47,7 +46,6 @@ export function InventarioAdmin() {
     conteos: conteosActuales,
     ajustes: ajustesLocales,
     actualizarImagenProducto,
-    crearProducto,
     iniciarConteo,
     actualizarConteoLinea,
     finalizarConteoActivo,
@@ -63,7 +61,6 @@ export function InventarioAdmin() {
   useEffect(() => {
     if (revisionOperacion && ["conteo", "iniciar-conteo", "finalizar-conteo", "aplicar-conteo"].includes(revisionOperacion.instruccion.operacion)) setVista("conteo");
   }, [revisionOperacion]);
-  const [mostrarProducto, setMostrarProducto] = useState(false);
   const [tipoConteo, setTipoConteo] = useState<TipoConteo>("general");
   const [turno, setTurno] = useState("mañana");
   const [conteoActivoId, setConteoActivoId] = useState<string | null>(null);
@@ -94,7 +91,7 @@ export function InventarioAdmin() {
   const abiertosRemotos = usePaginaApi<CabeceraConteoCompartidoDTO>("/inventario/compartidos?abiertos=true", vista === "menu");
   const historialRemoto = usePaginaApi<ConteoInventarioDTO>(`/inventario/conteos?page=${paginaConteos}&pageSize=${POR_PAGINA}`, !usaApi && vista === "conteo");
   const ajustesRemotos = usePaginaApi<AjusteInventario>(`/inventario/ajustes?page=${pagina}&pageSize=${POR_PAGINA}&q=${encodeURIComponent(vista === "menu" ? "" : busquedaHistorial)}`, vista === "ajustes" || vista === "menu");
-  const diferenciasRemotas = usePaginaApi<LineaConteo & { conteoId: string; turno: string; usuarioId: string; finalizadoEn: string; yaAjustado: boolean }>(`/inventario/descuadres?page=${pagina}&pageSize=${POR_PAGINA}&q=${encodeURIComponent(vista === "menu" ? "" : busquedaHistorial)}`, vista === "descuadres" || vista === "menu");
+  const diferenciasRemotas = usePaginaApi<DescuadreInventarioDTO>(`/inventario/descuadres?page=${pagina}&pageSize=${POR_PAGINA}&q=${encodeURIComponent(vista === "menu" ? "" : busquedaHistorial)}`, vista === "descuadres" || vista === "menu");
   const detalleRemoto = useRegistroApi<ConteoInventarioDTO>(`/inventario/conteos/${conteoDetalleId}`, !usaApi && !!conteoDetalleId);
   const inventario = usaApi ? productosRemotos.items : inventarioLocal;
   const ajustes = usaApi ? ajustesRemotos.items : ajustesLocales;
@@ -114,14 +111,15 @@ export function InventarioAdmin() {
     () => [...conteosPagina].sort((a, b) => (b.iniciadoEn < a.iniciadoEn ? -1 : b.iniciadoEn > a.iniciadoEn ? 1 : 0)),
     [conteosPagina],
   );
-  const lineasConDiferencia = useMemo(() => {
+  const lineasConDiferencia = useMemo<DescuadreInventarioDTO[]>(() => {
     if (usaApi) return diferenciasRemotas.items;
-    const confirmados = conteos.filter((c) => c.estado === "confirmado");
-    return confirmados.flatMap((conteo) =>
+    const confirmados = conteos.filter((c) => c.estado === "confirmado" && c.tipo !== "inicial");
+    const registros = confirmados.flatMap((conteo) =>
       lineasContadasDe(conteo)
         .filter((l) => l.diferencia !== 0)
-        .map((l) => ({ ...l, conteoId: conteo.id, turno: conteo.turno, usuarioId: conteo.usuarioId, finalizadoEn: conteo.finalizadoEn ?? conteo.iniciadoEn, yaAjustado: ajustes.some(a => a.conteoId === conteo.id) })),
+        .map((l) => ({ ...l, id: `${conteo.id}-${l.productoId}`, tipo: "conteo" as const, conteoId: conteo.id, turno: conteo.turno, usuarioId: conteo.usuarioId, finalizadoEn: conteo.finalizadoEn ?? conteo.iniciadoEn, yaAjustado: ajustes.some(a => a.conteoId === conteo.id) })),
     );
+    return [...registros, ...ajustes.filter(a => a.conteoId === "manual").flatMap(a => a.lineas.filter(l => l.diferencia !== 0).map(l => ({ ...l, id: `${a.id}-${l.productoId}`, tipo: "manual" as const, conteoId: null, turno: a.motivo ?? "Ajuste manual", usuarioId: a.usuarioId, finalizadoEn: a.creadoEn, yaAjustado: true, comentario: a.comentario })))];
   }, [conteos, diferenciasRemotas.items, ajustes]);
 
   const alertasStock = usaApi ? Number(productosRemotos.meta?.alertas ?? 0) : inventario.filter((p) => p.stock <= p.stockMinimo).length;
@@ -182,7 +180,7 @@ export function InventarioAdmin() {
     if (!Number.isInteger(stockFisico) || stockFisico < 0 || stockFisicoAjuste === "") return false;
     const producto = inventario.find((p) => p.id === productoAjusteId);
     if (await registrarAjusteManual(productoAjusteId, stockFisico, motivoAjuste, comentarioAjuste || undefined) === false) return false;
-    mostrarAviso(`Ajuste en ${producto?.nombre ?? "producto"}: ${producto?.stock ?? 0} → ${stockFisico}`, "exito");
+    mostrarAviso(`Ajuste en ${producto?.nombre ?? "producto"}: ${producto?.stockFisico ?? producto?.stock ?? 0} → ${stockFisico}`, "exito");
     setProductoAjusteId(null);
     setStockFisicoAjuste("");
     setComentarioAjuste("");
@@ -227,7 +225,6 @@ export function InventarioAdmin() {
   }
 
   function volverAlMenu() {
-    setMostrarProducto(false);
     setMostrarAjusteManual(false);
     setVista("menu");
   }
@@ -246,7 +243,7 @@ export function InventarioAdmin() {
       {
         id: "general" as VistaInv,
         titulo: "Stock general",
-        descripcion: "Niveles, alertas y crear productos",
+        descripcion: "Niveles, alertas y ajustes de cantidades",
         detalle: `${alertasStock} alerta(s) · ${usaApi ? productosRemotos.total : inventario.length} productos`,
         icono: <IconPackage width={24} height={24} />,
         tono: "teal" as const,
@@ -327,15 +324,6 @@ export function InventarioAdmin() {
             </h2>
           </div>
         </div>
-        {vista === "general" && (
-          <button
-            type="button"
-            onClick={() => setMostrarProducto((actual) => !actual)}
-            className="rounded-xl bg-ink px-3 py-1.5 text-[12px] font-semibold text-white active:bg-ink/90 shadow-sm"
-          >
-            {mostrarProducto ? "Volver" : "+ Producto"}
-          </button>
-        )}
       </div>
 
       {usaApi && vista === "conteo" && <ConteosCompartidos inicialId={conteoActivoId ?? conteoDetalleId} />}
@@ -343,24 +331,7 @@ export function InventarioAdmin() {
 
       {vista === "general" && (
         <div className="flex flex-1 flex-col min-h-0 mt-2.5">
-          {mostrarProducto ? (
-            <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar py-2">
-              {usaApi ? <FichaProductoCodigo categoriaInicial="Abarrotes" onCerrar={() => setMostrarProducto(false)} onGuardado={r => { setMostrarProducto(false); mostrarAviso(r.aviso ?? `Producto ${r.producto.nombre} listo`, r.aviso ? "error" : "exito"); }} /> : (
-              <FormularioProducto
-                alCancelar={() => setMostrarProducto(false)}
-                alGuardar={async (datos, archivo) => {
-                  const producto = await crearProducto(datos);
-                  if (!producto) return false;
-                  if (archivo) await actualizarImagenProducto(producto.id, archivo).catch(() => mostrarAviso("Producto creado; no se pudo subir la foto", "error"));
-                  setMostrarProducto(false);
-                  mostrarAviso(`Producto ${producto.nombre} creado`, "exito");
-                  return true;
-                }}
-              />
-              )}
-            </div>
-          ) : (
-            <>
+          <>
               <div className="flex-shrink-0 space-y-2">
                 <BuscadorInput value={busquedaGeneral} onChange={setBusquedaGeneral} placeholder="Buscar por nombre, código o categoría" />
                 <div className="flex items-center justify-between gap-2">
@@ -395,7 +366,7 @@ export function InventarioAdmin() {
                   <article key={producto.id} className="flex items-center gap-3 rounded-xl border border-line bg-paper-raised p-3 shadow-sm lg:col-span-1">
                     <VistaImagenProducto producto={producto} tamano="sm" clickable productos={inventarioFiltradoGeneral} />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-[13.5px] font-semibold text-ink">{producto.nombre}</p>
+                      <button type="button" aria-label={`Ajustar cantidades de ${producto.nombre}`} className="block w-full truncate text-left text-[13.5px] font-semibold text-ink underline decoration-line" onClick={() => { setProductoAjusteId(producto.id); setStockFisicoAjuste(String(producto.stockFisico ?? producto.stock)); setPasoAjuste(2); setMostrarAjusteManual(true); setVista("ajustes"); }}>{producto.nombre}</button>
                       <p className="mt-0.5 text-[12px] text-ink-soft">{producto.categoria} · {formatoMoneda(producto.precioVenta)} · {producto.codigoInterno}</p>
                       <p className={`mt-1 text-[12px] font-semibold ${producto.stock <= producto.stockMinimo ? "text-danger" : "text-success"}`}>
                         {producto.stock} en stock {producto.stock <= producto.stockMinimo && "· alerta"} · mín {producto.stockMinimo}
@@ -418,7 +389,7 @@ export function InventarioAdmin() {
                 ))}
                 {inventarioFiltradoGeneral.length === 0 && (
                   <div className="col-span-2">
-                    <ListaVacia titulo="No hay productos que coincidan con la búsqueda." texto="Ajusta el filtro o crea un producto nuevo." />
+                    <ListaVacia titulo="No hay productos que coincidan con la búsqueda." texto="Ajusta el filtro. Los productos se crean en Compras o Productos." />
                   </div>
                 )}
                     </div>
@@ -426,8 +397,7 @@ export function InventarioAdmin() {
                 </div>
               </div>
 
-            </>
-          )}
+          </>
         </div>
       )}
 
@@ -687,7 +657,7 @@ export function InventarioAdmin() {
               const yaAjustado = linea.yaAjustado;
               const conteo = conteos.find((c) => c.id === linea.conteoId);
               return (
-                <article key={`${linea.conteoId}-${linea.productoId}`} className="rounded-xl border border-line bg-paper-raised p-3.5 shadow-sm">
+                <article key={linea.id} className="rounded-xl border border-line bg-paper-raised p-3.5 shadow-sm">
                   <div className="flex items-center justify-between gap-2">
                     <p className="truncate text-[13.5px] font-semibold text-ink">{linea.nombre}</p>
                     <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${linea.diferencia < 0 ? "bg-danger-soft text-danger" : "bg-success-soft text-success"}`}>
@@ -695,10 +665,12 @@ export function InventarioAdmin() {
                     </span>
                   </div>
                   <p className="mt-1 text-[12px] text-ink-soft">Teórico {linea.stockTeorico} · Físico {linea.stockFisico} · {linea.turno} · {((linea as typeof linea & {usuario?:string}).usuario ?? nombreUsuario(linea.usuarioId))}</p>
-                  <p className="text-[11.5px] text-ink-faint">{conteo?.finalizadoEn ? new Date(conteo.finalizadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" }) : ""}</p>
-                  {!yaAjustado && (usaApi || conteo?.estado === "confirmado") && (
+                  <p className="text-[11.5px] text-ink-faint">{linea.finalizadoEn ? new Date(linea.finalizadoEn).toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" }) : ""}</p>
+                  {!yaAjustado && linea.conteoId && (usaApi || conteo?.estado === "confirmado") && (
                     <button type="button" onClick={() => setConfirmarAplicarConteoId(linea.conteoId)} className="mt-3 w-full rounded-lg bg-ink py-2.5 text-[12px] font-semibold text-white active:bg-ink/90">Revisar y aplicar al stock</button>
                   )}
+                  {linea.valorDiferencia !== undefined && <p className="mt-1 text-xs text-ink-soft">Valor de la diferencia: {linea.valorDiferencia === null ? "Sin costo registrado" : formatoMoneda(linea.valorDiferencia)}</p>}
+                  {linea.comentario && <p className="mt-1 text-xs text-ink-soft">{linea.comentario}</p>}
                   {yaAjustado && <p className="mt-2 text-[11.5px] font-semibold text-success">✓ Ajuste aplicado</p>}
                 </article>
               );
@@ -782,14 +754,14 @@ export function InventarioAdmin() {
                             type="button"
                             onClick={() => {
                               setProductoAjusteId(p.id);
-                              setStockFisicoAjuste(String(p.stock));
+                              setStockFisicoAjuste(String(p.stockFisico ?? p.stock));
                               setPasoAjuste(2);
                             }}
                             className="flex w-full items-center justify-between gap-2 rounded-xl border border-line bg-paper-raised px-3 py-2.5 text-left active:bg-paper-sunken"
                           >
                             <span className="min-w-0">
                               <span className="block truncate text-[13px] font-semibold text-ink">{p.nombre}</span>
-                              <span className="block truncate text-[11px] text-ink-soft">{p.codigoInterno} · teórico {p.stock}</span>
+                              <span className="block truncate text-[11px] text-ink-soft">{p.codigoInterno} · teórico {p.stockFisico ?? p.stock}</span>
                             </span>
                             <IconChevronRight width={18} height={18} className="flex-shrink-0 text-ink-faint" />
                           </button>
@@ -812,8 +784,9 @@ export function InventarioAdmin() {
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">Paso 2 de 2 · Físico y motivo</p>
                       <p className="mt-1 truncate text-[14px] font-semibold text-ink">{productoAjuste.nombre}</p>
                       <p className="text-[11.5px] text-ink-soft">
-                        {productoAjuste.codigoInterno} · teórico {productoAjuste.stock} · mín {productoAjuste.stockMinimo}
+                        {productoAjuste.codigoInterno} · físico {(productoAjuste.stockFisico ?? productoAjuste.stock)} · mín {productoAjuste.stockMinimo}
                       </p>
+                      <Link to={`/admin/productos?producto=${productoAjuste.id}`} className="mt-2 inline-block text-xs text-teal underline">Editar información del producto</Link>
                       <label className="mt-3 block text-[11px] font-semibold uppercase tracking-wide text-ink-faint">Stock físico corregido *</label>
                       <input
                         type="number"
@@ -826,8 +799,8 @@ export function InventarioAdmin() {
                         className="mt-1.5 w-full rounded-2xl border-2 border-ink bg-paper px-4 py-4 text-center text-[28px] font-semibold tabular-nums text-ink focus:border-accent focus:outline-none"
                       />
                       {stockFisicoAjuste !== "" && (
-                        <p className={`mt-2 text-center text-[12.5px] font-semibold ${Number(stockFisicoAjuste) - productoAjuste.stock === 0 ? "text-success" : "text-danger"}`}>
-                          Diferencia: {Number(stockFisicoAjuste) - productoAjuste.stock > 0 ? "+" : ""}{Number(stockFisicoAjuste) - productoAjuste.stock}
+                        <p className={`mt-2 text-center text-[12.5px] font-semibold ${Number(stockFisicoAjuste) - (productoAjuste.stockFisico ?? productoAjuste.stock) === 0 ? "text-success" : "text-danger"}`}>
+                          Diferencia: {Number(stockFisicoAjuste) - (productoAjuste.stockFisico ?? productoAjuste.stock) > 0 ? "+" : ""}{Number(stockFisicoAjuste) - (productoAjuste.stockFisico ?? productoAjuste.stock)}
                         </p>
                       )}
                     </div>
@@ -906,15 +879,14 @@ export function InventarioAdmin() {
         titulo="Confirmar ajuste manual"
         mensaje={
           productoAjuste
-            ? `${productoAjuste.nombre}: ${productoAjuste.stock} → ${stockFisicoAjuste || "?"} · motivo: ${motivoAjuste}.`
+            ? `${productoAjuste.nombre}: ${(productoAjuste.stockFisico ?? productoAjuste.stock)} → ${stockFisicoAjuste || "?"} · motivo: ${motivoAjuste}.`
             : ""
         }
         textoConfirmar="Aplicar ajuste"
         tono="ink"
         alCancelar={() => setConfirmarAjusteManual(false)}
-        alConfirmar={() => {
-          setConfirmarAjusteManual(false);
-          handleAjusteManual();
+        alConfirmar={async () => {
+          if (await handleAjusteManual()) setConfirmarAjusteManual(false);
         }}
       />
     </div>

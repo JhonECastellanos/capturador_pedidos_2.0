@@ -32,7 +32,7 @@ const CajaAdmin = lazy(() => import("./modules/caja/screens/CajaAdmin").then((m)
 const CierreAdmin = lazy(() => import("./modules/caja/screens/CierreAdmin").then((m) => ({ default: m.CierreAdmin })));
 const UsuariosAdmin = lazy(() => import("./modules/usuarios/screens/UsuariosAdmin").then((m) => ({ default: m.UsuariosAdmin })));
 const ComprasAdmin = lazy(() => import("./modules/compras/screens/ComprasAdmin").then((m) => ({ default: m.ComprasAdmin })));
-const PreciosAdmin = lazy(() => import("./modules/precios/screens/PreciosAdmin").then((m) => ({ default: m.PreciosAdmin })));
+const ProductosAdmin = lazy(() => import("./modules/productos/screens/ProductosAdmin").then((m) => ({ default: m.ProductosAdmin })));
 const Auditoria = lazy(() => import("./modules/administracion/screens/Auditoria").then((m) => ({ default: m.Auditoria })));
 const Resumen = lazy(() => import("./modules/administracion/screens/Resumen").then((m) => ({ default: m.Resumen })));
 const Configuracion = lazy(() => import("./modules/configuracion/Configuracion").then((m) => ({ default: m.Configuracion })));
@@ -70,7 +70,7 @@ function Contenido() {
             <Route path="creditos" element={<CreditosAdmin />} />
             <Route path="inventario" element={<InventarioAdmin />} />
             <Route path="compras" element={<ComprasAdmin />} />
-            <Route path="precios" element={<PreciosAdmin />} />
+            <Route path="productos" element={<ProductosAdmin />} />
             <Route path="caja" element={<CajaAdmin />} />
             <Route path="cierre" element={<CierreAdmin />} />
             <Route path="usuarios" element={<UsuariosAdmin />} />

@@ -41,6 +41,7 @@
     "prueba:persistencia": "node Backend/scripts/probar-persistencia.cjs",
     "prueba:guardados": "node --test scripts/probar-guardados.mjs && node Backend/scripts/probar-reintento.cjs",
     "prueba:inventario:inicial": "node Backend/scripts/probar-inventario-inicial.cjs",
+    "prueba:productos:compras": "node Backend/scripts/probar-productos-compras-stock.cjs",
     "seguridad:repositorio": "node scripts/verificar-repositorio.mjs",
     "prueba:paneles": "node --env-file=.env Backend/scripts/probar-paneles-ui.cjs",
     "demo:catalogo": "node --env-file=.env Backend/scripts/cargar-demo.cjs",
