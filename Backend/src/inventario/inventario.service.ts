@@ -124,18 +124,11 @@ export class InventarioService {
           usuarioId,
           fechaDiaria,
           turno: datos.turno,
-          lineas: {
-            create: seleccion.map((p) => ({
-              productoId: p.id,
-              stockTeorico: p.stockFisico,
-              cicloDiario: ciclos.get(p.id) ?? null,
-            })),
-          },
         },
-        include: { usuario: {select:{nombre:true}}, lineas: { include: { producto: true } }, ajustes: { select: { id: true } } },
       });
-
-      return this.dtoConteo(conteo);
+      if (seleccion.length) await tx.conteoLinea.createMany({ data: seleccion.map(p => ({ conteoId: conteo.id, productoId: p.id, stockTeorico: p.stockFisico, cicloDiario: ciclos.get(p.id) ?? null })) });
+      const registrado = await tx.conteoInventario.findUniqueOrThrow({ where: { id: conteo.id }, include: { usuario: {select:{nombre:true}}, lineas: { include: { producto: true } }, ajustes: { select: { id: true } } } });
+      return this.dtoConteo(registrado);
     });
   }
 

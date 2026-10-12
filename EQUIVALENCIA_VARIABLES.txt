@@ -856,11 +856,11 @@ RobotAsistente.estado <- escuchando/ocupado/synchronic:agente-hablando (frontend
 
 
 V7P4 · lectura de productos y conteos (11/10/2026)
-ProductoDTO.precioPendiente ↔ productos.precioPendiente: legado de productos sin importe parametrizado; Productos/CSV confirma el importe. Las altas actuales requieren un importe explícito, incluso cero.
+ProductoDTO.precioPendiente ↔ productos.precioPendiente: productos nuevos del inicial sin importe y legado sin parametrizar; Productos/CSV confirma el importe. Las altas de Compras/Productos requieren importe explícito, incluso cero.
 ProductoDTO.codigosLectura[] ↔ codigosProducto.codigo WHERE retiradoEn IS NULL: alias del mismo productoId; no sustituyen codigoInterno.
 codigosProducto: id, codigo (único, texto conserva ceros), productoId (FK productos), creadoEn, retiradoEn (retiro administrativo sin borrar historia).
 GET /productos/codigo/lectura?codigo=... ↔ alias activo o codigoInterno exacto; desconocido retorna null, retirado/inactivo devuelve conflicto.
-Alta de productos -> POST /productos (administrador), exclusivamente desde Compras o Productos. Inventario solo asigna y cuenta productos ya registrados.
+Alta comercial -> POST /productos (administrador), desde Compras o Productos. Inicial -> POST /productos/inicial/:conteoId (administrador/inventario), solo inicial abierto: producto/alias/línea/cantidad/participante en una transacción.
 POST /inventario/compartidos/:conteoId/asignar {productoId?}: reserva de cinco minutos, bloqueada por conteo. Sin productoId conserva el siguiente producto habitual.
 Conteo diario: tipo aleatorio, fechaDiaria America/Bogota, cinco productos; selección rota también jornadas abiertas anteriores, conservadas en historial.
 VENDEDOR ↔ conteo diario abierto; INVENTARIO ↔ inicial/general abiertos y catálogo sin existencias/costos; ADMINISTRADOR ↔ historial, cierre, ajuste y retiro de códigos.
@@ -889,3 +889,10 @@ PWA manifest display=standalone; sw.js solo ofrece retorno seguro ante desconexi
 Ajustes V8P4: Producto.productoBaseId → productos.productoBaseId (FK al principal); extension → productos.extension; API/vista SQL rowid = COALESCE(productoBaseId,id), rowid_ext = id; precio admite nombre/extension para edición transaccional. VOICE_MODELS_VOLUME/VOICE_MODELS_EXTERNAL permiten reutilizar un volumen existente de reconocimiento sin descargar modelos.
 
 Presentación principal V8P4: extension es opcional también en el producto principal; nombreBase se deriva del nombre sin el sufijo. El índice único cubre COALESCE(productoBaseId,id) + extension normalizada. No se cambia el ID al editar su presentación; categorías se conservan/heredan.
+
+V8P4 · excepción del inicial y etiquetas compartidas
+ProductoInicialEsquema.nombre/unidad/categoria/extension/productoBaseId -> productos; precioPendiente=true, stockFisico=0 al crear. No admite costos/importes.
+ProductoInicialEsquema.cantidad -> conteoLineas.stockFisico y contadoPorId/contadoEn; 0 válido. Un producto ya contado conserva sus cantidades al vincular otra etiqueta.
+familiaCompartidaId -> resolverCodigo devuelve el padre cuando su etiqueta sirve a varias presentaciones. GET /productos?familiaId pagina las opciones; el usuario elige el rowid_ext exacto.
+rowid -> productoBaseId ?? id; rowid_ext -> id de la presentación. El barcode de la familia se guarda una vez en codigosProducto del padre; no duplica identidades ni cantidades.
+Etiquetas anteriores -> codigosProducto.retiradoEn al cumplir 180 días desde la etiqueta activa más reciente del mismo producto. Mantenimiento al arrancar y cada seis horas; siempre conserva la más reciente activa, sin borrar relaciones históricas.

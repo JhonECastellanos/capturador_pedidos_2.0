@@ -83,15 +83,15 @@ function ean(base12) {
     const precioGuardado=page.waitForResponse(r=>r.url().endsWith('/precio')&&r.request().method()==='POST');await page.getByRole('button',{name:'Guardar precio',exact:true}).click();assert.equal((await precioGuardado).status(),201);
     const parametrizado=await pedir(admin,`/productos/${p1.id}`);assert.equal(parametrizado.precioVenta,2600);assert.equal(parametrizado.costoActual,1100);assert.equal(parametrizado.stockMinimo,4);assert.equal(parametrizado.stockFisico,20);
     casos.push('Formulario de Productos: confirma precio, costo y mínimo con los mismos campos persistidos; conserva las veinte unidades');
-    await page.goto(base+'/admin/inventario');await page.getByText('Stock general',{exact:true}).first().click();await page.getByRole('button',{name:'+ Producto',exact:true}).click();
+    await page.goto(base+'/admin/productos');await page.getByRole('button',{name:'Crear producto o vincular código',exact:true}).click();
     await figura(page,qr(marca+'-etiqueta-nueva'));await page.getByRole('button',{name:'Escanear código',exact:true}).click();await page.getByRole('dialog',{name:'Escanear producto'}).waitFor({state:'hidden',timeout:20000}).catch(async e=>{await page.screenshot({path:'.local/pruebas-v8/lector-fallo.png'});console.error(await page.locator('video').evaluate(v=>({ancho:v.videoWidth,alto:v.videoHeight,estado:v.readyState,pausado:v.paused})));console.error(await page.getByRole('dialog').innerText());throw e;});
-    assert.equal(await page.getByLabel('Código de barras o QR',{exact:true}).inputValue(),marca+'-etiqueta-nueva');
+    await page.waitForFunction(codigo=>document.querySelector('input[aria-label="Código de barras o QR"]')?.value===codigo,marca+'-etiqueta-nueva');
     await page.getByLabel('Nombre del producto',{exact:true}).fill(p1.nombre);
     await page.getByRole('option',{name:p1.nombre+' · '+p1.codigoInterno,exact:true}).click();
     const vinculo=page.waitForResponse(r=>r.url().endsWith('/codigos')&&r.request().method()==='POST');
     await page.getByRole('button',{name:'Usar producto existente',exact:true}).click();assert.equal((await vinculo).status(),201);
     const mismo=await pedir(admin,`/productos/${p1.id}`);assert.equal(mismo.stockFisico,20);assert.ok(mismo.codigosLectura.includes(codigoQR)&&mismo.codigosLectura.includes(marca+'-etiqueta-nueva'));
-    casos.push('Stock general: alta con cámara, coincidencia por nombre y segunda etiqueta del mismo producto sin duplicar stock');
+    casos.push('Productos: alta con cámara, coincidencia por nombre y segunda etiqueta del mismo producto sin duplicar stock');
     const general=await pedir(admin,'/inventario/conteos','POST',{tipo:'general',turno:'Escáner móvil'});
     const email=marca+'@pruebas.invalid';await pedir(admin,'/usuarios','POST',{nombre:'Lector de prueba',email,password:'SoloPruebas2026!',rol:'inventario'});
     const inv=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});await inv.addInitScript(camaraFalsa);await pedir(inv,'/auth/login','POST',{identifier:email,password:'SoloPruebas2026!'},200);
@@ -128,7 +128,9 @@ function ean(base12) {
     const vendedor = await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});await vendedor.addInitScript(camaraFalsa);
     await pedir(vendedor,'/auth/login','POST',{identifier:correoVendedor,password:'SoloPruebas2026!'},200);
     const diarioVista = await vendedor.newPage();diarioVista.on('pageerror',e=>errores.push(e.message));await diarioVista.goto(base+'/vendedor');
-    await diarioVista.getByText('Conteo diario',{exact:true}).click();await diarioVista.getByRole('button',{name:'Abrir conteo de hoy · 5 productos',exact:true}).click();await diarioVista.getByRole('progressbar',{name:'Progreso del conteo'}).waitFor();
+    await diarioVista.getByText('Conteo diario',{exact:true}).click();const apertura=diarioVista.waitForResponse(r=>r.url().endsWith('/inventario/compartidos')&&r.request().method()==='POST');await diarioVista.getByRole('button',{name:'Abrir conteo de hoy · 5 productos',exact:true}).click();const resultadoApertura=await apertura;
+    if(resultadoApertura.status()===403){assert.equal((await resultadoApertura.json()).code,'CONTEO_CERRADO');await diarioVista.getByRole('alert').filter({hasText:'ya terminó'}).waitFor();casos.push('Diario previamente confirmado en QA: se conserva su historial y se impide reabrirlo; el escaneo diario se valida en la base aislada de códigos');}
+    else {assert.equal(resultadoApertura.status(),201);await diarioVista.getByRole('progressbar',{name:'Progreso del conteo'}).waitFor();
     const diarios = await pedir(vendedor,'/inventario/compartidos');const diarioActual=diarios[0];
     const pendientesDiarios = await pedir(vendedor,`/inventario/compartidos/${diarioActual.id}/lineas`);const pendienteDiario=pendientesDiarios.find(l=>l.stockFisico===null&&!l.asignadoPorId);
     assert.ok(pendienteDiario,'Un producto del diario disponible');
@@ -139,6 +141,8 @@ function ean(base12) {
     await diarioVista.screenshot({path:'.local/pruebas-v7/vendedor-diario-390.png'});casos.push('Vendedor tiene entrada visible al diario, escanea uno de los cinco y guarda cero; el historial administrativo permanece oculto');
     await diarioVista.getByRole('button',{name:'Salir del conteo y continuar después',exact:true}).click();await diarioVista.getByRole('button',{name:'Continuar después',exact:true}).click();await diarioVista.getByRole('button',{name:'Abrir conteo de hoy · 5 productos',exact:true}).click();await diarioVista.getByRole('progressbar').waitFor();assert.equal((await pedir(vendedor,`/inventario/compartidos/${diarioActual.id}`)).contadas,1);
     casos.push('Vendedor puede salir y retomar el mismo conteo diario con su cantidad guardada');
+    }
+    if (!process.argv.includes("--solo-escaner")) {
     const robotContext=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});await pedir(robotContext,'/auth/login','POST',{identifier:'qa-admin@pruebas.invalid',password:'SoloPruebas2026!'},200);
     await robotContext.addInitScript(()=>{window.__pistasMicrofono=[];const original=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);navigator.mediaDevices.getUserMedia=async opciones=>{const flujo=await original(opciones);if(opciones.audio)window.__pistasMicrofono.push(...flujo.getAudioTracks());return flujo;};});
     await robotContext.route('**/agentes/estado',r=>r.fulfill({json:{data:{habilitado:true,modo:'hibrido',configurado:true,audio:{idioma:'es-CO',velocidad:1,volumen:0,voz:'',modeloStt:'base',stt:'whisper'}}}}));
@@ -180,6 +184,7 @@ function ean(base12) {
     await robot.waitForTimeout(350);await boton.click();assert.equal(await boton.getAttribute('aria-pressed'),'true');assert.equal(conexionesAudio,conexionesAntes);assert.ok(await robot.evaluate(()=>window.__pistasMicrofono.every(t=>t.enabled)));
     await robot.waitForTimeout(350);await boton.dblclick({delay:80});await robot.waitForFunction(()=>window.__pistasMicrofono.every(t=>t.readyState==='ended'));
     casos.push('Silenciar deshabilita las pistas sin cerrar la sesión: admite transcripción pendiente, reanuda sin nueva conexión y doble toque libera el micrófono');
+    }
     const camarasContext=await browser.newContext({viewport:{width:393,height:873},isMobile:true,hasTouch:true});await pedir(camarasContext,'/auth/login','POST',{identifier:'qa-admin@pruebas.invalid',password:'SoloPruebas2026!'},200);await camarasContext.addInitScript(camaraFalsa);
     await camarasContext.addInitScript(()=>{
       window.__ajustesCamara=[];window.__restriccionesCamara=[];window.__intentosNativos=0;
@@ -203,6 +208,37 @@ function ean(base12) {
     await pedir(admin,`/inventario/compartidos/${general.id}/asignar`,'POST',{});await escritorio.getByRole('button',{name:'Cancelar conteo definitivamente',exact:true}).click();await escritorio.getByRole('button',{name:'Sí, cancelar',exact:true}).click();await escritorio.waitForFunction(()=>!document.querySelector('button[aria-label="Cancelar conteo definitivamente"]'));
     const cancelado=await pedir(admin,`/inventario/compartidos/${general.id}`);assert.equal(cancelado.estado,'cancelado');assert.equal(cancelado.contadas,2);assert.equal(cancelado.ocupadas,0);assert.equal((await pedir(admin,`/productos/${p1.id}`)).stockFisico,20);
     casos.push('X de cancelación definitiva administrativa: exige confirmación, libera asignaciones, mantiene historial y no cambia stock');
+
+    const familiar=await pedir(admin,'/productos','POST',{nombre:p1.nombre,productoBaseId:p1.id,extension:'Familiar',unidad:'bolsa',precioVenta:2800,costoActual:1000,stock:6,codigosLectura:[codigoQR]});
+    assert.equal(familiar.rowid,p1.id);assert.equal(familiar.rowid_ext,familiar.id);
+    await page.goto(base+'/admin/ventas/pedido');await page.getByText('Venta abierta · cliente ocasional',{exact:true}).click();
+    await figura(page,qr(codigoQR));await page.getByRole('button',{name:'Escanear código',exact:true}).click();
+    await page.getByRole('dialog',{name:'Elegir presentación',exact:true}).getByText(familiar.nombre,{exact:true}).click();
+    await page.waitForFunction(n=>document.querySelector('input[placeholder="Buscar producto o código"]')?.value===n,familiar.nombre);
+    await page.getByRole('button',{name:'Disminuir cantidad'}).first().waitFor();
+    assert.equal(await page.getByRole('button',{name:'Disminuir cantidad'}).count(),1);
+    const nuevoGeneral=await pedir(admin,'/inventario/conteos','POST',{tipo:'general',turno:marca+' familia'});
+    await contar.goto(base+'/inventario');await contar.getByText('Inventario general · en curso',{exact:true}).first().click();
+    await figura(contar,qr(codigoQR));await contar.getByRole('button',{name:'Contar con cámara',exact:true}).click();
+    await contar.getByRole('dialog',{name:'Elegir presentación',exact:true}).getByText(familiar.nombre,{exact:true}).click();
+    await contar.getByLabel('Cantidad contada').fill('2');await figura(contar,[]);await contar.getByRole('button',{name:'Guardar cantidad',exact:true}).click();
+    await contar.getByRole('dialog',{name:'Escanear producto',exact:true}).waitFor();await contar.getByRole('button',{name:'Cerrar',exact:true}).click();
+    const lineaFamiliar=(await pedir(admin,`/inventario/compartidos/${nuevoGeneral.id}/lineas?q=${encodeURIComponent(familiar.nombre)}`)).find(l=>l.productoId===familiar.id);assert.equal(lineaFamiliar.stockFisico,2);
+    await pedir(admin,'/inventario/conteos/'+nuevoGeneral.id+'/cancelar','POST',{});
+    await page.goto(base+'/admin/productos');await figura(page,qr(codigoQR));await page.getByRole('button',{name:'Escanear código',exact:true}).click();
+    await page.getByRole('dialog',{name:'Elegir presentación',exact:true}).getByText(familiar.nombre,{exact:true}).click();
+    assert.equal(await page.getByLabel('Presentación o extensión',{exact:true}).inputValue(),'Familiar');
+    const provLector=await pedir(admin,'/proveedores','POST',{nombre:marca+' Proveedor lector'});
+    await page.goto(base+'/admin/compras');await page.getByRole('button',{name:/Nueva recepción/}).click();
+    await page.getByPlaceholder('Buscar por nombre o teléfono').fill(provLector.nombre);await page.getByText(provLector.nombre,{exact:true}).click();
+    await page.getByRole('button',{name:/Continuar a productos/}).click();await page.getByRole('button',{name:'+ Producto',exact:true}).click();
+    await figura(page,qr(codigoQR));await page.getByRole('button',{name:'Escanear código',exact:true}).click();
+    await page.getByRole('dialog',{name:'Elegir presentación',exact:true}).getByText(familiar.nombre,{exact:true}).click();
+    await page.getByRole('button',{name:'Usar producto existente',exact:true}).click();
+    await page.waitForFunction(n=>document.querySelector('input[placeholder="Filtrar por código o nombre"]')?.value===n,familiar.nombre);
+    assert.equal((await pedir(admin,'/productos/'+familiar.id)).stockFisico,6);
+    casos.push('Una etiqueta compartida: venta elige y agrega solo Familiar; general guarda dos unidades de su rowid_ext; Productos edita la extensión correcta y Compras la trae sin duplicar el producto ni alterar stock');
+
     assert.deepEqual(errores,[]);for(const c of casos)console.log('✓ '+c);writeFileSync('.local/pruebas-v7/escaner-ui.json',JSON.stringify({fecha:new Date().toISOString(),casos,lecturas,errores},null,2));
   } finally {await browser.close();}
-})().catch(e=>{console.error(e.stack);process.exitCode=1;});
+})().catch(e=>{console.error(String(e.stack).replace(/ambie_(?:access|refresh)=[^;\s]+/g,'sesion=[oculta]'));process.exitCode=1;});

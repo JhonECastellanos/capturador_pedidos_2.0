@@ -500,3 +500,16 @@ Reproducir: npm run prueba:productos:compras. Consultas y detalle de tablas en G
 
 
 Comprobación de producción posterior, 11/10/2026: API y frontend actualizados y saludables, sin migraciones. Chrome real con ancho móvil revisó localhost:8080 y el túnel HTTPS: módulo Productos, alta ausente en Inventario, edición de físico sin guardar, acceso a información del producto con el importe actual, filtros individuales y endpoint de Descuadres, sin errores de ejecución. Se conservaron todos los identificadores de 21 pedidos, 37 productos, ocho clientes, 17 pagos, seis conteos y dos usuarios. Conciliación de stock, reservas y totales: cero diferencias. No se guardaron pruebas comerciales en producción. Respaldo privado previo de 206.826 bytes, leído completamente con pg_restore sin restaurarlo; no equivale a un ensayo de recuperación. Los ejercicios de proveedores/compras quedan solo en QA, cuyos contenedores se retiran sin borrar volúmenes.
+
+
+### Excepción del inventario inicial y lector por presentación · 12/10/2026
+
+Stock general conserva consulta, fotos y ajustes, sin alta. Un inicial abierto permite a administrador/colaboradores escanear, crear o vincular, y registrar cantidad, sin costos ni importes. Producto nuevo y cantidad se guardan juntos; vincular una etiqueta al producto ya contado conserva su UUID y cantidad. Coincidencias exactas se muestran primero. Una etiqueta del principal sirve a sus presentaciones, cada una con rowid_ext y stock independientes; el lector pide elegir antes de vender, contar o editar.
+
+Validación actual: verificar y caché aprobados; 18 casos de integración; doce grupos de inicial/códigos/diario/roles/retirada en base QA nueva; once grupos de escáneres en Chrome con cámara sintética (--solo-escaner). QR y EAN-13 realmente decodificados, incluidas barras pequeñas/giradas/con contraste reducido/desenfoque leve. Se comprobaron campos en PostgreSQL y la vuelta automática a cámara, sin duplicar códigos ni cantidades. Cámara física de un celular requiere comprobación del usuario; estos videos sintéticos no sustituyen esa prueba.
+
+Ejercicio inicial: crear Camisa con cinco unidades; volver a la misma etiqueta y crear presentación Roja con tres. Comparten rowid, tienen rowid_ext distintos y una etiqueta de familia. Escanear pide elegir la presentación. Una etiqueta nueva vinculada por coincidencia conserva las cinco unidades y el ID. Inicial completo de la prueba: quince unidades, conciliadas con el ledger. El diario del vendedor decodificó QR y guardó cero en una base vacía; el diario ya confirmado en QA compartida se conservó y rechazó reabrirse.
+
+Retirada automática aprobada: no retira a los 179 días; después del plazo de 180 días retira la anterior y conserva la última activa y todas sus relaciones históricas. El servicio revisa al arrancar y cada seis horas. No hay borrado físico ni migración. En la integración se detectó un agotamiento de la transacción al crear líneas una por una; se sustituyó por createMany en la misma transacción y los 18 casos volvieron a pasar, sin ampliar el timeout.
+
+Reproducir exclusivamente en QA: node Backend/scripts/probar-codigos-inventario.cjs y node Backend/scripts/probar-escaner-ui.cjs --solo-escaner. La opción limita el segundo recorrido al lector; los casos antiguos de voz permanecen en el script pero no forman parte de esta validación.

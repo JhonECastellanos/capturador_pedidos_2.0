@@ -53,7 +53,7 @@ Esperar confirmación de escritura antes de cerrar formularios. Si falla la lect
 
 ## Persistencia e invariantes
 
-Alta de productos únicamente desde Productos o Compras > Nueva recepción, con la ficha compartida de códigos. Inventario administra cantidades y conteos; no ofrece alta ni un endpoint especial para crear productos del inicial. Stock general abre la corrección al tocar el nombre y permite ir a la edición existente en Productos. Usar stockFisico para la corrección, sin confundirlo con disponible tras reservas. Descuadres reúne ajustes manuales aplicados y conteos confirmados, excluye el inicial y no duplica un conteo al aplicarlo.
+Alta de productos desde Productos, Compras > Nueva recepción e Inventario inicial abierto, con la ficha compartida de códigos. Stock general no ofrece alta. El inicial permite al administrador y colaboradores crear, vincular etiquetas y contar en una sola transacción; sin costos ni importes. Stock general abre la corrección al tocar el nombre y permite ir a la edición existente en Productos. Usar stockFisico para la corrección, sin confundirlo con disponible tras reservas. Descuadres reúne ajustes manuales aplicados y conteos confirmados, excluye el inicial y no duplica un conteo al aplicarlo.
 
 PostgreSQL es la fuente de verdad en API. Imágenes/comprobantes en MinIO privado, con autenticación y validación de formato/tamaño. Semilla crea accesos y catálogos, sin datos comerciales demo.
 

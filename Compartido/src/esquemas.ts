@@ -117,6 +117,18 @@ export const FiltroClientesEsquema = z.object({
 
 export const VincularCodigoEsquema = z.object({ codigo: CodigoLecturaEsquema, conteoId: z.string().uuid().optional() });
 
+/** Alta o nueva etiqueta exclusivamente dentro de un inicial abierto. */
+export const ProductoInicialEsquema = z.object({
+  nombre: texto.min(2).max(200),
+  unidad: texto.min(1).max(40),
+  categoria: texto.max(100).optional(),
+  codigo: CodigoLecturaEsquema.optional(),
+  productoId: z.string().uuid().optional(),
+  productoBaseId: z.string().uuid().optional(),
+  extension: texto.max(80).optional(),
+  cantidad: cantidad.min(0).optional(),
+}).strict().refine(d => !!d.productoId || d.cantidad !== undefined, { message: "Indica la cantidad inicial, incluyendo 0 si no hay unidades", path: ["cantidad"] });
+
 export const NuevoProductoEsquema = z.object({
   productoBaseId: z.string().uuid().optional(),
   extension: texto.max(80).optional(),

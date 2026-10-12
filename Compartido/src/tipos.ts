@@ -159,6 +159,8 @@ export interface ProductoDTO {
   rowid_ext?: string;
   precioPendiente?: boolean;
   codigosLectura?: string[];
+  /** Una etiqueta de la familia exige elegir su presentación antes de contar/vender. */
+  familiaCompartidaId?: string;
   id: string;
   codigoInterno: string;
   nombre: string;

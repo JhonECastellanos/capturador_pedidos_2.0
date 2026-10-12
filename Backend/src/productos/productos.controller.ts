@@ -4,7 +4,8 @@ import { ProductosService, NuevoProductoSchema } from "./productos.service";
 import { Roles, UsuarioActual } from "../common/guards";
 import { ErrorDominio } from "../common/errores";
 import { paginacion } from "../common/paginacion";
-import { ImportarProductosEsquema, CodigoLecturaEsquema, VincularCodigoEsquema, CambiarPrecioEsquema } from "@synchronic-jo/contrato";
+import { ImportarProductosEsquema, CodigoLecturaEsquema, VincularCodigoEsquema, CambiarPrecioEsquema, ProductoInicialEsquema } from "@synchronic-jo/contrato";
+import { z } from "zod";
 
 @Controller("productos")
 export class ProductosController {
@@ -21,9 +22,10 @@ export class ProductosController {
     @Query("pageSize") pageSize?: string,
     @Query("orden") orden?: string,
     @Query("activo") activo?: string,
+    @Query("familiaId") familiaId?: string,
   ) {
     const p = paginacion(page, pageSize);
-    const resultado = await this.productos.listar(q, categoria, usuario.rol === RolUsuario.INVENTARIO ? undefined : stockEstado, p.pagina, p.porPagina, usuario.rol === RolUsuario.INVENTARIO ? "nombre" : orden, activo === "true" || usuario.rol === RolUsuario.INVENTARIO);
+    const resultado = await this.productos.listar(q, categoria, usuario.rol === RolUsuario.INVENTARIO ? undefined : stockEstado, p.pagina, p.porPagina, usuario.rol === RolUsuario.INVENTARIO ? "nombre" : orden, activo === "true" || usuario.rol === RolUsuario.INVENTARIO, z.string().uuid().optional().parse(familiaId));
     return { ...resultado, data: resultado.data.map(p => this.catalogoPermitido(p, usuario.rol)), ...(usuario.rol === RolUsuario.INVENTARIO ? { meta: { ...resultado.meta, alertas: 0 } } : {}) };
   }
 
@@ -39,6 +41,13 @@ export class ProductosController {
   async resolver(@Query("codigo") codigo: string, @UsuarioActual() usuario: Usuario) {
     const producto = await this.productos.resolverCodigo(CodigoLecturaEsquema.parse(codigo));
     return { data: producto ? this.catalogoPermitido(producto, usuario.rol) : null };
+  }
+
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO)
+  @Post("inicial/:conteoId")
+  async crearInicial(@Param("conteoId") conteoId: string, @Body() body: unknown, @UsuarioActual() usuario: Usuario) {
+    const resultado = await this.productos.productoInicial(conteoId, ProductoInicialEsquema.parse(body), usuario.id, usuario.rol);
+    return { data: { ...resultado, producto: this.catalogoPermitido(resultado.producto, usuario.rol) } };
   }
 
   @Roles(RolUsuario.ADMINISTRADOR)

@@ -1,10 +1,10 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger, OnApplicationBootstrap, OnModuleDestroy } from "@nestjs/common";
 import { z } from "zod";
 import { PrismaService } from "../common/prisma.module";
 import { ErrorDominio } from "../common/errores";
 import { siguienteCodigo, numero } from "../common/consecutivos";
-import { Prisma } from "@prisma/client";
-import { NuevoProductoEsquema, type ImportarProductosDTO, type ResultadoImportacionProductosDTO } from "@synchronic-jo/contrato";
+import { Prisma, RolUsuario } from "@prisma/client";
+import { NuevoProductoEsquema, ProductoInicialEsquema, type ImportarProductosDTO, type ResultadoImportacionProductosDTO } from "@synchronic-jo/contrato";
 import { InventarioService } from "../inventario/inventario.service";
 
 export const NuevoProductoSchema = NuevoProductoEsquema;
@@ -14,8 +14,39 @@ const nombrePrincipal = (p: { nombre: string; extension: string }) => p.extensio
 const COLORES = ["#e88f2a", "#3c6b3a", "#7d5a38", "#d97b96", "#304d25", "#b5442e"];
 
 @Injectable()
-export class ProductosService {
+export class ProductosService implements OnApplicationBootstrap, OnModuleDestroy {
+  private mantenimiento?: ReturnType<typeof setInterval>;
+  private retirando = false;
+  private readonly logger = new Logger(ProductosService.name);
   constructor(private readonly prisma: PrismaService, private readonly inventario: InventarioService) {}
+
+  onApplicationBootstrap() {
+    const revisar = async () => {
+      if (this.retirando) return;
+      this.retirando = true;
+      try { await this.retirarCodigosVencidos(); }
+      catch { this.logger.warn("No se pudo revisar el vencimiento de etiquetas; se reintentará en el próximo ciclo"); }
+      finally { this.retirando = false; }
+    };
+    void revisar();
+    this.mantenimiento = setInterval(() => { void revisar(); }, 6 * 60 * 60 * 1000);
+    this.mantenimiento.unref();
+  }
+
+  onModuleDestroy() { if (this.mantenimiento) clearInterval(this.mantenimiento); }
+
+  async retirarCodigosVencidos() {
+    return this.prisma.enTransaccion(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('codigos:mantenimiento'))`;
+      return tx.$executeRaw`WITH vigentes AS (
+        SELECT id, "productoId", "creadoEn", ROW_NUMBER() OVER(PARTITION BY "productoId" ORDER BY "creadoEn" DESC,id DESC) AS posicion
+        FROM "codigosProducto" WHERE "retiradoEn" IS NULL
+      ), vencidas AS (
+        SELECT antigua.id FROM vigentes antigua JOIN vigentes ultima ON ultima."productoId"=antigua."productoId" AND ultima.posicion=1
+        WHERE antigua.posicion>1 AND ultima."creadoEn" <= (CURRENT_TIMESTAMP AT TIME ZONE 'UTC') - INTERVAL '180 days'
+      ) UPDATE "codigosProducto" SET "retiradoEn"=CURRENT_TIMESTAMP AT TIME ZONE 'UTC' WHERE id IN (SELECT id FROM vencidas)`;
+    });
+  }
 
   async importar(datos: ImportarProductosDTO, usuarioId: string): Promise<ResultadoImportacionProductosDTO> {
     return this.prisma.enTransaccion(async tx => {
@@ -62,15 +93,15 @@ export class ProductosService {
     });
   }
 
-  async listar(q?: string, categoria?: string, stockEstado?: string, pagina = 1, porPagina = 20, orden = "reciente", activo = false) {
+  async listar(q?: string, categoria?: string, stockEstado?: string, pagina = 1, porPagina = 20, orden = "reciente", activo = false, familiaId?: string) {
     const filtro = q ? Prisma.sql`AND (p.nombre ILIKE ${'%'+q+'%'} OR p."codigoInterno" ILIKE ${'%'+q+'%'} OR EXISTS(SELECT 1 FROM "codigosProducto" cp WHERE cp."productoId"=p.id AND cp."retiradoEn" IS NULL AND cp.codigo ILIKE ${'%'+q+'%'}) OR c.nombre ILIKE ${'%'+q+'%'})` : Prisma.empty;
     const categoriaFiltro = categoria && categoria !== "Todas" ? Prisma.sql`AND c.nombre = ${categoria}` : Prisma.empty;
     const stockFiltro = stockEstado === "alerta" ? Prisma.sql`AND p."stockFisico"-p."stockReservado" <= p."stockMinimo"` : stockEstado === "ok" ? Prisma.sql`AND p."stockFisico"-p."stockReservado" > p."stockMinimo"` : Prisma.empty;
-    const base = Prisma.sql`FROM productos p LEFT JOIN categorias c ON c.id = p."categoriaId" WHERE TRUE ${activo ? Prisma.sql`AND p.activo=true` : Prisma.empty} ${filtro} ${categoriaFiltro} ${stockFiltro}`;
+    const base = Prisma.sql`FROM productos p LEFT JOIN categorias c ON c.id = p."categoriaId" WHERE TRUE ${activo ? Prisma.sql`AND p.activo=true` : Prisma.empty} ${familiaId ? Prisma.sql`AND (p.id=${familiaId} OR p."productoBaseId"=${familiaId})` : Prisma.empty} ${filtro} ${categoriaFiltro} ${stockFiltro}`;
     return this.prisma.$transaction(async tx => {
       const [cuenta] = await tx.$queryRaw<Array<{total: bigint}>>(Prisma.sql`SELECT COUNT(*) AS total ${base}`);
       const total = Number(cuenta.total), actual = Math.min(pagina, Math.max(1, Math.ceil(total / porPagina)));
-      const ordenSql = orden === "alertas" ? Prisma.sql`(p."stockFisico"-p."stockReservado" <= p."stockMinimo") DESC, p.nombre, p.id` : orden === "nombre" ? Prisma.sql`p.nombre,p.id` : Prisma.sql`p."creadoEn" DESC, p.id DESC`;
+      const ordenSql = orden === "alertas" ? Prisma.sql`(p."stockFisico"-p."stockReservado" <= p."stockMinimo") DESC, p.nombre, p.id` : orden === "nombre" ? Prisma.sql`${q ? Prisma.sql`(lower(p.nombre)=lower(${q})) DESC,` : Prisma.empty} p.nombre,p.id` : Prisma.sql`p."creadoEn" DESC, p.id DESC`;
       const ids = await tx.$queryRaw<Array<{id:string}>>(Prisma.sql`SELECT p.id ${base} ORDER BY ${ordenSql} LIMIT ${porPagina} OFFSET ${(actual-1)*porPagina}`);
       const productos = await tx.producto.findMany({where: {id: {in: ids.map(p=>p.id)}}, include: {categoria:true,codigosLectura: {where:{retiradoEn:null},select:{codigo:true}}}});
       const fotos = await tx.archivoAdjunto.findMany({where: {productoId: {in: ids.map(p=>p.id)}, eliminadoEn:null}, orderBy: {creadoEn:"desc"}, select:{id:true,productoId:true}});
@@ -97,7 +128,7 @@ export class ProductosService {
     return { data: cambios.map((c) => ({ ...c, valorAnterior: numero(c.valorAnterior), valorNuevo: numero(c.valorNuevo) })), meta: { pagina, porPagina, total } };
   }
 
-  async crear(datos: z.infer<typeof NuevoProductoSchema>) {
+  async crear(datos: z.infer<typeof NuevoProductoSchema>, precioPendiente = false) {
     const producto = await this.prisma.enTransaccion(async (tx) => {
       // La creación y el punto de partida comparten el mismo candado.
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('inventario:inicial'))`;
@@ -118,7 +149,7 @@ export class ProductosService {
           categoriaId: categoria?.id ?? base?.categoriaId ?? null,
           unidad: datos.unidad?.trim() || "unidad",
           precioVenta: datos.precioVenta,
-          precioPendiente: false,
+          precioPendiente,
           costoActual: datos.costoActual ?? 0,
           stockFisico: datos.stock ?? 0,
           stockMinimo: datos.stockMinimo ?? 0,
@@ -210,11 +241,14 @@ export class ProductosService {
     const id = externo?.productoId ?? interno?.id;
     if (!id) return null;
     if (!(externo?.producto.activo ?? interno?.activo)) throw new ErrorDominio("PRODUCTO_INACTIVO", "Este producto está inactivo", 409);
-    return this.obtener(id);
+    const producto = await this.obtener(id);
+    const compartida = externo && !producto.productoBaseId && await this.prisma.producto.count({ where: { productoBaseId: id, activo: true } }) > 0;
+    return { ...producto, ...(compartida ? { familiaCompartidaId: id } : {}) };
   }
 
   async vincularCodigo(productoId: string, codigo: string) {
     return this.prisma.enTransaccion(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('codigos:mantenimiento'))`;
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`codigo:${codigo}`}))`;
       const producto = await tx.producto.findUnique({ where: { id: productoId } });
       if (!producto?.activo) throw new ErrorDominio("PRODUCTO_INVALIDO", "Elige un producto activo", 404);
@@ -222,7 +256,7 @@ export class ProductosService {
       if (/^PROD-\d+$/i.test(codigo) && interno?.id !== productoId) throw new ErrorDominio("CODIGO_INTERNO", "Ese formato está reservado para el consecutivo del negocio. Usa el código de la etiqueta", 409);
       if (interno && interno.id !== productoId) throw new ErrorDominio("CODIGO_EXISTENTE", "Ese código identifica otro producto", 409);
       const existente = await tx.codigoProducto.findUnique({ where: { codigo } });
-      if (existente && existente.productoId !== productoId) throw new ErrorDominio("CODIGO_EXISTENTE", "Este código ya pertenece a otro producto. No se cambió su relación", 409);
+      if (existente && existente.productoId !== productoId && existente.productoId !== producto.productoBaseId) throw new ErrorDominio("CODIGO_EXISTENTE", "Este código ya pertenece a otro producto. No se cambió su relación", 409);
       if (existente?.retiradoEn) throw new ErrorDominio("CODIGO_RETIRADO", "El administrador retiró este código. Usa un código vigente", 409);
       return existente ?? tx.codigoProducto.create({ data: { productoId, codigo } });
     });
@@ -236,6 +270,28 @@ export class ProductosService {
     const codigo = await this.prisma.codigoProducto.findFirst({ where: { id: codigoId, productoId } });
     if (!codigo) throw new ErrorDominio("NO_ENCONTRADO", "Código no encontrado", 404);
     return this.prisma.codigoProducto.update({ where: { id: codigoId }, data: { retiradoEn: codigo.retiradoEn ?? new Date() } });
+  }
+
+  async productoInicial(conteoId: string, datos: z.infer<typeof ProductoInicialEsquema>, usuarioId: string, rol: RolUsuario) {
+    return this.prisma.enTransaccion(async tx => {
+      await this.inventario.verificarAcceso(conteoId, rol);
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('inventario:inicial'))`;
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`conteo:${conteoId}`}))`;
+      const conteo = await tx.conteoInventario.findUnique({ where: { id: conteoId } });
+      if (conteo?.tipo !== "INICIAL" || conteo.estado !== "EN_CURSO") throw new ErrorDominio("CONTEO_CERRADO", "Solo puedes registrar productos en un inventario inicial abierto", 409);
+      const producto = datos.productoId ? await this.obtener(datos.productoId) : await this.crear(NuevoProductoSchema.parse({ nombre: datos.nombre, unidad: datos.unidad, categoria: datos.categoria, productoBaseId: datos.productoBaseId, extension: datos.extension, precioVenta: 0 }), true);
+      if (!producto.activo) throw new ErrorDominio("PRODUCTO_INACTIVO", "El producto está inactivo", 409);
+      if (datos.codigo) await this.vincularCodigo(producto.id, datos.codigo);
+      await tx.conteoLinea.upsert({ where: { conteoId_productoId: { conteoId, productoId: producto.id } }, update: {}, create: { conteoId, productoId: producto.id, stockTeorico: producto.stockFisico } });
+      const linea = await tx.conteoLinea.findUniqueOrThrow({ where: { conteoId_productoId: { conteoId, productoId: producto.id } } });
+      const yaContado = linea.stockFisico !== null;
+      if (!yaContado) {
+        if (datos.cantidad === undefined) throw new ErrorDominio("CANTIDAD_INICIAL", "Indica la cantidad inicial de este producto, incluyendo 0 si no hay unidades");
+        await this.inventario.asignar(conteoId, usuarioId, false, producto.id);
+        await this.inventario.actualizarLinea(conteoId, producto.id, datos.cantidad, usuarioId, false);
+      }
+      return { producto, yaContado };
+    });
   }
 
   private dto(p: {

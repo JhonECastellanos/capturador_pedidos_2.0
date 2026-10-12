@@ -40,24 +40,22 @@ async function main() {
   const [admin,a,b,vendedor] = usuarios;
   const inicial = await pedir(admin,'/inventario/compartidos','POST',{ tipo:'inicial',turno:'Primera instalación' });
   assert.equal((await pedir(admin,`/inventario/compartidos/${inicial.id}`)).total,0);
-  const dato = { nombre:'Chocorramo de prueba',unidad:'paquete',codigo:'7701234567890' };
+  const dato = { cantidad:0, nombre:'Chocorramo de prueba',unidad:'paquete',codigo:'7701234567890' };
   const claveOperacion = randomUUID();
   await pedir(a,'/productos','POST',{nombre:dato.nombre,precioVenta:0},403);
-  const productoAlta = {...dato,precioVenta:0,codigosLectura:[dato.codigo]};
-  const primera = {producto:await pedir(admin,'/productos','POST',productoAlta,201,claveOperacion)};
-  const reintento = {producto:await pedir(admin,'/productos','POST',productoAlta,201,claveOperacion)};
-  await pedir(a,`/inventario/compartidos/${inicial.id}/asignar`,'POST',{productoId:primera.producto.id});
-  assert.equal(primera.producto.id,reintento.producto.id); assert.equal(primera.producto.precioPendiente,false);
+  const primera = await pedir(a,`/productos/inicial/${inicial.id}`,'POST',dato,201,claveOperacion);
+  const reintento = await pedir(a,`/productos/inicial/${inicial.id}`,'POST',dato,201,claveOperacion);
+  assert.equal(primera.producto.id,reintento.producto.id); assert.equal(primera.producto.precioPendiente,true);
   assert.equal(await bd.producto.count(),1); assert.equal(await bd.conteoLinea.count(),1);
   await pedir(b,`/inventario/compartidos/${inicial.id}/asignar`,'POST',{productoId:primera.producto.id},409);
-  await pedir(a,`/inventario/conteos/${inicial.id}/lineas/${primera.producto.id}?resumen=true`,'PATCH',{stockFisico:0});
+
   assert.equal((await bd.conteoLinea.findFirst()).stockFisico,0);
   assert.ok((await bd.conteoLinea.findFirst()).contadoEn);
   await pedir(admin,`/productos/${primera.producto.id}/codigos`,'POST',{codigo:'7701234567891'});
   await pedir(b,`/inventario/compartidos/${inicial.id}/asignar`,'POST',{productoId:primera.producto.id},409);
   for (const codigo of [dato.codigo,'7701234567891']) assert.equal((await pedir(admin,'/productos/codigo/lectura?codigo='+codigo)).id,primera.producto.id);
   assert.equal(await bd.producto.count(),1); assert.equal(await bd.codigoProducto.count(),2);
-  casos.push('Instalación vacía, alta administrativa con precio cero explícito, reintento único, cero contado y dos códigos del mismo producto');
+  casos.push('Instalación vacía, alta y cero contados juntos por colaborador, importe pendiente, reintento único y dos etiquetas del mismo producto');
   // Vista real contra la API aislada: captura de un código desconocido en inicial.
   let cerrandoVista = false; const erroresPuente = [];
   const navegador = await chromium.launch({ channel: 'chrome', headless: true });
@@ -81,13 +79,54 @@ async function main() {
     await pagina.getByRole('button', { name: 'Contar con cámara', exact: true }).click();
     await pagina.getByLabel('Código manual').fill('7700000000111');
     await pagina.getByRole('button', { name: 'Usar', exact: true }).click();
-    await pagina.getByRole('alert').filter({hasText:'Código sin registrar. Pide al administrador que lo vincule al producto en Productos.'}).waitFor();
-    assert.equal(await pagina.getByLabel('Nombre del producto').count(),0);
-    assert.equal(await pagina.getByRole('button',{name:'Crear o buscar producto',exact:true}).count(),0);
+    await pagina.getByLabel('Código de barras o QR',{exact:true}).waitFor();
+    assert.equal(await pagina.getByLabel('Código de barras o QR',{exact:true}).inputValue(),'7700000000111');
+    assert.equal(await pagina.getByLabel('Costo del producto').count(),0);
+    assert.equal(await pagina.getByLabel('Precio de venta',{exact:true}).count(),0);
+    await pagina.getByLabel('Cantidad inicial',{exact:true}).waitFor();
+    await pagina.getByLabel('Nombre del producto',{exact:true}).fill('Camisa de prueba');
+    await pagina.getByLabel('Unidad o presentación',{exact:true}).fill('unidad');
+    await pagina.getByLabel('Cantidad inicial',{exact:true}).fill('5');
+    await pagina.getByRole('button',{name:'Crear producto',exact:true}).click();
+    await pagina.getByRole('dialog',{name:'Escanear producto',exact:true}).waitFor();
+    const camisa = await pedir(admin,'/productos/codigo/lectura?codigo=7700000000111');
+    assert.equal(camisa.precioPendiente,true);
+    assert.equal((await bd.conteoLinea.findUnique({where:{conteoId_productoId:{conteoId:inicial.id,productoId:camisa.id}}})).stockFisico,5);
+    await pagina.getByLabel('Código manual').fill('7700000000111');await pagina.getByRole('button',{name:'Usar',exact:true}).click();
+    await pagina.getByRole('button',{name:'Crear otra presentación con esta etiqueta',exact:true}).click();
+    await pagina.getByLabel('Presentación o extensión',{exact:true}).fill('Roja');
+    await pagina.getByLabel('Cantidad inicial',{exact:true}).fill('3');
+    await pagina.getByRole('button',{name:'Crear producto',exact:true}).click();
+    await pagina.getByRole('dialog',{name:'Escanear producto',exact:true}).waitFor();
+    const roja = (await pedir(admin,'/productos?familiaId='+camisa.id)).find(p=>p.extension==='Roja');
+    assert.equal(roja.rowid,camisa.id);assert.equal(roja.rowid_ext,roja.id);assert.notEqual(roja.id,camisa.id);
+    assert.equal((await bd.conteoLinea.findUnique({where:{conteoId_productoId:{conteoId:inicial.id,productoId:roja.id}}})).stockFisico,3);
+    assert.equal(await bd.codigoProducto.count({where:{codigo:'7700000000111'}}),1);
+    await pagina.getByLabel('Código manual').fill('7700000000111');await pagina.getByRole('button',{name:'Usar',exact:true}).click();
+    await pagina.getByRole('dialog',{name:'Elegir presentación',exact:true}).waitFor();
+    await pagina.getByRole('button',{name:new RegExp('Camisa de prueba · Roja')}).click();
+    await pagina.getByRole('alert').filter({hasText:'Este producto ya fue contado'}).waitFor();
+    await pagina.getByRole('button',{name:'Contar con cámara',exact:true}).click();
+    await pagina.getByLabel('Código manual').fill('7700000000112');await pagina.getByRole('button',{name:'Usar',exact:true}).click();
+    await pagina.getByLabel('Nombre del producto',{exact:true}).fill('Camisa de prueba');
+    const coincidencias=pagina.getByRole('listbox',{name:'Productos coincidentes'});await coincidencias.waitFor();
+    assert.match(await coincidencias.getByRole('option').first().innerText(),new RegExp('^Camisa de prueba · '+camisa.codigoInterno));
+    await coincidencias.getByRole('option',{name:'Camisa de prueba · '+camisa.codigoInterno,exact:true}).click();
+    await pagina.getByRole('button',{name:'Usar producto existente',exact:true}).click();
+    await pagina.getByRole('dialog',{name:'Escanear producto',exact:true}).waitFor();
+    assert.equal((await pedir(admin,'/productos/codigo/lectura?codigo=7700000000112')).id,camisa.id);
+    assert.equal(await bd.producto.count({where:{id:camisa.id}}),1);
+    assert.equal((await bd.conteoLinea.findUnique({where:{conteoId_productoId:{conteoId:inicial.id,productoId:camisa.id}}})).stockFisico,5);
+    await pagina.getByRole('button',{name:'Cerrar',exact:true}).click();
+    await pagina.reload();await pagina.getByText('Inventario inicial · en curso',{exact:true}).first().click();
+    await pagina.getByPlaceholder('Buscar producto del conteo').fill('Camisa de prueba');
+    await pagina.getByText('Contado: 5',{exact:false}).waitFor();await pagina.getByText('Contado: 3',{exact:false}).waitFor();
+    casos.push('Inicial desde escáner: alta y cinco unidades atómicas; variante Roja de tres unidades con la misma etiqueta, rowid común y rowid_ext distinto; nueva etiqueta conserva producto y cantidad al recargar');
+
     assert.equal(await pagina.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     assert.deepEqual(erroresVista, []); assert.deepEqual(erroresPuente, []);
     await pagina.screenshot({ path: '.local/pruebas-v7/inicial-768.png' });
-    casos.push('Inicial en tablet, API real aislada: código desconocido informa que debe registrarse en Productos; sin alta dentro de inicial y con alternativa manual');
+    casos.push('Inicial en tablet, API real aislada: código desconocido abre el alta inicial sin costo/importe, con unidad y cantidad; alternativa manual disponible');
   } finally { cerrandoVista = true; await navegador.close(); }
   const revAntes = await pedir(a,'/sincronizacion/revision');
   await pedir(admin,`/productos/${primera.producto.id}/codigos`,'POST',{codigo:'7701234567892'});
@@ -103,16 +142,16 @@ async function main() {
   const segundo = {producto:otro};
   await pedir(b,`/inventario/conteos/${inicial.id}/lineas/${segundo.producto.id}?resumen=true`,'PATCH',{stockFisico:7});
   const resumen = await pedir(admin,`/inventario/compartidos/${inicial.id}`);
-  assert.equal(resumen.contadas,2); assert.equal(resumen.colaboradores,2); assert.equal(resumen.unidades,7);
+  assert.equal(resumen.contadas,4); assert.equal(resumen.colaboradores,2); assert.equal(resumen.unidades,15);
   await pedir(a,`/inventario/conteos/${inicial.id}/finalizar`,'POST',{},403);
   await pedir(admin,`/inventario/conteos/${inicial.id}/finalizar`,'POST',{});
   await pedir(admin,`/inventario/conteos/${inicial.id}/aplicar-ajuste`,'POST',{});
   assert.equal((await bd.producto.findUnique({where:{id:otro.id}})).stockFisico,7);
   assert.equal((await pedir(admin,'/inventario/inicial')).diferencias,0);
-  await pedir(admin,`/productos/inicial/${inicial.id}`,'POST',dato,404);
+  await pedir(admin,`/productos/inicial/${inicial.id}`,'POST',dato,409);
   await pedir(a,`/inventario/compartidos/${inicial.id}/lineas`, 'GET',undefined,403);
-  casos.push('Participantes y fechas reales; historial solo administrador; aplicar inicial establece siete unidades una sola vez y concilia el ledger');
-  await pedir(admin,'/pedidos','POST',{lineas:[{productoId:primera.producto.id,cantidad:1}],metodo:'efectivo',momentoCobro:'inmediato',estadoInicial:'entregado'},400);
+  casos.push('Participantes y fechas reales; historial solo administrador; aplicar inicial establece quince unidades una sola vez y concilia el ledger');
+  await pedir(admin,'/pedidos','POST',{lineas:[{productoId:primera.producto.id,cantidad:1}],metodo:'efectivo',momentoCobro:'inmediato',estadoInicial:'entregado'},409);
   await pedir(admin,`/productos/${primera.producto.id}/precio`,'POST',{nuevoPrecio:3000,costoActual:1700,stockMinimo:3});
   const parametrizado = await bd.producto.findUnique({where:{id:primera.producto.id}});
   assert.equal(parametrizado.precioPendiente,false); assert.equal(Number(parametrizado.costoActual),1700); assert.equal(parametrizado.stockFisico,0);
@@ -120,7 +159,7 @@ async function main() {
   assert.equal(lista[0].costoActual,0); assert.equal(lista[0].stockFisico,0);
   const lecturaCiega = await pedir(a,`/productos/${otro.id}`); assert.equal(lecturaCiega.stockFisico,0); assert.equal(lecturaCiega.costoActual,0); assert.equal(lecturaCiega.precioVenta,0);
   await pedir(a,'/pedidos','GET',undefined,403); await pedir(a,'/productos','POST',{nombre:'No permitido',precioVenta:1},403);
-  casos.push('Producto sin stock no se vende; configurar precio/costo/mínimo conserva stock; colaborador no accede a operaciones comerciales ni existencias teóricas');
+  casos.push('Producto sin importe parametrizado no se vende; configurar precio/costo/mínimo conserva stock; colaborador no accede a operaciones comerciales ni existencias teóricas');
   for (let i=0;i<6;i++) await pedir(admin,'/productos','POST',{ nombre:`Bebida de prueba ${i}`,unidad:'botella',precioVenta:1800,stock:5,codigosLectura:[`990000000000${i}`] });
   const general = await pedir(admin,'/inventario/compartidos','POST',{tipo:'general',turno:'Varios celulares'});
   const solicitudes = await Promise.all([a,b].map(actor => fetch(base+`/inventario/compartidos/${general.id}/asignar`,{ method:'POST',headers:{Authorization:'Bearer '+actor.token,'Content-Type':'application/json','Idempotency-Key':randomUUID()},body:JSON.stringify({productoId:otro.id}) })));
@@ -143,6 +182,24 @@ async function main() {
   await pedir(vendedor,`/inventario/compartidos/${diario.id}/asignar`,'POST',{productoId:lineaDiaria.productoId});
   await pedir(vendedor,`/inventario/conteos/${diario.id}/lineas/${lineaDiaria.productoId}?resumen=true`,'PATCH',{stockFisico:0});
   await pedir(vendedor,`/inventario/conteos/${diario.id}/lineas/${lineaDiaria.productoId}?resumen=true`,'PATCH',{stockFisico:10},409);
+
+  const pendiente=(await pedir(vendedor,`/inventario/compartidos/${diario.id}/lineas`)).find(l=>l.stockFisico===null);
+  const {QRCodeWriter,BarcodeFormat}=require('@zxing/library');const matriz=new QRCodeWriter().encode(pendiente.codigo,BarcodeFormat.QR_CODE,320,320,new Map());const puntos=[];
+  for(let y=0;y<320;y++)for(let x=0;x<320;x++)if(matriz.get(x,y))puntos.push([x+160,y+80]);
+  const diarioBrowser=await chromium.launch({channel:'chrome',headless:true});
+  try {
+    const contexto=await diarioBrowser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+    await contexto.route('**/api/v1/**',async r=>{const u=new URL(r.request().url());const respuesta=await r.fetch({url:'http://127.0.0.1:3110'+u.pathname+u.search,headers:{...r.request().headers(),Authorization:'Bearer '+vendedor.token}});await r.fulfill({response:respuesta});});
+    await contexto.addInitScript(figura=>{window.__qrDiario=figura;navigator.mediaDevices.getUserMedia=async()=>{const lienzo=document.createElement('canvas');lienzo.width=640;lienzo.height=480;const c=lienzo.getContext('2d');const pintar=()=>{c.fillStyle='white';c.fillRect(0,0,640,480);c.fillStyle='black';for(const [x,y]of window.__qrDiario)c.fillRect(x,y,1,1);};pintar();const reloj=setInterval(pintar,80);const flujo=lienzo.captureStream(12);for(const t of flujo.getTracks()){const stop=t.stop.bind(t);t.stop=()=>{clearInterval(reloj);stop();};}return flujo;};},puntos);
+    const vista=await contexto.newPage();await vista.goto('http://127.0.0.1:8180/vendedor');await vista.getByText('Conteo diario',{exact:true}).click();
+    await vista.getByText('Conteo diario · en curso',{exact:true}).first().click();await vista.getByRole('button',{name:'Contar con cámara',exact:true}).click();
+    await vista.getByLabel('Cantidad contada',{exact:true}).waitFor({timeout:20000});await vista.getByLabel('Cantidad contada',{exact:true}).fill('0');
+    await vista.evaluate(()=>{window.__qrDiario=[];});await vista.getByRole('button',{name:'Guardar cantidad',exact:true}).click();await vista.getByRole('dialog',{name:'Escanear producto',exact:true}).waitFor();
+    await vista.getByRole('button',{name:'Cerrar',exact:true}).click();
+    assert.equal((await bd.conteoLinea.findUnique({where:{conteoId_productoId:{conteoId:diario.id,productoId:pendiente.productoId}}})).stockFisico,0);
+    casos.push('Diario del vendedor en base aislada: QR decodificado desde video, cantidad cero guardada en PostgreSQL y retorno automático a la cámara');
+  } finally {await diarioBrowser.close();}
+
   const idsHoy = (await bd.conteoLinea.findMany({where:{conteoId:diario.id}})).map(l=>l.productoId);
   await bd.conteoInventario.update({where:{id:diario.id},data:{fechaDiaria:new Date('2020-01-01T00:00:00Z')}});
   const siguienteDia = await pedir(vendedor,'/inventario/compartidos','POST',{tipo:'aleatorio',turno:'Otro día'});
@@ -152,7 +209,7 @@ async function main() {
   for (const linea of await bd.conteoLinea.findMany({where:{conteoId:siguienteDia.id}})) await pedir(admin,`/inventario/conteos/${siguienteDia.id}/lineas/${linea.productoId}?resumen=true`,'PATCH',{stockFisico:0});
   await pedir(admin,`/inventario/conteos/${siguienteDia.id}/finalizar`,'POST',{});
   await pedir(vendedor,'/inventario/compartidos','POST',{tipo:'aleatorio',turno:'Ya cerrado'},403);
-  casos.push('Vendedor accede solo a diario; Inventario solo a inicial/general; cinco productos y rotación cubren ocho productos incluso con un día previo pendiente');
+  casos.push('Vendedor accede solo a diario; Inventario solo a inicial/general; cinco productos y rotación cubren diez productos incluso con un día previo pendiente');
   const antes = await bd.producto.count();
   await pedir(admin,'/productos/importar','POST',{prepararInicial:false,productos:[{nombre:'Arroz de prueba',unidad:'bolsa',precioVenta:4200,costoActual:2500,stock:0,codigosLectura:['7709990000011','7709990000012']}]});
   const arroz = await pedir(admin,'/productos/codigo/lectura?codigo=7709990000012');
@@ -164,6 +221,22 @@ async function main() {
   assert.ok((await bd.codigoProducto.findUnique({where:{id:codigos[0].id}})).retiradoEn);
   assert.equal((await pedir(admin,'/productos/codigo/lectura?codigo='+codigos[1].codigo)).id,arroz.id);
   casos.push('CSV admite varios alias y cantidad cero; retiro conserva la relación histórica, bloquea su reutilización y mantiene otro código activo');
+
+  const {ProductosService}=require('../dist/productos/productos.service');
+  const mantenimiento=new ProductosService({enTransaccion:fn=>bd.$transaction(fn)},null);
+  const viejo=await bd.codigoProducto.create({data:{productoId:arroz.id,codigo:'EXP-viejo',creadoEn:new Date(Date.now()-300*86400000)}});
+  const reciente=await bd.codigoProducto.create({data:{productoId:arroz.id,codigo:'EXP-reciente',creadoEn:new Date(Date.now()-179*86400000)}});
+  // Se envejecen solo las etiquetas propias de este ejercicio.
+  await bd.codigoProducto.updateMany({where:{productoId:arroz.id,codigo:{notIn:['EXP-viejo','EXP-reciente']}},data:{retiradoEn:new Date()}});
+  await mantenimiento.retirarCodigosVencidos();assert.equal((await bd.codigoProducto.findUnique({where:{id:viejo.id}})).retiradoEn,null);
+  await bd.codigoProducto.update({where:{id:reciente.id},data:{creadoEn:new Date(Date.now()-181*86400000)}});
+  await mantenimiento.retirarCodigosVencidos();assert.ok((await bd.codigoProducto.findUnique({where:{id:viejo.id}})).retiradoEn);
+  assert.equal((await bd.codigoProducto.findUnique({where:{id:reciente.id}})).retiradoEn,null);
+  assert.equal(await bd.codigoProducto.count({where:{productoId:arroz.id,retiradoEn:null}}),1);
+  assert.equal((await pedir(admin,'/productos/codigo/lectura?codigo=EXP-reciente')).id,arroz.id);
+  await pedir(admin,'/productos/codigo/lectura?codigo=EXP-viejo','GET',undefined,409);
+  casos.push('Retiro automático: ninguna etiqueta antigua a los 179 días; a los 181 días se retira la anterior, conserva la última vigente y su relación histórica');
+
   const {FiltroErrores}=require('../dist/common/errores'); let codigoHttp, respuesta;
   const salidaError={status(c){codigoHttp=c;return this;},send(r){respuesta=r;}};
   new FiltroErrores().catch(Object.assign(new Error('limite'),{statusCode:429}),{switchToHttp:()=>({getResponse:()=>salidaError})});

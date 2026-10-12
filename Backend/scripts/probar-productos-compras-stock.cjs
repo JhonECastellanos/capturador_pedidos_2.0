@@ -31,8 +31,8 @@ async function main() {
     await api(vendedor, '/auth/login', 'POST', { identifier: correoVendedor, password: 'SoloPruebas2026!' }, 200);
     await api(contador, '/auth/login', 'POST', { identifier: correoInventario, password: 'SoloPruebas2026!' }, 200);
     await api(contador, '/productos', 'POST', { nombre: marca + '-no permitido', precioVenta: 1 }, 403);
-    await api(admin, '/productos/inicial/' + randomUUID(), 'POST', {}, 404);
-    casos.push('Alta retirada de inventario en frontend y API; colaborador de inventario no crea productos');
+    await api(admin, '/productos/inicial/' + randomUUID(), 'POST', {nombre:'Registro inválido',unidad:'unidad',cantidad:0}, 404);
+    casos.push('Alta ausente en Stock general; solo un inicial abierto habilita el alta para colaboradores');
     const page = await admin.newPage(); page.on('pageerror', e => errores.push(e.message));
     const venta = await vendedor.newPage(); venta.on('pageerror', e => errores.push(e.message));
     await venta.goto(origen + '/vendedor/pedido'); await venta.getByText('Venta abierta · cliente ocasional', { exact: true }).click();

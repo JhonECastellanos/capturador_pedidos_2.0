@@ -4,7 +4,7 @@ import { BarraInferior } from "../../../components/BarraInferior";
 import { BarraSuperior } from "../../../components/BarraSuperior";
 import { Boton } from "../../../components/Boton";
 import { BotonEscaner } from "../../../components/BotonEscaner";
-import { EscanerCodigo } from "../../../components/EscanerCodigo";
+import { LecturaProductoCodigo } from "../../../components/LecturaProductoCodigo";
 import { BuscadorInput } from "../../../components/BuscadorInput";
 import { IconChevronRight, IconMapPin } from "../../../components/Icons";
 import { ListaVacia } from "../../../components/ListaVacia";
@@ -20,7 +20,7 @@ import { categorias } from "../../../data/semilla";
 import { construirPago } from "../../../dominio/servicios";
 import { SelectorPago } from "../../clientes-pedido/components/SelectorPago";
 import type { EstadoPedido, LineaPedido, MetodoPago, Pedido, Producto, Cliente } from "../../../types";
-import { api, usaApi } from "../../../data/api";
+import { usaApi } from "../../../data/api";
 import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
 import { formatoMoneda } from "../../../utils/formato";
 
@@ -281,7 +281,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
         <>
           <div className="flex-shrink-0 space-y-2 px-5 pt-3 md:px-6">
             <BuscadorInput value={busquedaProducto} onChange={setBusquedaProducto} placeholder="Buscar producto o código" accion={usaApi ? <BotonEscaner onClick={() => setCamara(true)} /> : undefined} />
-            {camara && <EscanerCodigo onCerrar={() => setCamara(false)} onCodigo={codigo => { setCamara(false); void api<Producto | null>(`/productos/codigo/lectura?codigo=${encodeURIComponent(codigo)}`).then(p => { if (!p) { mostrarAviso("Código sin registrar. Pide al administrador que cree o vincule el producto en Productos o Compras", "info"); return; } if (p.precioPendiente || p.stock <= 0) { mostrarAviso(p.precioPendiente ? "Este producto aún no tiene precio configurado" : "Este producto no tiene unidades disponibles", "info"); return; } setBusquedaProducto(p.nombre); setCategoria("Todas"); cambiarCantidad(p.id, 1, p); }).catch(e => mostrarAviso(e instanceof Error ? e.message : "No se pudo consultar el producto", "info")); }} />}
+            {camara && <LecturaProductoCodigo onCerrar={() => setCamara(false)} onProducto={p => { setCamara(false); if (!p) { mostrarAviso("Código sin registrar. Pide al administrador que lo registre en Productos, Compras o Inventario inicial", "info"); return; } if (p.precioPendiente || p.stock <= 0) { mostrarAviso(p.precioPendiente ? "Este producto aún no tiene precio configurado" : "Este producto no tiene unidades disponibles", "info"); return; } setBusquedaProducto(p.nombre); setCategoria("Todas"); cambiarCantidad(p.id, 1, { ...p, imagenUrl: p.imagenUrl ?? undefined }); }} />}
             <SegmentoControl
               desborda
               valor={categoria}

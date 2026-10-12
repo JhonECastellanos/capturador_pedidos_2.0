@@ -5,7 +5,7 @@ import { BarraSuperior } from "../../../components/BarraSuperior";
 import { Boton } from "../../../components/Boton";
 import { FichaProductoCodigo } from "../../../components/FichaProductoCodigo";
 import { BotonEscaner } from "../../../components/BotonEscaner";
-import { EscanerCodigo } from "../../../components/EscanerCodigo";
+import { LecturaProductoCodigo } from "../../../components/LecturaProductoCodigo";
 import { CodigosProducto } from "../components/CodigosProducto";
 import { BuscadorInput } from "../../../components/BuscadorInput";
 import { GuiaAyuda } from "../../../components/GuiaAyuda";
@@ -19,7 +19,7 @@ import { useOperaciones } from "../../../context/operaciones";
 import { calcularMargen } from "../../../dominio/servicios";
 import { formatoMoneda } from "../../../utils/formato";
 import type { Producto, CambioPrecio } from "../../../types";
-import { api, usaApi } from "../../../data/api";
+import { usaApi } from "../../../data/api";
 import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
 import { IntercambioProductosCSV } from "../components/IntercambioProductosCSV";
 import { useOperacionAgente } from "../../agentes/operacion-agente";
@@ -269,7 +269,7 @@ export function ProductosAdmin() {
       <div className="flex-shrink-0 pt-2.5">
         {usaApi && <><button type="button" onClick={() => setCrear("")} className="min-h-9 text-xs font-semibold text-teal">Crear producto o vincular código</button><IntercambioProductosCSV /></>}
         <BuscadorInput value={busqueda} onChange={setBusqueda} placeholder="Buscar por nombre, código o categoría" accion={usaApi ? <BotonEscaner onClick={() => setCamara(true)} /> : undefined} />
-        {camara && <EscanerCodigo onCerrar={() => setCamara(false)} onCodigo={codigo => { setCamara(false); void api<Producto | null>(`/productos/codigo/lectura?codigo=${encodeURIComponent(codigo)}`).then(p => { if (p) { setProductoId(p.id); setPrecio(String(p.precioVenta)); setPaso(1); } else setCrear(codigo); }).catch(e => mostrarAviso(e instanceof Error ? e.message : "No se pudo leer el producto", "info")); }} />}
+        {camara && <LecturaProductoCodigo onCerrar={() => setCamara(false)} onProducto={(p, codigo) => { setCamara(false); if (p) { setProductoId(p.id); setPrecio(String(p.precioVenta)); setPaso(1); } else setCrear(codigo); }} />}
       </div>
 
       <Paginacion pagina={pagina} totalPaginas={Math.max(1, Math.ceil((usaApi ? remoto.total : filtrados.length) / POR_PAGINA))} total={usaApi ? remoto.total : filtrados.length} porPagina={POR_PAGINA} onChange={setPagina} />
