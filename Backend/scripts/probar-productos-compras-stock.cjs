@@ -46,6 +46,30 @@ async function main() {
     await page.getByRole('button', { name: /Continuar a productos/ }).click();
     await page.getByRole('button', { name: '+ Producto', exact: true }).click();
     await page.getByRole('button', { name: 'Escanear código', exact: true }).waitFor();
+    // Una rueda real detecta recortes que el auto-scroll de Playwright puede ocultar.
+    async function alcanzar(boton) {
+      const paso = page.getByRole('main', { name: 'Productos de la recepción', exact: true });
+      const marco = await paso.boundingBox(); assert.ok(marco && marco.height > 0);
+      await paso.evaluate(e => { e.scrollTop = 0; });
+      await page.mouse.move(marco.x + marco.width / 2, marco.y + marco.height / 2);
+      let visible = false;
+      for (let n = 0; n < 50; n++) {
+        const r = await boton.boundingBox();
+        if (r && r.y >= marco.y && r.y + r.height <= marco.y + marco.height) { visible = true; break; }
+        await page.mouse.wheel(0, Math.min(120, marco.height / 3));
+        await page.waitForTimeout(40);
+      }
+      assert.ok(visible, 'El botón debe quedar completo dentro del área desplazable');
+      assert.equal(await boton.evaluate(e => { const r=e.getBoundingClientRect();return e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)); }), true, 'El botón no debe quedar tapado');
+    }
+    for (const [width,height] of [[320,480],[390,844],[390,400],[768,1024],[1440,900]]) {
+      await page.setViewportSize({width,height});
+      await alcanzar(page.getByRole('button', { name: 'Crear producto', exact: true }));
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+      await page.screenshot({path:`${carpeta}/alta-alcanzable-${width}-${height}.png`});
+    }
+    await page.setViewportSize({width:393,height:873});
+    casos.push('Alta desde Compras: rueda real alcanza Crear producto sin recortes en 320, 390, teclado de poca altura, tablet 768 y escritorio 1440');
     const nombre = marca + ' Galletas de avena', codigo = marca + '-BARRAS';
     await page.getByLabel('Código de barras o QR', { exact: true }).fill(codigo);
     await page.getByLabel('Nombre del producto', { exact: true }).fill(nombre);
@@ -54,6 +78,7 @@ async function main() {
     await page.getByLabel('Costo del producto', { exact: true }).fill('1200');
     await page.getByLabel('Precio de venta', { exact: true }).fill('2500');
     await page.getByLabel('Stock mínimo', { exact: true }).fill('3');
+    await alcanzar(page.getByRole('button', { name: 'Crear producto', exact: true }));
     const alta = page.waitForResponse(r => r.url().endsWith('/api/v1/productos') && r.request().method() === 'POST');
     const inicio = performance.now(); await page.getByRole('button', { name: 'Crear producto', exact: true }).click();
     const respuestaAlta = await alta; assert.equal(respuestaAlta.status(), 201); const p = (await respuestaAlta.json()).data;
@@ -62,6 +87,7 @@ async function main() {
     await page.getByLabel('Cantidad de ' + nombre, { exact: true }).fill('12');
     await page.getByLabel('Costo de ' + nombre, { exact: true }).fill('1200');
     await page.getByRole('button', { name: 'Agregar ' + nombre, exact: true }).click();
+    await alcanzar(page.getByRole('button', { name: /Revisar y confirmar/ }));
     await page.getByRole('button', { name: /Revisar y confirmar/ }).click();
     await page.getByRole('checkbox', { name: /Descontar de caja/ }).uncheck();
     const guardado = page.waitForResponse(r => r.url().endsWith('/api/v1/recepciones-compra') && r.request().method() === 'POST');
@@ -126,6 +152,26 @@ async function main() {
     await page.goto(origen + '/admin/productos'); await page.getByPlaceholder('Buscar por nombre, código o categoría').fill(nombre); await page.getByText(nombre, { exact: true }).first().click(); await page.getByLabel('Nombre del producto', { exact: true }).waitFor();
     assert.equal((await api(admin, '/productos/' + p.id + '/historial')).length, 0);
     await page.screenshot({ path: carpeta + '/producto-393.png' });
+    const aparienciaAnterior = await api(admin, '/apariencia');
+    const colores = { robotReposo:'#9c27b0',robotEscuchando:'#009688',robotHablando:'#e91e63' };
+    try {
+      await page.goto(origen+'/admin/configuracion');
+      for (const [rotulo,valor] of [['Robot en reposo',colores.robotReposo],['Robot escuchando',colores.robotEscuchando],['Robot respondiendo',colores.robotHablando]]) await page.getByLabel('Código de '+rotulo,{exact:true}).fill(valor);
+      const guardada=page.waitForResponse(r=>r.url().endsWith('/api/v1/apariencia') && r.request().method()==='PUT');
+      await page.getByRole('button',{name:'Guardar apariencia',exact:true}).click();assert.equal((await guardada).status(),200);
+      const enAPI=await api(admin,'/apariencia');for(const k of Object.keys(colores))assert.equal(enAPI[k],colores[k]);
+      const enBD=sql(`SELECT json_build_object('robotReposo',configuracion->>'robotReposo','robotEscuchando',configuracion->>'robotEscuchando','robotHablando',configuracion->>'robotHablando') FROM "configuracionesVisuales" WHERE id='principal';`);assert.deepEqual(enBD,colores);
+      await page.reload();await page.getByLabel('Código de Robot en reposo',{exact:true}).waitFor();
+      for (const [campo,valor] of [['Robot en reposo',colores.robotReposo],['Robot escuchando',colores.robotEscuchando],['Robot respondiendo',colores.robotHablando]]) assert.equal(await page.getByLabel('Código de '+campo,{exact:true}).inputValue(),valor);
+      const robot=page.getByRole('button',{name:'Asistente',exact:true});await robot.waitFor();
+      const antes=await robot.getAttribute('data-estado');
+      for(const [estado,rgb] of [['reposo','rgb(156, 39, 176)'],['escuchando','rgb(0, 150, 136)'],['hablando','rgb(233, 30, 99)']]){await robot.evaluate((e,v)=>e.setAttribute('data-estado',v),estado);assert.equal(await robot.evaluate(e=>getComputedStyle(e).color),rgb);}
+      await robot.evaluate((e,v)=>e.setAttribute('data-estado',v),antes);
+      await api(admin,'/apariencia','PUT',{...enAPI,robotReposo:'rojo'},400);
+      await api(vendedor,'/apariencia','PUT',enAPI,403);
+      assert.deepEqual(await api(admin,'/apariencia'),enAPI);
+      casos.push('Colores del robot: vista previa, guardado real en API/PostgreSQL, recarga y tres estados CSS; formato inválido y vendedor rechazados sin cambios; no se prueba audio');
+    } finally { await api(admin,'/apariencia','PUT',aparienciaAnterior); }
     assert.deepEqual(errores, []);
     writeFileSync(carpeta + '/resultados.json', JSON.stringify({ fecha: new Date().toISOString(), marca, casos, tiempos, errores }, null, 2));
     for (const caso of casos) console.log('✓ ' + caso); console.log(JSON.stringify(tiempos));

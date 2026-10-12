@@ -1,12 +1,12 @@
-.robot-asistente { --nivel: 0; color: #4f8054; width: 56px; height: 56px; border: 0; padding: 0; background: transparent; cursor: grab; touch-action: none; filter: drop-shadow(0 2px 3px #0002); }
+.robot-asistente { --nivel: 0; color: var(--color-robot-reposo, #f97316); width: 56px; height: 56px; border: 0; padding: 0; background: transparent; cursor: grab; touch-action: none; filter: drop-shadow(0 2px 3px #0002); }
 .robot-asistente:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 50%; }
 .robot-asistente:active { cursor: grabbing; }
 .robot-dibujo { width: 100%; height: 100%; overflow: visible; }
 .robot-halo { opacity: .18; transform-origin: 32px 34px; }
-.robot-asistente[data-estado="escuchando"] { color: #2385aa; }
+.robot-asistente[data-estado="escuchando"] { color: var(--color-robot-escuchando, #2385aa); }
 .robot-asistente[data-estado="escuchando"] .robot-halo { opacity: calc(.2 + var(--nivel) * .65); transform: scale(calc(1 + var(--nivel) * .2)); }
 .robot-asistente[data-estado="escuchando"] .robot-dibujo { transform: translateY(calc(var(--nivel) * -3px)); }
-.robot-asistente[data-estado="hablando"] { color: #d87c1d; }
+.robot-asistente[data-estado="hablando"] { color: var(--color-robot-hablando, #d87c1d); }
 .robot-asistente[data-estado="hablando"] .robot-halo { animation: robot-onda .7s ease-in-out infinite alternate; }
 .robot-asistente[data-estado="hablando"] .robot-boca { transform-origin: 32px 44px; animation: robot-boca .25s ease-in-out infinite alternate; }
 .robot-asistente[data-estado="pensando"] .robot-halo { animation: robot-onda 1.4s ease-in-out infinite alternate; }

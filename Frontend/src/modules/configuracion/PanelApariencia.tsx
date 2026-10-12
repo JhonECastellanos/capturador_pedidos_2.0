@@ -4,8 +4,8 @@ import { useApariencia } from "../../context/apariencia-context";
 import { aplicarApariencia } from "../../utils/apariencia";
 import { archivoAImagenDataUrl } from "../../utils/imagen";
 import { Boton } from "../../components/Boton";
-const campos = { fondo: "Fondo", texto: "Texto", acento: "Acento y botones", encabezado: "Encabezado", textoEncabezado: "Texto del encabezado" } as const;
-const paletas = [{ nombre: "Naranja", colores: APARIENCIA_INICIAL }, { nombre: "Azul", colores: { ...APARIENCIA_INICIAL, acento: "#2563eb", encabezado: "#152b4b", textoEncabezado: "#ffffff" } }, { nombre: "Bosque", colores: { ...APARIENCIA_INICIAL, fondo: "#f4f7f4", acento: "#15803d", encabezado: "#173b2c", textoEncabezado: "#ffffff" } }];
+const campos = { fondo: "Fondo", texto: "Texto", acento: "Acento y botones", encabezado: "Encabezado", textoEncabezado: "Texto del encabezado", robotReposo: "Robot en reposo", robotEscuchando: "Robot escuchando", robotHablando: "Robot respondiendo" } as const;
+const paletas = [{ nombre: "Naranja", colores: APARIENCIA_INICIAL }, { nombre: "Azul", colores: { ...APARIENCIA_INICIAL, acento: "#2563eb", robotReposo: "#2563eb", encabezado: "#152b4b", textoEncabezado: "#ffffff" } }, { nombre: "Bosque", colores: { ...APARIENCIA_INICIAL, fondo: "#f4f7f4", acento: "#15803d", robotReposo: "#15803d", encabezado: "#173b2c", textoEncabezado: "#ffffff" } }];
 export function PanelApariencia() {
   const { apariencia, guardar } = useApariencia();
   const [borrador, setBorrador] = useState<Apariencia | null>(null);

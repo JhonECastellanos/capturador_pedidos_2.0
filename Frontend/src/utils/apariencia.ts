@@ -3,6 +3,7 @@ const fuentes = { inter: '"Inter", ui-sans-serif, sans-serif', sistema: 'system-
 export function aplicarApariencia(v: Apariencia) {
   const estilo = document.documentElement.style;
   const tokens = { ink: v.texto, paper: v.fondo, accent: v.acento, header: v.encabezado, 'header-ink': v.textoEncabezado,
+    'robot-reposo': v.robotReposo, 'robot-escuchando': v.robotEscuchando, 'robot-hablando': v.robotHablando,
     'ink-soft': `color-mix(in srgb, ${v.texto} 78%, ${v.fondo})`, 'ink-faint': `color-mix(in srgb, ${v.texto} 68%, ${v.fondo})`,
     'paper-raised': '#ffffff', 'paper-sunken': `color-mix(in srgb, ${v.fondo} 85%, ${v.texto})`,
     'accent-soft': `color-mix(in srgb, ${v.acento} 12%, white)`, 'accent-dark': `color-mix(in srgb, ${v.acento} 65%, black)`,

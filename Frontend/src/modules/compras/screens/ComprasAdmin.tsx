@@ -577,8 +577,8 @@ export function ComprasAdmin() {
       )}
 
       {paso === 2 && (
-        <>
-          {/* Fijo: proveedor, buscador, crear producto */}
+        <main aria-label="Productos de la recepción" className="min-h-0 flex-1 overflow-y-auto">
+          {/* El alta y el catálogo comparten el desplazamiento del paso. */}
           <div className="flex-shrink-0 space-y-2.5 px-5 pt-4 md:px-6 lg:px-8">
             <div className="flex items-center justify-between gap-2 rounded-xl bg-teal-soft px-3 py-2 text-[12.5px] text-teal">
               <span className="min-w-0 truncate">
@@ -640,7 +640,7 @@ export function ComprasAdmin() {
           </div>
 
           <Paginacion pagina={paginaProducto} totalPaginas={Math.max(1,Math.ceil((usaApi ? productosRemotos.total : productosFiltrados.length)/POR_PAGINA))} total={usaApi ? productosRemotos.total : productosFiltrados.length} porPagina={POR_PAGINA} onChange={setPaginaProducto}/>
-          {/* Contenedor fijo: catálogo con scroll propio */}
+          {/* La lista paginada se desplaza junto al formulario y la continuación. */}
           <div className="flex min-h-0 flex-1 flex-col px-5 py-3 md:px-6 lg:px-8">
             <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
               <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
@@ -724,7 +724,7 @@ export function ComprasAdmin() {
               Revisar y confirmar →
             </Boton>
           </BarraInferior>
-        </>
+        </main>
       )}
 
       {paso === 3 && (

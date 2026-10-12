@@ -896,3 +896,7 @@ ProductoInicialEsquema.cantidad -> conteoLineas.stockFisico y contadoPorId/conta
 familiaCompartidaId -> resolverCodigo devuelve el padre cuando su etiqueta sirve a varias presentaciones. GET /productos?familiaId pagina las opciones; el usuario elige el rowid_ext exacto.
 rowid -> productoBaseId ?? id; rowid_ext -> id de la presentación. El barcode de la familia se guarda una vez en codigosProducto del padre; no duplica identidades ni cantidades.
 Etiquetas anteriores -> codigosProducto.retiradoEn al cumplir 180 días desde la etiqueta activa más reciente del mismo producto. Mantenimiento al arrancar y cada seis horas; siempre conserva la más reciente activa, sin borrar relaciones históricas.
+
+V8P4 · apariencia del robot
+Apariencia.robotReposo / robotEscuchando / robotHablando -> AparienciaEsquema (hexadecimal de seis dígitos) -> PUT /apariencia -> configuracionesVisuales.configuracion (JSON existente) -> AparienciaProvider -> --color-robot-reposo / --color-robot-escuchando / --color-robot-hablando.
+Las configuraciones anteriores sin esos campos reciben valores predeterminados al leer; no requieren migración. Configuración > Apariencia permite vista previa, guardar y descartar usando el mismo proceso existente.

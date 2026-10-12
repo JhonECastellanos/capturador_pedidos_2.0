@@ -10,6 +10,7 @@ export function contraste(a: string, b: string): number {
 }
 export const AparienciaEsquema = z.object({
   fondo: color, texto: color, acento: color, encabezado: color, textoEncabezado: color,
+  robotReposo: color.default("#f97316"), robotEscuchando: color.default("#2385aa"), robotHablando: color.default("#d87c1d"),
   fuente: z.enum(["inter", "sistema", "grotesk", "serif"]),
   portada: z.enum(["tienda", "oficina", "almacen"]),
   imagen: z.string().max(410000).regex(/^$|^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/, "Usa una imagen JPG, PNG o WebP").default(""),
@@ -18,7 +19,7 @@ export const AparienciaEsquema = z.object({
   if (contraste(v.textoEncabezado, v.encabezado) < 4.5) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["textoEncabezado"], message: "Aumenta el contraste entre el encabezado y su texto" });
 });
 export type Apariencia = z.infer<typeof AparienciaEsquema>;
-export const APARIENCIA_INICIAL: Apariencia = { fondo: "#f5f7fa", texto: "#182638", acento: "#f97316", encabezado: "#ffffff", textoEncabezado: "#182638", fuente: "inter", portada: "tienda", imagen: "" };
+export const APARIENCIA_INICIAL: Apariencia = { fondo: "#f5f7fa", texto: "#182638", acento: "#f97316", encabezado: "#ffffff", textoEncabezado: "#182638", robotReposo: "#f97316", robotEscuchando: "#2385aa", robotHablando: "#d87c1d", fuente: "inter", portada: "tienda", imagen: "" };
 export const PERMISOS_EDITABLES: Record<string, string[]> = {
   administrador: ["clientes", "pedidos", "cobros", "inventario", "caja", "usuarios", "cierre-diario"],
   vendedor: ["clientes", "pedidos", "cobros", "inventario"], inventario: ["inventario"],
