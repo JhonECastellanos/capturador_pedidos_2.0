@@ -4,6 +4,8 @@ import { useAuth } from "../../../context/auth";
 import { api } from "../../../data/api";
 import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
 import { Boton } from "../../../components/Boton";
+import { ConfirmarAccion } from "../../../components/ConfirmarAccion";
+import { IconX } from "../../../components/Icons";
 import { BotonEscaner } from "../../../components/BotonEscaner";
 import { EscanerCodigo } from "../../../components/EscanerCodigo";
 import { FichaProductoCodigo } from "../../../components/FichaProductoCodigo";
@@ -33,7 +35,7 @@ export function ConteosCompartidos({ inicialId }: { inicialId?: string | null })
   const [ocupado, setOcupado] = useState(false);
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
-  const [confirmacion, setConfirmacion] = useState<"iniciar" | "finalizar" | "aplicar-ajuste" | "cancelar" | null>(null);
+  const [confirmacion, setConfirmacion] = useState<"iniciar" | "finalizar" | "aplicar-ajuste" | "cancelar" | "salir" | null>(null);
   const [tipoInicio, setTipoInicio] = useState<string | null>(null);
   const historial = usePaginaApi<CabeceraConteoCompartidoDTO>(`/inventario/compartidos?page=${pagina}&pageSize=${porPagina}&abiertos=${!administrador}`);
   const lineas = usePaginaApi<LineaCompartidaDTO>(`/inventario/compartidos/${seleccion}/lineas?page=${paginaLineas}&pageSize=${porPagina}&q=${encodeURIComponent(busqueda)}`, !!seleccion);
@@ -103,7 +105,14 @@ export function ConteosCompartidos({ inicialId }: { inicialId?: string | null })
   });
   async function guardarConfirmacion(accion: "finalizar" | "aplicar-ajuste" | "cancelar") {
     if (!administrador || !seleccion) return false;
-    return ejecutar(async () => { await api(`/inventario/conteos/${seleccion}/${accion}`, "POST", {}); setConfirmacion(null); setMensaje("Operación guardada correctamente."); });
+    return ejecutar(async () => { await api(`/inventario/conteos/${seleccion}/${accion}`, "POST", {}); setConfirmacion(null); if (accion === "cancelar") { setAsignacion(null); setCantidad(""); setContinuo(false); setCamara(false); setNuevoCodigo(null); void detalle.refetch(); } setMensaje("Operación guardada correctamente."); });
+  }
+  async function salirDelConteo() {
+    await ejecutar(async () => {
+      if (asignacion && !("contadoEnEsperado" in asignacion)) await api(`/inventario/compartidos/${seleccion}/asignar?liberar=true`, "POST", {});
+      setAsignacion(null); setCantidad(""); setContinuo(false); setCamara(false); setNuevoCodigo(null); setSeleccion(null); setConfirmacion(null);
+      setMensaje("Puedes continuar después. Las cantidades guardadas y los demás colaboradores se conservan.");
+    });
   }
   const confirmarFinalCompartido = useOperacionAgente("finalizar-conteo", r => {
     setSeleccion(r.instruccion.conteoId ?? null); setConfirmacion("finalizar"); setMensaje(r.resumen);
@@ -123,7 +132,7 @@ export function ConteosCompartidos({ inicialId }: { inicialId?: string | null })
     {(error || historial.error || lineas.error || detalle.error?.message) && <p role="alert" className="text-sm text-danger">{error || historial.error || lineas.error || detalle.error?.message} <button type="button" onClick={() => { historial.actualizar(); lineas.actualizar(); }}>Reintentar lectura</button></p>}
     {mensaje && <p role="status" className="text-sm text-success">{mensaje}</p>}
     {seleccion && <div className="space-y-3 rounded-xl border border-line bg-paper-raised p-3">
-      <div className="flex items-center justify-between gap-2"><h3 className="font-semibold">{conteo ? nombreTipo(conteo.tipo) : "Detalle del conteo"}</h3><button type="button" disabled={ocupado} onClick={() => { if (asignacion) void ejecutar(async () => { await api(`/inventario/compartidos/${seleccion}/asignar?liberar=true`, "POST", {}); setAsignacion(null); setCantidad(""); setSeleccion(null); }); else setSeleccion(null); }} className="text-sm text-teal">{administrador ? "← Historial" : "← Conteos"}</button></div>
+      <div className="flex items-center justify-between gap-2"><h3 className="min-w-0 font-semibold">{conteo ? nombreTipo(conteo.tipo) : "Detalle del conteo"}</h3><div className="flex shrink-0 items-center gap-1"><button type="button" disabled={ocupado} onClick={() => { if (asignacion || nuevoCodigo !== null) setConfirmacion("salir"); else { setSeleccion(null); setContinuo(false); } }} className="text-sm text-teal">{administrador ? "← Historial" : "← Conteos"}</button>{conteo?.estado === "en-curso" && <button type="button" aria-label="Salir del conteo y continuar después" title="Salir y continuar después" disabled={ocupado} onClick={() => setConfirmacion("salir")} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-soft hover:bg-paper-sunken"><IconX width={18} height={18} /></button>}</div></div>
       {conteo && <>
         <p role="status" className="text-sm font-semibold">{conteo.contadas}/{conteo.total} productos contados · {conteo.ocupadas} en conteo · {conteo.colaboradores} colaboradores</p>
         <progress aria-label="Progreso del conteo" value={conteo.contadas} max={Math.max(1, conteo.total)} className="w-full accent-teal" />
@@ -157,15 +166,17 @@ export function ConteosCompartidos({ inicialId }: { inicialId?: string | null })
         {!lineas.items.length && !lineas.cargando && <p className="p-2 text-sm text-ink-soft">No hay productos con ese filtro.</p>}
       </div>
       {administrador && conteo && <div className="flex flex-wrap gap-2">
-        {conteo.estado === "en-curso" && <><Boton ancho="auto" disabled={ocupado || !!asignacion || conteo.contadas !== conteo.total || !!conteo.ocupadas} onClick={() => setConfirmacion("finalizar")}>Finalizar conteo</Boton><Boton ancho="auto" variante="fantasma" disabled={ocupado || !!asignacion} onClick={() => setConfirmacion("cancelar")}>Cancelar conteo</Boton></>}
+        {conteo.estado === "en-curso" && <><Boton ancho="auto" disabled={ocupado || !!asignacion || conteo.contadas !== conteo.total || !!conteo.ocupadas} onClick={() => setConfirmacion("finalizar")}>Finalizar conteo</Boton><button type="button" aria-label="Cancelar conteo definitivamente" title="Cancelar conteo definitivamente" disabled={ocupado} onClick={() => setConfirmacion("cancelar")} className="flex h-9 w-9 items-center justify-center rounded-full border border-danger/30 text-danger hover:bg-danger-soft"><IconX width={18} height={18} /></button></>}
         {conteo.estado === "confirmado" && !conteo.aplicado && <Boton ancho="auto" disabled={ocupado} onClick={() => setConfirmacion("aplicar-ajuste")}>{conteo.tipo === "inicial" ? "Confirmar inventario inicial" : "Aplicar ajuste al stock"}</Boton>}
         {conteo.aplicado && <p className="text-sm text-success">Cantidades aplicadas al inventario.</p>}
       </div>}
-      {confirmacion && confirmacion !== "iniciar" && <div role="dialog" aria-label="Confirmar operación de inventario" className="rounded-lg border border-line p-3 text-sm">
+      {confirmacion && confirmacion !== "iniciar" && confirmacion !== "salir" && confirmacion !== "cancelar" && <div role="dialog" aria-label="Confirmar operación de inventario" className="rounded-lg border border-line p-3 text-sm">
         <p>{confirmacion === "aplicar-ajuste" ? "Se actualizará el stock con las cantidades revisadas. Realiza el conteo durante una pausa de ventas y compras." : confirmacion === "finalizar" ? "Se cerrará el conteo y quedará guardado en el historial. Todavía no cambia el stock." : "Se cancelará este conteo conservando su historial."}</p>
-        <div className="mt-2 flex gap-2"><Boton ancho="auto" disabled={ocupado} onClick={() => void (confirmacion === "finalizar" ? confirmarFinalCompartido() : confirmacion === "aplicar-ajuste" ? confirmarAplicacionCompartida() : guardarConfirmacion("cancelar"))}>Confirmar</Boton><Boton ancho="auto" variante="fantasma" disabled={ocupado} onClick={() => setConfirmacion(null)}>Volver</Boton></div>
+        <div className="mt-2 flex gap-2"><Boton ancho="auto" disabled={ocupado} onClick={() => void (confirmacion === "finalizar" ? confirmarFinalCompartido() : confirmarAplicacionCompartida())}>Confirmar</Boton><Boton ancho="auto" variante="fantasma" disabled={ocupado} onClick={() => setConfirmacion(null)}>Volver</Boton></div>
       </div>}
     </div>}
+    <ConfirmarAccion abierto={confirmacion === "salir"} titulo="Salir del conteo" mensaje="Conservaremos las cantidades guardadas para continuar después. Se libera solo tu producto asignado; lo que aún no has guardado no se registra." textoConfirmar="Continuar después" ocupado={ocupado} alCancelar={() => setConfirmacion(null)} alConfirmar={() => void salirDelConteo()} />
+    <ConfirmarAccion abierto={confirmacion === "cancelar"} titulo="Cancelar conteo definitivamente" mensaje="Se cerrará este conteo para todos los colaboradores y se conservará su historial, sin cambiar el stock. Para retomarlo más tarde, vuelve y utiliza la X junto al título." textoConfirmar="Sí, cancelar" tono="peligro" ocupado={ocupado} alCancelar={() => setConfirmacion(null)} alConfirmar={() => void guardarConfirmacion("cancelar")} />
     {administrador && confirmacion === "iniciar" && <div role="dialog" aria-label="Revisar inicio de inventario" className="rounded-lg border border-line bg-paper-raised p-3 text-sm"><p>Crear {nombreTipo(tipoInicio ?? "general")}. El stock solo cambia al aplicar las cantidades revisadas.</p><div className="mt-2 flex gap-2"><Boton ancho="auto" disabled={ocupado} onClick={confirmarInicioCompartido}>Confirmar inicio</Boton><Boton ancho="auto" variante="fantasma" disabled={ocupado} onClick={() => { setConfirmacion(null); setTipoInicio(null); }}>Volver</Boton></div></div>}
     {!seleccion && <>
     <h3 className="font-semibold">{administrador ? "Historial y progreso de inventarios" : "Conteos disponibles"}</h3>

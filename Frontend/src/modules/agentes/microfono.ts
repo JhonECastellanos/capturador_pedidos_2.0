@@ -1,6 +1,6 @@
 import { api, baseApi } from "../../data/api";
 
-export async function abrirMicrofono(texto: (valor: string) => void, estado: (valor: string) => void, registrar: (detener: () => void) => void, pausado: () => boolean = () => false, vistaPrevia?: (valor: string) => void, nivel?: (valor: number) => void, contextoPreparado?: AudioContext) {
+export async function abrirMicrofono(texto: (valor: string) => void, estado: (valor: string) => void, registrar: (detener: () => void, silenciar: (valor: boolean) => boolean) => void, pausado: () => boolean = () => false, vistaPrevia?: (valor: string) => void, nivel?: (valor: number) => void, contextoPreparado?: AudioContext) {
   if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) { void contextoPreparado?.close().catch(() => {}); throw new Error("El micrófono necesita HTTPS o localhost. Abre la aplicación mediante HTTPS para dictar"); }
   const contexto = contextoPreparado ?? new AudioContext();
   void contexto.resume().catch(() => {});
@@ -8,6 +8,7 @@ export async function abrirMicrofono(texto: (valor: string) => void, estado: (va
   let conexion: WebSocket | undefined;
   let capturador: AudioWorkletNode | undefined;
   let cerrada = false;
+  let silenciado = false;
   let animacion = 0;
   function cerrar() {
     if (cerrada) return;
@@ -18,10 +19,18 @@ export async function abrirMicrofono(texto: (valor: string) => void, estado: (va
     void contexto.close();
     estado("Micrófono desconectado");
   }
-  registrar(cerrar);
+  const silenciar = (valor: boolean) => {
+    if (cerrada) return false;
+    silenciado = valor;
+    medios?.getAudioTracks().forEach(pista => { pista.enabled = !valor; });
+    if (valor) nivel?.(0);
+    return true;
+  };
+  registrar(cerrar, silenciar);
   try {
     medios = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: false });
     if (cerrada) { medios.getTracks().forEach(pista => pista.stop()); return cerrar; }
+    medios.getAudioTracks().forEach(pista => { pista.enabled = !silenciado; });
     await contexto.audioWorklet.addModule(new URL("./captura-audio.js", import.meta.url).href);
     const { ticket } = await api<{ ticket: string }>("/agentes/audio/sesion", "POST", {});
     if (cerrada) return cerrar;
@@ -51,7 +60,7 @@ export async function abrirMicrofono(texto: (valor: string) => void, estado: (va
     capturador.port.onmessage = evento => {
       if (cerrada || socket.readyState !== WebSocket.OPEN) return;
       if (socket.bufferedAmount > 128000) { cerrar(); estado("La conexión está lenta. Puedes volver a iniciar el micrófono"); return; }
-      socket.send(pausado() ? new ArrayBuffer(evento.data.byteLength) : evento.data);
+      socket.send(silenciado || pausado() ? new ArrayBuffer(evento.data.byteLength) : evento.data);
     };
     const fuente = contexto.createMediaStreamSource(medios);
     fuente.connect(capturador);
@@ -63,7 +72,7 @@ export async function abrirMicrofono(texto: (valor: string) => void, estado: (va
         if (cerrada) return;
         analizador.getFloatTimeDomainData(muestras);
         const energia = Math.sqrt(muestras.reduce((total, n) => total + n * n, 0) / muestras.length);
-        nivel(pausado() ? 0 : Math.min(1, energia * 8));
+        nivel(silenciado || pausado() ? 0 : Math.min(1, energia * 8));
         animacion = requestAnimationFrame(actualizar);
       };
       actualizar();

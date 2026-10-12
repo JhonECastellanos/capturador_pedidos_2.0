@@ -248,7 +248,7 @@ body {
 .header-negocio .bg-white\/10, .header-negocio .bg-white\/15 { background: color-mix(in srgb, var(--color-header-ink) 10%, var(--color-header)); }
 .header-negocio nav a[aria-current="page"] { color: var(--color-accent-ink); }
 @media (max-width: 1023px) {
-  .admin-contenido { padding: 12px; }
+  .admin-contenido { padding: clamp(8px, 1.5vw, 14px); }
   .admin-cuerpo > header nav a { border-radius: 10px; padding: 6px 10px; font-size: 11px; }
   .lista-datos { border-radius: 14px; }
   .lista-datos article { box-shadow: none; }
@@ -272,4 +272,31 @@ body {
   overflow-y: visible;
   height: auto;
   flex: none;
+}
+
+/* En celulares se evita sumar margen del panel, lista y tarjeta. El escritorio
+   conserva su composición; no se reduce el tamaño táctil ni el texto del usuario. */
+@media (max-width: 639px) {
+  .app-viewport :where(main, header, footer, form, section, article, .lista-datos, .lista-productos, .flex, .grid):is(.px-4, .px-5, .px-6) { padding-inline: 8px; }
+  .app-viewport :where(section, article, form, .flex, .grid):is(.p-4, .p-5, .p-6) { padding: 10px; }
+  .app-viewport :where(section, article, form, .flex, .grid):is(.p-3, .p-3\.5) { padding: 8px; }
+  .app-viewport :where(.lista-datos, .lista-productos):is(.p-2, .p-3) { padding-inline: 4px; }
+  .app-viewport .lista-datos article:not(.tarjeta-pedido) { padding: 8px; }
+  .app-viewport :where(.gap-3, .gap-4, .gap-5, .gap-6) { gap: 8px; }
+  .app-viewport :where(.space-y-3, .space-y-4, .space-y-5, .space-y-6) > :not(:last-child) { margin-block-end: 8px; }
+  .app-viewport :where(.mb-4, .mb-5, .mb-6) { margin-bottom: 10px; }
+  .app-viewport :where(.mt-4, .mt-5, .mt-6) { margin-top: 10px; }
+  .app-viewport h1 { font-size: clamp(18px, 5vw, 24px); }
+  .app-viewport h2 { font-size: clamp(16px, 4.5vw, 20px); }
+  .app-viewport .min-w-0 :where(p, h1, h2, h3) { overflow-wrap: anywhere; }
+  .app-viewport .ticket-edge { margin-inline: -8px; }
+  .admin-cuerpo > header nav { margin-inline: -8px; padding-inline: 8px; margin-top: 8px; }
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  .app-viewport :where(main, header, footer):is(.px-5, .px-6) { padding-inline: 14px; }
+}
+@media (max-width: 1023px) {
+  .admin-cuerpo { min-width: 0; }
+  .admin-contenido { padding-inline: max(8px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right)); }
+  .app-viewport :where(main, section, form) { max-width: 100%; }
 }

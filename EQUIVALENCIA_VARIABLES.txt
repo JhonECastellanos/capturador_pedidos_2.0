@@ -1,7 +1,16 @@
 ================================================================================
 EQUIVALENCIA DE VARIABLES · FRONTEND / API / BASE DE DATOS
 Proyecto Synchronic.JO
-APP_VERSION: Frontend/src/config.ts muestra V4P2; no cambia el formato de datos.
+APP_VERSION: Frontend/src/config.ts muestra V8P4; no cambia el formato de datos.
+
+Preferencia de cámara: synchronic:camara-preferida (sessionStorage del navegador).
+Solo guarda el identificador local de la cámara elegida durante esa sesión;
+no viaja a la API ni tiene columna en PostgreSQL. Si ya no existe, se descarta
+y se vuelve a la cámara trasera disponible. No se guardan imágenes del escáner.
+Salir del conteo -> POST compartidos/:id/asignar?liberar=true -> libera solo
+asignadoPorId/asignadoHasta del usuario; conserva stockFisico/contadoPorId/contadoEn.
+Cancelar definitivamente -> POST conteos/:id/cancelar -> estado cancelado,
+finalizadoEn y asignaciones liberadas en la misma transacción; historial intacto.
 ================================================================================
 
 Este archivo muestra, campo por campo, cómo se llama la misma variable en las

@@ -6,6 +6,7 @@ interface ConfirmarAccionProps {
   tono?: "peligro" | "exito" | "ink";
   alConfirmar: () => void;
   alCancelar: () => void;
+  ocupado?: boolean;
 }
 
 const estilosPorTono = {
@@ -39,6 +40,7 @@ export function ConfirmarAccion({
   tono = "ink",
   alConfirmar,
   alCancelar,
+  ocupado = false,
 }: ConfirmarAccionProps) {
   if (!abierto) return null;
   return (
@@ -47,7 +49,7 @@ export function ConfirmarAccion({
       aria-modal="true"
       aria-label={titulo}
       className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/50 p-6"
-      onClick={alCancelar}
+      onClick={() => { if (!ocupado) alCancelar(); }}
     >
       <div
         className="w-full max-w-sm rounded-2xl border border-line bg-paper-raised px-5 py-5 shadow-2xl"
@@ -68,6 +70,7 @@ export function ConfirmarAccion({
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button
             type="button"
+            disabled={ocupado}
             onClick={alCancelar}
             className="rounded-xl border border-line bg-paper py-3 text-[13.5px] font-semibold text-ink active:bg-paper-sunken"
           >
@@ -75,6 +78,7 @@ export function ConfirmarAccion({
           </button>
           <button
             type="button"
+            disabled={ocupado}
             onClick={alConfirmar}
             className={`rounded-xl py-3 text-[13.5px] font-semibold text-white active:opacity-90 ${estilosPorTono[tono]}`}
           >

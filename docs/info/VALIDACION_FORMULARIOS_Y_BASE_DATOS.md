@@ -1,6 +1,40 @@
 # Validar formularios y PostgreSQL
 
-La revisión vigente de conteos y páginas está al final, en «Criterios de aceptación V5P3». Las mediciones y alturas de las secciones anteriores son históricas: la altura fija de 64 rem fue sustituida por contenedores ajustados al contenido, con desplazamiento interno y páginas de 5/15 registros.
+La revisión vigente es V8P4. Las mediciones y alturas de secciones anteriores son históricas: las listas paginadas usan cinco registros en móvil y quince en escritorio, sin desplazamiento interno; se desplazan con la pantalla. Los formularios conservan su desplazamiento cuando hace falta.
+
+## V8P4 · Espacios móviles, barras y salida de conteos (11/10/2026)
+
+- Márgenes exteriores móviles de ocho píxeles, tarjetas y buscadores compactos, sin reducir las áreas táctiles ni los campos por debajo del tamaño necesario para evitar el zoom del teclado. El escritorio mantiene su disposición. El contenido respeta los márgenes seguros del dispositivo.
+- Cámara: solicita hasta Full HD cuando está disponible, enfoque continuo si la cámara lo admite y lectura nativa de formatos compatibles, con ZXing como respaldo. Alterna orientación y banda central sin abrir flujos adicionales. La vista muestra la imagen completa; selector de cámara, luz y zoom aparecen solo según las capacidades. Recuerda la elección durante la sesión y vuelve a la cámara trasera si la elegida dejó de existir. No almacena imágenes de la cámara. Referencias: [lector nativo y formatos admitidos](https://developer.mozilla.org/en-US/docs/Web/API/BarcodeDetector) y [ajustes de cámara](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack/applyConstraints).
+- Robot: un toque inicia o silencia el micrófono. Silenciar deshabilita las pistas y envía silencio: conserva la conexión para terminar una transcripción pendiente, el razonamiento y la respuesta. Reactivarlo reutiliza la sesión e interrumpe la voz para dictar una corrección sin repetir el saludo. Las instrucciones recibidas mientras se interpreta se procesan en orden con el borrador previo. Dos toques rápidos apagan el agente, liberan micrófono/conexión y descartan su cola pendiente; ninguna operación se guarda automáticamente. Cerrar la nube o cambiar su ancho no cambia el audio. Los límites de sesión del servidor siguen vigentes.
+- X junto al título de inventario inicial, general o diario: pide confirmar **Continuar después**, libera solo la asignación propia y conserva las cantidades ya guardadas. No guarda una cantidad que aún esté digitándose. El conteo sigue abierto para los demás colaboradores y se puede retomar. El administrador dispone de otra X, **Cancelar conteo definitivamente**, con confirmación: cancela para todos, libera asignaciones y conserva historial y stock. Los otros roles no reciben ese permiso.
+
+Ejercicios desde el celular:
+
+1. Recarga la aplicación. En Inventario → Stock general compara el ancho del buscador y las cinco tarjetas con el ancho de pantalla; desplaza la pantalla y pasa a otra página.
+2. En una venta ocasional, escanea una etiqueta EAN: incluye todas las barras y margen blanco a ambos lados dentro del marco, evita reflejos y aleja ligeramente el teléfono para enfocar. Debe sonar un bip, volver al producto y sumar una unidad. Repite con QR. Si el teléfono tiene varias cámaras, elige la trasera principal; usa luz/zoom solo si sus controles aparecen.
+3. En + Producto escanea un código nuevo, escribe un nombre existente y vincúlalo desde las coincidencias: ambos códigos deben identificar el mismo SKU y su stock debe mantenerse. En Precios modifica una presentación y comprueba sus identificadores con las consultas ya documentadas.
+4. Activa el robot, dicta, toca para silenciar y espera la respuesta. Reactiva y dicta una corrección. Cierra la nube tocando fuera: el audio sigue activo. Dos toques rápidos deben apagarlo.
+5. Cuenta y guarda una cantidad, toma otro producto y pulsa la X junto al título. **Volver** conserva el borrador; **Continuar después** conserva solo lo guardado. Reabre el mismo conteo desde otro celular y comprueba cantidad, responsable y fecha. La X definitiva del administrador debe conservar esos datos en el historial sin mover el stock.
+
+Pruebas de esta revisión: `node Backend/scripts/probar-escaner-ui.cjs` aprobó dieciséis grupos sobre Chrome y API/PostgreSQL QA, incluyendo EAN-13 pequeño, girado 90/180°, contraste reducido y desenfoque leve; QR; alias; guardado de cero y trece; salida/reanudación; cancelación sin cambio de stock; controles de voz y corrección pendiente. También comprobó recepción de una transcripción después de silenciar, pistas deshabilitadas, reanudación sin nueva conexión y liberación al apagar. El selector/enfoque/luz, cámara recordada/retirada y la falla del detector nativo se verificaron con capacidades simuladas y decodificación real de ZXing. En la primera ejecución, barras sintéticas entre 78 y 586 ms en cuatro ejercicios; primera apertura con QR: 1399 ms. No son tiempos garantizados para cámaras físicas.
+
+`node Backend/scripts/probar-presentaciones.cjs` aprobó siete grupos, incluyendo persistencia e historia de presentaciones, códigos y duplicados concurrentes; revisó doce módulos en diez anchos: 320, 360, 393, 412, 480, 600, 768, 1024, 1440 y 1920 px. Sin desbordamiento horizontal ni desplazamiento interno de listas; margen móvil máximo diez píxeles. Caché aprobada y 33 casos controlados del agente aprobados. La cámara física del Redmi 14C requiere el ejercicio del usuario; la emulación no certifica el enfoque de ese equipo.
+
+Regresión del negocio: dieciocho casos de integración aprobados, más el recorrido de paneles en Chrome QA: etiquetas táctiles, cinco productos/continuación, roles, cliente y venta persistidos, factura con precios históricos y totales conciliados contra PostgreSQL. Todas las escrituras de ejercicios permanecen en QA aislada; no se inició el servidor de desarrollo.
+
+Para comparar salida y cancelación, consulta antes y después el mismo ID. Salir mantiene `en-curso` y las líneas contadas; solo la asignación propia debe desaparecer. Cancelar definitivamente mantiene las líneas contadas, deja `cancelado` y cero asignaciones. Ninguna acción crea un movimiento de stock:
+
+```sql
+SELECT c.id,c.tipo,c.estado,c."finalizadoEn",
+       COUNT(l.id) FILTER (WHERE l."stockFisico" IS NOT NULL) AS contadas,
+       COUNT(l.id) FILTER (WHERE l."asignadoPorId" IS NOT NULL) AS asignadas,
+       (SELECT COUNT(*) FROM "participantesConteo" p WHERE p."conteoId"=c.id) AS participantes
+FROM "conteosInventario" c LEFT JOIN "conteoLineas" l ON l."conteoId"=c.id
+WHERE c.id='ID_DEL_CONTEO' GROUP BY c.id;
+SELECT "productoId","stockFisico","contadoPorId","contadoEn","asignadoPorId","asignadoHasta"
+FROM "conteoLineas" WHERE "conteoId"='ID_DEL_CONTEO';
+```
 
 El navegador mantiene el borrador hasta confirmar. La API valida la operación y responde después de confirmar su transacción en PostgreSQL. Una respuesta correcta significa que el documento ya está guardado; la actualización de otra pantalla puede tardar el intervalo de sincronización de dos segundos más la lectura. No se debe repetir una venta porque una tarjeta aún no se haya actualizado.
 

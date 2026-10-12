@@ -27,17 +27,19 @@ export default function Asistente() {
   const vozActiva = useRef(false);
   const conversacionId = useRef("");
   const bloqueo = useRef(false);
+  const ordenesPendientes = useRef<string[]>([]);
   const detenerMicrofono = useRef<(() => void) | null>(null);
+  const silenciarMicrofono = useRef<((valor: boolean) => boolean) | null>(null);
   const interpretarActual = useRef<(orden: string) => Promise<void>>(async () => {});
   const robot = useRef<HTMLButtonElement | null>(null);
   const [hablando, setHablando] = useState(false);
   const hablandoActual = useRef(false);
   const [escuchando, setEscuchando] = useState(false);
   useEffect(() => {
-    const limpiar = () => { conversacionId.current = crypto.randomUUID(); generacion.current++; generacionAudio.current++; vozActiva.current = false; detenerMicrofono.current?.(); detenerMicrofono.current = null; setEscuchando(false); bloqueo.current = false; cambiarRevisionAgente(null); setAbierto(false); setHablando(false); setEstado(null); setTexto(""); setMensaje(""); setOcupado(false); window.speechSynthesis?.cancel(); };
+    const limpiar = () => { ordenesPendientes.current = []; conversacionId.current = crypto.randomUUID(); generacion.current++; generacionAudio.current++; vozActiva.current = false; detenerMicrofono.current?.(); detenerMicrofono.current = null; silenciarMicrofono.current = null; setEscuchando(false); bloqueo.current = false; cambiarRevisionAgente(null); setAbierto(false); setHablando(false); setEstado(null); setTexto(""); setMensaje(""); setOcupado(false); window.speechSynthesis?.cancel(); };
     limpiar();
     window.addEventListener("synchronic:sesion-expirada", limpiar);
-    return () => { generacion.current++; generacionAudio.current++; vozActiva.current = false; detenerMicrofono.current?.(); detenerMicrofono.current = null; cambiarRevisionAgente(null); window.speechSynthesis?.cancel(); window.removeEventListener("synchronic:sesion-expirada", limpiar); };
+    return () => { generacion.current++; generacionAudio.current++; vozActiva.current = false; detenerMicrofono.current?.(); detenerMicrofono.current = null; silenciarMicrofono.current = null; cambiarRevisionAgente(null); window.speechSynthesis?.cancel(); window.removeEventListener("synchronic:sesion-expirada", limpiar); };
   }, [usuario?.id, usuario?.rol]);
   useEffect(() => {
     const aviso = (e: Event) => setMensaje(String((e as CustomEvent<unknown>).detail));
@@ -55,7 +57,7 @@ export default function Asistente() {
     bloqueo.current = true; setOcupado(true);
     const turno = generacion.current;
     try { await tarea(); } catch (e) { if (turno === generacion.current) { const aviso = e instanceof Error ? e.message : "No se pudo completar la instrucción"; setMensaje(aviso); if (estado && vozActiva.current) hablar(aviso, estado.audio); } }
-    finally { if (turno === generacion.current) { bloqueo.current = false; setOcupado(false); } }
+    finally { if (turno === generacion.current) { bloqueo.current = false; setOcupado(false); const pendiente = ordenesPendientes.current.shift(); if (pendiente) void interpretarActual.current(pendiente); } }
   }
   async function interpretar(instruccion = texto) {
     const orden = instruccion.trim();
@@ -70,12 +72,12 @@ export default function Asistente() {
       setMensaje("Estoy preparando el detalle. No se ha guardado ninguna operación");
       if (estado && vozActiva.current) hablar("Claro, voy a revisar lo que me indicaste.", estado.audio);
       const resultado = await api<RevisionAgente>("/agentes/interpretar", "POST", { texto: orden, conversacionId: conversacionId.current, contexto: contextoAgente(), ...(anterior ? { anterior: anterior.instruccion, id: anterior.id, version: anterior.version + 1 } : {}) }).catch(error => {
-        if (turno === generacion.current) { detenerMicrofono.current?.(); detenerMicrofono.current = null; setEscuchando(false); }
+        if (turno === generacion.current) { detenerMicrofono.current?.(); detenerMicrofono.current = null; silenciarMicrofono.current = null; setEscuchando(false); }
         throw new Error(`${error instanceof Error ? error.message : "No se pudo interpretar"}. El texto se conserva; toca el robot y vuelve a dictar la corrección`);
       });
       if (turno !== generacion.current || revisionAgente() !== anterior || agenteGuardando()) return;
       cambiarRevisionAgente(resultado); setMensaje(resultado.resumen + (resultado.conexion?.respaldo ? ` · Respondió el respaldo: ${resultado.conexion.proveedor}` : "")); setTexto(orden); navegar(resultado.ruta);
-      if (estado && vozActiva.current) hablar(resultado.resumen, estado.audio);
+      if (estado && vozActiva.current && !ordenesPendientes.current.length) hablar(resultado.resumen, estado.audio);
     });
   }
   useEffect(() => { interpretarActual.current = interpretar; });
@@ -86,11 +88,20 @@ export default function Asistente() {
   }, []);
   async function alternarMicrofono() {
     setAbierto(true);
-    if (escuchando || iniciando.current) {
+    if (escuchando && silenciarMicrofono.current?.(true)) {
+      setEscuchando(false); setMensaje("Micrófono silenciado · sigo procesando tu instrucción"); return;
+    }
+    if (iniciando.current) {
       generacionAudio.current++; detenerMicrofono.current?.(); detenerMicrofono.current = null;
+      silenciarMicrofono.current = null;
       iniciando.current = false; setEscuchando(false); setMensaje("Micrófono desactivado · sigo procesando tu instrucción"); return;
     }
-    const turno = generacionAudio.current;
+    // Reactivar durante una respuesta permite interrumpirla sin perder el borrador.
+    window.speechSynthesis?.cancel();
+    window.dispatchEvent(new CustomEvent("synchronic:agente-hablando", { detail: false }));
+    if (silenciarMicrofono.current?.(false)) { setEscuchando(true); setMensaje("Te escucho. Puedes completar o corregir la operación."); return; }
+    const turno = ++generacionAudio.current;
+    const reanudando = vozActiva.current;
     if (!window.AudioContext) { setMensaje("Este navegador no permite capturar audio. Prueba con Chrome, Edge o Safari actualizado"); return; }
     iniciando.current = true;
     const contextoAudio = new AudioContext();
@@ -105,18 +116,21 @@ export default function Asistente() {
       vozActiva.current = true;
       transferido = true;
       const detener = await abrirMicrofono(valor => {
-        if (turno !== generacionAudio.current || bloqueo.current || agenteGuardando()) return;
-        setTexto(valor); void interpretarActual.current(valor);
+        if (turno !== generacionAudio.current || agenteGuardando()) return;
+        setTexto(valor);
+        if (bloqueo.current) { ordenesPendientes.current.push(valor); setMensaje("Te entendí. Completaré el detalle con esta corrección."); }
+        else void interpretarActual.current(valor);
       }, aviso => {
         if (turno !== generacionAudio.current) return;
-        setMensaje(aviso); if (aviso === "Micrófono desconectado") setEscuchando(false);
-      }, detener => { if (turno !== generacionAudio.current) detener(); else detenerMicrofono.current = detener; },
-      () => bloqueo.current || agenteGuardando() || hablandoActual.current, valor => { if (turno === generacionAudio.current && !bloqueo.current) setTexto(valor); },
+        setMensaje(aviso); if (aviso === "Micrófono desconectado") { setEscuchando(false); detenerMicrofono.current = null; silenciarMicrofono.current = null; }
+      }, (detener, silenciar) => { if (turno !== generacionAudio.current) detener(); else { detenerMicrofono.current = detener; silenciarMicrofono.current = silenciar; } },
+      () => agenteGuardando() || hablandoActual.current, valor => { if (turno === generacionAudio.current) setTexto(valor); },
       nivel => { robot.current?.style.setProperty("--nivel", String(nivel)); }, contextoAudio);
       if (turno !== generacionAudio.current) { detener(); return; }
       detenerMicrofono.current = detener; setEscuchando(true);
       const saludo = "Hola, soy el asistente de Synchronic.JO. Puedes decirme la operación completa.";
-      setMensaje(saludo); hablar(saludo, configuracion.audio);
+      if (!reanudando) { setMensaje(saludo); hablar(saludo, configuracion.audio); }
+      else setMensaje("Te escucho. Puedes completar o corregir la operación.");
     } catch (error) {
       if (turno === generacionAudio.current) setMensaje(error instanceof Error ? error.message : "No se pudo activar el micrófono");
     } finally {
@@ -126,7 +140,9 @@ export default function Asistente() {
   }
   function apagarAgente() {
     generacion.current++; generacionAudio.current++; vozActiva.current = false;
+    ordenesPendientes.current = [];
     detenerMicrofono.current?.(); detenerMicrofono.current = null; iniciando.current = false;
+    silenciarMicrofono.current = null;
     bloqueo.current = false; setOcupado(false); setEscuchando(false); setHablando(false); setAbierto(false);
     window.speechSynthesis?.cancel();
   }
@@ -136,7 +152,7 @@ export default function Asistente() {
       <span className="text-[10px] text-ink-soft">{ocupado ? "Preparando detalle…" : hablando ? "Respondiendo" : escuchando ? "Te escucho · toca el robot para detener" : "Toca el robot para hablar"}</span>
       <p aria-label="Texto reconocido" className="mt-1 line-clamp-2 min-h-8 text-xs" aria-live="polite">{texto || mensaje || "Aquí aparece lo que dictas"}</p>
       {mensaje && texto && <p role="status" className="mt-1 line-clamp-2 text-[11px] text-ink-soft">{mensaje}</p>}
-      <input aria-label="Ancho del texto del asistente" title="Ajustar ancho" type="range" min="200" max="440" step="10" value={ancho} onChange={e => { const valor = Number(e.target.value); setAncho(valor); localStorage.setItem("ambie:ui:ancho-asistente", String(valor)); }} className="mt-1 block h-2 w-full accent-teal" />
+      <label className="mt-1 flex items-center gap-2 text-[10px] text-ink-soft">Ancho<input aria-label="Ancho del texto del asistente" title="Ajustar ancho" type="range" min="200" max="440" step="10" value={ancho} onChange={e => { const valor = Number(e.target.value); setAncho(valor); localStorage.setItem("ambie:ui:ancho-asistente", String(valor)); }} className="min-w-0 flex-1 h-2 accent-teal" /></label>
     </section>
   </RobotAsistente>;
 }

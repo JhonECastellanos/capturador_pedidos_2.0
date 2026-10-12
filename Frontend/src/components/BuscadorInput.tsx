@@ -11,8 +11,8 @@ interface Props {
 
 export function BuscadorInput({ value, onChange, placeholder = "Buscar", autoFocus, accion }: Props) {
   return (
-    <div className="flex items-center gap-2.5 rounded-xl border border-line bg-paper-raised px-3.5 py-2.5">
-      <IconSearch width={18} height={18} className="text-ink-faint" />
+    <div className="buscador-input flex items-center gap-2 rounded-xl border border-line bg-paper-raised px-2.5 py-2 sm:px-3.5 sm:py-2.5">
+      <IconSearch width={18} height={18} className="shrink-0 text-ink-faint" />
       <input
         autoFocus={autoFocus}
         value={value}

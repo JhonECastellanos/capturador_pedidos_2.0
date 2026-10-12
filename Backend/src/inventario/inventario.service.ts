@@ -194,6 +194,7 @@ export class InventarioService {
         where: { id: conteoId },
         data: { estado: EstadoConteo.CANCELADO, finalizadoEn: new Date() },
       });
+      await tx.conteoLinea.updateMany({ where: { conteoId, asignadoPorId: { not: null } }, data: { asignadoPorId: null, asignadoHasta: null } });
     });
     return this.obtener(conteoId);
   }

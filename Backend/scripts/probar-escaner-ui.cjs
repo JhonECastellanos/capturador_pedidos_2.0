@@ -43,7 +43,7 @@ function ean(base12) {
       navigator.mediaDevices.getUserMedia=async restricciones=>{
         if(!restricciones.video) return original(restricciones);
         const canvas=document.createElement('canvas');canvas.width=640;canvas.height=480;const ctx=canvas.getContext('2d');
-        const pintar=()=>{ctx.fillStyle='white';ctx.fillRect(0,0,640,480);ctx.fillStyle='black';for(const [x,y,w,h] of window.__figuraCamara??[])ctx.fillRect(x,y,w,h);};
+        const pintar=()=>{const perfil=window.__perfilCamara??{};ctx.resetTransform();ctx.filter='none';ctx.fillStyle=perfil.fondo??'white';ctx.fillRect(0,0,640,480);ctx.translate(320,240);ctx.rotate((perfil.giro??0)*Math.PI/180);ctx.scale(perfil.escala??1,perfil.escala??1);ctx.translate(-320,-240);ctx.filter=perfil.filtro??'none';ctx.fillStyle=perfil.tinta??'black';for(const [x,y,w,h] of window.__figuraCamara??[])ctx.fillRect(x,y,w,h);};
         pintar();const intervalo=setInterval(pintar,80);const flujo=canvas.captureStream(12);
         for(const pista of flujo.getTracks()){window.__pistasCamara.push(pista);const detener=pista.stop.bind(pista);pista.stop=()=>{clearInterval(intervalo);detener();};}return flujo;
       };
@@ -65,6 +65,11 @@ function ean(base12) {
       lecturas.push({nombre,milisegundos:Math.round(performance.now()-inicio)});
     }
     await escanear(qr(codigoQR),p1.nombre);await escanear(barras.figura,p2.nombre);
+    for(const perfil of [{giro:90,escala:0.7},{giro:180,escala:0.6,fondo:'#ddd',tinta:'#555'},{giro:12,escala:0.8,filtro:'blur(0.35px)'}]){
+      await page.evaluate(p=>{window.__perfilCamara=p;},perfil);await escanear(barras.figura,p2.nombre);
+    }
+    await page.evaluate(()=>{window.__perfilCamara={};});
+    casos.push('Barras EAN pequeñas, giradas 90/180 grados, con menor contraste y desenfoque leve: mismo código sin lecturas duplicadas');
     await figura(page,qr(codigoQR));await page.getByRole('button',{name:'Escanear código',exact:true}).click();await page.getByRole('dialog',{name:'Escanear producto'}).waitFor({state:'hidden'});
     await page.waitForFunction(n=>document.querySelector('input[placeholder="Buscar producto o código"]')?.value===n,p1.nombre);
     const fila=page.getByText(p1.nombre,{exact:true}).locator('..').locator('..');assert.ok((await fila.innerText()).includes('2'));
@@ -106,6 +111,17 @@ function ean(base12) {
     await contar.reload();await contar.getByText('Inventario general · en curso',{exact:true}).first().click();await contar.getByPlaceholder('Buscar producto del conteo').fill(marca);await contar.getByText('Contado: 0',{exact:false}).waitFor();
     await contar.screenshot({path:'.local/pruebas-v7/inventario-escaner-390.png'});
     casos.push('Colaborador en móvil: cámara → cero → guardar → cámara → trece → guardar; ambas cantidades persisten al recargar');
+    const segundaAsignacion=await pedir(admin,`/inventario/compartidos/${general.id}/asignar`,'POST',{});
+    await contar.getByRole('button',{name:'Tomar siguiente producto',exact:true}).click();await contar.getByLabel('Cantidad contada').waitFor();
+    await contar.getByLabel('Cantidad contada').fill('99');await contar.getByRole('button',{name:'Salir del conteo y continuar después',exact:true}).click();
+    await contar.getByRole('dialog',{name:'Salir del conteo',exact:true}).getByRole('button',{name:'Volver',exact:true}).click();assert.equal(await contar.getByLabel('Cantidad contada').inputValue(),'99');
+    await contar.getByRole('button',{name:'Salir del conteo y continuar después',exact:true}).click();await contar.getByRole('button',{name:'Continuar después',exact:true}).click();await contar.getByRole('heading',{name:'Conteos disponibles',exact:true}).waitFor();
+    const pausado=await pedir(admin,`/inventario/compartidos/${general.id}`);assert.equal(pausado.estado,'en-curso');assert.equal(pausado.contadas,2);assert.equal(pausado.ocupadas,1);
+    const ajena=await pedir(admin,`/inventario/compartidos/${general.id}/lineas?q=${encodeURIComponent(segundaAsignacion.codigo)}`);assert.ok(ajena.some(l=>l.productoId===segundaAsignacion.productoId&&l.asignadoPorId));
+    await contar.reload();await contar.getByText('Inventario general · en curso',{exact:true}).first().click();await contar.getByPlaceholder('Buscar producto del conteo').fill(marca);await contar.getByText('Contado: 13',{exact:false}).waitFor();
+    await pedir(inv,`/inventario/conteos/${general.id}/cancelar`,'POST',{},403);
+    await pedir(admin,`/inventario/compartidos/${general.id}/asignar?liberar=true`,'POST',{});
+    casos.push('X con confirmación: volver conserva borrador; salir conserva dos cantidades y libera solo al colaborador, permite retomar y no concede cancelación global');
     const diariosPrevios=await pedir(admin,'/inventario/compartidos?tipo=aleatorio');for(const c of diariosPrevios.filter(c=>c.tipo==='aleatorio'&&c.estado==='en-curso'))await pedir(admin,`/inventario/conteos/${c.id}/cancelar`,'POST');
     const correoVendedor = marca + '-vendedor@pruebas.invalid';
     await pedir(admin,'/usuarios','POST',{nombre:'Vendedor lector de prueba',email:correoVendedor,password:'SoloPruebas2026!',rol:'vendedor'});
@@ -121,11 +137,14 @@ function ean(base12) {
     const verificacionDiaria=await pedir(vendedor,`/inventario/compartidos/${diarioActual.id}/lineas`);assert.equal(verificacionDiaria.find(l=>l.productoId===pendienteDiario.productoId).stockFisico,0);
     if(verificacionDiaria.some(l=>l.stockFisico===null)){await diarioVista.getByRole('dialog',{name:'Escanear producto'}).waitFor();await diarioVista.getByRole('button',{name:'Cerrar',exact:true}).click();}
     await diarioVista.screenshot({path:'.local/pruebas-v7/vendedor-diario-390.png'});casos.push('Vendedor tiene entrada visible al diario, escanea uno de los cinco y guarda cero; el historial administrativo permanece oculto');
+    await diarioVista.getByRole('button',{name:'Salir del conteo y continuar después',exact:true}).click();await diarioVista.getByRole('button',{name:'Continuar después',exact:true}).click();await diarioVista.getByRole('button',{name:'Abrir conteo de hoy · 5 productos',exact:true}).click();await diarioVista.getByRole('progressbar').waitFor();assert.equal((await pedir(vendedor,`/inventario/compartidos/${diarioActual.id}`)).contadas,1);
+    casos.push('Vendedor puede salir y retomar el mismo conteo diario con su cantidad guardada');
     const robotContext=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});await pedir(robotContext,'/auth/login','POST',{identifier:'qa-admin@pruebas.invalid',password:'SoloPruebas2026!'},200);
+    await robotContext.addInitScript(()=>{window.__pistasMicrofono=[];const original=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);navigator.mediaDevices.getUserMedia=async opciones=>{const flujo=await original(opciones);if(opciones.audio)window.__pistasMicrofono.push(...flujo.getAudioTracks());return flujo;};});
     await robotContext.route('**/agentes/estado',r=>r.fulfill({json:{data:{habilitado:true,modo:'hibrido',configurado:true,audio:{idioma:'es-CO',velocidad:1,volumen:0,voz:'',modeloStt:'base',stt:'whisper'}}}}));
     await robotContext.route('**/agentes/audio/sesion',r=>r.fulfill({json:{data:{ticket:'prueba-ui'}}}));
-    let socketRobot;
-    await robotContext.routeWebSocket('**/agentes/audio/conversar?*',ws=>{socketRobot=ws;setTimeout(()=>ws.send(JSON.stringify({tipo:'listo'})),50);ws.onMessage(()=>{});});
+    let socketRobot,conexionesAudio=0;
+    await robotContext.routeWebSocket('**/agentes/audio/conversar?*',ws=>{socketRobot=ws;conexionesAudio++;setTimeout(()=>ws.send(JSON.stringify({tipo:'listo'})),50);ws.onMessage(()=>{});});
     const robot=await robotContext.newPage();robot.on('pageerror',e=>errores.push(e.message));await robot.goto(base+'/admin/precios');const boton=robot.getByRole('button',{name:'Asistente',exact:true});await boton.click();
     await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.getAttribute('aria-pressed')==='true');
     assert.equal(await robot.getByRole('button',{name:'Hablar',exact:true}).count(),0);assert.equal(await robot.getByRole('button',{name:'Detener',exact:true}).count(),0);
@@ -139,13 +158,51 @@ function ean(base12) {
     await robotContext.route('**/agentes/interpretar',async r=>{await new Promise(resolve=>setTimeout(resolve,850));await r.fulfill({json:{data:revisionPendiente}});});
     await robot.waitForTimeout(350);await boton.click();await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.getAttribute('aria-pressed')==='true');
     socketRobot.send(JSON.stringify({tipo:'instruccion',texto:'Cambia el precio del producto a 2800'}));await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.dataset.estado==='pensando');
-    await robot.waitForTimeout(350);await boton.click();assert.equal(await boton.getAttribute('aria-pressed'),'false');await robot.getByText('Confirmar cambio',{exact:true}).waitFor();
+    await robot.waitForTimeout(350);await boton.click();assert.equal(await boton.getAttribute('aria-pressed'),'false');await robot.getByText('Confirmar cambio',{exact:true}).waitFor().catch(async error=>{await robot.screenshot({path:'.local/pruebas-v8/robot-pendiente-fallo.png'});console.error('Detalle visible en la prueba: '+await robot.locator('body').innerText());console.error('Errores de página: '+JSON.stringify(errores));throw error;});
     casos.push('Detener micrófono durante interpretación conserva la respuesta y abre la confirmación; doble toque apaga sin guardar');
     casos.push('Robot con transporte simulado: un toque escucha, otro detiene; tocar fuera cierra solo la burbuja; ancho ajustable y sin botones Hablar/Detener');
+    let cancelaciones=0;await robot.evaluate(()=>{window.__cancelacionesVoz=0;const cancelar=speechSynthesis.cancel.bind(speechSynthesis);speechSynthesis.cancel=()=>{window.__cancelacionesVoz++;cancelar();};});
+    await robot.waitForTimeout(350);await boton.click();await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.getAttribute('aria-pressed')==='true');
+    cancelaciones=await robot.evaluate(()=>window.__cancelacionesVoz);assert.ok(cancelaciones>0);assert.ok(!(await robot.locator('aside[aria-label="Asistente de operaciones"]').innerText()).includes('Hola, soy'));
+    await robot.locator('body').dispatchEvent('pointerdown');assert.equal(await boton.getAttribute('aria-pressed'),'true');assert.equal(await robot.getByLabel('Ancho del texto del asistente').count(),0);await robot.waitForTimeout(350);await boton.dblclick({delay:80});
+    casos.push('Reactivar micrófono interrumpe TTS y reanuda sin repetir saludo; cerrar nube no apaga la escucha');
+    await robot.goto(base+'/admin/precios');await robot.waitForTimeout(350);await boton.click();await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.getAttribute('aria-pressed')==='true');
+    const correccionPendiente=await pedir(admin,'/agentes/revisar','POST',{id:revisionPendiente.id,version:2,instruccion:{operacion:'precio',producto:p1.nombre,precio:3200}});const instruccionesRecibidas=[];
+    await robotContext.route('**/agentes/interpretar',async r=>{const cuerpo=r.request().postDataJSON();instruccionesRecibidas.push(cuerpo);await new Promise(resolve=>setTimeout(resolve,cuerpo.texto.includes('3200')?100:1100));await r.fulfill({json:{data:cuerpo.texto.includes('3200')?correccionPendiente:revisionPendiente}});});
+    socketRobot.send(JSON.stringify({tipo:'instruccion',texto:'Pon el precio a 2800'}));await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.dataset.estado==='pensando');
+    socketRobot.send(JSON.stringify({tipo:'instruccion',texto:'Mejor a 3200'}));await robot.waitForFunction(()=>document.querySelector('[aria-label="Texto reconocido"]')?.textContent.includes('3200'));
+    await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.dataset.estado==='reposo'||document.querySelector('button[aria-label="Asistente"]')?.dataset.estado==='escuchando');
+    assert.equal(instruccionesRecibidas.length,2);assert.equal(instruccionesRecibidas[1].anterior.precio,2800);assert.ok((await robot.locator('body').innerText()).includes('3.200'));assert.equal((await pedir(admin,`/productos/${p1.id}`)).precioVenta,2600);
+    await robot.waitForTimeout(350);await boton.dblclick({delay:80});casos.push('Corrección dictada durante razonamiento se procesa después con el borrador anterior, cambia a 3200 y no guarda sin confirmar');
+    await robot.goto(base+'/admin/precios');await robot.waitForTimeout(350);await boton.click();await robot.waitForFunction(()=>document.querySelector('button[aria-label="Asistente"]')?.getAttribute('aria-pressed')==='true');const conexionesAntes=conexionesAudio;
+    await robot.waitForTimeout(350);await boton.click();assert.equal(await boton.getAttribute('aria-pressed'),'false');assert.ok(await robot.evaluate(()=>window.__pistasMicrofono.every(t=>!t.enabled)));
+    socketRobot.send(JSON.stringify({tipo:'texto',texto:'Pon el precio a 2800'}));socketRobot.send(JSON.stringify({tipo:'instruccion',texto:'Pon el precio a 2800'}));await robot.getByText('Confirmar cambio',{exact:true}).waitFor();assert.equal(await boton.getAttribute('aria-pressed'),'false');
+    await robot.waitForTimeout(350);await boton.click();assert.equal(await boton.getAttribute('aria-pressed'),'true');assert.equal(conexionesAudio,conexionesAntes);assert.ok(await robot.evaluate(()=>window.__pistasMicrofono.every(t=>t.enabled)));
+    await robot.waitForTimeout(350);await boton.dblclick({delay:80});await robot.waitForFunction(()=>window.__pistasMicrofono.every(t=>t.readyState==='ended'));
+    casos.push('Silenciar deshabilita las pistas sin cerrar la sesión: admite transcripción pendiente, reanuda sin nueva conexión y doble toque libera el micrófono');
+    const camarasContext=await browser.newContext({viewport:{width:393,height:873},isMobile:true,hasTouch:true});await pedir(camarasContext,'/auth/login','POST',{identifier:'qa-admin@pruebas.invalid',password:'SoloPruebas2026!'},200);await camarasContext.addInitScript(camaraFalsa);
+    await camarasContext.addInitScript(()=>{
+      window.__ajustesCamara=[];window.__restriccionesCamara=[];window.__intentosNativos=0;
+      const capturar=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+      navigator.mediaDevices.enumerateDevices=async()=>['principal','auxiliar'].map(deviceId=>({deviceId,kind:'videoinput',label:'Trasera '+deviceId,groupId:'qa'}));
+      navigator.mediaDevices.getUserMedia=async restricciones=>{window.__restriccionesCamara.push(restricciones);if(window.__camaraRetirada&&restricciones.video.deviceId?.exact==='auxiliar')throw new DOMException('Cámara retirada','NotFoundError');const flujo=await capturar(restricciones);const t=flujo.getVideoTracks()[0];if(t){t.getCapabilities=()=>({focusMode:['continuous'],torch:true,zoom:{min:1,max:3,step:0.1}});t.getSettings=()=>({deviceId:restricciones.video.deviceId?.exact??'principal',zoom:1});t.applyConstraints=async c=>window.__ajustesCamara.push(c);}return flujo;};
+      window.BarcodeDetector=class {static async getSupportedFormats(){return ['ean_13'];}async detect(){window.__intentosNativos++;throw new Error('Lector nativo temporalmente no disponible');}};
+    });
+    const camarasPagina=await camarasContext.newPage();camarasPagina.on('pageerror',e=>errores.push(e.message));await camarasPagina.goto(base+'/admin/ventas/pedido');await camarasPagina.getByText('Venta abierta · cliente ocasional',{exact:true}).click();await figura(camarasPagina,[]);await camarasPagina.getByRole('button',{name:'Escanear código',exact:true}).click();await camarasPagina.getByLabel('Cambiar cámara').waitFor();await camarasPagina.getByRole('button',{name:'Encender luz',exact:true}).click();assert.equal(await camarasPagina.getByRole('button',{name:'Apagar luz',exact:true}).getAttribute('aria-pressed'),'true');
+    await camarasPagina.getByLabel('Cambiar cámara').selectOption('auxiliar');await camarasPagina.waitForFunction(()=>window.__restriccionesCamara.length>=2&&window.__ajustesCamara.length>=3);assert.ok(await camarasPagina.evaluate(()=>window.__pistasCamara.slice(0,-1).every(p=>p.readyState==='ended')));
+    await figura(camarasPagina,barras.figura);await camarasPagina.getByRole('dialog',{name:'Escanear producto'}).waitFor({state:'hidden',timeout:20000});await camarasPagina.getByRole('button',{name:'Disminuir cantidad'}).waitFor();
+    assert.ok(await camarasPagina.evaluate(()=>window.__pistasCamara.every(p=>p.readyState==='ended')&&window.__intentosNativos>=1&&window.__restriccionesCamara.every(r=>r.video.width.ideal===1920)));
+    await figura(camarasPagina,[]);await camarasPagina.getByRole('button',{name:'Escanear código',exact:true}).click();await camarasPagina.getByLabel('Cambiar cámara').waitFor();await camarasPagina.waitForFunction(()=>document.querySelector('select[aria-label="Cambiar cámara"]')?.value==='auxiliar');assert.equal(await camarasPagina.evaluate(()=>window.__restriccionesCamara.at(-1).video.deviceId.exact),'auxiliar');await camarasPagina.getByRole('button',{name:'Cerrar',exact:true}).click();
+    await camarasPagina.evaluate(()=>{window.__camaraRetirada=true;});await camarasPagina.getByRole('button',{name:'Escanear código',exact:true}).click();await camarasPagina.getByLabel('Cambiar cámara').waitFor();await camarasPagina.waitForFunction(()=>document.querySelector('select[aria-label="Cambiar cámara"]')?.value==='principal');assert.equal(await camarasPagina.evaluate(()=>sessionStorage.getItem('synchronic:camara-preferida')),null);await figura(camarasPagina,barras.figura);await camarasPagina.getByRole('dialog',{name:'Escanear producto'}).waitFor({state:'hidden',timeout:20000});
+    casos.push('Cámara con capacidades simuladas: resolución Full HD, enfoque/luz/selector y liberación al cambiar; fallo nativo vuelve al EAN real de ZXing');
     const escritorio=await admin.newPage();escritorio.on('pageerror',e=>errores.push(e.message));await escritorio.setViewportSize({width:1440,height:900});await escritorio.goto(base+'/admin/inventario');await escritorio.getByText('Conteo guiado',{exact:true}).first().click();await escritorio.getByText('Inventario general · en curso',{exact:true}).first().click();
     assert.equal(await escritorio.getByRole('heading',{name:'Historial y progreso de inventarios',exact:true}).count(),0);
     await escritorio.getByRole('button',{name:'← Historial',exact:true}).click();await escritorio.getByRole('heading',{name:'Historial y progreso de inventarios',exact:true}).waitFor();
     await escritorio.screenshot({path:'.local/pruebas-v7/historial-1440.png'});casos.push('Administrador: lista de historial y detalle separados, paginación compacta en 390 y 1440');
+    await escritorio.getByText('Inventario general · en curso',{exact:true}).first().click();await escritorio.getByRole('button',{name:'Cancelar conteo definitivamente',exact:true}).click();await escritorio.getByRole('dialog',{name:'Cancelar conteo definitivamente',exact:true}).getByRole('button',{name:'Volver',exact:true}).click();assert.equal((await pedir(admin,`/inventario/compartidos/${general.id}`)).estado,'en-curso');
+    await pedir(admin,`/inventario/compartidos/${general.id}/asignar`,'POST',{});await escritorio.getByRole('button',{name:'Cancelar conteo definitivamente',exact:true}).click();await escritorio.getByRole('button',{name:'Sí, cancelar',exact:true}).click();await escritorio.waitForFunction(()=>!document.querySelector('button[aria-label="Cancelar conteo definitivamente"]'));
+    const cancelado=await pedir(admin,`/inventario/compartidos/${general.id}`);assert.equal(cancelado.estado,'cancelado');assert.equal(cancelado.contadas,2);assert.equal(cancelado.ocupadas,0);assert.equal((await pedir(admin,`/productos/${p1.id}`)).stockFisico,20);
+    casos.push('X de cancelación definitiva administrativa: exige confirmación, libera asignaciones, mantiene historial y no cambia stock');
     assert.deepEqual(errores,[]);for(const c of casos)console.log('✓ '+c);writeFileSync('.local/pruebas-v7/escaner-ui.json',JSON.stringify({fecha:new Date().toISOString(),casos,lecturas,errores},null,2));
   } finally {await browser.close();}
 })().catch(e=>{console.error(e.stack);process.exitCode=1;});
