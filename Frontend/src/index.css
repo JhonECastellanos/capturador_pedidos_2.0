@@ -309,7 +309,8 @@ body {
 .app-viewport .inline-flex.rounded-full { min-width: 0; max-width: 100%; overflow-x: auto; }
 .app-viewport .inline-flex.rounded-full > button { flex-shrink: 0; white-space: nowrap; }
 .app-viewport :is(h1,h2,h3,h4,p,label,legend,span).uppercase { text-transform: none; letter-spacing: normal; }
-.admin-pantalla > .h-full:has(.titulo-modulo) .overflow-y-auto {
+.admin-pantalla > .h-full:has(.titulo-modulo) > .overflow-y-auto,
+.admin-pantalla > .h-full:has(.titulo-modulo) > .flex > .overflow-y-auto {
   height: auto;
   max-height: none;
   overflow-y: visible;
