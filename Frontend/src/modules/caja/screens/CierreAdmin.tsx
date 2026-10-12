@@ -553,9 +553,9 @@ export function CierreAdmin() {
       <TiraToast aviso={aviso} alCerrar={cerrarAviso} />
       {/* ─── Cabecera fija: Título + Guía + Botón de nuevo cierre en la misma línea ─── */}
       <div className="flex-shrink-0 flex items-center justify-between gap-2 border-b border-line pb-3">
-        <div className="flex items-center gap-2">
+        <div className="cabecera-modulo flex items-center gap-2">
           <IconLock width={20} height={20} className="text-ink" />
-          <h2 className="font-display text-[18px] font-semibold text-ink">Validación y Cierre</h2>
+          <h2 className="titulo-modulo sr-only">Validación y Cierre</h2>
           <GuiaAyuda
             pantalla="Validación y Cierre"
             pasos={[

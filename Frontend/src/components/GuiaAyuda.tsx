@@ -35,7 +35,7 @@ export function GuiaAyuda({ pantalla, pasos }: GuiaAyudaProps) {
         onClick={abrir}
         aria-label={`Ayuda de ${pantalla}`}
         title={`Cómo usar ${pantalla}`}
-        className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-line bg-paper-raised text-[15px] active:bg-paper-sunken"
+        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[10px] border border-line bg-paper-raised text-[15px] active:bg-paper-sunken"
       >
         💡
       </button>

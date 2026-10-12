@@ -136,14 +136,14 @@ export function PedidosAdmin() {
   return (
     <div className="flex h-full flex-col min-h-0">
       <div className="flex-shrink-0 flex items-start justify-between gap-3 border-b border-line pb-2.5">
-        <div className="flex items-center gap-2">
-          <h2 className="font-display text-[18px] font-semibold text-ink">Seguimiento de pedidos</h2>
+        <div className="cabecera-modulo flex items-center gap-2">
+          <h2 className="titulo-modulo sr-only">Seguimiento de pedidos</h2>
           <GuiaAyuda
             pantalla="Seguimiento de pedidos"
             pasos={[
-              { titulo: "1 · Segmento HOY / HISTORIAL", texto: "HOY muestra solo lo de hoy. HISTORIAL con periodo hoy / ayer / semana / mes y todo al final." },
+              { titulo: "1 · Hoy e historial", texto: "Hoy muestra los pedidos del día. Historial permite consultar hoy, ayer, semana, mes, año o todo." },
               { titulo: "2 · Buscador y filtros", texto: "Busca por cliente o consecutivo. Filtra por estado y por rango de fecha (Desde / Hasta) sin afectar el buscador." },
-              { titulo: "3 · Consulta auditada", texto: "Toca un pedido para ver líneas, pagos recibidos y el historial de estados con nombres. Los estados y cobros se gestionan en Ventas; un pedido cancelado se puede reactivar aquí mismo." },
+              { titulo: "3 · Consulta auditada", texto: "Toca un pedido para ver líneas, pagos recibidos y el historial de estados con nombres. Los estados y cobros se gestionan en Ventas; los cancelados se conservan en el historial." },
               { titulo: "4 · Comprobante y Excel", texto: "Adjunta foto o PDF del pago en el detalle. Usa Exportar Excel para descargar la tabla filtrada." },
             ]}
           />
@@ -168,8 +168,8 @@ export function PedidosAdmin() {
             valor={segmento}
             onChange={setSegmento}
             opciones={[
-              { valor: "hoy", etiqueta: "HOY" },
-              { valor: "historial", etiqueta: "HISTORIAL" },
+              { valor: "hoy", etiqueta: "Hoy" },
+              { valor: "historial", etiqueta: "Historial" },
             ]}
           />
 

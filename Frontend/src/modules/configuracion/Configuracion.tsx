@@ -2,13 +2,14 @@ import { PanelApariencia } from "./PanelApariencia";
 import { InstalarAplicacion } from "../../components/InstalarAplicacion";
 import { Link } from "react-router-dom";
 import { PanelAgentes } from "../agentes/PanelAgentes";
+import { GuiaAyuda } from "../../components/GuiaAyuda";
 
 export function Configuracion() {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex-shrink-0 border-b border-line px-5 py-4 md:px-6">
-        <h1 className="font-display text-xl font-semibold text-ink">Configuración</h1>
-        <p className="mt-1 text-sm text-ink-soft">Organiza los ajustes y accesos de tu negocio.</p>
+      <header className="cabecera-modulo flex-shrink-0">
+        <h1 className="titulo-modulo sr-only">Configuración</h1>
+        <GuiaAyuda pantalla="Configuración" pasos={[{ titulo: "Ajustes del negocio", texto: "Administra usuarios y consulta la auditoría desde los accesos generales. Personaliza colores, fuente y portada en Apariencia; revisa la conexión y el audio del asistente en su panel." }]} />
       </header>
       <main className="min-h-0 flex-1 overflow-y-auto px-5 py-4 md:px-6">
         <section className="rounded-2xl border border-line bg-paper-raised p-5">

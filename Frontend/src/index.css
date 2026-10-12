@@ -300,3 +300,20 @@ body {
   .admin-contenido { padding-inline: max(8px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right)); }
   .app-viewport :where(main, section, form) { max-width: 100%; }
 }
+
+/* Controles coherentes con la navegación; las insignias y fotografías conservan
+   su forma. Solo las filas extensas de opciones tienen desplazamiento horizontal. */
+.app-viewport button.rounded-full,
+.app-viewport .inline-flex.rounded-full,
+.header-negocio nav a { border-radius: 10px; }
+.app-viewport .inline-flex.rounded-full { min-width: 0; max-width: 100%; overflow-x: auto; }
+.app-viewport .inline-flex.rounded-full > button { flex-shrink: 0; white-space: nowrap; }
+.app-viewport :is(h1,h2,h3,h4,p,label,legend,span).uppercase { text-transform: none; letter-spacing: normal; }
+.admin-pantalla > .h-full:has(.titulo-modulo) .overflow-y-auto {
+  height: auto;
+  max-height: none;
+  overflow-y: visible;
+  flex: none;
+}
+.admin-pantalla .cabecera-modulo,
+.admin-pantalla :where(div,header):has(> .cabecera-modulo) { position: static; padding-block: 0; border-bottom: 0; }

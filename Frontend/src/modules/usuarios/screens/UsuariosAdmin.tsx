@@ -3,7 +3,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { Boton } from "../../../components/Boton";
 import { ConfirmarAccion } from "../../../components/ConfirmarAccion";
 import { GuiaAyuda } from "../../../components/GuiaAyuda";
-import { IconArrowLeft, IconUser } from "../../../components/Icons";
+import { IconArrowLeft } from "../../../components/Icons";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
 import { useOperaciones } from "../../../context/operaciones";
@@ -194,15 +194,14 @@ export function UsuariosAdmin() {
   return (
     <div className="flex h-full flex-col min-h-0">
       <div className="flex-shrink-0 flex items-center justify-between gap-3 border-b border-line pb-2.5">
-        <div className="flex items-center gap-2">
-          <IconUser className="text-teal" />
-          <h2 className="font-display text-[18px] font-semibold text-ink">Usuarios y permisos</h2>
+        <div className="cabecera-modulo flex items-center gap-2">
+          <h2 className="titulo-modulo sr-only">Usuarios y permisos</h2>
           <GuiaAyuda
             pantalla="Usuarios y permisos"
             pasos={[
               { titulo: "1 · Crear acceso", texto: "Toca '+ Nuevo Usuario' para crear accesos con nombre, correo, rol y contraseña. Solo el administrador gestiona accesos." },
               { titulo: "2 · Roles", texto: "Inventario: conteos compartidos de productos. Vendedor: clientes, pedidos y cobros. Administrador: control total, inventario y cierre." },
-              { titulo: "3 · Lista", texto: "Revisa activos, roles y permisos en la tabla con scroll interno." },
+              { titulo: "3 · Lista", texto: "Revisa activos, roles y permisos. Usa la paginación para consultar más usuarios." },
             ]}
           />
         </div>

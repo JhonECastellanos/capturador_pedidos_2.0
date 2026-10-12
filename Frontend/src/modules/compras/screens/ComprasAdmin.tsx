@@ -261,12 +261,12 @@ export function ComprasAdmin() {
         {/* Zona fija: título, pestañas, periodo, buscador */}
         <div className="flex-shrink-0 border-b border-line pb-2.5">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <h2 className="font-display text-[18px] font-semibold text-ink">Compras y gastos</h2>
+            <div className="cabecera-modulo flex items-center gap-2">
+              <h2 className="titulo-modulo sr-only">Compras y gastos</h2>
               <GuiaAyuda
                 pantalla="Compras y gastos"
                 pasos={[
-                  { titulo: "1 · Historial", texto: "COMPRAS lista recepciones y GASTOS egresos. Filtros hoy/ayer/semana/mes/todo y buscador siempre visibles. Toca una compra para ver su detalle." },
+                  { titulo: "1 · Historial", texto: "Compras lista recepciones y Gastos egresos. Usa los filtros de período y el buscador. Toca una compra para ver su detalle." },
                   { titulo: "2 · Nueva recepción", texto: "Botón + Recepción arriba. Paso 1 proveedor, paso 2 productos (cada uno confirma con toast y Deshacer), paso 3 confirmar. La flecha te lleva al paso anterior o al inicio." },
                   { titulo: "3 · Facturación", texto: "Lo que facturaste en la compra se ve en otra pantalla: toca cualquier recepción del historial para abrir su detalle con líneas y total." },
                   { titulo: "4 · Efecto", texto: "Al confirmar sube el stock, actualiza el último costo y, si marcas descontar, crea el egreso en caja. Los gastos se descuentan de caja automáticamente." },
@@ -290,16 +290,12 @@ export function ComprasAdmin() {
                 type="button"
                 onClick={() => setTab("compras")}
                 className={`rounded-full px-3.5 py-1 text-[12px] font-semibold transition-colors ${tab === "compras" ? "bg-ink text-white" : "text-ink-soft hover:text-ink"}`}
-              >
-                COMPRAS
-              </button>
+              >Compras</button>
               <button
                 type="button"
                 onClick={() => setTab("gastos")}
                 className={`rounded-full px-3.5 py-1 text-[12px] font-semibold transition-colors ${tab === "gastos" ? "bg-ink text-white" : "text-ink-soft hover:text-ink"}`}
-              >
-                GASTOS
-              </button>
+              >Gastos</button>
             </div>
           </div>
 

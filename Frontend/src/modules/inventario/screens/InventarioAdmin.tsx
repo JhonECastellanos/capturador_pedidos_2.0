@@ -27,6 +27,12 @@ import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
 import { normalizarConteo } from "../../../utils/inventario";
 import { useRevisionAgente } from "../../agentes/operacion-agente";
 
+const guiaInventario = [
+  { titulo: "1 · Elige el proceso", texto: "Cada tarjeta es un proceso completo: stock, conteo, descuadres o ajuste. Toca una para entrar." },
+  { titulo: "2 · Completa de principio a fin", texto: "Dentro del proceso solo ves lo necesario del paso actual. La flecha te devuelve al menú sin perder lo avanzado." },
+  { titulo: "3 · Confirma lo crítico", texto: "Aplicar ajustes, finalizar o cancelar conteos piden confirmación. Todo queda auditado con usuario y turno." },
+];
+
 const campo = "rounded-lg border border-line bg-paper-raised px-3 py-2.5 text-[13px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none";
 
 type VistaInv = "menu" | "general" | "conteo" | "descuadres" | "ajustes" | "inicial";
@@ -272,15 +278,11 @@ export function InventarioAdmin() {
     ];
     return (
       <div className="flex h-full flex-col min-h-0">
-        <div className="flex-shrink-0 flex items-center gap-2 border-b border-line pb-2.5">
-          <h2 className="font-display text-[18px] font-semibold text-ink">Inventario</h2>
+        <div className="cabecera-modulo flex-shrink-0 flex items-center gap-2 border-b border-line pb-2.5">
+          <h2 className="titulo-modulo sr-only">Inventario</h2>
           <GuiaAyuda
             pantalla="Inventario"
-            pasos={[
-              { titulo: "1 · Elige el proceso", texto: "Cada tarjeta es un proceso completo: stock, conteo, descuadres o ajuste. Toca una para entrar." },
-              { titulo: "2 · Completa de principio a fin", texto: "Dentro del proceso solo ves lo necesario del paso actual. La flecha te devuelve al menú sin perder lo avanzado." },
-              { titulo: "3 · Confirma lo crítico", texto: "Aplicar ajustes, finalizar o cancelar conteos piden confirmación. Todo queda auditado con usuario y turno." },
-            ]}
+            pasos={guiaInventario}
           />
         </div>
         <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar py-3">
@@ -308,7 +310,7 @@ export function InventarioAdmin() {
 
   return (
     <div className="flex h-full flex-col min-h-0">
-      <div className="flex-shrink-0 flex items-center justify-between gap-3 border-b border-line pb-2.5">
+      <div className="cabecera-modulo flex-shrink-0 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -319,8 +321,8 @@ export function InventarioAdmin() {
             <IconArrowLeft width={18} height={18} />
           </button>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-accent">Inventario</p>
-            <h2 className="font-display text-[17px] font-semibold text-ink">
+            <GuiaAyuda pantalla="Inventario" pasos={guiaInventario} />
+            <h2 className="titulo-modulo sr-only">
               {vista === "general" ? "Stock general" : vista === "conteo" ? "Conteo guiado" : vista === "descuadres" ? "Descuadres" : vista === "inicial" ? "Inventario inicial" : "Ajuste manual"}
             </h2>
           </div>
