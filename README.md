@@ -46,3 +46,9 @@ Cada formulario espera la confirmación de guardado en PostgreSQL. Pedidos, pago
 - [Diccionario de tablas y campos](docs/info/DICCIONARIO_DATOS_V4P2.md).
 - [Pruebas realizadas y alcance](docs/info/VALIDACION_FORMULARIOS_Y_BASE_DATOS.md).
 - [Publicación y despliegue continuo](docs/info/DESPLIEGUE_CONTINUO.md).
+
+### Enlace temporal de validación con Cloudflare
+
+Con la aplicación ya instalada, ejecutar `iniciar_cloudflare_validacion.cmd`. Renueva el túnel dentro de `capturador_pedidos_20`, actualiza APP_ORIGIN/CORS y espera la salud de API/frontend, sin ejecutar migraciones ni modificar operaciones del negocio. La dirección vigente se guarda en `.local/cloudflare-url-actual.txt`. Usa tu cuenta normal para acceder.
+
+El enlace cambia al crear otro túnel y es para pruebas; para un hostname estable se requiere un túnel administrado. [Documentación de Cloudflare](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/).
