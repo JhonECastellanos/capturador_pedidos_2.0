@@ -927,3 +927,6 @@ WhisperCompartido -> caché de un motor CPU instalado, lru_cache(maxsize=1), pro
 Audio WebSocket -> sin límite acumulativo de silencio/audio; PipelineWorker.idle_timeout_secs=None; renovación después de 3600 s entre turnos; mantiene dos sesiones, ticket 30 s/un uso y bloques PCM <=12800 bytes.
 synchronic:audio-diagnostico -> fase/milisegundos/codigo, solo evento RAM; logs audio-listo/audio-cerrado sin audio, ticket ni transcripción. Reconexión solicita nuevo ticket y descarta audio acumulado; cierre manual no reabre el micrófono.
 audio.turnoVoz -> callbacks TTS solo para locución vigente; watchdog libera el estado de habla si falta onend.
+
+Arranque voz -> importación de la canalización Pipecat antes de salud; precarga Tiny instalado (modelo actual), Base/Small como alternativas si falta; cache sigue limitada a un motor. Cambiar de modelo puede necesitar carga inicial.
+uvicorn.error -> filtro de entradas con ticket=; los diagnósticos de cierre/apertura no incluyen autorizaciones temporales.
