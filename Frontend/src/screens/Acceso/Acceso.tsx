@@ -54,6 +54,7 @@ export default function Acceso() {
               <label htmlFor="usuario-acceso" className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Usuario o correo</label>
               <input
                 id="usuario-acceso"
+                required
                 value={identificador}
                 onChange={(e) => { setIdentificador(e.target.value); setError(null); }}
                 placeholder="Tu correo, código o system"
@@ -66,6 +67,7 @@ export default function Acceso() {
               <div className="relative mt-1.5">
                 <input
                   id="password-acceso"
+                  required
                   type={verPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(null); }}
