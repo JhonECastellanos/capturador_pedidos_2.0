@@ -4,11 +4,16 @@ import { z } from "zod";
 import { ContextoAgenteEsquema, InstruccionAgenteEsquema } from "@synchronic-jo/contrato";
 import { Roles, UsuarioActual } from "../common/guards";
 import { AgentesService } from "./agentes.service";
+import { ChatService } from "./chat.service";
 
 const roles = [RolUsuario.ADMINISTRADOR, RolUsuario.VENDEDOR, RolUsuario.INVENTARIO];
 @Controller("agentes")
 export class AgentesController {
-  constructor(private readonly agentes: AgentesService) {}
+  constructor(private readonly agentes: AgentesService, private readonly chat: ChatService) {}
+  @Roles(RolUsuario.ADMINISTRADOR) @Post("chat") conversar(@Body() body: unknown, @UsuarioActual() usuario: Usuario) {
+    const r = z.object({ texto: z.string().trim().min(1).max(6000), anterior: InstruccionAgenteEsquema.optional(), id: z.string().uuid().optional(), version: z.number().int().min(1).optional(), conversacionId: z.string().uuid().optional() }).strict().parse(body);
+    return this.chat.responder(r.texto, usuario, r.anterior, r.id, r.version, r.conversacionId).then(data => ({ data }));
+  }
   @Roles(...roles) @Get("estado") estado() { return this.agentes.estado().then(data => ({ data })); }
   @Roles(RolUsuario.ADMINISTRADOR) @Get("configuracion") configuracion() { return this.agentes.configuracion().then(data => ({ data })); }
   @Roles(RolUsuario.ADMINISTRADOR) @Put("configuracion") guardar(@Body() body: unknown) {
@@ -21,7 +26,7 @@ export class AgentesController {
   @Roles(RolUsuario.ADMINISTRADOR) @Post("proveedores/:id/probar") probar(@Param("id") id: string) { return this.agentes.probar(z.string().uuid().parse(id)).then(data => ({ data })); }
   @Roles(...roles) @Post("interpretar") interpretar(@Body() body: unknown, @UsuarioActual() usuario: Usuario) {
     const r = z.object({ texto: z.string().trim().min(1).max(6000), conversacionId: z.string().uuid().optional(), contexto: ContextoAgenteEsquema.optional(), anterior: InstruccionAgenteEsquema.optional(), id: z.string().uuid().optional(), version: z.number().int().min(1).optional() }).strict().parse(body);
-    return this.agentes.interpretar(r.texto, r.anterior, usuario, r.id, r.version, r.contexto, r.conversacionId).then(data => ({ data }));
+    return this.agentes.interpretar(r.texto, r.anterior, usuario, r.id, r.version, r.contexto, r.conversacionId).then(async data => ({ data: data.instruccion.operacion === "consulta" ? { ...data, datos: { ...data.datos, consulta: await this.chat.consultar(data, usuario) } } : data }));
   }
   @Roles(...roles) @Post("revisar") revisar(@Body() body: unknown, @UsuarioActual() usuario: Usuario) {
     const r = z.object({ instruccion: InstruccionAgenteEsquema, id: z.string().uuid(), version: z.number().int().min(1) }).strict().parse(body);

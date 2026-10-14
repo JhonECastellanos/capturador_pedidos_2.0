@@ -23,6 +23,7 @@ import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodo, type Periodo } from "../..
 import { formatoMoneda } from "../../../utils/formato";
 import { FormularioGasto } from "../components/FormularioGasto";
 import { useOperacionAgente, useRevisionAgente } from "../../agentes/operacion-agente";
+import { useSearchParams } from "react-router-dom";
 
 type TabCompras = "compras" | "gastos";
 type Vista = "historial" | "recepcion" | "detalle";
@@ -40,6 +41,10 @@ export function ComprasAdmin() {
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
   const [detalle, setDetalle] = useState<RecepcionCompra | null>(null);
+  const [parametros, setParametros] = useSearchParams();
+  const recepcionEnlace = parametros.get("recepcion");
+  const detalleEnlace = useRegistroApi<RecepcionCompra>(`/recepciones-compra/${recepcionEnlace}`, !!recepcionEnlace);
+  useEffect(() => { if (recepcionEnlace && detalleEnlace.data?.id === recepcionEnlace) { setDetalle(detalleEnlace.data); setVista("detalle"); } }, [detalleEnlace.data, recepcionEnlace]);
 
   // Wizard recepción
   const [paso, setPaso] = useState<PasoRecepcion>(1);
@@ -155,6 +160,7 @@ export function ComprasAdmin() {
   }
 
   function cerrarDetalle() {
+    if (recepcionEnlace) setParametros({}, { replace: true });
     setDetalle(null);
     setVista("historial");
   }

@@ -41,6 +41,8 @@ Las pruebas operativas se ejecutan en QA aislada, nunca sobre los datos reales. 
 
 Cada formulario espera la confirmación de guardado en PostgreSQL. Pedidos, pagos, caja e inventario se actualizan mediante transacciones; la sincronización mantiene las pantallas al día. El historial conserva documentos y valores de venta anteriores. Productos permite exportar/importar CSV; Inventario permite revisar el inicio del negocio y conteos. Inicio muestra ventas, compras, gastos y descuadres por período al costo guardado.
 
+Notificaciones conserva avisos comerciales y abre su detalle. Chat usa la conexión configurada para consultar datos o preparar operaciones: se revisan y confirman mediante los formularios habituales. Los avisos del navegador requieren permiso y la aplicación abierta.
+
 - [Guía completa de instalación y desarrollo](docs/info/GUIA_INSTALACION_Y_DESARROLLO.md).
 - [Modelo, consultas y ejemplos de CSV](docs/info/GUARDADO_Y_CONCILIACION_V4P2.md).
 - [Diccionario de tablas y campos](docs/info/DICCIONARIO_DATOS_V4P2.md).

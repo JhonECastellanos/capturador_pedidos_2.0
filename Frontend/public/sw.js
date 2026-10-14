@@ -1,6 +1,16 @@
 // Synchronic.JO V8P4. No guarda respuestas, sesiones ni documentos del negocio.
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  const destino = new URL(event.notification.data?.ruta || '/admin/notificaciones', self.location.origin);
+  if (destino.origin !== self.location.origin || !/^\/admin(?:\/|$)/.test(destino.pathname)) return;
+  event.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async ventanas => {
+    const ventana = ventanas.find(v => new URL(v.url).origin === self.location.origin);
+    if (ventana) { ventana.postMessage({ tipo: 'abrir-notificacion', ruta: destino.pathname + destino.search }); await ventana.focus(); }
+    else await self.clients.openWindow(destino.href);
+  }));
+});
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   if (event.request.mode !== 'navigate' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;

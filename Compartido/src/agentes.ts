@@ -30,9 +30,12 @@ export const ConfiguracionAgenteInicial: ConfiguracionAgente = {
   local: { modelo: "", dispositivo: "auto" },
   live: { proveedor: "gemini", proveedorId: null, modelo: "", voz: "" },
 };
-export const OperacionesAgente = ["pedido", "compra", "gasto", "egreso", "precio", "cobro", "estado", "cierre", "conteo", "iniciar-conteo", "finalizar-conteo", "aplicar-conteo"] as const;
+export const OperacionesAgente = ["pedido", "compra", "gasto", "egreso", "precio", "cobro", "estado", "cierre", "conteo", "iniciar-conteo", "finalizar-conteo", "aplicar-conteo", "consulta"] as const;
 export const InstruccionAgenteEsquema = z.object({
   operacion: z.enum(OperacionesAgente),
+  recurso: z.enum(["productos", "pedidos", "compras", "proveedores", "resumen"]).optional(),
+  busqueda: z.string().max(150).optional(),
+  periodo: z.enum(["hoy", "ayer", "semana", "mes", "anio", "todo"]).optional(),
   cliente: z.string().max(150).optional(), ocasional: z.boolean().optional(),
   proveedor: z.string().max(150).optional(), referencia: z.string().max(150).optional(),
   lineas: z.array(z.object({ producto: z.string().min(1).max(150), cantidad: z.number().int().min(0).max(1000000), costoUnitario: z.number().finite().min(0).optional() }).strict()).max(100).optional(),
@@ -50,6 +53,7 @@ export interface RevisionAgente {
   id: string; version: number; instruccion: InstruccionAgente;
   faltantes: string[]; ruta: string; datos: Record<string, unknown>;
   resumen: string; total?: string; huella: string;
+  opcionesProducto?: Array<{ texto: string; elegidoId?: string; opciones: Array<{ id: string; nombre: string }> }>;
   conexion?: { proveedor: string; modelo: string; respaldo: boolean; milisegundos: number; uso?: UsoAgente };
 }
 export interface EstadoPruebaAgente { estado: "disponible" | "limitado" | "error" | "sin-configurar"; mensaje: string; comprobadoEn: string; milisegundos?: number; uso?: UsoAgente }

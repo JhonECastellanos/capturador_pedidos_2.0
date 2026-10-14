@@ -1,5 +1,10 @@
 import { api } from "../../data/api";
 import type { ConfiguracionAgente } from "@synchronic-jo/contrato";
+let locucion = { texto: "", hasta: 0 };
+const limpiar = (s: string) => s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+export function esEcoDelAsistente(texto: string) {
+  return Date.now() < locucion.hasta && limpiar(texto).length > 12 && limpiar(texto) === locucion.texto;
+}
 export async function transcribirArchivo(archivo: Blob, audio: ConfiguracionAgente["audio"]) {
   if (!archivo.size || archivo.size > 5 * 1024 * 1024) throw new Error("El audio debe tener contenido y pesar como máximo 5 MB");
   const formato = archivo.type.split(";")[0];
@@ -12,6 +17,7 @@ export function hablar(texto: string, audio: ConfiguracionAgente["audio"]) {
   window.speechSynthesis.cancel();
   window.dispatchEvent(new CustomEvent("synchronic:agente-hablando", { detail: false }));
   const mensaje = new SpeechSynthesisUtterance(texto);
+  locucion = { texto: limpiar(texto), hasta: Date.now() + 30_000 };
   mensaje.lang = audio.idioma; mensaje.rate = audio.velocidad; mensaje.volume = audio.volumen;
   const voz = window.speechSynthesis.getVoices().find(v => v.voiceURI === audio.voz); if (voz) mensaje.voice = voz;
   mensaje.onstart = () => window.dispatchEvent(new CustomEvent("synchronic:agente-hablando", { detail: true }));

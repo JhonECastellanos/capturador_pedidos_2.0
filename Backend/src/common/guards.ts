@@ -102,8 +102,8 @@ export class AuthGuard implements CanActivate {
 
     if (!sesion.usuario.esSistema) {
       const modulo = request.url?.split("?")[0].split("/")[3];
-      const permiso = ({ usuarios: "usuarios", clientes: "clientes", pedidos: "pedidos", pagos: "cobros", inventario: "inventario", compras: "inventario", "recepciones-compra": "inventario", proveedores: "inventario", gastos: "caja", abonos: "cobros", caja: "caja", cierres: "cierre-diario" } as Record<string, string>)[modulo ?? ""] ?? (modulo === "productos" && request.method !== "GET" ? "inventario" : undefined);
-      const requerido = /\/(?:pagos|abonos)(?:\?|$)/.test(request.url ?? "") ? "cobros" : permiso;
+      const permiso = ({ notificaciones: "notificaciones", usuarios: "usuarios", clientes: "clientes", pedidos: "pedidos", pagos: "cobros", inventario: "inventario", compras: "inventario", "recepciones-compra": "inventario", proveedores: "inventario", gastos: "caja", abonos: "cobros", caja: "caja", cierres: "cierre-diario" } as Record<string, string>)[modulo ?? ""] ?? (modulo === "productos" && request.method !== "GET" ? "inventario" : undefined);
+      const requerido = request.url?.split("?")[0] === "/api/v1/agentes/chat" ? "chat" : /\/(?:pagos|abonos)(?:\?|$)/.test(request.url ?? "") ? "cobros" : permiso;
       if (requerido && sesion.usuario.permisosDenegados.includes(requerido)) throw new ForbiddenException("Tu administrador deshabilitó este permiso");
     }
 

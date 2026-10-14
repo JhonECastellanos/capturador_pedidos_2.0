@@ -351,10 +351,102 @@ test('micrófono muestra texto parcial sin interpretar y envía silencio durante
     socket.onmessage({ data: JSON.stringify({ tipo: 'hablando' }) }); assert.equal(interrupciones, 1);
     const pcm = new Int16Array([25, -40]);
     pausado = true; capturador.port.onmessage({ data: pcm.buffer }); assert.deepEqual([...enviados.at(-1)], [0, 0]);
+    socket.onmessage({ data: JSON.stringify({ tipo: 'hablando' }) }); assert.equal(interrupciones, 1, 'Un VAD retrasado no interrumpe la respuesta mientras se envía silencio');
     pausado = false; capturador.port.onmessage({ data: pcm.buffer }); assert.deepEqual([...enviados.at(-1)], [25, -40]);
   } finally { detener(); }
   detener(); assert.equal(niveles.at(-1), 0); assert.equal(paradas, 1); assert.equal(cierres, 1);
   socket.onmessage({ data: JSON.stringify({ tipo: 'instruccion', texto: 'No debe enviarse' }) }); assert.equal(finales.length, 1);
+});
+
+test('Chocorramo aproximado propone una referencia y sucesivas correcciones reemplazan los avisos anteriores', async () => {
+  const catalogo = ['Chocorramo 70 g', 'Chocorramo mini', 'Yogur fresa', 'Yogur mora'].map((nombre, n) => ({ ...productos[0], id: 'choco-' + n, nombre, codigoInterno: 'PROD-C' + n, stockFisico: 100 }));
+  const agente = new AgentesService({ producto: { findMany: async () => catalogo }, cliente: { findMany: async () => [] } });
+  let r = await agente.revisar({ ...pedido, lineas: [{ producto: 'choco ramo', cantidad: 2 }] }, usuario);
+  assert.deepEqual(r.faltantes, []); assert.equal(r.datos.lineas[0].nombre, 'Chocorramo 70 g');
+  assert.match(r.resumen, /También tengo Chocorramo mini/); assert.doesNotMatch(r.resumen, /Repite|presentación/);
+  assert.equal(r.instruccion.lineas[0].producto, 'Chocorramo 70 g');
+  for (const nombre of ['Yogur', 'Chocorramo mini', 'chocoramo', 'Yogur mora']) {
+    r = await agente.revisar({ ...r.instruccion, lineas: [{ producto: nombre, cantidad: 2 }] }, usuario, r.id, r.version + 1);
+    assert.deepEqual(r.faltantes, [], nombre); assert.equal(r.datos.lineas.length, 1);
+    assert.equal(r.instruccion.metodo, 'efectivo'); assert.equal(r.instruccion.lineas[0].cantidad, 2);
+    assert.doesNotMatch(r.resumen, /Repite|venta por|presentación/);
+  }
+  const fallo = await agente.revisar({ ...r.instruccion, lineas: [{ producto: 'Galletas inventadas', cantidad: 2 }] }, usuario);
+  assert.match(fallo.resumen, /No encontré/);
+  const arreglado = await agente.revisar({ ...fallo.instruccion, lineas: [{ producto: 'Chocorramo mini', cantidad: 2 }] }, usuario);
+  assert.deepEqual(arreglado.faltantes, []); assert.doesNotMatch(arreglado.resumen, /No encontré/);
+});
+
+test('producto genérico del proveedor se recupera solo si el texto literal identifica una referencia', async () => {
+  await listo; codigo = 200;
+  const catalogo = [{ ...productos[0], nombre: 'Chocorramo 70 g' }];
+  const agente = new AgentesService({ producto: { findMany: async () => catalogo }, cliente: { findMany: async () => [] } });
+  agente.leer = async () => ({ configuracion: { habilitado: true, modo: 'hibrido' }, secretos: {} });
+  agente.proveedor = async () => ({ nombre: 'Prueba', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' });
+  const previa = respuesta;
+  try {
+    respuesta = { ...pedido, lineas: [{ producto: 'venta', cantidad: 2 }] };
+    const r = await agente.interpretar('Quiero dos chocorramo en efectivo para preparar', undefined, usuario);
+    assert.deepEqual(r.faltantes, []); assert.equal(r.datos.lineas[0].nombre, 'Chocorramo 70 g');
+    const desconocido = await agente.interpretar('Quiero dos galletas desconocidas', undefined, usuario);
+    assert.equal(desconocido.datos.lineas.length, 0); assert.match(desconocido.resumen, /nombre del producto/);
+  } finally { respuesta = previa; }
+});
+
+test('una alternativa dictada conserva el resto del borrador y el eco no se interpreta como una corrección', () => {
+  const ts = require('typescript'), vm = require('node:vm'), fs = require('node:fs');
+  function cargar(ruta, extras) {
+    const m = { exports: {} };
+    const codigo = ts.transpileModule(fs.readFileSync(ruta, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+    vm.runInNewContext(codigo, { module: m, exports: m.exports, require: () => ({}), ...extras }); return m.exports;
+  }
+  const operaciones = cargar('Frontend/src/modules/agentes/operacion-agente.ts');
+  const opcion = operaciones.elegirOpcionDictada('la segunda', { instruccion: pedido, opcionesProducto: [{ texto: pedido.lineas[0].producto, opciones: [{ nombre: 'Arepa pequeña' }, { nombre: 'Arepa grande' }] }] });
+  assert.equal(opcion.lineas[0].producto, 'Arepa grande'); assert.equal(opcion.lineas[0].cantidad, 1);
+  assert.equal(opcion.lineas[1].producto, pedido.lineas[1].producto); assert.equal(opcion.metodo, 'efectivo');
+  const eventos = [], audio = cargar('Frontend/src/modules/agentes/audio.ts', { Date, SpeechSynthesisUtterance: class { constructor(t) { this.text = t; } }, CustomEvent: class { constructor(t) { this.type = t; } }, window: { dispatchEvent: e => eventos.push(e), speechSynthesis: { cancel() {}, getVoices: () => [], speak() {} } } });
+  audio.hablar('Elegí Chocorramo 70 g. También tengo Chocorramo mini.', { idioma: 'es', velocidad: 1, volumen: 1 });
+  assert.equal(audio.esEcoDelAsistente('Elegí Chocorramo 70 g. También tengo Chocorramo mini.'), true);
+  assert.equal(audio.esEcoDelAsistente('Cambia por Chocorramo mini'), false);
+});
+
+test('chat consulta servicios paginados, respeta permisos y prepara cambios sin ejecutar escrituras', async () => {
+  const { ChatService } = require('../dist/agentes/chat.service');
+  let instruccion, ultima, consultas = 0;
+  const leer = async (...args) => { consultas++; ultima = args; return { data: [], meta: { total: 0 } }; };
+  const chat = new ChatService({ interpretar: async () => ({ instruccion, resumen: 'Listo. Revisa y confirma.', faltantes: [] }) }, { listar: leer }, { listar: leer }, { listarRecepciones: leer, listarProveedores: leer }, { resumen: async args => { ultima = args; return { ventas: 0, pedidos: 0, ticketPromedio: 0 }; } });
+  const admin = { id: 'admin', rol: RolUsuario.ADMINISTRADOR, permisosDenegados: [] };
+  for (const recurso of ['productos', 'pedidos', 'compras', 'proveedores']) {
+    instruccion = { operacion: 'consulta', recurso, busqueda: 'prueba', periodo: 'ayer' };
+    const r = await chat.responder('Consultar', admin);
+    assert.deepEqual(r.resultados, []); assert.equal(r.revision, undefined);
+    assert.ok(JSON.stringify(ultima).includes('10'), 'Consulta acotada');
+  }
+  instruccion = { operacion: 'consulta', recurso: 'resumen', periodo: 'ayer' };
+  await chat.responder('Resumen de ayer', admin); assert.equal(ultima.desde, ultima.hasta);
+  instruccion = { operacion: 'consulta', recurso: 'productos' };
+  const antes = consultas;
+  await assert.rejects(chat.responder('Stock', { ...admin, permisosDenegados: ['inventario'] }), e => e.getStatus() === 403);
+  assert.equal(consultas, antes);
+  instruccion = pedido;
+  const borrador = await chat.responder('Prepara pedido', admin);
+  assert.deepEqual(borrador.revision.instruccion, pedido); assert.equal(consultas, antes, 'Preparar no guarda ni consulta datos adicionales');
+});
+
+test('chat descarta respuestas de una sesión anterior y retira el borrador confirmado', () => {
+  const ts = require('typescript'), vm = require('node:vm'), fs = require('node:fs');
+  let sesion = 1; const eventos = {};
+  const modulo = { exports: {} };
+  const codigo = ts.transpileModule(fs.readFileSync('Frontend/src/modules/agentes/chat-estado.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  vm.runInNewContext(codigo, { module: modulo, exports: modulo.exports, crypto: require('node:crypto'), require: () => ({ claveConsulta: r => ['api', sesion, r] }), window: { addEventListener: (n, fn) => { eventos[n] = fn; } } });
+  const chat = modulo.exports, antes = chat.sesionChat('admin');
+  chat.actualizarChat(antes, { revision: { id: 'operacion' }, mensajes: [{ texto: 'mensaje' }] });
+  eventos['synchronic:agente-guardado']({ detail: 'operacion' }); assert.equal(antes.revision, undefined);
+  sesion++;
+  chat.actualizarChat(antes, { revision: { id: 'respuesta-vieja' } });
+  assert.equal(chat.sesionChatVigente(antes), false); assert.equal(antes.revision, undefined);
+  const nueva = chat.sesionChat('admin'); assert.equal(nueva.mensajes.length, 0);
+  assert.notEqual(nueva.conversacionId, antes.conversacionId);
 });
 
 
@@ -436,14 +528,16 @@ test('coincidencias corrigen errores breves, pero no adivinan tamaños, sabores 
   for (const texto of ['Agua Cristal', 'Yogur', 'Agua Cristal 650 ml', 'Galletas chocolate', 'PROD-15']) assert.equal(elegirProducto(texto, catalogo), null, texto);
 });
 
-test('varias líneas exactas comparten una lectura y una corrección conserva el texto literal', async () => {
+test('varias líneas exactas comparten una lectura y la referencia resuelta no altera el texto de entrada', async () => {
   let lecturas = 0;
   const agente = new AgentesService({ producto: { findMany: async () => { lecturas++; return productos; } }, cliente: { findMany: async () => [] } });
   const r = await agente.revisar(pedido, usuario);
   assert.equal(lecturas, 1); assert.equal(r.datos.lineas.length, 3);
   const literal = 'Arepas de quezo';
-  const corregido = await agente.revisar({ ...pedido, lineas: [{ producto: literal, cantidad: 2 }] }, usuario);
-  assert.equal(corregido.instruccion.lineas[0].producto, literal);
+  const entrada = { ...pedido, lineas: [{ producto: literal, cantidad: 2 }] };
+  const corregido = await agente.revisar(entrada, usuario);
+  assert.equal(entrada.lineas[0].producto, literal);
+  assert.equal(corregido.instruccion.lineas[0].producto, 'Arepa de queso');
   assert.equal(corregido.datos.lineas[0].nombre, 'Arepa de queso');
   assert.equal(corregido.resumen, 'Listo. Revisa y confirma.');
 });
@@ -476,7 +570,7 @@ test('guiones de todos los módulos revisan los datos sin ejecutar escrituras', 
     assert.deepEqual(r.instruccion, guion.instruccion);
     operaciones.add(i.operacion);
   }
-  assert.equal(operaciones.size, 12);
+  assert.equal(operaciones.size, 13);
 });
 
 test('proveedor recibe el texto literal y contexto de catálogo con una lectura de configuración', async () => {

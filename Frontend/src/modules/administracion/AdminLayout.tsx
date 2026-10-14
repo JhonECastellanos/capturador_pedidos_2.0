@@ -15,6 +15,7 @@ import {
 } from "../../components/Icons";
 import { useAuth } from "../../context/auth";
 import { Suspense, useEffect, useRef, type ComponentType } from "react";
+import { AvisosNegocio } from "./AvisosNegocio";
 
 interface ItemNavegacion {
   to: string;
@@ -25,6 +26,7 @@ interface ItemNavegacion {
 
 const navegacionPrincipal: ItemNavegacion[] = [
   { to: "/admin", etiqueta: "Inicio", icono: IconHome, fin: true },
+  { to: "/admin/notificaciones", etiqueta: "Notificaciones", icono: IconClipboard },
   { to: "/admin/ventas", etiqueta: "Ventas", icono: IconCart },
   { to: "/admin/pedidos", etiqueta: "Pedidos", icono: IconClipboard },
   { to: "/admin/creditos", etiqueta: "Créditos", icono: IconChartBar },
@@ -35,6 +37,7 @@ const navegacionPrincipal: ItemNavegacion[] = [
   { to: "/admin/cierre", etiqueta: "Cierre", icono: IconLock },
   { to: "/admin/usuarios", etiqueta: "Usuarios", icono: IconUser },
   { to: "/admin/auditoria", etiqueta: "Auditoría", icono: IconClipboard },
+  { to: "/admin/chat", etiqueta: "Chat", icono: IconUser },
   { to: "/admin/configuracion", etiqueta: "Configuración", icono: IconTag },
 ];
 
@@ -55,6 +58,11 @@ export function AdminLayout() {
   const itemsVisibles = todosLosItems.filter(item => !usuario?.permisosDenegados?.includes(permisoPantalla(item.to) ?? ""));
   const contenedorNav = useRef<HTMLElement | null>(null);
   const refsItems = useRef<Record<string, HTMLAnchorElement | null>>({});
+  useEffect(() => {
+    const abrir = (e: MessageEvent) => { if (e.data?.tipo === "abrir-notificacion" && typeof e.data.ruta === "string" && /^\/admin(?:\/|\?|$)/.test(e.data.ruta)) navegar(e.data.ruta); };
+    navigator.serviceWorker?.addEventListener("message", abrir);
+    return () => navigator.serviceWorker?.removeEventListener("message", abrir);
+  }, [navegar]);
 
   async function salir() {
     if (!await cerrarSesion()) return;
@@ -72,13 +80,13 @@ export function AdminLayout() {
   }, [ubicacion.pathname]);
 
   return (
-    <div className="flex h-full flex-col lg:flex-row">
+    <div className="flex h-full flex-col lg:flex-row"><AvisosNegocio key={usuario?.id} />
       {/* ─── Sidebar desktop ─── */}
       <aside className="hidden w-60 flex-shrink-0 flex-col header-negocio border-r border-line px-4 py-5 lg:flex">
         <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-header-ink">{APP_NOMBRE} · {APP_VERSION}</p>
         <h1 className="px-2 font-display text-[18px] font-semibold leading-tight">Centro de control</h1>
         <p className="mt-1 px-2 truncate text-[11px] text-white/60">{usuario?.nombre}</p>
-        <nav className="mt-5 flex-1 space-y-1">
+        <nav className="mt-5 min-h-0 flex-1 space-y-1 overflow-y-auto">
           {itemsVisibles.map((item) => (
             <NavLink key={item.to} to={item.to} end={item.fin} className={claseItemNav}>
               <item.icono width={18} height={18} />

@@ -14,6 +14,14 @@ const confirmaciones = new Map<string, () => Promise<boolean>>();
 let escriturasPendientes = 0;
 export function agenteGuardando() { return escriturasPendientes > 0; }
 export function revisionAgente() { return revision; }
+export function elegirOpcionDictada(texto: string, actual?: RevisionAgente | null) {
+  const ordinal = /^(?:(?:quiero|elige|pon|escoge)\s+)?(?:el|la)\s+(primero|primera|segundo|segunda|tercero|tercera|1|2|3)[.!]?$/i.exec(texto.trim());
+  if (!ordinal || actual?.opcionesProducto?.length !== 1) return undefined;
+  const n = /^(prim|1)/i.test(ordinal[1]) ? 0 : /^(seg|2)/i.test(ordinal[1]) ? 1 : 2;
+  const grupo = actual.opcionesProducto[0], opcion = grupo.opciones[n];
+  if (!opcion) return undefined;
+  return { ...actual.instruccion, lineas: actual.instruccion.lineas?.map(l => l.producto === grupo.texto ? { ...l, producto: opcion.nombre } : l) };
+}
 export function cambiarRevisionAgente(r: RevisionAgente | null) { revision = r; listeners.forEach(l => l()); }
 export function avisoAgente(mensaje: string) { window.dispatchEvent(new CustomEvent("ambie:agente-aviso", { detail: mensaje })); }
 export function useRevisionAgente() { return useSyncExternalStore(l => { listeners.add(l); return () => { listeners.delete(l); }; }, revisionAgente); }
@@ -50,6 +58,7 @@ export function useOperacionAgente(operacion: InstruccionAgente["operacion"], ap
         try { resultado = await funciones.current.guardar(); }
         finally { escriturasPendientes--; }
         if (!resultado) { if (propia) avisoAgente("No se confirmó el guardado. El detalle sigue disponible para corregir o reintentar"); return false; }
+        if (propia) window.dispatchEvent(new CustomEvent("synchronic:agente-guardado", { detail: propia.id }));
         if (propia && revisionAgente() === anterior) { cambiarRevisionAgente(null); avisoAgente("Operación guardada correctamente"); navegar(propia.ruta.startsWith("/admin") ? "/admin" : propia.ruta.startsWith("/inventario") ? "/inventario" : "/vendedor", { replace: true }); }
         return true;
       } catch (e) { avisoAgente(e instanceof Error ? e.message : "No se pudo confirmar; conserva el detalle y reintenta"); return false; }

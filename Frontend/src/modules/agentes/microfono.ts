@@ -49,7 +49,7 @@ export async function abrirMicrofono(texto: (valor: string) => void, estado: (va
           const mensaje = JSON.parse(evento.data);
           if (mensaje.tipo === "listo") terminar();
           else if (mensaje.tipo === "error") { const error = new Error(typeof mensaje.mensaje === "string" ? mensaje.mensaje : "No se pudo procesar el audio"); terminar(error); cerrar(); estado(error.message); }
-          else if (mensaje.tipo === "hablando") { window.speechSynthesis?.cancel(); window.dispatchEvent(new CustomEvent("synchronic:agente-hablando", { detail: false })); }
+          else if (mensaje.tipo === "hablando" && !pausado()) { window.speechSynthesis?.cancel(); window.dispatchEvent(new CustomEvent("synchronic:agente-hablando", { detail: false })); }
           else if (mensaje.tipo === "texto" && typeof mensaje.texto === "string" && mensaje.texto.trim() && mensaje.texto.length <= 6000) vistaPrevia?.(mensaje.texto.trim());
           else if (mensaje.tipo === "instruccion" && typeof mensaje.texto === "string" && mensaje.texto.trim() && mensaje.texto.length <= 6000) texto(mensaje.texto.trim());
         } catch { estado("Se recibió un mensaje de audio que no se pudo interpretar"); }

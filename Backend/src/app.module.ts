@@ -23,6 +23,7 @@ import { UsuariosModule } from "./usuarios/usuarios.module";
 import { CierresModule } from "./cierres/cierres.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { AgentesModule } from "./agentes/agentes.module";
+import { NotificacionesModule } from "./notificaciones/notificaciones.module";
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { AgentesModule } from "./agentes/agentes.module";
     AuditoriaModule,
     ArchivosModule,
     AgentesModule,
+    NotificacionesModule,
     AparienciaModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: AuthGuard }, { provide: APP_INTERCEPTOR, useClass: GuardadoInterceptor }, { provide: APP_INTERCEPTOR, useClass: AuditoriaInterceptor }],

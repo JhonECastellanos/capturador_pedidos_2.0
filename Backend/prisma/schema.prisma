@@ -148,6 +148,7 @@ model Usuario {
   gastos         Gasto[]
   movimientosCaja MovimientoCaja[]
   cierres        CierreDia[]
+  notificacionesLeidas LecturaNotificacion[]
 
   @@map("usuarios")
 }
@@ -232,6 +233,27 @@ model AuditoriaEvento {
 
   @@index([entidadTipo, entidadId])
   @@map("auditoriaEventos")
+}
+
+// Avisos del negocio creados por triggers en la misma transacción del documento.
+model Notificacion {
+  id String @id @default(uuid())
+  tipo String
+  titulo String
+  ruta String
+  creadoEn DateTime @default(now())
+  lecturas LecturaNotificacion[]
+  @@index([creadoEn, id])
+  @@map("notificaciones")
+}
+model LecturaNotificacion {
+  notificacionId String
+  usuarioId String
+  leidoEn DateTime @default(now())
+  notificacion Notificacion @relation(fields: [notificacionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  @@id([notificacionId, usuarioId])
+  @@map("lecturasNotificacion")
 }
 
 // Confirmación técnica del guardado; no es otro documento de negocio.

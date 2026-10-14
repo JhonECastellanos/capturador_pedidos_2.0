@@ -21,6 +21,13 @@ const GastoSchema = z.object({
   metodo: z.enum(["efectivo", "billetera"]).optional(),
 });
 
+function recepcionDTO(r: Prisma.RecepcionCompraGetPayload<{ include: { proveedor: true; lineas: true } }>) {
+  return { id: r.id, numero: r.numero, proveedorId: r.proveedorId, proveedor: r.proveedor.nombre, usuarioId: r.usuarioId,
+    total: numero(r.total), descontarCaja: r.descontarCaja, creadoEn: r.creadoEn,
+    lineas: r.lineas.map(l => ({ productoId: l.productoId, nombre: l.nombre, codigoInterno: l.codigoInterno,
+      cantidad: l.cantidad, costoUnitario: numero(l.costoUnitario), subtotal: numero(l.subtotal) })) };
+}
+
 @Injectable()
 export class ComprasService {
   constructor(private readonly prisma: PrismaService) {}
@@ -60,25 +67,15 @@ export class ComprasService {
       }),
     ]);
     return {
-      data: recepciones.map((r) => ({
-        id: r.id,
-        numero: r.numero,
-        proveedorId: r.proveedorId,
-        proveedor: r.proveedor.nombre,
-        total: numero(r.total),
-        descontarCaja: r.descontarCaja,
-        creadoEn: r.creadoEn,
-        lineas: r.lineas.map((l) => ({
-          productoId: l.productoId,
-          nombre: l.nombre,
-          codigoInterno: l.codigoInterno,
-          cantidad: l.cantidad,
-          costoUnitario: numero(l.costoUnitario),
-          subtotal: numero(l.subtotal),
-        })),
-      })),
+      data: recepciones.map(recepcionDTO),
       meta: { pagina, porPagina, total },
     };
+  }
+
+  async obtenerRecepcion(id: string) {
+    const r = await this.prisma.recepcionCompra.findUnique({ where: { id }, include: { proveedor: true, lineas: true } });
+    if (!r) throw new ErrorDominio("NO_ENCONTRADO", "La recepción no existe", 404);
+    return recepcionDTO(r);
   }
 
   async listarGastos(filtros: { desde?: string; hasta?: string; pagina?: number; porPagina?: number; q?: string; periodo?: string } = {}) {

@@ -15,5 +15,5 @@ export function aplicarApariencia(v: Apariencia) {
 }
 export function permisoPantalla(ruta: string): string | undefined {
   const m = ruta.split('/')[2];
-  return ({ ventas: 'pedidos', pedidos: 'pedidos', creditos: 'cobros', inventario: 'inventario', conteo: 'inventario', compras: 'inventario', productos: 'inventario', caja: 'caja', cierre: 'cierre-diario', usuarios: 'usuarios', abonos: 'cobros', clientes: 'clientes' } as Record<string, string>)[m];
+  return ({ notificaciones: 'notificaciones', chat: 'chat', ventas: 'pedidos', pedidos: 'pedidos', creditos: 'cobros', inventario: 'inventario', conteo: 'inventario', compras: 'inventario', productos: 'inventario', caja: 'caja', cierre: 'cierre-diario', usuarios: 'usuarios', abonos: 'cobros', clientes: 'clientes' } as Record<string, string>)[m];
 }

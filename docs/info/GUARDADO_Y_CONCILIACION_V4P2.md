@@ -333,3 +333,28 @@ WHERE a."conteoId" IS NULL AND a.estado='aplicado' ORDER BY a."creadoEn" DESC;
 ~~~
 
 Ejercicio reproducible, únicamente en QA: node Backend/scripts/probar-productos-compras-stock.cjs. Crea dos proveedores ficticios y tres productos: 12 paquetes a costo 1.200 (14.400), 7 botellas a 800 y 5 bolsas a 3.000 (20.600). Compras debe aumentar 35.000. Una corrección de 12 a 10 paquetes registra -2 y 2.400 de faltante; de 10 a 13 registra +3 y 3.600 de sobrante. Comprueba cada formulario, PostgreSQL, caché del tablero, reintento concurrente y catálogo del vendedor ya abierto. Los registros se conservan en QA, sin contaminar el negocio.
+
+### Conciliar avisos y operaciones preparadas en Chat
+
+Después de la migración, una venta nueva y cada cambio real de estado generan un aviso. Una recepción genera otro. Cancelar un borrador o consultar stock desde Chat no crea ventas, movimientos ni avisos. Abrir el detalle tampoco guarda: se confirma con el botón habitual del módulo. El historial de notificaciones es por instalación; su lectura es individual y respeta los módulos habilitados del administrador.
+
+~~~sql
+SELECT n.id, n.tipo, n.titulo, n.ruta, n."creadoEn",
+       u.nombre AS lector, l."leidoEn"
+FROM notificaciones n
+LEFT JOIN "lecturasNotificacion" l ON l."notificacionId" = n.id
+LEFT JOIN usuarios u ON u.id = l."usuarioId"
+ORDER BY n."creadoEn" DESC, n.id DESC LIMIT 30;
+
+-- Una única marca por persona y aviso: esta consulta debe devolver cero filas.
+SELECT "notificacionId", "usuarioId", count(*)
+FROM "lecturasNotificacion"
+GROUP BY "notificacionId", "usuarioId" HAVING count(*) > 1;
+
+-- Para contrastar una recepción abierta desde un aviso, usar su UUID real.
+SELECT r.id, r.numero, r.total, sum(l.subtotal) AS total_lineas
+FROM "recepcionesCompra" r JOIN "recepcionLineas" l ON l."recepcionCompraId"=r.id
+GROUP BY r.id, r.numero, r.total HAVING r.total <> sum(l.subtotal);
+~~~
+
+Las consultas no modifican el negocio. No comparar la cantidad de avisos con todo el historial: los anteriores a la migración no reciben un aviso retrospectivo.

@@ -21,6 +21,6 @@ export const AparienciaEsquema = z.object({
 export type Apariencia = z.infer<typeof AparienciaEsquema>;
 export const APARIENCIA_INICIAL: Apariencia = { fondo: "#f5f7fa", texto: "#182638", acento: "#f97316", encabezado: "#ffffff", textoEncabezado: "#182638", robotReposo: "#f97316", robotEscuchando: "#2385aa", robotHablando: "#d87c1d", fuente: "inter", portada: "tienda", imagen: "" };
 export const PERMISOS_EDITABLES: Record<string, string[]> = {
-  administrador: ["clientes", "pedidos", "cobros", "inventario", "caja", "usuarios", "cierre-diario"],
+  administrador: ["clientes", "pedidos", "cobros", "inventario", "caja", "usuarios", "cierre-diario", "notificaciones", "chat"],
   vendedor: ["clientes", "pedidos", "cobros", "inventario"], inventario: ["inventario"],
 };

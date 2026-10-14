@@ -3,11 +3,12 @@ import { useNavigate } from "react-router-dom";
 import type { ConfiguracionAgente, RevisionAgente } from "@synchronic-jo/contrato";
 import { useAuth } from "../../context/auth";
 import { api, usaApi } from "../../data/api";
-import { agenteGuardando, contextoAgente, cambiarRevisionAgente, confirmarDesdeAgente, revisionAgente } from "./operacion-agente";
-import { hablar } from "./audio";
+import { agenteGuardando, contextoAgente, cambiarRevisionAgente, confirmarDesdeAgente, revisionAgente, elegirOpcionDictada } from "./operacion-agente";
+import { esEcoDelAsistente, hablar } from "./audio";
 import { abrirMicrofono } from "./microfono";
 import { RobotAsistente } from "./RobotAsistente";
 import { respuestaCordial } from "./conversacion";
+import { consultaDictada, type MensajeChat } from "./chat-estado";
 
 type Estado = { habilitado: boolean; modo: string; configurado: boolean; audio: ConfiguracionAgente["audio"] };
 
@@ -61,7 +62,7 @@ export default function Asistente() {
   }
   async function interpretar(instruccion = texto) {
     const orden = instruccion.trim();
-    if (!orden) return;
+    if (!orden || esEcoDelAsistente(orden)) return;
     const cordial = respuestaCordial(orden);
     if (cordial) { setMensaje(cordial); setTexto(""); if (estado && vozActiva.current) hablar(cordial, estado.audio); return; }
     await ejecutar(async () => {
@@ -70,8 +71,15 @@ export default function Asistente() {
       if (/^confirmar(?:\s+(?:pedido|operación|operacion))?[.!]?$/i.test(orden)) { await confirmarDesdeAgente(); return; }
       if (/^cancelar(?:\s+(?:instrucción|instruccion))?[.!]?$/i.test(orden)) { cambiarRevisionAgente(null); setTexto(""); setMensaje("Instrucción cancelada. No se guardó una operación"); return; }
       setMensaje("Preparando detalle…");
-      const resultado = await api<RevisionAgente>("/agentes/interpretar", "POST", { texto: orden, conversacionId: conversacionId.current, contexto: contextoAgente(), ...(anterior ? { anterior: anterior.instruccion, id: anterior.id, version: anterior.version + 1 } : {}) });
+      const opcion = elegirOpcionDictada(orden, anterior);
+      const resultado = opcion && anterior ? await api<RevisionAgente>("/agentes/revisar", "POST", { instruccion: opcion, id: anterior.id, version: anterior.version + 1 }) : await api<RevisionAgente>("/agentes/interpretar", "POST", { texto: orden, conversacionId: conversacionId.current, contexto: contextoAgente(), ...(anterior ? { anterior: anterior.instruccion, id: anterior.id, version: anterior.version + 1 } : {}) });
       if (turno !== generacion.current || revisionAgente() !== anterior || agenteGuardando()) return;
+      if (resultado.instruccion.operacion === "consulta" && usuario) {
+        const consulta = resultado.datos.consulta as { respuesta: string; resultados?: MensajeChat["resultados"] };
+        consultaDictada(usuario.id, orden, consulta); setMensaje(consulta.respuesta); setTexto(orden); navegar("/admin/chat");
+        if (estado && vozActiva.current) hablar(consulta.respuesta, estado.audio);
+        return;
+      }
       cambiarRevisionAgente(resultado); setMensaje(resultado.resumen + (resultado.conexion?.respaldo ? ` · Respondió el respaldo: ${resultado.conexion.proveedor}` : "")); setTexto(orden); navegar(resultado.ruta);
       if (estado && vozActiva.current && !ordenesPendientes.current.length) hablar(resultado.resumen, estado.audio);
     });

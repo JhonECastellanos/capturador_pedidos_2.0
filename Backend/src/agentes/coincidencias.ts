@@ -1,6 +1,6 @@
 /** Se compara una copia del texto; la transcripción original no se modifica. */
 export const normalizarProducto = (texto: string) => texto.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().replace(/\bmililitros?\b/g, "ml").replace(/[^a-z0-9]+/g, " ").trim();
-const ignoradas = new Set("con de del las los una uno unos unas para quiero pedido cliente ocasional pago efectivo billetera credito preparar entregado agrega agregar cambia cambiar producto productos por favor necesito unidades unidad dos tres cuatro cinco seis siete ocho nueve diez tengo contado inventario cuesta costo pesos precio compra proveedor recibir recepcion".split(" "));
+const ignoradas = new Set("con de del las los una uno unos unas para quiero venta pedido cliente ocasional pago efectivo billetera credito preparar entregado agrega agregar cambia cambiar producto productos por favor necesito unidades unidad dos tres cuatro cinco seis siete ocho nueve diez tengo contado inventario cuesta costo pesos precio compra proveedor recibir recepcion".split(" "));
 export function palabrasProducto(texto: string) {
   return [...new Set(normalizarProducto(texto).split(" ").filter(t => t.length > 2 && t.length <= 150 && !ignoradas.has(t)))].slice(0, 48);
 }
@@ -24,16 +24,18 @@ export function coincidencias<T extends NombreProducto>(texto: string, productos
     if (normalizarProducto(texto) === nombre || normalizarProducto(texto) === normalizarProducto(producto.codigoInterno)) return { producto, puntaje: 1 };
     if (!palabras.length || numeros.some(n => !nombre.split(" ").includes(n))) return { producto, puntaje: 0 };
     const tokens = palabrasProducto(producto.nombre);
+    const compacta = Math.max(parecido(palabras.join(""), tokens.join("")), ...tokens.map(t => parecido(palabras.join(""), t)));
     const valores = palabras.map(p => Math.max(0, ...tokens.map(t => parecido(p, t))));
+    if (compacta >= 0.84) return { producto, puntaje: compacta };
     return { producto, puntaje: valores.some(p => p < 0.7) ? 0 : valores.reduce((s, p) => s + p, 0) / valores.length };
   }).filter(p => p.puntaje > 0).sort((a, b) => b.puntaje - a.puntaje);
 }
-export function elegirProducto<T extends NombreProducto>(texto: string, productos: T[]) {
+export function elegirProducto<T extends NombreProducto>(texto: string, productos: T[], probable = false) {
   const exactos = productos.filter(p => normalizarProducto(p.nombre) === normalizarProducto(texto) || normalizarProducto(p.codigoInterno) === normalizarProducto(texto));
   if (exactos.length) return exactos.length === 1 ? exactos[0] : null;
   const candidatos = coincidencias(texto, productos);
-  // Una presentación incompleta o dos nombres cercanos requieren aclaración.
-  return candidatos[0]?.puntaje >= 0.84 && (!candidatos[1] || candidatos[0].puntaje - candidatos[1].puntaje >= 0.14) ? candidatos[0].producto : null;
+  // La revisión puede proponer una referencia; otras búsquedas exigen unicidad.
+  return candidatos[0]?.puntaje >= 0.84 && (probable || !candidatos[1] || candidatos[0].puntaje - candidatos[1].puntaje >= 0.14) ? candidatos[0].producto : null;
 }
 export function sugerenciasCatalogo<T extends NombreProducto>(texto: string, productos: T[]) {
   const literal = palabrasProducto(texto);

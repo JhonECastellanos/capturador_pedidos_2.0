@@ -17,6 +17,8 @@ const PERMISOS = [
   { codigo: "cierre-diario", nombre: "Cierre diario", descripcion: "Ejecutar cierre del día" },
   { codigo: "clientes", nombre: "Clientes", descripcion: "Gestionar clientes" },
   { codigo: "cobros", nombre: "Cobros", descripcion: "Registrar abonos y cobros" },
+  { codigo: "notificaciones", nombre: "Notificaciones", descripcion: "Consultar avisos del negocio" },
+  { codigo: "chat", nombre: "Chat", descripcion: "Consultar y preparar operaciones para revisión" },
 ];
 
 /**

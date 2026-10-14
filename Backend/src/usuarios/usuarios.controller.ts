@@ -4,7 +4,7 @@ import { paginacion } from "../common/paginacion";
 import { RolUsuario, Usuario } from "@prisma/client";
 import { UsuariosService } from "./usuarios.service";
 import { Roles, UsuarioActual } from "../common/guards";
-import { CambiarRolUsuarioEsquema, CrearUsuarioEsquema } from "@synchronic-jo/contrato";
+import { CambiarRolUsuarioEsquema, CrearUsuarioEsquema, PERMISOS_EDITABLES } from "@synchronic-jo/contrato";
 import { ErrorDominio } from "../common/errores";
 
 @Roles(RolUsuario.ADMINISTRADOR)
@@ -40,7 +40,7 @@ export class UsuariosController {
   async retirar(@Param("usuarioId") id: string, @UsuarioActual() actor: Usuario) { return { data: await this.usuarios.retirar(id, actor.id) }; }
   @Patch(":usuarioId/permisos")
   async permisos(@Param("usuarioId") id: string, @Body() body: unknown, @UsuarioActual() actor: Usuario) {
-    const datos = z.object({ permisosDenegados: z.array(z.string()).max(7) }).strict().parse(body);
+    const datos = z.object({ permisosDenegados: z.array(z.string()).max(PERMISOS_EDITABLES.administrador.length) }).strict().parse(body);
     return { data: await this.usuarios.cambiarPermisos(id, datos.permisosDenegados, actor.id) };
   }
 

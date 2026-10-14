@@ -25,6 +25,8 @@ import {
 
 const ConteoColaborador = lazy(() => import("./modules/inventario/screens/ConteoColaborador"));
 const Asistente = lazy(() => import("./modules/agentes/Asistente"));
+const ChatAdmin = lazy(() => import("./modules/agentes/ChatAdmin"));
+const Notificaciones = lazy(() => import("./modules/administracion/screens/Notificaciones"));
 const InventarioAdmin = lazy(() => import("./modules/inventario/screens/InventarioAdmin").then((m) => ({ default: m.InventarioAdmin })));
 const PedidosAdmin = lazy(() => import("./modules/pedidos/screens/PedidosAdmin").then((m) => ({ default: m.PedidosAdmin })));
 const CreditosAdmin = lazy(() => import("./modules/creditos/screens/CreditosAdmin").then((m) => ({ default: m.CreditosAdmin })));
@@ -60,6 +62,8 @@ function Contenido() {
           {/* ─── Panel administrativo (rutas anidadas) ─── */}
           <Route path="/admin" element={<RutaProtegida roles={["administrador"]}><AdminLayout /></RutaProtegida>}>
             <Route index element={<Resumen />} />
+            <Route path="notificaciones" element={<Notificaciones />} />
+            <Route path="chat" element={<ChatAdmin />} />
             <Route path="ventas" element={<AdminVentas />} />
             <Route path="ventas/pedido" element={<AdminVentasPedido />} />
             <Route path="ventas/pedido/:pedidoId" element={<AdminVentasPedidoDetalle />} />

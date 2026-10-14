@@ -14,5 +14,6 @@ import { CacheTablero } from "./cache.service";
   } })],
   controllers: [DashboardController],
   providers: [DashboardService, CacheTablero],
+  exports: [DashboardService],
 })
 export class DashboardModule {}

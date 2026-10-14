@@ -809,3 +809,11 @@ RolUsuario agrega inventario; roles/rolPermisos le asignan solo inventario. La A
 conteoLineas.asignadoPorId: FK a usuarios, nullable; identifica quién está contando. asignadoHasta: instante UTC nullable; vence a los cinco minutos. Ambos se limpian al guardar o liberar. contadoPorId/contadoEn identifican el guardado confirmado; stockFisico NULL sigue pendiente, 0 es contado. Índice conteoId/stockFisico/asignadoHasta para recuperar pendientes. La unicidad conteoId/productoId impide duplicar una línea.
 
 participantesConteo: PK compuesta conteoId/usuarioId; FK a conteosInventario y usuarios. primeroEn/ultimoEn: primera y última cantidad guardada por ese usuario. No almacena otra copia de cantidades ni balances. La migración conserva participantes históricos conocidos a partir de las líneas con responsable y fecha. Los antiguos registros sin responsable no reciben un colaborador inventado. Trigger diferido de sincronización publica cambios solo al confirmar la transacción.
+
+### Avisos comerciales — 14/10/2026
+
+`notificaciones`: `id` UUID textual, PK; `tipo` pedido/compra; `titulo` breve con consecutivo y estado; `ruta` al detalle administrativo; `creadoEn` instante UTC. Índice creadoEn/id para paginar de forma estable. El trigger genera el aviso en la misma transacción del alta de pedido, cambio real de estado o recepción. No copia las líneas, importes ni clientes y no altera el historial comercial. No reconstruye avisos de operaciones anteriores a la migración.
+
+`lecturasNotificacion`: PK compuesta notificacionId/usuarioId; FKs al aviso y al usuario, con borrado en cascada de esas relaciones; `leidoEn` instante UTC de la primera lectura. El upsert evita duplicados y otro administrador mantiene su propia marca de lectura. El retiro de usuarios del aplicativo es lógico: no elimina documentos comerciales.
+
+Los mensajes y borradores del chat permanecen en RAM por sesión. Las operaciones confirmadas se guardan en sus tablas actuales. No hay una segunda tabla de ventas, cantidades, pagos ni transacciones del chat. Los avisos se leen mediante consulta paginada propia; no requieren incrementar la revisión operativa de sincronización.

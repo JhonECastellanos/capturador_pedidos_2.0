@@ -10,14 +10,18 @@ async function main() {
     const login = await context.request.post(base + '/api/v1/auth/login', { data: { identifier: 'system', password: process.env.SYSTEM_PASSWORD || process.env.BOOTSTRAP_PASSWORD } });
     assert.equal(login.status(), 200);
     const antes = (await (await context.request.get(base + '/api/v1/pedidos')).json()).meta.total;
-    const producto = (await (await context.request.get(base + '/api/v1/productos?pageSize=200&activo=true')).json()).data.find(p => p.stock >= 3);
+    const catalogo = (await (await context.request.get(base + '/api/v1/productos?pageSize=200&activo=true')).json()).data;
+    const producto = catalogo.find(p => p.stock >= 3), otro = catalogo.find(p => p.stock >= 3 && p.id !== producto?.id);
     assert.ok(producto && producto.stock >= 3);
+    assert.ok(otro, 'QA debe tener dos productos disponibles');
     const instruccion = { operacion: 'pedido', ocasional: true, lineas: [{ producto: producto.nombre, cantidad: 2 }], metodo: 'efectivo', preparacion: 'pendiente' };
     async function revisar(i, version) {
       const r = await context.request.post(base + '/api/v1/agentes/revisar', { data: { id, version, instruccion: i } });
       assert.equal(r.status(), 201); return (await r.json()).data;
     }
     const id = randomUUID(), original = await revisar(instruccion, 1), correccion = await revisar({ ...instruccion, metodo: 'billetera', lineas: [{ producto: producto.nombre, cantidad: 3 }] }, 2);
+    const cambio = await revisar({ ...correccion.instruccion, lineas: [{ producto: otro.nombre, cantidad: 2 }] }, 3);
+    const segundoCambio = await revisar({ ...cambio.instruccion, lineas: [{ producto: producto.nombre, cantidad: 1 }] }, 4);
     const audio = { idioma: 'es', velocidad: 1, volumen: 1, voz: '', stt: 'whisper', modeloStt: 'base' };
     await context.route('**/agentes/estado', r => r.fulfill({ json: { data: { habilitado: true, configurado: true, modo: 'hibrido', audio } } }));
     await context.route('**/agentes/audio/sesion', r => r.fulfill({ json: { data: { ticket: 'qa-controlado' } } }));
@@ -27,7 +31,7 @@ async function main() {
     await context.route('**/agentes/interpretar', async r => {
       llamadas++; ordenes.push(r.request().postDataJSON());
       if (llamadas === 1) await r.fulfill({ status: 422, json: { message: 'El proveedor rechazó esta solicitud de prueba' } });
-      else { await new Promise(resolve => setTimeout(resolve, 250)); await r.fulfill({ json: { data: llamadas === 2 ? original : correccion } }); }
+      else { await new Promise(resolve => setTimeout(resolve, 250)); await r.fulfill({ json: { data: llamadas === 2 ? original : llamadas === 3 ? correccion : llamadas === 4 ? cambio : segundoCambio } }); }
     });
     await context.addInitScript(() => {
       window.__locuciones = [];
@@ -51,6 +55,14 @@ async function main() {
     await page.waitForFunction(() => window.__locuciones.filter(t => t === 'Listo. Revisa y confirma.').length === 2);
     assert.equal(ordenes[2].anterior.lineas[0].cantidad, 2);
     assert.equal(ordenes[2].anterior.metodo, 'efectivo');
+    socket.send(JSON.stringify({ tipo: 'instruccion', texto: 'Listo. Revisa y confirma.' }));
+    await page.waitForTimeout(350); assert.equal(llamadas, 3, 'El eco de la respuesta no envía otro turno');
+    socket.send(JSON.stringify({ tipo: 'instruccion', texto: `Cambia el producto por dos ${otro.nombre}` }));
+    await page.waitForFunction(() => window.__locuciones.filter(t => t === 'Listo. Revisa y confirma.').length === 3);
+    socket.send(JSON.stringify({ tipo: 'instruccion', texto: `Ahora cambia por un ${producto.nombre}` }));
+    await page.waitForFunction(() => window.__locuciones.filter(t => t === 'Listo. Revisa y confirma.').length === 4);
+    assert.equal(ordenes[4].anterior.lineas[0].producto, otro.nombre);
+    assert.equal(ordenes[4].anterior.metodo, 'billetera');
     await page.locator('body').dispatchEvent('pointerdown');
     assert.equal(await robot.getAttribute('aria-expanded'), 'false');
     assert.equal(await robot.getAttribute('aria-pressed'), 'true');
