@@ -3,6 +3,7 @@ import asyncio
 import base64
 import binascii
 import hmac
+import logging
 import os
 import shutil
 import tempfile
@@ -16,6 +17,7 @@ from loguru import logger
 from sesiones_audio import VOCABULARIO_AUDIO
 
 logger.remove()  # Pipecat no debe registrar el texto de pedidos ni audio privado.
+logging.getLogger("uvicorn.error").addFilter(lambda registro: "ticket=" not in registro.getMessage())
 
 
 @asynccontextmanager
@@ -25,7 +27,7 @@ async def ciclo_vida(_app):
     try:
         # Solo archivos ya instalados. Cargar el motor antes de declarar salud.
         from motor_audio import precalentar
-        for nombre in ("base", "tiny", "small"):
+        for nombre in ("tiny", "base", "small"):
             ruta = Path(os.environ.get("HF_HOME", "/data/modelos")) / f"whisper-{nombre}"
             if (ruta / "model.bin").is_file():
                 await asyncio.to_thread(precalentar, ruta)

@@ -11,6 +11,24 @@ from uuid import UUID
 
 from fastapi import WebSocket, WebSocketDisconnect
 
+# Cargar la canalización al arrancar, antes de declarar el servicio disponible.
+from pipecat.audio.vad.silero import SileroVADAnalyzer
+from pipecat.audio.vad.vad_analyzer import VADParams
+from pipecat.processors.audio.vad_processor import VADProcessor
+from pipecat.processors.frame_processor import FrameProcessor, FrameDirection
+from pipecat.frames.frames import Frame, InputAudioRawFrame
+from pipecat.processors.aggregators.llm_context import LLMContext
+from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair, LLMUserAggregatorParams
+from pipecat.turns.user_turn_strategies import UserTurnStrategies
+from pipecat.turns.user_stop.speech_timeout_user_turn_stop_strategy import SpeechTimeoutUserTurnStopStrategy
+from pipecat.pipeline.pipeline import Pipeline
+from pipecat.pipeline.worker import PipelineWorker, PipelineParams
+from pipecat.workers.runner import WorkerRunner
+from motor_audio import WhisperCompartido as WhisperSTTService
+from pipecat.transcriptions.language import Language
+
+from pipecat.frames.frames import TranscriptionFrame, VADUserStartedSpeakingFrame
+
 VOCABULARIO_AUDIO = "arepa arepas queso empanada empanadas yogur yogurt gaseosa Coca-Cola café cafés agua aguas Cristal chocolatina chocolatinas Jet galletas Oreo Doritos cliente ocasional efectivo billetera crédito inventario pedido"
 
 usados = {}
@@ -58,22 +76,6 @@ async def conversar(socket: WebSocket):
         ruta = Path(os.environ.get("HF_HOME", "/data/modelos")) / f"whisper-{datos['modelo']}"
         if not (ruta / "model.bin").is_file():
             raise ValueError("Prepara primero el reconocimiento elegido desde Configuración")
-        from pipecat.audio.vad.silero import SileroVADAnalyzer
-        from pipecat.audio.vad.vad_analyzer import VADParams
-        from pipecat.processors.audio.vad_processor import VADProcessor
-        from pipecat.processors.frame_processor import FrameProcessor, FrameDirection
-        from pipecat.frames.frames import Frame, InputAudioRawFrame
-        from pipecat.processors.aggregators.llm_context import LLMContext
-        from pipecat.processors.aggregators.llm_response_universal import LLMContextAggregatorPair, LLMUserAggregatorParams
-        from pipecat.turns.user_turn_strategies import UserTurnStrategies
-        from pipecat.turns.user_stop.speech_timeout_user_turn_stop_strategy import SpeechTimeoutUserTurnStopStrategy
-        from pipecat.pipeline.pipeline import Pipeline
-        from pipecat.pipeline.worker import PipelineWorker, PipelineParams
-        from pipecat.workers.runner import WorkerRunner
-        from motor_audio import WhisperCompartido as WhisperSTTService
-        from pipecat.transcriptions.language import Language
-
-        from pipecat.frames.frames import TranscriptionFrame, VADUserStartedSpeakingFrame
         texto_parcial = ""
         turno_abierto = False
 
