@@ -1,3 +1,4 @@
+import { AparienciaProvider } from "./context/AparienciaProvider";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { AuthProvider } from "./context/AuthContext";
@@ -23,6 +24,9 @@ import {
 } from "./modules/ventas/screens/RutasVentas";
 
 const ConteoColaborador = lazy(() => import("./modules/inventario/screens/ConteoColaborador"));
+const Asistente = lazy(() => import("./modules/agentes/Asistente"));
+const ChatAdmin = lazy(() => import("./modules/agentes/ChatAdmin"));
+const Notificaciones = lazy(() => import("./modules/administracion/screens/Notificaciones"));
 const InventarioAdmin = lazy(() => import("./modules/inventario/screens/InventarioAdmin").then((m) => ({ default: m.InventarioAdmin })));
 const PedidosAdmin = lazy(() => import("./modules/pedidos/screens/PedidosAdmin").then((m) => ({ default: m.PedidosAdmin })));
 const CreditosAdmin = lazy(() => import("./modules/creditos/screens/CreditosAdmin").then((m) => ({ default: m.CreditosAdmin })));
@@ -30,7 +34,7 @@ const CajaAdmin = lazy(() => import("./modules/caja/screens/CajaAdmin").then((m)
 const CierreAdmin = lazy(() => import("./modules/caja/screens/CierreAdmin").then((m) => ({ default: m.CierreAdmin })));
 const UsuariosAdmin = lazy(() => import("./modules/usuarios/screens/UsuariosAdmin").then((m) => ({ default: m.UsuariosAdmin })));
 const ComprasAdmin = lazy(() => import("./modules/compras/screens/ComprasAdmin").then((m) => ({ default: m.ComprasAdmin })));
-const PreciosAdmin = lazy(() => import("./modules/precios/screens/PreciosAdmin").then((m) => ({ default: m.PreciosAdmin })));
+const ProductosAdmin = lazy(() => import("./modules/productos/screens/ProductosAdmin").then((m) => ({ default: m.ProductosAdmin })));
 const Auditoria = lazy(() => import("./modules/administracion/screens/Auditoria").then((m) => ({ default: m.Auditoria })));
 const Resumen = lazy(() => import("./modules/administracion/screens/Resumen").then((m) => ({ default: m.Resumen })));
 const Configuracion = lazy(() => import("./modules/configuracion/Configuracion").then((m) => ({ default: m.Configuracion })));
@@ -47,6 +51,7 @@ function Contenido() {
 
           {/* ─── Flujo del vendedor (app móvil) ─── */}
           <Route path="/inventario" element={<RutaProtegida roles={["inventario"]}><ConteoColaborador /></RutaProtegida>} />
+          <Route path="/vendedor/conteo" element={<RutaProtegida roles={["vendedor"]}><ConteoColaborador /></RutaProtegida>} />
           <Route path="/vendedor" element={<RutaProtegida roles={["vendedor"]}><VendedorInicio /></RutaProtegida>} />
           <Route path="/vendedor/pedido" element={<RutaProtegida roles={["vendedor"]}><VendedorPedido /></RutaProtegida>} />
           <Route path="/vendedor/pedido/completado" element={<RutaProtegida roles={["vendedor"]}><VendedorPedidoCompletado /></RutaProtegida>} />
@@ -57,6 +62,8 @@ function Contenido() {
           {/* ─── Panel administrativo (rutas anidadas) ─── */}
           <Route path="/admin" element={<RutaProtegida roles={["administrador"]}><AdminLayout /></RutaProtegida>}>
             <Route index element={<Resumen />} />
+            <Route path="notificaciones" element={<Notificaciones />} />
+            <Route path="chat" element={<ChatAdmin />} />
             <Route path="ventas" element={<AdminVentas />} />
             <Route path="ventas/pedido" element={<AdminVentasPedido />} />
             <Route path="ventas/pedido/:pedidoId" element={<AdminVentasPedidoDetalle />} />
@@ -67,7 +74,7 @@ function Contenido() {
             <Route path="creditos" element={<CreditosAdmin />} />
             <Route path="inventario" element={<InventarioAdmin />} />
             <Route path="compras" element={<ComprasAdmin />} />
-            <Route path="precios" element={<PreciosAdmin />} />
+            <Route path="productos" element={<ProductosAdmin />} />
             <Route path="caja" element={<CajaAdmin />} />
             <Route path="cierre" element={<CierreAdmin />} />
             <Route path="usuarios" element={<UsuariosAdmin />} />
@@ -91,10 +98,11 @@ function Contenido() {
 
 export default function App() {
   return (
-    <AuthProvider>
+    <AparienciaProvider><AuthProvider>
       <OperacionesProvider>
         <Contenido />
+        <Suspense fallback={null}><Asistente /></Suspense>
       </OperacionesProvider>
-    </AuthProvider>
+    </AuthProvider></AparienciaProvider>
   );
 }

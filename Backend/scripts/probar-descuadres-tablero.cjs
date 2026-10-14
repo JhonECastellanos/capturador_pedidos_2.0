@@ -74,4 +74,4 @@ const marca = 'QA-Descuadres-'+Date.now();
    await page.waitForFunction(valor=>document.querySelector('[aria-label="Descuadres de inventario"]').textContent.replace(/\s/g,'').includes('Faltantes$'+new Intl.NumberFormat('es-CO',{maximumFractionDigits:0}).format(valor)),rangoGrafico.descuadres.faltantes);assert.notEqual(actualizado.cache.version,revisionPrev.cache.version);
   assert.deepEqual(errores,[]);mkdirSync('.local/pruebas-ui',{recursive:true});const informe={fecha:new Date().toISOString(),conteoId:conteo.id,diarioId:diario.id,manual,importesConfirmados:{faltantes:200,sobrantes:750,ajusteManual:999},sinDuplicarAlAplicar:true,costosHistoricos:true,limiteBogota:true,canceladosExcluidos:true,sinCostoInformado:true,periodos,errores};writeFileSync('.local/pruebas-ui/descuadres-tablero.json',JSON.stringify(informe,null,2));console.log(JSON.stringify(informe,null,2));
  }finally{await browser.close();}
-})().catch(e=>{console.error(e);process.exitCode=1;});
+})().catch(e=>{console.error(String(e.message).replace(/ambie_(?:access|refresh)=[^;\s]+/g,'sesion=[oculta]'));process.exitCode=1;});

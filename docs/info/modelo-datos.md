@@ -1,7 +1,9 @@
-# Modelo de datos — AMBIÉ (PostgreSQL)
+# Modelo de datos — Synchronic.JO (PostgreSQL)
 
 Base de datos PostgreSQL que reemplaza a `localStorage` como fuente de verdad.
 Una sola empresa por instalación. Las instalaciones nuevas empiezan sin operaciones comerciales; las existentes se actualizan mediante migraciones que conservan datos e historial. No se importan datos de `ambie:v1:*` automáticamente.
+
+Salir de un conteo conserva su estado abierto, participantes y líneas guardadas; libera únicamente la asignación del usuario que sale. Cancelarlo definitivamente es exclusivo del administrador: cambia estado/fecha de cierre y libera todas las asignaciones dentro de la misma transacción, sin eliminar cantidades/responsables/fechas ni modificar productos o movimientos de stock. Se reutilizan `conteosInventario`, `conteoLineas` y `participantesConteo`; no requiere tablas nuevas.
 
 ## Convenciones de nombres
 
@@ -107,7 +109,7 @@ La asignación ocurre dentro de la misma transacción que inserta la entidad
 - `aplicado` se deriva de la existencia de un ajuste; no es otra columna de estado ni una segunda copia del stock.
 - Tipo `inicial`: un punto de partida aplicado por instalación; conserva nombre/costo y acumulado del ledger en `conteoLineas`. La confirmación usa los ajustes existentes y no genera gasto ni duplica el stock.
 - `ajustesInventario` + `ajusteLineas` (`conteoId` nulo = ajuste manual; no existe `"manual"`).
-- `cambiosPrecio`: historial de precios.
+- `cambiosPrecio`: historial de valores de venta.
 
 ### Compras y cierres
 
@@ -144,3 +146,62 @@ La asignación ocurre dentro de la misma transacción que inserta la entidad
 - Soporte: sesiones, archivosAdjuntos, auditoriaEventos, consecutivos, escriturasConfirmadas y versionesCache. La tabla _prisma_migrations registra migraciones. Total después de actualizar: 36 tablas.
 
 La migración 202610100003 retira recordatoriosCredito, cierrePedidos y cierreMovimientos: estaban vacías tanto en negocio como en QA y no tienen lecturas ni escrituras en los servicios actuales. Conserva cierresDia, cierreMedios y cierreAcciones, que sí guardan los cierres y sus decisiones. Si alguna instalación tiene registros en las tablas retiradas, la migración se detiene sin eliminarlos. No se borra ni se restablece información comercial. La migración 202610100002 retira solo un índice redundante; la unicidad de ajuste por conteo permanece protegida por Prisma y PostgreSQL.
+
+### Configuración del asistente (V6P4)
+
+`configuracionesAgente` contiene una sola configuración, identificada por `principal`. No agrega empresas ni modifica pedidos, pagos, inventario o caja.
+
+| Campo | Tipo y uso |
+|---|---|
+| `id` | Texto, clave primaria; el servicio usa `principal`. |
+| `configuracion` | JSONB con modo, proveedores sin claves, selección de modelos y ajustes de audio/local/live. Validado con el contrato compartido. |
+| `secretos` | Texto cifrado con AES-256-GCM: IV, etiqueta de autenticación y contenido cifrado. Contiene las claves por identificador de proveedor; nunca se devuelve al frontend. |
+| `version` | Entero positivo. La actualización exige la versión leída, bajo bloqueo transaccional; devuelve 409 si otro administrador ya guardó. |
+| `actualizadoEn` | Fecha de la última modificación, administrada por Prisma. |
+
+La clave privada `AGENT_CONFIG_SECRET` debe mantenerse estable y protegida junto con el respaldo de la instalación. Si está vacía se utiliza el secreto de autenticación del servidor. Cambiarla sin conservar la anterior impide abrir las claves ya guardadas. El DTO público solo indica `tieneClave`.
+
+Una instrucción interpretada permanece como borrador en memoria del navegador. No crea una tabla paralela de ventas ni ejecuta documentos. Al confirmar, utiliza el mismo formulario, endpoint y transacción comercial. La auditoría registra metadatos de las solicitudes, sin audio, cuerpos ni claves.
+
+Consulta de validación sin mostrar secretos:
+
+```sql
+SELECT id, version, "actualizadoEn",
+       configuracion->>'modo' AS modo,
+       configuracion->>'habilitado' AS habilitado
+FROM "configuracionesAgente";
+```
+
+V6P4: dentro del JSON configuracion, proveedores[].maxTokens guarda el límite de salida por solicitud (256..8192; 2000 predeterminado) y respaldoId conserva el UUID de otra conexión autorizada o null. Los registros anteriores reciben esos valores predeterminados al validar; no se requiere otra tabla ni se modifican documentos comerciales. Las métricas de una interpretación se devuelven en RevisionAgente.conexion sin guardar texto, claves ni una estimación de saldo.
+
+
+## V7P4 · etiquetas y primera instalación
+
+`productos` conserva su UUID y `codigoInterno` único. `precioPendiente` conserva compatibilidad con productos históricos aún sin parametrizar: permanecen fuera de ventas hasta confirmar su importe en Productos o importar un importe explícito por CSV. Las altas comerciales requieren un importe explícito; cero confirmado también es válido. El inicial abierto permite crear sin importe ni costo, con precioPendiente=true; Stock general no permite altas.
+
+`codigosProducto` relaciona varias etiquetas con un solo producto. Campos: `id` UUID, `codigo` texto único de hasta 128 caracteres validado por API (incluye ceros iniciales), `productoId` FK restrictiva, `creadoEn` fecha de vinculación y `retiradoEn` fecha opcional de retiro. La API reserva el formato PROD para los consecutivos internos. Un código no puede trasladarse a otro producto. Los códigos retirados se conservan y no se reutilizan; el administrador puede retirarlos cuando dejen de circular. Al arrancar y cada seis horas se retiran las etiquetas anteriores cuyo reemplazo más reciente lleve 180 días vigente, dejando siempre la última activa. Se conserva la relación histórica.
+
+La lectura acepta códigos de barras y contenido literal de QR, sin abrir enlaces del QR. Busca un alias vigente o el consecutivo exacto. Si el código no existe en un inicial abierto, se muestra la ficha con coincidencias por nombre, unidad, categoría, extensión y cantidad, sin costos/importes. El alta, alias, línea y cantidad se confirman juntos. Productos y Compras usan la misma ficha con costo/importe/mínimo. Una etiqueta de la familia abre una selección paginada de presentación antes de contar, vender o editar; el consecutivo interno de cada presentación siempre es exacto.
+
+No se añadieron tablas de stock, participantes o historiales duplicadas. Se reutilizan `conteosInventario`, `conteoLineas`, `participantesConteo`, `ajustesInventario` y `movimientosInventario`. Crear un producto mientras el inicial está abierto añade su línea pendiente bajo los mismos bloqueos. Registrar una etiqueta adicional de un producto ya contado conserva la cantidad anterior.
+
+Escanear para contar reserva la línea elegida cinco minutos bajo el bloqueo del conteo. Otro colaborador recibe un conflicto si la línea está ocupada o contada. Guardar usa el PATCH existente, confirma la transacción y libera la reserva antes de abrir la siguiente cámara. Cero es un conteo válido. Cerrar y aplicar siguen siendo decisiones del administrador; el conteo no ajusta stock automáticamente.
+
+El vendedor solo accede a diarios abiertos; el colaborador Inventario solo a iniciales/generales abiertos. Este último consulta nombres, códigos y unidades, con costos y existencias teóricas ocultos para evitar influir en su conteo. El administrador/system conserva historial, responsables, fechas y diferencias. Un diario pendiente anterior se conserva, pero no bloquea la selección de otra jornada; la rotación utiliza las selecciones de jornadas no canceladas hasta cubrir el catálogo y comienza otro ciclo.
+
+
+### V8P4 · Apariencia y retiro de colaboradores
+
+`configuracionesVisuales`: fila `principal`, JSON validado `configuracion` (fondo, texto, acento, encabezado, textoEncabezado, fuente, portada, imagen pública) y `actualizadoEn`. GET es público y no entrega identidad ni documentos; PUT exige administrador. Su trigger diferido incrementa la revisión de sincronización tras confirmar el guardado. La imagen comprimida tiene hasta 300 KB y admite firmas JPEG/PNG/WebP; no admite SVG aportado por usuarios.
+
+`usuarios.permisosDenegados`: lista de restricciones sobre los permisos disponibles del rol. Se verifican en AuthGuard, además del rol. `usuarios.eliminadoEn`: fecha del retiro lógico; nunca se eliminan sus referencias de conteos. Cada cambio de acceso revoca sesiones y registra metadatos en auditoría. Una restricción en PostgreSQL impide retirar o restringir system. Los correos nuevos se normalizan y se comprueban sin distinguir mayúsculas bajo bloqueo de transacción.
+
+### Presentaciones del producto (ajustes V8P4)
+`productos.id` sigue siendo el identificador operativo de cada presentación: pedidos, compras, stock, reservas, conteos y etiquetas apuntan a ese mismo registro. `productoBaseId` vincula una presentación con su producto principal; `extension` identifica la presentación (por ejemplo, 250 ml o paquete de 6). Un principal tiene base nula y puede representar la primera presentación; su extensión es opcional. Una presentación no puede ser principal de otra. El índice único por principal y extensión, sin distinguir mayúsculas, evita duplicaciones; la creación y edición usan el mismo bloqueo transaccional del catálogo.
+
+La API y la vista SQL `identidadesProducto` exponen `rowid = COALESCE(productoBaseId,id)` y `rowid_ext = id`. No se duplican identificadores almacenados. `codigoInterno` mantiene su consecutivo único para cada presentación. Los códigos comerciales están en `codigosProducto`: varias etiquetas pueden apuntar a la misma presentación, pero cada etiqueta solo puede pertenecer a un registro. Retirar una etiqueta conserva su relación histórica e impide lecturas futuras; no elimina inventario.
+
+nombreBase en la API identifica el nombre principal sin el sufijo de presentación. Cambiar el nombre principal actualiza sus presentaciones dentro de la misma transacción. Editar una presentación modifica su extensión. Los nombres, cantidades y valores de venta históricos de `pedidoLineas` permanecen intactos. Cada presentación tiene stock y precio independientes; los informes por producto agrupan por `rowid`, los informes detallados por `rowid_ext`.
+
+
+Una etiqueta externa del producto principal puede identificar varias presentaciones por color/tamaño. Se guarda una sola relación con el principal; cada presentación conserva su UUID, consecutivo, rowid_ext y stock. El lector pide elegir la presentación, sin repartir cantidades ni elegir por intuición. Vincular otra etiqueta al producto ya contado conserva el conteo. No se modifica el identificador por cambiar una etiqueta.

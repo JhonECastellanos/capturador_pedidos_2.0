@@ -1,6 +1,6 @@
 import { Controller, Get } from "@nestjs/common";
 import { PrismaService } from "../common/prisma.module";
-import { METODO_PAGO } from "@ambie/contrato";
+import { METODO_PAGO } from "@synchronic-jo/contrato";
 
 /**
  * Catálogos de apoyo para los formularios del frontend.

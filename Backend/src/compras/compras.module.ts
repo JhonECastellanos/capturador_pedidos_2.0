@@ -5,5 +5,6 @@ import { ComprasController } from "./compras.controller";
 @Module({
   controllers: [ComprasController],
   providers: [ComprasService],
+  exports: [ComprasService],
 })
 export class ComprasModule {}

@@ -4,14 +4,17 @@ import { ProductosService, NuevoProductoSchema } from "./productos.service";
 import { Roles, UsuarioActual } from "../common/guards";
 import { ErrorDominio } from "../common/errores";
 import { paginacion } from "../common/paginacion";
-import { ImportarProductosEsquema } from "@ambie/contrato";
+import { ImportarProductosEsquema, CodigoLecturaEsquema, VincularCodigoEsquema, CambiarPrecioEsquema, ProductoInicialEsquema } from "@synchronic-jo/contrato";
+import { z } from "zod";
 
 @Controller("productos")
 export class ProductosController {
   constructor(private readonly productos: ProductosService) {}
 
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO, RolUsuario.VENDEDOR)
   @Get()
-  listar(
+  async listar(
+    @UsuarioActual() usuario: Usuario,
     @Query("q") q?: string,
     @Query("categoria") categoria?: string,
     @Query("stockEstado") stockEstado?: string,
@@ -19,9 +22,11 @@ export class ProductosController {
     @Query("pageSize") pageSize?: string,
     @Query("orden") orden?: string,
     @Query("activo") activo?: string,
+    @Query("familiaId") familiaId?: string,
   ) {
     const p = paginacion(page, pageSize);
-    return this.productos.listar(q, categoria, stockEstado, p.pagina, p.porPagina, orden, activo === "true");
+    const resultado = await this.productos.listar(q, categoria, usuario.rol === RolUsuario.INVENTARIO ? undefined : stockEstado, p.pagina, p.porPagina, usuario.rol === RolUsuario.INVENTARIO ? "nombre" : orden, activo === "true" || usuario.rol === RolUsuario.INVENTARIO, z.string().uuid().optional().parse(familiaId));
+    return { ...resultado, data: resultado.data.map(p => this.catalogoPermitido(p, usuario.rol)), ...(usuario.rol === RolUsuario.INVENTARIO ? { meta: { ...resultado.meta, alertas: 0 } } : {}) };
   }
 
   @Roles(RolUsuario.ADMINISTRADOR)
@@ -31,9 +36,39 @@ export class ProductosController {
     return this.productos.listarCambios(p.pagina, p.porPagina);
   }
 
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO, RolUsuario.VENDEDOR)
+  @Get("codigo/lectura")
+  async resolver(@Query("codigo") codigo: string, @UsuarioActual() usuario: Usuario) {
+    const producto = await this.productos.resolverCodigo(CodigoLecturaEsquema.parse(codigo));
+    return { data: producto ? this.catalogoPermitido(producto, usuario.rol) : null };
+  }
+
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO)
+  @Post("inicial/:conteoId")
+  async crearInicial(@Param("conteoId") conteoId: string, @Body() body: unknown, @UsuarioActual() usuario: Usuario) {
+    const resultado = await this.productos.productoInicial(conteoId, ProductoInicialEsquema.parse(body), usuario.id, usuario.rol);
+    return { data: { ...resultado, producto: this.catalogoPermitido(resultado.producto, usuario.rol) } };
+  }
+
+  @Roles(RolUsuario.ADMINISTRADOR)
+  @Get(":productoId/codigos")
+  async codigos(@Param("productoId") id: string) { return { data: await this.productos.codigos(id) }; }
+
+  @Roles(RolUsuario.ADMINISTRADOR)
+  @Post(":productoId/codigos")
+  async vincular(@Param("productoId") id: string, @Body() body: unknown) {
+    const datos = VincularCodigoEsquema.parse(body);
+    return { data: await this.productos.vincularCodigo(id, datos.codigo) };
+  }
+
+  @Roles(RolUsuario.ADMINISTRADOR)
+  @Post(":productoId/codigos/:codigoId/retirar")
+  async retirar(@Param("productoId") id: string, @Param("codigoId") codigoId: string) { return { data: await this.productos.retirarCodigo(id, codigoId) }; }
+
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.INVENTARIO, RolUsuario.VENDEDOR)
   @Get(":productoId")
-  async obtener(@Param("productoId") productoId: string) {
-    return { data: await this.productos.obtener(productoId) };
+  async obtener(@Param("productoId") productoId: string, @UsuarioActual() usuario: Usuario) {
+    return { data: this.catalogoPermitido(await this.productos.obtener(productoId), usuario.rol) };
   }
 
   @Roles(RolUsuario.ADMINISTRADOR)
@@ -44,9 +79,10 @@ export class ProductosController {
     return { data: await this.productos.importar(datos.data, usuario.id) };
   }
 
-  @Get(":productoId/precios")
-  async historialPrecios(@Param("productoId") productoId: string, @Query("limite") limite?: string) {
-    return this.productos.historialPrecios(productoId, paginacion("1", limite ?? "50").porPagina);
+  @Roles(RolUsuario.ADMINISTRADOR)
+  @Get(":productoId/historial")
+  async historialProducto(@Param("productoId") productoId: string, @Query("limite") limite?: string) {
+    return this.productos.historialProducto(productoId, paginacion("1", limite ?? "50").porPagina);
   }
 
   @Roles(RolUsuario.ADMINISTRADOR)
@@ -64,9 +100,11 @@ export class ProductosController {
     @Body() body: { nuevoPrecio?: number },
     @UsuarioActual() usuario: Usuario,
   ) {
-    if (typeof body?.nuevoPrecio !== "number" || body.nuevoPrecio < 0) {
-      throw new ErrorDominio("VALIDACION", "Precio inválido");
-    }
-    return { data: await this.productos.actualizarPrecio(productoId, body.nuevoPrecio, usuario.id) };
+    const datos = CambiarPrecioEsquema.parse(body);
+    return { data: await this.productos.actualizarPrecio(productoId, datos.nuevoPrecio, usuario.id, datos) };
   }
+  private catalogoPermitido<T extends Awaited<ReturnType<ProductosService["obtener"]>>>(producto: T, rol: RolUsuario) {
+    return rol === RolUsuario.INVENTARIO ? { ...producto, precioVenta: 0, costoActual: 0, stock: 0, stockFisico: 0, stockReservado: 0, stockDisponible: 0, stockMinimo: 0 } : producto;
+  }
+
 }

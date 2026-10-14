@@ -1,11 +1,12 @@
 import { useState } from "react";
-import type { AuditoriaEventoDTO } from "@ambie/contrato";
+import type { AuditoriaEventoDTO } from "@synchronic-jo/contrato";
 import { usaApi } from "../../../data/api";
 import { usePaginaApi } from "../../../data/usePaginaApi";
 import { ListaVacia } from "../../../components/ListaVacia";
 import { Paginacion } from "../../../components/Paginacion";
 import { formatoFechaHora } from "../../../utils/fechas";
 import { useTamanoPagina } from "../../../utils/paginacion";
+import { GuiaAyuda } from "../../../components/GuiaAyuda";
 
 export function Auditoria() {
   const porPagina = useTamanoPagina();
@@ -13,7 +14,7 @@ export function Auditoria() {
   const [entidad, setEntidad] = useState("");
   const { items: eventos, total, error, cargando, actualizando } = usePaginaApi<AuditoriaEventoDTO>(`/auditoria?page=${pagina}&pageSize=${porPagina}${entidad ? `&entidad=${encodeURIComponent(entidad)}` : ""}`);
   return <div className="flex h-full min-h-0 flex-col">
-    <header className="shrink-0 border-b border-line pb-3"><h2 className="font-display text-lg font-semibold text-ink">Auditoría del negocio</h2><p className="mt-1 text-xs text-ink-soft">Acciones confirmadas, responsables y fechas. Los accesos y credenciales no se muestran.</p>
+    <header className="cabecera-modulo shrink-0"><h2 className="titulo-modulo sr-only">Auditoría del negocio</h2><GuiaAyuda pantalla="Auditoría" pasos={[{ titulo: "Cambios registrados", texto: "Revisa acciones confirmadas, responsables y fechas. Filtra por área y pasa de página para consultar más registros. Los accesos y credenciales no se muestran." }]} />
       <label className="mt-3 flex items-center gap-3 text-sm text-ink-soft">Área<select value={entidad} className="min-h-11 rounded-xl border border-line bg-paper-raised px-3" onChange={(e) => { setEntidad(e.target.value); setPagina(1); }}>
         <option value="">Todas</option>{["pedidos", "clientes", "productos", "inventario", "usuarios", "usuario", "caja", "cierres", "gastos", "archivos"].map((v) => <option key={v} value={v}>{v}</option>)}
       </select></label>

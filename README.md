@@ -1,6 +1,8 @@
-# AMBIÉ · Capturador de pedidos
+# Synchronic.JO
 
-Aplicación para administrar un negocio desde computador o celular: pedidos, cobros, crédito, inventario, compras, gastos, precios y caja. Una empresa por instalación, con accesos de administrador, vendedor y colaboradores de inventario.
+Aplicación para administrar un negocio desde computador o celular: pedidos, cobros, crédito, inventario, compras, gastos, productos y caja. Una empresa por instalación, con accesos de administrador, vendedor y colaboradores de inventario.
+
+Versión de producción: **V8P4**. Personaliza colores, fuente y portada desde Configuración. Puede instalarse como aplicación en un navegador compatible mediante HTTPS (localhost también permite probarla).
 
 ## Tecnología
 
@@ -33,14 +35,22 @@ curl http://localhost:8080/api/v1/salud
 npm run verificar
 ~~~
 
-Las pruebas operativas se ejecutan en QA aislada, nunca sobre los datos reales. Esta versión no incluye un servicio de agente; Configuración conserva los accesos a Usuarios y Auditoría.
+Las pruebas operativas se ejecutan en QA aislada, nunca sobre los datos reales. V8P4 incorpora un servicio optativo de voz y ajustes en Configuración > Agentes IA. Primero se valida Híbrido; Local queda preparado sin modelos y API Live conserva sus ajustes para la siguiente etapa. La voz revisa operaciones en los formularios existentes; Chat presenta y confirma dentro de la conversación, usando las mismas acciones del negocio. Consulta la guía para activar audio, ver sus logs y conocer las pruebas pendientes.
 
 ## Funcionamiento esperado
 
-Cada formulario espera la confirmación de guardado en PostgreSQL. Pedidos, pagos, caja e inventario se actualizan mediante transacciones; la sincronización mantiene las pantallas al día. El historial conserva documentos y precios anteriores. Precios permite exportar/importar CSV; Inventario permite revisar el inicio del negocio y conteos. Inicio muestra ventas, compras, gastos y descuadres por período al costo guardado.
+Cada formulario espera la confirmación de guardado en PostgreSQL. Pedidos, pagos, caja e inventario se actualizan mediante transacciones; la sincronización mantiene las pantallas al día. El historial conserva documentos y valores de venta anteriores. Productos permite exportar/importar CSV; Inventario permite revisar el inicio del negocio y conteos. Inicio muestra ventas, compras, gastos y descuadres por período al costo guardado.
+
+Notificaciones conserva avisos comerciales y abre su detalle. Chat usa la conexión configurada para consultar datos o preparar operaciones: se revisan y confirman dentro del chat, sin cambiar de pantalla. Los avisos del navegador requieren permiso y la aplicación abierta.
 
 - [Guía completa de instalación y desarrollo](docs/info/GUIA_INSTALACION_Y_DESARROLLO.md).
 - [Modelo, consultas y ejemplos de CSV](docs/info/GUARDADO_Y_CONCILIACION_V4P2.md).
 - [Diccionario de tablas y campos](docs/info/DICCIONARIO_DATOS_V4P2.md).
 - [Pruebas realizadas y alcance](docs/info/VALIDACION_FORMULARIOS_Y_BASE_DATOS.md).
 - [Publicación y despliegue continuo](docs/info/DESPLIEGUE_CONTINUO.md).
+
+### Enlace temporal de validación con Cloudflare
+
+Con la aplicación ya instalada, ejecutar `iniciar_cloudflare_validacion.cmd`. Renueva el túnel dentro de `capturador_pedidos_20`, actualiza APP_ORIGIN/CORS y espera la salud de API/frontend, sin ejecutar migraciones ni modificar operaciones del negocio. La dirección vigente se guarda en `.local/cloudflare-url-actual.txt`. Usa tu cuenta normal para acceder.
+
+El enlace cambia al crear otro túnel y es para pruebas; para un hostname estable se requiere un túnel administrado. [Documentación de Cloudflare](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/).

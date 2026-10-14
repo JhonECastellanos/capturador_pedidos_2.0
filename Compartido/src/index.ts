@@ -1,8 +1,8 @@
 /**
- * Punto de entrada del contrato compartido de AMBIÉ.
+ * Punto de entrada del contrato compartido de Synchronic.JO.
  *
  * Se importa igual desde el frontend y desde la API:
- *   import { ESTADO_PEDIDO, type PedidoDTO } from "@ambie/contrato";
+ *   import { ESTADO_PEDIDO, type PedidoDTO } from "@synchronic-jo/contrato";
  */
 
 export * from "./enums";
@@ -15,3 +15,6 @@ export * from "./conteo-diario";
 export const VERSION_CONTRATO = "1.0.0";
 
 export * from "./conteo-compartido";
+export * from "./agentes";
+
+export * from "./apariencia";

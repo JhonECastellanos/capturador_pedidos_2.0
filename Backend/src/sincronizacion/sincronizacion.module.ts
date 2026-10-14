@@ -1,7 +1,7 @@
 import { Roles } from "../common/guards";
 import { RolUsuario } from "@prisma/client";
 import { Controller, Get, Header, Injectable, Module } from "@nestjs/common";
-import type { RevisionDatosDTO } from "@ambie/contrato";
+import type { RevisionDatosDTO } from "@synchronic-jo/contrato";
 import { PrismaService } from "../common/prisma.module";
 
 @Injectable()

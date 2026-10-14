@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { Envelope, InventarioInicialDTO } from "@ambie/contrato";
+import type { Envelope, InventarioInicialDTO } from "@synchronic-jo/contrato";
 import type { ConteoInventario } from "../../../types";
 import { respuestaRed, usaApi } from "../../../data/api";
 import { claveConsulta } from "../../../data/query";
@@ -23,7 +23,7 @@ export function InventarioInicial({ conteo, iniciar, abrir }: { conteo?: ConteoI
     <div className="max-w-3xl rounded-2xl border border-line bg-paper-raised p-4">
       <p className="font-semibold text-ink">El punto de partida del negocio</p>
       <p className="mt-2 text-[13px] text-ink-soft">Cuenta todos los productos, revisa las cantidades y confirma el inicio. Se conservarán los costos de ese momento para comparar el inventario con las ventas, compras y ajustes posteriores.</p>
-      <p className="mt-2 text-[12px] text-ink-soft">Hazlo durante una pausa de las operaciones. Si el stock o el catálogo cambian mientras cuentas, tendrás que cancelar ese inicio y repetirlo. Los productos creados después no forman parte de esta comparación.</p>
+      <p className="mt-2 text-[12px] text-ink-soft">Puedes escanear etiquetas, crear productos sin costo/precio y vincular nuevos códigos a productos existentes dentro del conteo. Hazlo durante una pausa de las operaciones. Si el stock o el catálogo cambian mientras cuentas, tendrás que cancelar ese inicio y repetirlo. Los productos creados después no forman parte de esta comparación.</p>
       {!usaApi ? <p className="mt-3 text-sm text-ink-soft">El inventario inicial requiere la conexión a la base de datos del negocio.</p> : consulta.isPending ? <p role="status" className="mt-3">Consultando inventario inicial…</p> : consulta.error ? <p role="alert" className="mt-3 text-danger">{consulta.error.message} <button type="button" onClick={() => void consulta.refetch()}>Reintentar</button></p> : !inicial && <div className="mt-4">
         <Boton onClick={conteo ? () => abrir(conteo) : iniciar}>{conteo ? conteo.estado === "en-curso" ? "Continuar inventario inicial" : "Revisar y confirmar inicio" : "Contar inventario inicial"}</Boton>
         <p className="mt-2 text-[12px] text-ink-soft">Se registra una sola vez. Contar y finalizar todavía no cambian el stock; la confirmación final aplica las cantidades y guarda el punto de partida.</p>

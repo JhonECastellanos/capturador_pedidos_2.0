@@ -1,4 +1,4 @@
-name: capturador_pedidos_20
+name: ${COMPOSE_PROJECT_NAME:-synchronic_jo}
 
 services:
   redis:
@@ -19,7 +19,7 @@ services:
       timeout: 2s
       retries: 10
   frontend:
-    image: capturador_pedidos_20-frontend:local
+    image: synchronic-jo-frontend:local
     build:
       context: .
       dockerfile: Frontend/Dockerfile
@@ -77,11 +77,11 @@ services:
       retries: 10
 
   migrate:
-    image: capturador_pedidos_20-api:local
+    image: synchronic-jo-api:local
     mem_limit: 768m
     memswap_limit: 768m
     cpus: 1.0
-    # Contexto en la raíz: la API es un workspace que depende de @ambie/contrato.
+    # Contexto en la raíz: la API es un workspace que depende de @synchronic-jo/contrato.
     build:
       context: .
       dockerfile: Backend/Dockerfile
@@ -97,7 +97,7 @@ services:
     restart: "no"
 
   api:
-    image: capturador_pedidos_20-api:local
+    image: synchronic-jo-api:local
     mem_limit: ${API_MEMORY:-512m}
     memswap_limit: ${API_MEMORY:-512m}
     cpus: ${API_CPUS:-1.0}
@@ -109,6 +109,10 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       SESSION_SECRET: ${SESSION_SECRET}
       CACHE_REDIS_URL: redis://redis:6379
+      AGENT_CONFIG_SECRET: ${AGENT_CONFIG_SECRET:-}
+      VOICE_AGENT_TOKEN: ${VOICE_AGENT_TOKEN:-}
+      VOICE_AGENT_URL: http://voice-agent:7860
+      OLLAMA_URL: ${OLLAMA_URL:-http://voice-agent:11434}
       JWT_SECRET: ${JWT_SECRET}
       JWT_ACCESS_TTL_SEGUNDOS: ${JWT_ACCESS_TTL_SEGUNDOS:-900}
       JWT_REFRESH_TTL_DIAS: ${JWT_REFRESH_TTL_DIAS:-7}
@@ -141,7 +145,7 @@ services:
   #
   #   docker compose --profile bootstrap run --rm bootstrap
   bootstrap:
-    image: capturador_pedidos_20-api:local
+    image: synchronic-jo-api:local
     mem_limit: 256m
     memswap_limit: 256m
     cpus: 0.5
@@ -184,7 +188,32 @@ services:
       timeout: 5s
       retries: 5
 
+  voice-agent:
+    profiles: ["voz"]
+    image: synchronic-jo-voz:local
+    build:
+      context: .
+      dockerfile: Agentes/voz/Dockerfile
+      target: ${VOICE_BUILD_TARGET:-voz-hibrida}
+    mem_limit: ${VOICE_MEMORY:-1536m}
+    memswap_limit: ${VOICE_MEMORY:-1536m}
+    cpus: ${VOICE_CPUS:-2}
+    restart: unless-stopped
+    environment:
+      VOICE_AGENT_TOKEN: ${VOICE_AGENT_TOKEN:-}
+      HF_HOME: /data/modelos
+    volumes:
+      - voz_modelos:/data/modelos
+    tmpfs:
+      - /tmp:size=32m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+
 volumes:
+  voz_modelos:
+    name: ${VOICE_MODELS_VOLUME:-${COMPOSE_PROJECT_NAME:-synchronic_jo}_voz_modelos}
+    external: ${VOICE_MODELS_EXTERNAL:-false}
   postgres_data:
   minio_data:
 

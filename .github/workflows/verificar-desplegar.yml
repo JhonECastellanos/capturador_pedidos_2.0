@@ -22,6 +22,7 @@ jobs:
       - run: npm run seguridad:repositorio
       - run: npm run verificar
       - run: npm run prueba:cache
+      - run: npm run prueba:agentes
   desplegar:
     needs: verificar
     if: >-

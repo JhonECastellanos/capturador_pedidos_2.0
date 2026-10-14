@@ -1,4 +1,4 @@
-import type { DashboardResumenDTO } from "@ambie/contrato";
+import type { DashboardResumenDTO } from "@synchronic-jo/contrato";
 import type { Tramo } from "./periodos";
 /** Día local de la interfaz, sin desplazar el DATE contable a UTC. */
 export function diaTablero(fecha: Date) { return `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, "0")}-${String(fecha.getDate()).padStart(2, "0")}`; }

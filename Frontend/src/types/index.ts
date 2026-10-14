@@ -5,8 +5,8 @@
 
 // ─── Enumeraciones ────────────────────────────────────────────────
 
-export type { MetodoPago, EstadoPedido, RolUsuario, EstadoCuenta } from "@ambie/contrato";
-import type { MetodoPago, EstadoPedido, RolUsuario, EstadoCuenta, PedidoDTO, UsuarioDTO, TipoConteo } from "@ambie/contrato";
+export type { MetodoPago, EstadoPedido, RolUsuario, EstadoCuenta } from "@synchronic-jo/contrato";
+import type { MetodoPago, EstadoPedido, RolUsuario, EstadoCuenta, PedidoDTO, UsuarioDTO, TipoConteo } from "@synchronic-jo/contrato";
 /** Periodicidad pactada de pago para el crédito del cliente. */
 export type TipoCredito = "diario" | "semanal" | "quincenal" | "mensual";
 
@@ -102,6 +102,16 @@ export function inicialesDe(nombre: string): string {
 // ─── Productos ────────────────────────────────────────────────────
 
 export interface Producto {
+  /** La API separa físico y reservado; modo local conserva stock. */
+  stockFisico?: number;
+  stockReservado?: number;
+  nombreBase?: string;
+  productoBaseId?: string | null;
+  extension?: string;
+  rowid?: string;
+  rowid_ext?: string;
+  precioPendiente?: boolean;
+  codigosLectura?: string[];
   id: string;
   /** Código interno propio del negocio (PROD-001). */
   codigoInterno: string;
@@ -192,7 +202,7 @@ export interface MovimientoCaja {
 
 // ─── Usuarios ─────────────────────────────────────────────────────
 
-export interface UsuarioSistema extends Pick<UsuarioDTO, "esSistema"> {
+export interface UsuarioSistema extends Pick<UsuarioDTO, "esSistema" | "permisosDenegados"> {
   id: string;
   nombre: string;
   email: string;
@@ -284,7 +294,7 @@ export interface AjusteInventario {
   creadoEn: string;
 }
 
-// ─── Precios (Fase 4) ─────────────────────────────────────────────
+// ─── Productos (Fase 4) ─────────────────────────────────────────────
 
 export interface CambioPrecio {
   id: string;

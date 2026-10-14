@@ -3,11 +3,12 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { BarraInferior } from "../../../components/BarraInferior";
 import { BarraSuperior } from "../../../components/BarraSuperior";
 import { Boton } from "../../../components/Boton";
+import { BotonEscaner } from "../../../components/BotonEscaner";
+import { LecturaProductoCodigo } from "../../../components/LecturaProductoCodigo";
 import { BuscadorInput } from "../../../components/BuscadorInput";
 import { IconChevronRight, IconMapPin } from "../../../components/Icons";
 import { ListaVacia } from "../../../components/ListaVacia";
 import { SegmentoControl } from "../../../components/SegmentoControl";
-import { SelectorOpciones } from "../../../components/SelectorOpciones";
 import { TarjetaClicable } from "../../../components/TarjetaClicable";
 import { TarjetaProducto } from "../../../components/TarjetaProducto";
 import { TiraToast } from "../../../components/TiraToast";
@@ -25,8 +26,9 @@ import { formatoMoneda } from "../../../utils/formato";
 import { DetalleProductosPedido } from "../components/DetalleProductosPedido";
 import { Paginacion } from "../../../components/Paginacion";
 import { useTamanoPagina, paginar } from "../../../utils/paginacion";
+import { useOperacionAgente } from "../../agentes/operacion-agente";
 
-type Paso = 1 | 2 | 3 | 4;
+type Paso = 1 | 2 | 3;
 type ModoEntrega = Extract<EstadoPedido, "entregado" | "pendiente">;
 
 interface FlujoVentaProps {
@@ -44,7 +46,7 @@ interface FlujoVentaProps {
 
 /**
  * Flujo de venta compartido (vendedor y administrador).
- * Pasos a pantalla completa: cliente → productos → entrega → pago.
+ * Pasos a pantalla completa: cliente → productos → detalle, entrega y pago.
  */
 export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titulo = "Crear pedido", alConfirmar }: FlujoVentaProps) {
   const POR_PAGINA = useTamanoPagina();
@@ -62,6 +64,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
   const [busquedaCliente, setBusquedaCliente] = useState("");
   const [busquedaProducto, setBusquedaProducto] = useState("");
   const [categoria, setCategoria] = useState<string>("Todas");
+  const [camara, setCamara] = useState(false);
   const [productosElegidos, setProductosElegidos] = useState<Record<string, Producto>>({});
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
   const [entrega, setEntrega] = useState<ModoEntrega>("entregado");
@@ -132,8 +135,9 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
   const total = lineas.reduce((suma, linea) => suma + linea.subtotal, 0);
   const unidades = lineas.reduce((suma, linea) => suma + linea.cantidad, 0);
 
-  function cambiarCantidad(productoId: string, delta: number) {
-    const producto = productosFiltrados.find((p) => p.id === productoId) ?? productosElegidos[productoId];
+  function cambiarCantidad(productoId: string, delta: number, encontrado?: Producto) {
+    const producto = encontrado ?? productosFiltrados.find((p) => p.id === productoId) ?? productosElegidos[productoId];
+    if (producto?.precioPendiente) { mostrarAviso("Configura su precio antes de vender este producto", "info"); return; }
     if (producto) setProductosElegidos(actuales => ({...actuales,[productoId]:producto}));
     const tope = producto?.stock ?? 0;
     setCantidades((actuales) => {
@@ -166,6 +170,19 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
     return true;
   }
 
+  const confirmarPedidoCompartido = useOperacionAgente("pedido", r => {
+    const productos = (r.datos.productos ?? []) as Producto[];
+    const elegidas = (r.datos.lineas ?? []) as LineaPedido[];
+    const cliente = r.datos.cliente as Cliente | null;
+    setProductosElegidos(Object.fromEntries(productos.map(p => [p.id, p])));
+    setCantidades(Object.fromEntries(elegidas.map(l => [l.productoId, l.cantidad])));
+    setOcasional(r.datos.ocasional === true);
+    if (cliente) seleccionarClienteActivo(cliente.id);
+    if (r.datos.metodo) setMetodo(r.datos.metodo as MetodoPago);
+    if (r.datos.entrega) setEntrega(r.datos.entrega as ModoEntrega);
+    setPaso(3);
+  }, confirmarPedido, () => ({ operacion: "pedido", ocasional, ...(ocasional ? {} : { cliente: clienteSeleccionado?.nombre }), lineas: lineas.map(l => ({ producto: l.nombre, cantidad: l.cantidad })), metodo, preparacion: entrega }));
+
   function volver() {
     if (paso === 1) {
       navegar(rutaInicio);
@@ -183,9 +200,9 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
       <div className="flex h-full flex-col min-h-0">
         <BarraSuperior
           titulo={titulo}
-          subtitulo="Paso 1 de 4 · Cliente"
+          subtitulo="Paso 1 de 3 · Cliente"
           onVolver={() => navegar(rutaInicio)}
-          paso={{ actual: 1, total: 4 }}
+          paso={{ actual: 1, total: 3 }}
         />
         <div className="flex-shrink-0 px-5 pt-3 md:px-6">
           <BuscadorInput autoFocus value={busquedaCliente} onChange={setBusquedaCliente} placeholder="Buscar por nombre, alias o teléfono" />
@@ -242,27 +259,27 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
     );
   }
 
-  // ─── Pasos 2, 3 y 4 ───
+  // ─── Productos y detalle final ───
   const titulos: Record<Paso, string> = {
     1: "Cliente",
     2: "Agregar productos",
-    3: "Entrega del pedido",
-    4: "Registrar pago",
+    3: "Revisar pedido",
   };
 
   return (
     <div className={`flex h-full min-h-0 flex-col ${paso === 2 ? "overflow-y-auto" : ""}`}>
       <BarraSuperior
         titulo={titulos[paso]}
-        subtitulo={`${clienteSeleccionado.alias} · Paso ${paso} de 4`}
+        subtitulo={`${clienteSeleccionado.alias} · Paso ${paso} de 3`}
         onVolver={volver}
-        paso={{ actual: paso, total: 4 }}
+        paso={{ actual: paso, total: 3 }}
       />
 
       {paso === 2 && (
         <>
           <div className="flex-shrink-0 space-y-2 px-5 pt-3 md:px-6">
-            <BuscadorInput value={busquedaProducto} onChange={setBusquedaProducto} placeholder="Buscar producto o código" />
+            <BuscadorInput value={busquedaProducto} onChange={setBusquedaProducto} placeholder="Buscar producto o código" accion={usaApi ? <BotonEscaner onClick={() => setCamara(true)} /> : undefined} />
+            {camara && <LecturaProductoCodigo onCerrar={() => setCamara(false)} onProducto={p => { setCamara(false); if (!p) { mostrarAviso("Código sin registrar. Pide al administrador que lo registre en Productos, Compras o Inventario inicial", "info"); return; } if (p.precioPendiente || p.stock <= 0) { mostrarAviso(p.precioPendiente ? "Este producto aún no tiene precio configurado" : "Este producto no tiene unidades disponibles", "info"); return; } setBusquedaProducto(p.nombre); setCategoria("Todas"); cambiarCantidad(p.id, 1, { ...p, imagenUrl: p.imagenUrl ?? undefined }); }} />}
             <SegmentoControl
               desborda
               valor={categoria}
@@ -334,7 +351,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
               <span className="font-mono text-[17px] font-semibold text-ink">{formatoMoneda(total)}</span>
             </div>
             <Boton disabled={lineas.length === 0} onClick={() => cambiarPaso(3)}>
-              Continuar a entrega <IconChevronRight width={17} height={17} />
+              Revisar pedido <IconChevronRight width={17} height={17} />
             </Boton>
           </BarraInferior>
         </>
@@ -343,48 +360,12 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
       {paso === 3 && (
         <>
           <main className="no-scrollbar flex-1 min-h-0 overflow-y-auto px-5 py-4 md:px-6">
-            <p className="text-[12.5px] leading-relaxed text-ink-soft">
-              Indica si el pedido ya se entregó o si queda por preparar (jugos, sándwiches, etc.). El estado queda visible en Pedidos para su seguimiento.
-            </p>
-            <div className="mt-3">
-              <SelectorOpciones
-                columnas={1}
-                valor={entrega}
-                onChange={setEntrega}
-                opciones={[
-                  {
-                    valor: "entregado",
-                    titulo: "Entregado ahora",
-                    descripcion: "El cliente ya recibió el pedido. Continúa al cobro.",
-                    etiqueta: "✓",
-                  },
-                  {
-                    valor: "pendiente",
-                    titulo: "Pendiente por preparar",
-                    descripcion: "Queda pendiente. Podrás marcarlo como entregado y cobrar después desde el detalle del pedido o en Abonos.",
-                    etiqueta: "⏳",
-                  },
-                ]}
-              />
-            </div>
-          </main>
-          <BarraInferior>
-            <Boton onClick={() => cambiarPaso(4)}>
-              Continuar al pago <IconChevronRight width={17} height={17} />
-            </Boton>
-          </BarraInferior>
-        </>
-      )}
-
-      {paso === 4 && (
-        <>
-          <main className="no-scrollbar flex-1 min-h-0 overflow-y-auto px-5 py-4 md:px-6">
             <section className="rounded-xl border border-line bg-paper-raised p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[11.5px] font-semibold uppercase tracking-wide text-ink-faint">Cliente</p>
-                  <p className="mt-0.5 truncate text-[15px] font-semibold text-ink">{clienteSeleccionado.nombre}</p>
-                  <p className="truncate text-[12.5px] text-ink-soft">“{clienteSeleccionado.alias}”</p>
+                  <p className="mt-0.5 truncate text-[15px] font-semibold text-ink">{clienteSeleccionado?.nombre ?? "Cliente por definir"}</p>
+                  <p className="truncate text-[12.5px] text-ink-soft">{clienteSeleccionado?.alias ? `“${clienteSeleccionado.alias}”` : ""}</p>
                 </div>
                 <span className={`flex-shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                   entrega === "entregado" ? "bg-success-soft text-success" : "bg-accent-soft text-accent-dark"
@@ -401,10 +382,17 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
               </div>
             </section>
 
+            <section className="mt-4" aria-label="Entrega del pedido">
+              <p className="mb-2 text-[12px] font-semibold text-ink-soft">Entrega</p>
+              <SegmentoControl valor={entrega} onChange={setEntrega} opciones={[
+                { valor: "entregado", etiqueta: "Entregado ahora" },
+                { valor: "pendiente", etiqueta: "Por preparar" },
+              ]} />
+            </section>
             <section className="mt-4">
               <p className="mb-2.5 text-[12px] font-semibold uppercase tracking-wide text-ink-soft">Forma de pago</p>
               <SelectorPago metodo={metodo} onChange={setMetodo} permitirCredito={!ocasional} />
-              {metodo === "credito" && (
+              {metodo === "credito" && !ocasional && (
                 <div className="mt-3 rounded-xl border border-danger/20 bg-danger-soft p-3">
                   <p className="text-[13px] font-semibold text-danger">Saldo pendiente: {formatoMoneda(total)}</p>
                   <p className="mt-1 text-[12px] leading-relaxed text-ink-soft">
@@ -412,6 +400,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
                   </p>
                 </div>
               )}
+              {ocasional && metodo === "credito" && <p role="alert" className="mt-3 rounded-xl bg-danger-soft px-3 py-2.5 text-[12px] text-danger">La venta ocasional no admite crédito. Elige efectivo o billetera para continuar.</p>}
               {metodo !== "credito" && entrega === "pendiente" && (
                 <p className="mt-3 rounded-xl bg-paper-sunken px-3 py-2.5 text-[12px] leading-relaxed text-ink-soft">
                   El pago queda registrado ahora y el pedido permanece por preparar. Podrás marcarlo como entregado desde el detalle sin cobrarlo nuevamente.
@@ -421,8 +410,8 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
 
           </main>
           <BarraInferior>
-            <Boton onClick={confirmarPedido}>
-              {metodo === "credito" ? "Registrar crédito" : "Confirmar pedido"} · {formatoMoneda(total)}
+            <Boton disabled={ocasional && metodo === "credito"} onClick={confirmarPedidoCompartido}>
+              {ocasional && metodo === "credito" ? "Elige efectivo o billetera" : metodo === "credito" ? "Registrar crédito" : "Confirmar pedido"} · {formatoMoneda(total)}
             </Boton>
           </BarraInferior>
         </>

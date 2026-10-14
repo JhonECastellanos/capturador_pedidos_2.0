@@ -13,7 +13,7 @@ const estilosPorVariante: Record<Variante, string> = {
   primario:
     "bg-ink text-white active:bg-ink/90 disabled:bg-ink-faint disabled:text-white/70",
   secundario:
-    "bg-accent text-ink active:bg-accent-dark disabled:bg-accent-soft disabled:text-ink-faint",
+    "bg-accent text-accent-ink active:bg-accent-dark disabled:bg-accent-soft disabled:text-ink-faint",
   fantasma:
     "bg-transparent text-ink border border-line active:bg-paper-sunken disabled:text-ink-faint",
   peligro:

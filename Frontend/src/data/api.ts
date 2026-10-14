@@ -1,4 +1,4 @@
-import type { Envelope, EnvelopeLista } from "@ambie/contrato";
+import type { Envelope, EnvelopeLista } from "@synchronic-jo/contrato";
 import { consultas, claveConsulta } from "./query";
 import { claveGuardado, resolverGuardado } from "./guardados";
 
@@ -19,7 +19,7 @@ function registrarAcceso(cuerpo: { data?: { expiraEn?: string } } | null, renova
 function expirarSesion() {
   if (sesionExpirada) return;
   sesionExpirada = true; expiraEn = 0; revisionAcceso++;
-  window.dispatchEvent(new Event("ambie:sesion-expirada"));
+  window.dispatchEvent(new Event("synchronic:sesion-expirada"));
 }
 
 function renovarAcceso() {
@@ -41,7 +41,7 @@ export class ErrorApi extends Error {
 async function enviar(ruta: string, metodo: string, datos?: unknown, signal?: AbortSignal, clave?: string) {
   try {
     return await fetch(`${baseApi}${ruta}`, {
-      method: metodo, credentials: "include", signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(20000)]) : AbortSignal.timeout(20000),
+      method: metodo, credentials: "include", signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(ruta.startsWith("/agentes/") ? 45000 : 20000)]) : AbortSignal.timeout(ruta.startsWith("/agentes/") ? 45000 : 20000),
       headers: { ...(datos === undefined ? {} : { "Content-Type": "application/json" }), ...(clave ? { "Idempotency-Key": clave } : {}) },
       body: datos === undefined ? undefined : JSON.stringify(datos),
     });
@@ -53,10 +53,10 @@ async function enviar(ruta: string, metodo: string, datos?: unknown, signal?: Ab
 
 export async function respuestaRed<T>(ruta: string, metodo = "GET", datos?: unknown, signal?: AbortSignal): Promise<T> {
   const sesionInicial = claveConsulta(ruta)[1];
-  const protegida = ruta !== "/salud" && (!ruta.startsWith("/auth/") || ruta === "/auth/me" || ruta === "/auth/logout");
+  const protegida = ruta !== "/salud" && (ruta !== "/apariencia" || metodo !== "GET") && (!ruta.startsWith("/auth/") || ruta === "/auth/me" || ruta === "/auth/logout");
   if (protegida && ruta !== "/auth/me" && sesionExpirada) throw new ErrorApi("La sesión terminó. Vuelve a iniciar sesión.", 401);
   // Se renueva antes de leer o guardar, también al volver de una pestaña suspendida.
-  if (protegida && expiraEn && Date.now() >= expiraEn - 30_000) {
+  if (protegida && ruta !== "/auth/me" && expiraEn && Date.now() >= expiraEn - 30_000) {
     if (!await renovarAcceso()) throw new ErrorApi(sesionExpirada ? "La sesión terminó. Vuelve a iniciar sesión." : "No se pudo renovar la sesión. Intenta de nuevo.", sesionExpirada ? 401 : 0);
   }
   signal?.throwIfAborted();
@@ -88,7 +88,10 @@ export async function respuestaRed<T>(ruta: string, metodo = "GET", datos?: unkn
   }
   if (cuerpo === null) throw new ErrorApi("No se pudo confirmar la respuesta del guardado. Reintenta con los mismos datos para comprobarlo.", 0);
   if (ruta === "/auth/login") registrarAcceso(cuerpo);
-  if (ruta === "/auth/me" && revisionInicial === revisionAcceso) registrarAcceso(cuerpo, false);
+  if (ruta === "/auth/me") {
+    if (cuerpo.data === null) expirarSesion();
+    else if (revisionInicial === revisionAcceso) registrarAcceso(cuerpo, false);
+  }
   if (ruta === "/auth/logout") { sesionExpirada = true; expiraEn = 0; revisionAcceso++; }
   resolverGuardado(guardado);
   return cuerpo as T;
@@ -97,7 +100,11 @@ export async function respuestaRed<T>(ruta: string, metodo = "GET", datos?: unkn
 export async function respuestaApi<T>(ruta: string, metodo = "GET", datos?: unknown): Promise<T> {
   if (metodo === "GET" && !ruta.startsWith("/auth/") && ruta !== "/salud") return consultas.fetchQuery({ queryKey: claveConsulta(ruta), queryFn: ({ signal }) => respuestaRed<T>(ruta, "GET", undefined, signal) });
   const respuesta = await respuestaRed<T>(ruta, metodo, datos);
-  if (metodo !== "GET" && !ruta.startsWith("/auth/")) await consultas.invalidateQueries({ queryKey: ["api"] });
+  // Interpretar, revisar y transcribir no modifican los datos del negocio.
+  if (metodo !== "GET" && !ruta.startsWith("/auth/") && (!ruta.startsWith("/agentes/") || ruta === "/agentes/configuracion")) {
+    // El guardado termina con la respuesta de PostgreSQL; las lecturas se actualizan aparte.
+    void consultas.invalidateQueries({ queryKey: ["api"] }).catch(() => {});
+  }
   return respuesta;
 }
 

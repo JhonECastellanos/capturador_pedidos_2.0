@@ -1,0 +1,1 @@
+pipecat-ai[runner,whisper,silero,local-smart-turn]==1.12.0

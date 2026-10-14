@@ -35,7 +35,7 @@ La repetición con la corrección aplicada abrió las doce secciones después de
 - Venta ocasional: efectivo y billetera funcionan; crédito sin cliente se rechaza.
 - Líneas repetidas y cantidades fraccionarias: se rechazan sin guardar parcialmente.
 - Conteo parcial: modifica solo las líneas digitadas y rechaza aplicar dos veces el mismo ajuste.
-- Factura con dos productos: conserva cantidades y precios históricos después de cambiar el catálogo y recargar.
+- Factura con dos productos: conserva cantidades y valores de venta históricos después de cambiar el catálogo y recargar.
 - Paneles: doce módulos, filtros, borradores, scroll y retroceso; móvil 390×844 y poca altura 390×320 y 1440×320.
 - Sincronización entre dos sesiones: un producto nuevo aparece en Inventario sin pulsar Actualizar.
 - Reenvío idéntico de una venta: expone la falta de protección de la API frente a reintentos.

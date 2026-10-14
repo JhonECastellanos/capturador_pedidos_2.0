@@ -1,6 +1,42 @@
 # Validar formularios y PostgreSQL
 
-La revisión vigente de conteos y páginas está al final, en «Criterios de aceptación V5P3». Las mediciones y alturas de las secciones anteriores son históricas: la altura fija de 64 rem fue sustituida por contenedores ajustados al contenido, con desplazamiento interno y páginas de 5/15 registros.
+La revisión vigente es V8P4. Las mediciones y alturas de secciones anteriores son históricas: las listas paginadas usan cinco registros en móvil y quince en escritorio, sin desplazamiento interno; se desplazan con la pantalla. Los formularios conservan su desplazamiento cuando hace falta.
+
+## V8P4 · Espacios móviles, barras y salida de conteos (11/10/2026)
+
+- Márgenes exteriores móviles de ocho píxeles, tarjetas y buscadores compactos, sin reducir las áreas táctiles ni los campos por debajo del tamaño necesario para evitar el zoom del teclado. El escritorio mantiene su disposición. El contenido respeta los márgenes seguros del dispositivo.
+- Cámara: solicita hasta Full HD cuando está disponible, enfoque continuo si la cámara lo admite y lectura nativa de formatos compatibles, con ZXing como respaldo. Alterna orientación y banda central sin abrir flujos adicionales. La vista muestra la imagen completa; selector de cámara, luz y zoom aparecen solo según las capacidades. Recuerda la elección durante la sesión y vuelve a la cámara trasera si la elegida dejó de existir. No almacena imágenes de la cámara. Referencias: [lector nativo y formatos admitidos](https://developer.mozilla.org/en-US/docs/Web/API/BarcodeDetector) y [ajustes de cámara](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack/applyConstraints).
+- Robot: un toque inicia o silencia el micrófono. Silenciar deshabilita las pistas y envía silencio: conserva la conexión para terminar una transcripción pendiente, el razonamiento y la respuesta. Reactivarlo reutiliza la sesión e interrumpe la voz para dictar una corrección sin repetir el saludo. Las instrucciones recibidas mientras se interpreta se procesan en orden con el borrador previo. Dos toques rápidos apagan el agente, liberan micrófono/conexión y descartan su cola pendiente; ninguna operación se guarda automáticamente. Cerrar la nube o cambiar su ancho no cambia el audio. Los límites de sesión del servidor siguen vigentes.
+- X junto al título de inventario inicial, general o diario: pide confirmar **Continuar después**, libera solo la asignación propia y conserva las cantidades ya guardadas. No guarda una cantidad que aún esté digitándose. El conteo sigue abierto para los demás colaboradores y se puede retomar. El administrador dispone de otra X, **Cancelar conteo definitivamente**, con confirmación: cancela para todos, libera asignaciones y conserva historial y stock. Los otros roles no reciben ese permiso.
+
+Ejercicios desde el celular:
+
+1. Recarga la aplicación. En Inventario → Stock general compara el ancho del buscador y las cinco tarjetas con el ancho de pantalla; desplaza la pantalla y pasa a otra página.
+2. En una venta ocasional, escanea una etiqueta EAN: incluye todas las barras y margen blanco a ambos lados dentro del marco, evita reflejos y aleja ligeramente el teléfono para enfocar. Debe sonar un bip, volver al producto y sumar una unidad. Repite con QR. Si el teléfono tiene varias cámaras, elige la trasera principal; usa luz/zoom solo si sus controles aparecen.
+3. En + Producto escanea un código nuevo, escribe un nombre existente y vincúlalo desde las coincidencias: ambos códigos deben identificar el mismo SKU y su stock debe mantenerse. En Productos modifica una presentación y comprueba sus identificadores con las consultas ya documentadas.
+4. Activa el robot, dicta, toca para silenciar y espera la respuesta. Reactiva y dicta una corrección. Cierra la nube tocando fuera: el audio sigue activo. Dos toques rápidos deben apagarlo.
+5. Cuenta y guarda una cantidad, toma otro producto y pulsa la X junto al título. **Volver** conserva el borrador; **Continuar después** conserva solo lo guardado. Reabre el mismo conteo desde otro celular y comprueba cantidad, responsable y fecha. La X definitiva del administrador debe conservar esos datos en el historial sin mover el stock.
+
+Pruebas de esta revisión: `node Backend/scripts/probar-escaner-ui.cjs` aprobó dieciséis grupos sobre Chrome y API/PostgreSQL QA, incluyendo EAN-13 pequeño, girado 90/180°, contraste reducido y desenfoque leve; QR; alias; guardado de cero y trece; salida/reanudación; cancelación sin cambio de stock; controles de voz y corrección pendiente. También comprobó recepción de una transcripción después de silenciar, pistas deshabilitadas, reanudación sin nueva conexión y liberación al apagar. El selector/enfoque/luz, cámara recordada/retirada y la falla del detector nativo se verificaron con capacidades simuladas y decodificación real de ZXing. En la primera ejecución, barras sintéticas entre 78 y 586 ms en cuatro ejercicios; primera apertura con QR: 1399 ms. No son tiempos garantizados para cámaras físicas.
+
+`node Backend/scripts/probar-presentaciones.cjs` aprobó siete grupos, incluyendo persistencia e historia de presentaciones, códigos y duplicados concurrentes; revisó doce módulos en diez anchos: 320, 360, 393, 412, 480, 600, 768, 1024, 1440 y 1920 px. Sin desbordamiento horizontal ni desplazamiento interno de listas; margen móvil máximo diez píxeles. Caché aprobada y 33 casos controlados del agente aprobados. La cámara física del Redmi 14C requiere el ejercicio del usuario; la emulación no certifica el enfoque de ese equipo.
+
+Regresión del negocio: dieciocho casos de integración aprobados, más el recorrido de paneles en Chrome QA: etiquetas táctiles, cinco productos/continuación, roles, cliente y venta persistidos, factura con valores de venta históricos y totales conciliados contra PostgreSQL. Todas las escrituras de ejercicios permanecen en QA aislada; no se inició el servidor de desarrollo.
+
+Publicación comprobada el 11/10/2026: producción local y el enlace HTTPS vigente sirven V8P4, con el asistente habilitado. Se conservaron los IDs de los 20 pedidos, 35 productos, 8 clientes, 15 pagos, 6 conteos y 2 usuarios previos; conciliación de stock, reservas y totales: cero diferencias. El respaldo previo se leyó completo sin restaurarlo. Revisión visual de producción a 393 px: margen de 8 px, cinco productos, sin desbordamiento horizontal y lista sin scroll interno; formulario con cámara/nombre/presentación y diálogo de salida del inventario inicial existente comprobados sin guardar ni cancelar operaciones. QA se retira sin borrar volúmenes. La prueba física de cámara/micrófono del celular sigue correspondiendo al usuario.
+
+Para comparar salida y cancelación, consulta antes y después el mismo ID. Salir mantiene `en-curso` y las líneas contadas; solo la asignación propia debe desaparecer. Cancelar definitivamente mantiene las líneas contadas, deja `cancelado` y cero asignaciones. Ninguna acción crea un movimiento de stock:
+
+```sql
+SELECT c.id,c.tipo,c.estado,c."finalizadoEn",
+       COUNT(l.id) FILTER (WHERE l."stockFisico" IS NOT NULL) AS contadas,
+       COUNT(l.id) FILTER (WHERE l."asignadoPorId" IS NOT NULL) AS asignadas,
+       (SELECT COUNT(*) FROM "participantesConteo" p WHERE p."conteoId"=c.id) AS participantes
+FROM "conteosInventario" c LEFT JOIN "conteoLineas" l ON l."conteoId"=c.id
+WHERE c.id='ID_DEL_CONTEO' GROUP BY c.id;
+SELECT "productoId","stockFisico","contadoPorId","contadoEn","asignadoPorId","asignadoHasta"
+FROM "conteoLineas" WHERE "conteoId"='ID_DEL_CONTEO';
+```
 
 El navegador mantiene el borrador hasta confirmar. La API valida la operación y responde después de confirmar su transacción en PostgreSQL. Una respuesta correcta significa que el documento ya está guardado; la actualización de otra pantalla puede tardar el intervalo de sincronización de dos segundos más la lectura. No se debe repetir una venta porque una tarjeta aún no se haya actualizado.
 
@@ -34,7 +70,7 @@ ORDER BY "creadoEn" DESC, id DESC LIMIT 10;
 
 Comparar nombre, teléfono, dirección y nacimiento con lo digitado. `id` es la identidad interna, `codigo` el consecutivo visible y `tipoCreditoId` relaciona `tiposCredito`. Teléfono y nombre no son claves únicas: dos personas pueden compartirlos. No usar una coincidencia de nombre para concluir que son el mismo cliente.
 
-## Pedido, cantidades y precios históricos
+## Pedido, cantidades y valores de venta históricos
 
 ```sql
 SELECT p.id, p.numero, p.estado, p.metodo, p."momentoCobro",
@@ -139,16 +175,16 @@ Los ejercicios del navegador usan formularios reales y PostgreSQL QA. `npm.cmd r
 
 ## Comprobaciones realizadas el 9 de octubre de 2026
 
-Los 18 casos de integración QA aprobaron permisos, sesiones, transacciones, reserva de stock, concurrencia, pagos FIFO, cancelación, compras, gastos, cierre y precios históricos. Los reintentos secuenciales y simultáneos conservaron un solo pedido y cobro por clave; los rechazos y rollback no dejaron documentos parciales. Aprobaron también dos pruebas de caché, dos de claves de guardado y seis de renovación de sesión.
+Los 18 casos de integración QA aprobaron permisos, sesiones, transacciones, reserva de stock, concurrencia, pagos FIFO, cancelación, compras, gastos, cierre y valores de venta históricos. Los reintentos secuenciales y simultáneos conservaron un solo pedido y cobro por clave; los rechazos y rollback no dejaron documentos parciales. Aprobaron también dos pruebas de caché, dos de claves de guardado y seis de renovación de sesión.
 
-El navegador recorrió Inicio, Ventas, Pedidos, Créditos, Inventario, Compras, Precios, Caja, Cierre, Usuarios, Auditoría y Configuración. Comprobó filtros, regreso, conservación de borradores y scroll durante sincronización, además de tamaños 390×844, 390×320 y 1440×320. Configuración conserva los accesos generales a Usuarios y Auditoría.
+El navegador recorrió Inicio, Ventas, Pedidos, Créditos, Inventario, Compras, Productos, Caja, Cierre, Usuarios, Auditoría y Configuración. Comprobó filtros, regreso, conservación de borradores y scroll durante sincronización, además de tamaños 390×844, 390×320 y 1440×320. Configuración conserva los accesos generales a Usuarios y Auditoría.
 
 | Formulario real QA | Confirmación desde el clic | Observación directa en PostgreSQL |
 |---|---|---|
 | Cliente: nombre, teléfono, dirección y nacimiento | 252 ms | 592 ms; los cuatro campos coinciden |
 | Venta ocasional: 2 Coca-Colas de $3.500 y 3 Doritos de $5.200 | 231 ms | 566 ms; total, pago aplicado y caja de $22.600 |
 
-Son mediciones de una ejecución local, con tiempos redondeados; la observación SQL incluye lanzar psql mediante Docker. La factura continuó mostrando sus precios originales al cambiar el catálogo a $9.000 y recargarla. Ventas, número de pedidos y ticket del día también coincidieron entre API y PostgreSQL QA. El recorrido espera el regreso normal del formulario antes de empezar el siguiente ejercicio; no interrumpe una confirmación pendiente con otra navegación.
+Son mediciones de una ejecución local, con tiempos redondeados; la observación SQL incluye lanzar psql mediante Docker. La factura continuó mostrando sus valores de venta originales al cambiar el catálogo a $9.000 y recargarla. Ventas, número de pedidos y ticket del día también coincidieron entre API y PostgreSQL QA. El recorrido espera el regreso normal del formulario antes de empezar el siguiente ejercicio; no interrumpe una confirmación pendiente con otra navegación.
 
 En la instalación del negocio se ejecutaron los cinco bloques de consulta de esta guía en transacciones de lectura. Las nueve ventas del mes suman $121.600 y su ticket promedio es $13.511,11; compras y gastos son cero. No se encontraron diferencias entre subtotales y cantidades por precio, entre totales y suma de líneas, ni entre stock reservado y reservas activas. La caja neta es $39.900: ventas y caja representan conceptos distintos y no deben igualarse sin revisar pagos y crédito. Se conservaron 8 clientes, 32 productos, 9 pedidos, 4 pagos y 4 movimientos de caja, sin escribir operaciones comerciales en producción.
 
@@ -158,11 +194,11 @@ Las cinco tarjetas mensuales se contrastaron en Chrome con la API y SQL. No hubo
 
 ### Nueva comprobación móvil: 9 de octubre, después de ampliar las listas
 
-Se reutilizaron los componentes y guardados existentes. Los gráficos conservan el detalle al pasar el ratón en escritorio; en Chrome con pantalla táctil emulada, un toque lo muestra y otro lo oculta. Se comprobó la etiqueta visible en una captura, además del estado del botón. Las listas principales de Pedidos, Créditos, Inventario, Compras, Precios, Caja y Cierre tienen una altura estable de 64 rem y desplazamiento interno; el panel exterior permite llegar a la parte inferior. Pedidos necesitó ampliar la primera medida porque sus tarjetas de 172–190 px no dejaban caber cinco registros completos.
+Se reutilizaron los componentes y guardados existentes. Los gráficos conservan el detalle al pasar el ratón en escritorio; en Chrome con pantalla táctil emulada, un toque lo muestra y otro lo oculta. Se comprobó la etiqueta visible en una captura, además del estado del botón. Las listas principales de Pedidos, Créditos, Inventario, Compras, Productos, Caja y Cierre tienen una altura estable de 64 rem y desplazamiento interno; el panel exterior permite llegar a la parte inferior. Pedidos necesitó ampliar la primera medida porque sus tarjetas de 172–190 px no dejaban caber cinco registros completos.
 
 Agregar productos utiliza un contenedor de 33 rem con padding horizontal de 8 px y el botón de continuar debajo. Cinco tarjetas completas caben dentro del contenedor; la página se desplaza para acceder al pie. Se comprobaron selección y continuación como administrador y vendedor, manteniendo buscador, categorías y cantidades. Las pruebas de ambos roles usan el mismo flujo existente, sin ejecutar una venta de producción.
 
-En la última ejecución QA, el cliente recibió respuesta confirmada en **136 ms** y se observó en PostgreSQL a los **397 ms**; la venta recibió respuesta en **209 ms** y se observó a los **493 ms**. La venta de dos líneas sumó **$22.600**, con cantidades 2 y 3, y coincidió con pago y caja. La factura conservó sus precios tras modificar el catálogo. Los agregados del día coincidieron con SQL: **56 pedidos y $264.800**, antes de la ejecución posterior de integración. Son registros exclusivamente QA y mediciones puntuales, no un límite de latencia garantizado.
+En la última ejecución QA, el cliente recibió respuesta confirmada en **136 ms** y se observó en PostgreSQL a los **397 ms**; la venta recibió respuesta en **209 ms** y se observó a los **493 ms**. La venta de dos líneas sumó **$22.600**, con cantidades 2 y 3, y coincidió con pago y caja. La factura conservó sus valores de venta tras modificar el catálogo. Los agregados del día coincidieron con SQL: **56 pedidos y $264.800**, antes de la ejecución posterior de integración. Son registros exclusivamente QA y mediciones puntuales, no un límite de latencia garantizado.
 
 Pasaron `verificar`, las dos pruebas de caché, el recorrido de paneles con hover/toque y los 18 casos de integración. El cierre ya existente en QA se conservó: ese caso comprobó el rechazo de duplicados, sin crear otro cierre. Se mantienen advertencias previas de estilo React; no hubo errores de compilación ni de ejecución del recorrido. El control final del repositorio no detectó patrones sensibles en 254 archivos revisados.
 
@@ -193,8 +229,8 @@ Evidencias locales, excluidas de Git porque contienen datos de prueba o del nego
 - E1: `.local/pruebas-criterios/resultados.json`: ocho tamaños de catálogo, páginas 5/15, límites, filtros, 54 visitas a nueve módulos en seis anchuras; gestos, precio guardado una sola vez y carrito de dos páginas. Las pruebas de tamaños usan el catálogo de productos y los componentes comunes; no simulan 1.000 documentos de cada área comercial.
 - E2: `.local/pruebas-persistencia/conteo-diario.json`: 17 productos, cuatro jornadas simuladas, 21 capturas, concurrencia, ciclo, cero, actor, fecha, general parcial y aplicación única. El historial previo se conserva. La ejecución anterior de 204 productos/41 jornadas simuladas queda en `conteo-diario-204-productos.json`; no representa días reales transcurridos.
 - E3: `.local/pruebas-criterios/formulario-conteo.json`: formulario táctil real, cinco productos, cero guardado y conservado al recargar; responsable y fecha en SQL, stock y ledger sin cambios. Confirmación puntual de 99,6 ms. Se corrigió el orden inestable de líneas: apertura, actualización y lectura individual usan ahora el mismo orden por id, sin cambiar datos históricos.
-- E4: `prueba:paneles` y `.local/pruebas-ui/conciliacion-formularios.json`: doce módulos, filtros, borradores, regreso, sincronización, venta/cliente reales QA y precios históricos. Cliente: respuesta confirmada 201,6 ms y observado en SQL a 477,2 ms. Venta: 186,4 ms y 452,8 ms; dos productos con cantidades 2/3, total/pago/caja de $22.600. La observación incluye arrancar Docker/psql; no mide el instante interno del commit.
-- E5: 18 casos de `prueba:integracion`, dos de caché y pruebas de reintentos con cuatro pedidos confirmados: permisos, sesiones, concurrencia, reservas, cobros FIFO, reversos, adjuntos, compras, gastos, precios y agregados. El cierre ya existente solo valida rechazo de duplicados; no se creó un cierre nuevo en ese recorrido.
+- E4: `prueba:paneles` y `.local/pruebas-ui/conciliacion-formularios.json`: doce módulos, filtros, borradores, regreso, sincronización, venta/cliente reales QA y valores de venta históricos. Cliente: respuesta confirmada 201,6 ms y observado en SQL a 477,2 ms. Venta: 186,4 ms y 452,8 ms; dos productos con cantidades 2/3, total/pago/caja de $22.600. La observación incluye arrancar Docker/psql; no mide el instante interno del commit.
+- E5: 18 casos de `prueba:integracion`, dos de caché y pruebas de reintentos con cuatro pedidos confirmados: permisos, sesiones, concurrencia, reservas, cobros FIFO, reversos, adjuntos, compras, gastos, valores de venta y agregados. El cierre ya existente solo valida rechazo de duplicados; no se creó un cierre nuevo en ese recorrido.
 - E6: `.local/pruebas-persistencia/inventario-inicial.json`: inicio aplicado conservado, 146 productos, valor inicial $3.959.105, diferencias cero; compra repetida genera una recepción y mantiene cantidades/costos de partida. No se reemplazó el inicio existente para volver a probar su creación.
 - E7: `.local/pruebas-criterios/detalles-final.json`: comprobante autenticado del pedido individual con respuesta 200 y contenido; tablet táctil de 1024 px con cinco registros y resumen SQL de jornada.
 - E8: `.local/pruebas-ui/conservacion-antes.json`, `conservacion-despues.json`, `integridad-produccion.json` y `produccion-criterios.json`: huellas y cantidades de 23 tablas comerciales iguales antes/después, integridad SQL y navegador real en producción local; únicamente lecturas comerciales.
@@ -262,9 +298,9 @@ Publicación local comprobada en http://localhost:8080: frontend saludable, nuev
 
 Se reprodujo la excepción de historialEstados.length al pasar de la factura al historial sin recargar. La factura almacenaba un Envelope {data}, mientras el lector de detalles almacenaba un documento directo bajo la misma clave de caché. El resultado dependía de cuál pantalla se abría primero. Se unificó la caché por sesión y ruta con la respuesta HTTP completa; los lectores extraen data mediante select. Tablero e inventario inicial siguen el mismo contrato. No se crean tablas ni se modifican pedidos para resolver este error.
 
-Pedidos espera el documento individual antes de mostrar el detalle y ofrece Reintentar o Volver al historial si falla su lectura. La prueba de regresión Backend/scripts/probar-detalle-pedidos.cjs reproduce ambos sentidos del recorrido y una interrupción de lectura en 390 y 1440 px, exclusivamente en QA. Los 18 casos de integración aprobaron guardados, archivos, saldos, caja, reservas, concurrencia, cancelación, búsquedas y precios históricos; también aprobaron las pruebas de deduplicación, invalidación y separación de sesiones de caché.
+Pedidos espera el documento individual antes de mostrar el detalle y ofrece Reintentar o Volver al historial si falla su lectura. La prueba de regresión Backend/scripts/probar-detalle-pedidos.cjs reproduce ambos sentidos del recorrido y una interrupción de lectura en 390 y 1440 px, exclusivamente en QA. Los 18 casos de integración aprobaron guardados, archivos, saldos, caja, reservas, concurrencia, cancelación, búsquedas y valores de venta históricos; también aprobaron las pruebas de deduplicación, invalidación y separación de sesiones de caché.
 
-Comprobación posterior en producción (10/10/2026): los 13 pedidos existentes abrieron su detalle sin errores. Se conciliaron 28 líneas y 15 entradas de historial, precios históricos, cantidades, totales, fechas y saldos con PostgreSQL; el total registrado es 298.500. La comparación antes/después de 23 tablas comerciales confirmó conservación íntegra. La distribución consultada fue 8 pedidos del 06/10, 4 del 09/10 y 1 del 10/10. Para consultar todos: HISTORIAL, Todo, Todos y sin filtros de texto/fecha; móvil muestra cinco registros por página. En estos 13 pedidos no hay comprobantes adjuntos registrados: la comprobación de archivo persistente se realizó en QA, no se inventaron imágenes de producción.
+Comprobación posterior en producción (10/10/2026): los 13 pedidos existentes abrieron su detalle sin errores. Se conciliaron 28 líneas y 15 entradas de historial, valores de venta históricos, cantidades, totales, fechas y saldos con PostgreSQL; el total registrado es 298.500. La comparación antes/después de 23 tablas comerciales confirmó conservación íntegra. La distribución consultada fue 8 pedidos del 06/10, 4 del 09/10 y 1 del 10/10. Para consultar todos: HISTORIAL, Todo, Todos y sin filtros de texto/fecha; móvil muestra cinco registros por página. En estos 13 pedidos no hay comprobantes adjuntos registrados: la comprobación de archivo persistente se realizó en QA, no se inventaron imágenes de producción.
 
 La revisión actual de paneles aprobó navegación, filtros, borradores, sincronización, vendedor móvil y formularios reales de cliente y pedido en QA. Confirmación de respuesta: cliente 172,4 ms; pedido 283,2 ms. Son mediciones de este recorrido local, no garantías de latencia ni el instante interno del commit. Evidencias privadas locales: .local/pruebas-ui/conciliacion-historial.json y conciliacion-formularios.json.
 
@@ -276,11 +312,11 @@ GET /auth/me puede responder 200 con data=null cuando no se presenta token de ac
 
 ### Validación actual de CSV e historial — 10/10/2026
 
-En una base QA separada aprobaron los 18 casos de integración y los recorridos reales de pantallas, factura y detalle en 390 y 1440 px. La prueba probar-productos-csv.cjs confirmó carga desde el formulario, vista previa sin escrituras, exportación completa, separadores y comillas, renovación de sesión sin 401 inicial, permisos administrativos, reintentos y solicitudes simultáneas sin productos duplicados. Un lote con error revierte productos, precios y consecutivos. El inventario inicial se revisó y aplicó por el mecanismo existente; importar después con la opción inicial desmarcada conservó el stock histórico de los productos existentes.
+En una base QA separada aprobaron los 18 casos de integración y los recorridos reales de pantallas, factura y detalle en 390 y 1440 px. La prueba probar-productos-csv.cjs confirmó carga desde el formulario, vista previa sin escrituras, exportación completa, separadores y comillas, renovación de sesión sin 401 inicial, permisos administrativos, reintentos y solicitudes simultáneas sin productos duplicados. Un lote con error revierte productos, valores de venta y consecutivos. El inventario inicial se revisó y aplicó por el mecanismo existente; importar después con la opción inicial desmarcada conservó el stock histórico de los productos existentes.
 
 La prueba probar-historial-fechas.cjs creó exclusivamente en QA pedidos de hoy, ayer, anteayer y siete días atrás, y comprobó su búsqueda y detalle en el historial. El filtro HOY excluyó correctamente los anteriores. Estas fechas de prueba no modifican registros del negocio.
 
-En el recorrido actual de formularios QA la respuesta confirmada demoró 121,9 ms para el cliente y 199,9 ms para el pedido. La consulta posterior a PostgreSQL observó los datos a 400,2 y 491,3 ms respectivamente; incluye el costo de iniciar la consulta y no mide por separado el instante del commit. Cantidades 2 y 3, total 22.600, pago y factura coincidieron; cambiar precios después no alteró la factura. Son mediciones locales de esta ejecución, sin garantía de latencia en otros equipos o redes.
+En el recorrido actual de formularios QA la respuesta confirmada demoró 121,9 ms para el cliente y 199,9 ms para el pedido. La consulta posterior a PostgreSQL observó los datos a 400,2 y 491,3 ms respectivamente; incluye el costo de iniciar la consulta y no mide por separado el instante del commit. Cantidades 2 y 3, total 22.600, pago y factura coincidieron; cambiar valores de venta después no alteró la factura. Son mediciones locales de esta ejecución, sin garantía de latencia en otros equipos o redes.
 
 Publicación comprobada en localhost:8080 y por HTTPS en el túnel temporal autorizado: ingreso, recarga de sesión, historial completo y controles CSV disponibles, sin 401 ni errores de ejecución en esos recorridos. Se abrieron los 13 detalles originales y se conciliaron 28 líneas y 15 entradas de historial con PostgreSQL; total 298.500. Las huellas antes/después de 23 tablas comerciales coincidieron. La revisión SQL encontró cero diferencias en líneas, totales y reservas, y cero ajustes duplicados. Se creó un respaldo binario antes de publicar y no se borró ni reinicializó la base del negocio. El túnel es temporal y su dirección puede cambiar cuando se reinicia. La prueba de móvil usa Chrome con tamaño y entrada táctil emulados; falta la validación física del usuario desde su teléfono.
 
@@ -288,7 +324,7 @@ Publicación comprobada en localhost:8080 y por HTTPS en el túnel temporal auto
 
 Esta ampliación se compiló y probó exclusivamente en QA (8180/3100), con imágenes separadas y una base nueva de pruebas. No se aplicó su migración ni sus imágenes a producción. El commit preparado para V5P3 incluye la marca sin despliegue para que publicar en GitHub ejecute verificaciones sin instalar estos cambios.
 
-El archivo docs/ejemplos/catalogo-inicial.csv se cargó desde el formulario real de Precios. Se comprobaron las ocho columnas contra PostgreSQL y las cantidades/costos del conteo inicial. Los tres productos ficticios recibieron códigos automáticos distintos: 20 arepas a costo 2.100, 15 empanadas a 1.300 y 12 bebidas a 1.500; 47 unidades y valor inicial 79.500. Los nombres quedaron visibles en Precios. La misma suite aprobó repetición, concurrencia, permisos, rollback del lote, comillas/separadores, exportación y conservación de stock posterior al inicio.
+El archivo docs/ejemplos/catalogo-inicial.csv se cargó desde el formulario real de Productos. Se comprobaron las ocho columnas contra PostgreSQL y las cantidades/costos del conteo inicial. Los tres productos ficticios recibieron códigos automáticos distintos: 20 arepas a costo 2.100, 15 empanadas a 1.300 y 12 bebidas a 1.500; 47 unidades y valor inicial 79.500. Los nombres quedaron visibles en Productos. La misma suite aprobó repetición, concurrencia, permisos, rollback del lote, comillas/separadores, exportación y conservación de stock posterior al inicio.
 
 probar-descuadres-tablero.cjs comprobó faltante 2 × 100 = 200, sobrante 3 × 250 = 750 y ajuste manual 1 × 999 = 999. Confirmar invalida la caché; aplicar un conteo no vuelve a sumar sus diferencias; cambiar costos después mantiene los importes anteriores. Se comprobó inclusión del conteo diario, exclusión de borradores/cancelados/inicial, aviso para costo histórico NULL y frontera UTC 04:59:59 / 05:00:00 del día de Bogotá. Los ocho recorridos (Día/Semana/Mes/Año en 390 y 1440 px) mostraron etiquetas con toque/hover sin errores; otra operación actualizó el gráfico automáticamente. La prueba conserva y reutiliza un conteo diario confirmado si se repite el mismo día.
 
@@ -307,3 +343,268 @@ Los 18 casos integrales y las dos pruebas de caché aprobaron. El gráfico de di
 Se comprobó también la actualización del progreso del administrador tras guardar desde otra sesión, sin recargar. La corrección administrativa desde el formulario conserva colaboradores y rechaza repetir una modificación usando la fecha de lectura anterior.
 
 Producción local activada el 10/10/2026: respaldo binario previo, cinco servicios saludables y migraciones sin borrado. Las huellas de las 23 tablas comerciales coinciden antes/después: 14 pedidos, 32 productos, 8 clientes y 9 pagos. Conciliación sin errores en líneas, totales y reservas ni ajustes duplicados. El acceso local y el túnel temporal HTTPS se comprobaron con inicio de sesión real, historial de fechas anteriores, CSV, conteos compartidos, opción de rol Inventario y gráfico de descuadres; sin errores de consola ni respuestas 401 durante estos recorridos. Las cinco tarjetas mensuales coinciden con PostgreSQL (ventas 330.600 y 14 pedidos en esa instantánea). No se cargaron registros comerciales de prueba en producción.
+
+
+## Ejercicios V7P4 · robot y lectura de códigos
+
+Se trabaja en V7P4; V6P4 quedó publicada antes de los ajustes. La instalación del negocio de 8080 no se migra ni reinicia con estas pruebas. El desarrollo se consulta en http://127.0.0.1:8180. El lector es ZXing Browser, cargado solo al abrir la cámara; documentación: https://github.com/zxing-js/browser. Para cámara/micrófono en un celular se necesita HTTPS y autorización del dispositivo; HTTP por IP de la red permite consultar la aplicación, pero no garantiza acceso a cámara.
+
+1. En Productos, crear un producto con nombre, unidad, costo, precio y mínimo. Escanear una etiqueta nueva, buscar el nombre y seleccionar la coincidencia: al guardar debe conservar el mismo PROD y sus existencias. En la sección de códigos se puede retirar una etiqueta tras confirmar, conservando las otras.
+2. En una instalación vacía, abrir Inventario → Conteo guiado → Inventario inicial. Escanear un código nuevo, crear nombre/unidad (sin costo/precio), guardar el producto y contar 0 o cualquier cantidad entera. Otro colaborador no puede repetirlo. Cerrar/aplicar requiere administrador y revisar todas las líneas. Parametrizar el precio después conserva la cantidad inicial.
+3. En Ventas, paso Agregar productos, tocar la cámara del buscador. Leer QR y barras: bip, regreso, nombre en el filtro y una unidad seleccionada. Escanear la misma etiqueta otra vez suma una unidad. No se confirma la venta por escanear.
+4. En general, entrar desde dos usuarios Inventario: escanear el mismo producto simultáneamente. Solo uno recibe la asignación; el otro ve el aviso. Guardar 0 → cámara → siguiente etiqueta → guardar 13. Recargar y revisar cantidades, responsable, fechas y diferencias desde administrador.
+5. Entrar como vendedor: Conteo diario → Abrir conteo de hoy. Solo aparecen los cinco seleccionados (o todo el catálogo si hay menos de cinco). Leer una etiqueta ajena al diario debe mostrar un aviso sin cambiar cantidades. El rol Inventario no puede abrir diarios; vendedor no puede abrir generales ni consultar historial cerrado.
+6. Robot: tocar una vez inicia audio; tocar fuera oculta solo su burbuja; tocar otra vez detiene. El deslizador cambia el ancho, limitado a la pantalla, y la transcripción conserva dos líneas. Arrastrar mueve el robot sin activar/desactivar el micrófono. Confirmar operaciones sigue usando voz o el formulario del negocio.
+7. CSV: `codigosLectura` es opcional; `7701234567890|7701234567891` vincula ambas etiquetas. No usar fórmulas ni separadores de miles. `cantidadInicial` vacía significa sin contar; 0 significa cero unidades. Los archivos anteriores siguen funcionando sin añadir esta columna.
+
+Pruebas reproducibles desde la raíz, con PostgreSQL QA 5433 y API/frontend QA disponibles:
+
+```powershell
+npm.cmd run verificar
+node Backend/scripts/probar-codigos-inventario.cjs
+node Backend/scripts/probar-conteo-compartido.cjs
+node Backend/scripts/probar-escaner-ui.cjs
+```
+
+La prueba de códigos crea una base nueva `ambie_v7_pruebas_<fecha>` dentro de PostgreSQL QA y una API temporal 3110, que detiene al terminar; conserva los resultados y la base. La prueba de interfaz usa Chrome real con cámara sintética: decodifica imágenes QR/EAN-13 mediante el lector real y guarda conteos en QA. El robot utiliza transporte de audio simulado para comprobar sus controles, sin afirmar reconocimiento acústico real. No equivale a probar cámaras, altavoces, conexión HTTPS ni proveedor de voz en celulares físicos. Informes y capturas quedan en `.local/pruebas-v7/`.
+
+### Consultas de lectura
+
+Usar la conexión del inicio de esta guía; reemplazar PROD y conteo por los que muestra la pantalla. Estas consultas no modifican datos.
+
+```sql
+-- Un producto interno, varias etiquetas. Los retirados permanecen relacionados.
+SELECT p.id, p."codigoInterno", p.nombre, p.unidad, p."precioPendiente",
+       c.codigo, c."creadoEn", c."retiradoEn"
+FROM productos p LEFT JOIN "codigosProducto" c ON c."productoId"=p.id
+WHERE p."codigoInterno"='PROD-0001'
+ORDER BY c."creadoEn";
+
+-- Relación única garantizada también por el índice UNIQUE.
+SELECT codigo, COUNT(*) FROM "codigosProducto" GROUP BY codigo HAVING COUNT(*)>1;
+
+-- Estado del conteo, cantidad (incluyendo cero), responsable y fecha exacta.
+SELECT c.id, c.tipo, c.estado, c."iniciadoEn", c."finalizadoEn",
+       p."codigoInterno", p.nombre, l."stockTeorico", l."stockFisico",
+       l.diferencia, u.nombre AS responsable, l."contadoEn",
+       l."asignadoPorId", l."asignadoHasta"
+FROM "conteosInventario" c JOIN "conteoLineas" l ON l."conteoId"=c.id
+JOIN productos p ON p.id=l."productoId"
+LEFT JOIN usuarios u ON u.id=l."contadoPorId"
+WHERE c.id='ID_DEL_CONTEO' ORDER BY p.nombre;
+
+-- Comparar el detalle administrativo: progreso, participantes y valor al costo registrado.
+SELECT c.id, COUNT(l.id) AS productos, COUNT(l."stockFisico") AS contados,
+       COALESCE(SUM(l."stockFisico"),0) AS unidades,
+       COALESCE(SUM(GREATEST(-l.diferencia,0)*l."costoUnitarioConteo"),0) AS faltantes,
+       COALESCE(SUM(GREATEST(l.diferencia,0)*l."costoUnitarioConteo"),0) AS sobrantes,
+       (SELECT COUNT(*) FROM "participantesConteo" pc WHERE pc."conteoId"=c.id) AS colaboradores
+FROM "conteosInventario" c LEFT JOIN "conteoLineas" l ON l."conteoId"=c.id
+WHERE c.id='ID_DEL_CONTEO' GROUP BY c.id;
+```
+
+Una escritura responde tras COMMIT. La revisión agrupa lecturas durante 250 ms; las otras pantallas consultan cada dos segundos más latencia. Si ocurre un 429, esperar el tiempo indicado y reintentar con la misma operación; no crear otra venta porque una tarjeta tarde en actualizarse.
+
+
+Validación de esta revisión (11/10/2026): contrato de 14 enums, API, tipos, frontend y lint terminaron correctamente. Se comprobaron instalación inicial vacía, alias, conflictos con rollback, cero, roles, rotación, QR/EAN-13 sobre video sintético y vistas 390/768/1440. La regresión de tres colaboradores pasó, al igual que caché y reintentos: 23 solicitudes produjeron cuatro pedidos confirmados distintos según las cuatro intenciones, con un único cobro por clave. Se conservan advertencias de lint anteriores; este resultado no certifica carga máxima ni micrófono físico. La revisión de secretos del repositorio pasó.
+
+
+### Recuperación de sesión en V7P4 (11/10/2026)
+
+`GET /auth/me` es una consulta opcional: devuelve usuario válido o `data: null`. Para indicar `renovable: true`, verifica el hash de la cookie en `sesiones`, su vencimiento, revocación y el estado activo del usuario. Si la sesión terminó, elimina las cookies antiguas; el frontend limpia la sesión y presenta el ingreso sin intentar renovar una cookie inválida. Un acceso JWT vencido puede recuperarse si su renovación sigue vigente. Esta respuesta no autoriza operaciones privadas.
+
+Prueba reproducible: `node Backend/scripts/probar-sesion-ui.cjs --api-real`. Requiere API QA en 8180 y PostgreSQL QA en 5433, base `ambie_test`, con el administrador ficticio de pruebas. Se aprobaron 12 casos: seis de transporte controlado (anticipación, respuestas tardías, revocación, caída de red, cancelación y reintento de guardado) y seis con API/PostgreSQL reales (sin cookies, cookies inexistentes, sesión revocada, renovación vencida, acceso vencido y solo cookie de renovación). Se verifican cookies HttpOnly, nuevo ingreso y cierre. Solo modifica sesiones ficticias; conserva documentos del negocio.
+
+Ejercicio manual: recarga `http://127.0.0.1:8180`, inicia sesión, navega a un módulo y vuelve a recargar. Debe conservar una sesión válida. Al salir, la recarga debe mostrar el ingreso sin llamar a renovación. Usa el mismo dominio durante la prueba: `localhost` y `127.0.0.1` conservan cookies diferentes. Un 401 directo de `/auth/refresh` sigue siendo correcto si la sesión fue revocada, venció o no existe; no se permite recuperar una sesión inválida ni se oculta ese rechazo.
+
+
+## V8P4 · Marca, acceso, apariencia e instalación
+
+Prueba: `node Backend/scripts/probar-v8p4.cjs` contra API QA 8180, PostgreSQL QA 5433 (`ambie_test`) y Chrome. Comprueba 13 grupos: acceso system por correo y rechazo de duplicados; roles; apariencia persistida y modificación exclusiva del administrador; validación de contraste y firmas de imágenes; retiro conservando cantidad, responsable y fecha del conteo; protección de system; permisos individuales y revocación; interfaz 390×844, 768×1024, 1440×900 y acceso con scroll 320×320; vendedor dirigido a su pantalla y conteo diario; manifiesto/iconos/service worker válidos para instalación, sin CacheStorage privado y recuperación tras desconexión. Incluye guardar una imagen propia desde el formulario y comprobar su persistencia al recargar. El perfil PWA es normal: Chrome no instala en incógnito.
+
+Se aprobaron también los 12 casos de sesión, caché y reintentos (23 solicitudes para cuatro operaciones distintas). Los datos de prueba permanecen en QA; la apariencia de QA se restaura al terminar. La instalación física en Android/iOS y la cámara física requieren validación del usuario.
+
+Ejercicios de negocio: ingresar con `system` o su correo usando la contraseña de la instalación; crear administrador del negocio; crear dos colaboradores de inventario y abrir el mismo conteo general desde sus celulares. Cada producto debe reservarse a un único colaborador; guardar cero conserva el cero. Al retirar al colaborador, su trabajo debe seguir apareciendo con su nombre en el detalle. Un vendedor ve ventas y conteo diario; no puede consultar administración ni conteo general.
+
+Ejercicio visual: Configuración → Apariencia → cambiar una paleta, código de color, fuente y portada → Guardar apariencia → recargar o abrir otro dispositivo. Ambos deben conservar la elección. Descartar cambios solo revierte la vista previa. Un color ilegible o archivo inválido debe explicar el problema y conservar lo guardado.
+
+Consultas de lectura:
+
+```sql
+SELECT codigo, nombre, rol, activo, "eliminadoEn", "permisosDenegados"
+FROM usuarios ORDER BY "creadoEn" DESC;
+SELECT id, "actualizadoEn", configuracion - 'imagen' AS apariencia
+FROM "configuracionesVisuales";
+SELECT c.id AS conteo, p.nombre AS producto, l."stockFisico", l."contadoEn",
+       u.nombre AS responsable, u."eliminadoEn" AS usuario_retirado
+FROM "conteoLineas" l JOIN "conteosInventario" c ON c.id=l."conteoId"
+JOIN productos p ON p.id=l."productoId"
+LEFT JOIN usuarios u ON u.id=l."contadoPorId"
+WHERE l."contadoEn" IS NOT NULL ORDER BY l."contadoEn" DESC;
+```
+
+Validación adicional V8P4 con imágenes Docker y servicios QA reales (11/10/2026): los 18 casos de integración aprobaron permisos, renovación, reserva/stock, pagos, FIFO, caja, cancelación, compras, archivos e historial. El recorrido completo de paneles en Chrome aprobó filtros, borradores, sincronización y desplazamiento; comprobó formularios de cliente y venta contra PostgreSQL, totales y valores de venta históricos. Los 32 casos de agentes son pruebas controladas: no equivalen a audios físicos ni a una respuesta de un proveedor externo.
+
+Producción V8P4 comprobada el 11/10/2026: frontend y API llevan la etiqueta V8P4; PostgreSQL, Redis, MinIO, API y frontend saludables, migración con salida 0. El respaldo previo de 168.998 bytes se leyó completamente con pg_restore sin ejecutarlo ni restaurarlo. Antes y después coinciden 15 pedidos (también sus identificadores), 371.600 en total de documentos, ocho clientes, 32 productos, 857 unidades físicas, 20 reservadas, tres conteos, diez pagos y dos usuarios. El acceso system por correo funcionó en localhost y en el túnel HTTPS; las cookies externas son Secure y HttpOnly. Las ventas, número de pedidos y el historial se conciliaron contra PostgreSQL. Chrome recorrió Inicio, Pedidos, Inventario, Productos, Usuarios y Configuración en 390/768/1440 desde ambos orígenes, sin desbordamiento horizontal ni errores de ejecución; manifestó cero obstáculos de instalación PWA y ninguna caché privada. No se crearon operaciones comerciales de prueba en producción. El enlace temporal cambia al reiniciar el túnel: usar un dominio estable para una instalación permanente.
+
+### Ejercicios de etiquetas y presentaciones — ajustes V8P4
+1. Inventario → Stock general → + Producto: escanea una etiqueta nueva, escribe parte del nombre. Si el producto ya existe, selecciónalo y vincula la etiqueta: su código interno, stock e historial se conservan. Si no existe, completa nombre, unidad, costo, precio y mínimo; cantidades por Compras o inventario inicial. En el inventario inicial no se solicitan costo ni precio. La fotografía mantiene el proceso existente.
+2. Productos: abre un producto, cambia su nombre y confirma el resumen. Desde Crear presentación registra, por ejemplo, 250 ml y 1 litro; cada una tendrá su código y existencias. Una misma presentación repetida, incluso con mayúsculas diferentes, se rechaza. Retira una etiqueta antigua desde Códigos después de verificar que la nueva lee correctamente.
+3. Listas: usa la paginación en móvil/tablet/escritorio. La lista completa de esa página se desplaza con la pantalla, sin scroll interno; los cuadros de formulario y escáner mantienen el desplazamiento necesario para acceder a sus campos.
+4. Robot: un toque inicia escucha, otro corta solamente el micrófono y conserva el procesamiento/respuesta pendiente. Dos toques rápidos apagan escucha, respuesta y solicitud pendiente. Tocar fuera cierra solo el texto. Se conservan los límites de duración y volumen del servicio de audio; al terminar una sesión puedes volver a tocar el robot. Detener el micrófono no descarta una operación que ya se está interpretando. Durante la voz sintetizada no se envía sonido al reconocedor, para evitar autoescucha.
+
+Pruebas reproducibles solo en contenedores QA: `node Backend/scripts/probar-presentaciones.cjs`, `node Backend/scripts/probar-escaner-ui.cjs`. Las etiquetas QR y EAN-13 se generan en la prueba y se presentan mediante un video sintético en Chrome: el lector real las decodifica. Esta prueba no sustituye la cámara física de un celular. No se descarga un modelo nuevo ni se utiliza un servidor de desarrollo.
+
+```sql
+-- Un producto comercial y sus presentaciones.
+SELECT rowid, rowid_ext, "codigoInterno", nombre, extension
+FROM "identidadesProducto" WHERE rowid='ID_PRINCIPAL' ORDER BY extension;
+-- Stock y valor actuales por presentación, sin duplicar el principal.
+SELECT COALESCE("productoBaseId",id) AS rowid, id AS rowid_ext,
+       nombre, "stockFisico", "stockReservado", "precioVenta", "costoActual"
+FROM productos WHERE id='ID_PRINCIPAL' OR "productoBaseId"='ID_PRINCIPAL';
+-- Unidades e importes históricos por producto/presentación (ventas no canceladas).
+SELECT COALESCE(p."productoBaseId",p.id) AS rowid, p.id AS rowid_ext,
+       SUM(l.cantidad) AS unidades, SUM(l.subtotal) AS ventas
+FROM "pedidoLineas" l JOIN productos p ON p.id=l."productoId"
+JOIN pedidos d ON d.id=l."pedidoId"
+WHERE d.estado<>'cancelado' AND d."fechaOperacion" BETWEEN '2026-10-01' AND '2026-10-31'
+GROUP BY COALESCE(p."productoBaseId",p.id),p.id;
+-- Debe devolver cero filas: presentaciones repetidas y etiquetas duplicadas.
+SELECT "productoBaseId", lower(btrim(extension)), COUNT(*) FROM productos
+WHERE "productoBaseId" IS NOT NULL GROUP BY 1,2 HAVING COUNT(*)>1;
+SELECT codigo,COUNT(*) FROM "codigosProducto" GROUP BY codigo HAVING COUNT(*)>1;
+```
+
+Resultado de los ajustes V8P4 (11/10/2026): compilación/contrato/tipos/lint aprobados; 18 casos de integración y 33 pruebas controladas de agentes aprobados. Los ejercicios de presentaciones comprobaron alias idempotentes, retiro de etiqueta, dos IDs, stock independiente, duplicados concurrentes y factura histórica. Chrome aprobó ocho grupos del escáner/robot, incluida respuesta pendiente conservada después de detener el micrófono. La lectura sintética QR inicial tardó 1.543 ms y EAN-13 posterior 154 ms en esta ejecución; no representan una garantía de latencia en cámaras físicas. Dos audios existentes se transcribieron con Whisper base (25.388 ms inicial y 4.683 ms siguiente). El WebSocket real confirmó listo → voz → texto → instrucción en 20.018 ms, incluyendo la duración del audio de prueba. No se descargaron modelos y no se arrancó Vite ni otro servidor de desarrollo.
+
+Prueba externa autorizada: OpenCode Zen/space-bunny-free rechazó sus credenciales o permisos en QA; no se guardó un pedido. Gemini de producción respondió a la orden ficticia en 1.051 ms y preparó un borrador; inicialmente omitió cliente ocasional. Se añadió descripción de ese campo y normalización del literal cliente ocasional, manteniendo intactos los clientes registrados y los valores false explícitos. La conexión de producción sigue siendo la elegida por el administrador. Los límites de recursos del servidor de audio se conservaron.
+
+Cierre de los ajustes V8P4: el recorrido completo de paneles y ventas pasó también después de retirar el scroll interno de listas. Los siete grupos de presentaciones incluyen asignar Individual al producto existente sin cambiar su ID, rechazar otra combinación igual y crear Paquete de 6 desde el formulario con nombre principal, categoría Bebidas, costo 6.000, precio 12.000 y stock cero. La categoría y la carga de foto del alta anterior se conservan. Gemini de producción respondió a la orden autorizada con ocasional=true, método billetera y cero datos faltantes (1.329 ms), sin guardar una venta. El WebSocket real por HTTPS recibió voz, texto e instrucción en 26.547 ms, incluyendo audio de prueba y carga inicial del motor.
+
+Compatibilidad CSV de presentaciones verificada: reimportar el nombre exportado de un producto con extensión no duplica su sufijo, conserva su ID, categoría y stock. El editor transaccional devuelve el nombre canónico que guarda el importador.
+
+Verificación final en producción: todos los identificadores del respaldo previo permanecen (20 pedidos, 35 productos, ocho clientes y 15 pagos). La diferencia con la instantánea anterior de 18 pedidos corresponde a nuevas operaciones guardadas mientras se validaba. Se compararon stocks con la suma de deltas del ledger, reservas con cantidadReservada − cantidadConsumida − cantidadLiberada y totales con líneas: cero diferencias en los tres controles. API, frontend, PostgreSQL, Redis, MinIO y audio saludables; localhost y HTTPS sirven V8P4 con el asistente habilitado. QA se retiró conservando sus volúmenes; el volumen de reconocimiento existente permanece disponible para producción.
+
+### Productos, compras y correcciones V8P4 · 11/10/2026
+
+Esta decisión del 11/10 retiró el alta de Inventario; el ajuste del 12/10, documentado abajo, restablece la excepción del inicial abierto y su endpoint transaccional. Stock general permanece sin alta. Compras y Productos reutilizan la ficha de código, nombre, unidad, presentación, costo, importe y mínimo. No se borran tablas ni registros ni se duplica el catálogo. La corrección desde Stock general usa físico, conserva reservas y se registra en Descuadres e Inicio con responsable, fecha y costo histórico.
+
+Pruebas actuales sobre imágenes Docker QA: compilación completa, dos pruebas de caché, 18 casos de integración, nueve grupos de códigos/inicial/colaboradores y recorrido real de diez módulos en 320/393/768/1440. La prueba de tablero confirmó períodos, límites de Bogotá, costos históricos, exclusión de cancelados y ausencia de doble contabilización al aplicar. Proveedores y compras ficticios se conservaron en QA.
+
+Ejercicio nuevo: proveedor Distribuciones Centro, 12 paquetes de galletas a 1.200, total 14.400; Suministros Norte, siete botellas a 800 y cinco bolsas a 3.000, total 20.600. PostgreSQL coincidió con cada campo y ledger; un reintento concurrente devolvió la misma recepción. Caché del tablero reflejó 35.000 de compras y luego respondió hit. El vendedor ya conectado vio las cantidades sin recargar; el colaborador contó el producto comprado y se comprobaron sus permisos.
+
+Con dos unidades reservadas, corregir físico 12→10→13 generó -2/-2.400 y +3/+3.600. Cada diferencia apareció una sola vez en historial y tablero, con autor y fecha. Se rechazó bajar a una unidad, sin cambios al stock. En la última ejecución local de QA, las respuestas del alta y la recepción demoraron 182 y 214 ms; el vendedor vio la recepción a los 1.564 ms desde el inicio de confirmar. Incluyen navegador, API y sincronización; no son una garantía de latencia para otros equipos ni una escritura diferida en PostgreSQL.
+
+Reproducir: npm run prueba:productos:compras. Consultas y detalle de tablas en GUARDADO_Y_CONCILIACION_V4P2.md. Las pruebas comerciales no se ejecutan en producción.
+
+
+Comprobación de producción posterior, 11/10/2026: API y frontend actualizados y saludables, sin migraciones. Chrome real con ancho móvil revisó localhost:8080 y el túnel HTTPS: módulo Productos, alta ausente en Inventario, edición de físico sin guardar, acceso a información del producto con el importe actual, filtros individuales y endpoint de Descuadres, sin errores de ejecución. Se conservaron todos los identificadores de 21 pedidos, 37 productos, ocho clientes, 17 pagos, seis conteos y dos usuarios. Conciliación de stock, reservas y totales: cero diferencias. No se guardaron pruebas comerciales en producción. Respaldo privado previo de 206.826 bytes, leído completamente con pg_restore sin restaurarlo; no equivale a un ensayo de recuperación. Los ejercicios de proveedores/compras quedan solo en QA, cuyos contenedores se retiran sin borrar volúmenes.
+
+
+### Excepción del inventario inicial y lector por presentación · 12/10/2026
+
+Stock general conserva consulta, fotos y ajustes, sin alta. Un inicial abierto permite a administrador/colaboradores escanear, crear o vincular, y registrar cantidad, sin costos ni importes. Producto nuevo y cantidad se guardan juntos; vincular una etiqueta al producto ya contado conserva su UUID y cantidad. Coincidencias exactas se muestran primero. Una etiqueta del principal sirve a sus presentaciones, cada una con rowid_ext y stock independientes; el lector pide elegir antes de vender, contar o editar.
+
+Validación actual: verificar y caché aprobados; 18 casos de integración; doce grupos de inicial/códigos/diario/roles/retirada en base QA nueva; once grupos de escáneres en Chrome con cámara sintética (--solo-escaner). QR y EAN-13 realmente decodificados, incluidas barras pequeñas/giradas/con contraste reducido/desenfoque leve. Se comprobaron campos en PostgreSQL y la vuelta automática a cámara, sin duplicar códigos ni cantidades. Cámara física de un celular requiere comprobación del usuario; estos videos sintéticos no sustituyen esa prueba.
+
+Ejercicio inicial: crear Camisa con cinco unidades; volver a la misma etiqueta y crear presentación Roja con tres. Comparten rowid, tienen rowid_ext distintos y una etiqueta de familia. Escanear pide elegir la presentación. Una etiqueta nueva vinculada por coincidencia conserva las cinco unidades y el ID. Inicial completo de la prueba: quince unidades, conciliadas con el ledger. El diario del vendedor decodificó QR y guardó cero en una base vacía; el diario ya confirmado en QA compartida se conservó y rechazó reabrirse.
+
+Retirada automática aprobada: no retira a los 179 días; después del plazo de 180 días retira la anterior y conserva la última activa y todas sus relaciones históricas. El servicio revisa al arrancar y cada seis horas. No hay borrado físico ni migración. En la integración se detectó un agotamiento de la transacción al crear líneas una por una; se sustituyó por createMany en la misma transacción y los 18 casos volvieron a pasar, sin ampliar el timeout.
+
+Reproducir exclusivamente en QA: node Backend/scripts/probar-codigos-inventario.cjs y node Backend/scripts/probar-escaner-ui.cjs --solo-escaner. La opción limita el segundo recorrido al lector; los casos antiguos de voz permanecen en el script pero no forman parte de esa validación histórica.
+
+## Respuestas y rendimiento del agente · V8P4
+
+La transcripción permanece literal en la burbuja y en la solicitud. Se compara una copia sin tildes para buscar nombres: primero coincidencias exactas, luego errores breves de escritura y plurales. Los números de una presentación deben coincidir. «Agua Cristal» con dos tamaños disponibles o «Yogur» con dos sabores requiere aclaración; no se escoge por orden de la lista. La búsqueda aproximada está acotada: más de 120 candidatos requiere una indicación más precisa. El modelo recibe hasta 24 nombres y unidades ordenados por parecido, junto al borrador anterior, para conservar cantidades, pago y preparación al corregir. No recibe una descarga completa del catálogo.
+
+Un saludo recibe una respuesta corta sin proveedor. Al preparar una operación no se reproduce una locución previa. Con información completa responde «Listo. Revisa y confirma.»; cuando falta algo menciona solo el primer dato. Las demás validaciones siguen en el detalle. Un error de interpretación mantiene el texto, el borrador y la escucha; cortar el micrófono sigue permitiendo terminar una respuesta y dos toques apagan el agente. Ningún mensaje de preparación ejecuta la transacción: confirmar sigue usando el mismo formulario, revisión actualizada y guardado del negocio.
+
+«Cambia el pago a billetera» sobre un pedido ya preparado usa directamente su revisión existente. Una frase con más cambios, como «Cambia el pago a billetera y agrega otro producto», pasa al modelo para interpretar toda la corrección. El crédito de un cliente ocasional continúa bloqueado.
+
+DeepSeek no admite una herramienta obligatoria con razonamiento activado. En sus conexiones directas y OpenCode se envía `thinking.type=disabled` para esta extracción. No se cambia el modelo, la clave ni el límite de tokens; tampoco se envía ese parámetro a OpenRouter u otros proveedores. Referencia: [API de DeepSeek](https://api-docs.deepseek.com/api/create-chat-completion/). Los errores de cuota, credencial y disponibilidad siguen explicándose; una suscripción no garantiza una respuesta sin fallos.
+
+### Ejercicios rápidos
+
+Los [16 guiones de prueba](../ejemplos/guiones-agente.json) describen la frase y los campos que deben aparecer en cada detalle. Son datos ficticios; cambia nombres, proveedor y consecutivo por referencias existentes en tu instalación. Para una prueba sin movimiento comercial, revisa y cancela sin decir confirmar. Los guiones incluyen ventas con dos y tres tipos de producto, correcciones, efectivo/billetera, crédito registrado y ocasional rechazado, abonos, estado de pedidos, compras con costo, gastos, egresos, precio, apertura/guardado/finalización/aplicación de conteos y cierre con cero válido. Los permisos reales del rol se siguen aplicando.
+
+1. Toca el robot y di «Hola buenas tardes». Debe saludar brevemente y no preparar una venta.
+2. Dicta «Cliente ocasional, dos Pepsi 400 ml y tres Doritos queso, efectivo, para preparar». Comprueba las dos referencias, cantidades, total y estado del detalle.
+3. Di «Cambia el pago a billetera». Debe conservar referencias, cantidades y preparación. Después di «Deja solo un Doritos, conserva las Pepsi»: cambia esa cantidad y comprueba el total.
+4. Usa otra combinación: «Una leche entera, cuatro panes integrales y dos cafés americanos, cliente ocasional, efectivo, ya entregado». Verifica las tres líneas; si esos nombres no están activos, pide aclaración con los de tu catálogo.
+5. Prueba «Cliente ocasional, un Doritos a crédito». Debe solicitar un cliente registrado. No debe confirmarse con el cliente ocasional.
+6. En un conteo abierto, toma un producto y di «Conté cero». Comprueba el cero y la asignación. Revisa el cierre o ajuste antes de confirmar; estos pueden modificar existencias.
+7. Mientras prepara un detalle, toca una vez para mutear: el resultado debe llegar. Reactiva y corrige; tocar fuera solo oculta la burbuja. Dos toques rápidos deben apagar la voz.
+
+### Reproducir y medir en QA
+
+Con las imágenes actuales y QA en 8180/3100, ejecutar desde la raíz:
+
+~~~powershell
+npm.cmd run prueba:agentes
+npm.cmd run prueba:cache
+npm.cmd run prueba:integracion
+node --env-file=.env Backend/scripts/probar-paneles-ui.cjs
+node --env-file=.env Backend/scripts/probar-respuesta-agente-ui.cjs
+node --env-file=.env Backend/scripts/medir-rendimiento.cjs actual
+~~~
+
+Ejecutar las suites que escriben en QA por separado: comparten revisiones, catálogo e inventario. El recorrido del robot usa audio/proveedor simulados y revisión API/PostgreSQL real; comprueba saludo, error recuperable, detalle, corrección, muteo, reactivación y apagado sin crear pedidos. Los 16 guiones prueban preparación y validaciones de los doce tipos de operación; no acreditan reconocimiento acústico o extracción del proveedor real para cada módulo.
+
+La medición de rendimiento realiza tres recorridos con Chrome, 390×844, caché nueva, red local y sin limitación de CPU; registra duración hasta el catálogo, bytes transferidos, solicitudes al escribir y revisión de uno/cinco productos. Guarda JSON y trazas privadas en `.local/rendimiento`. Son observaciones de laboratorio; no datos de usuarios reales ni garantía de tiempos en celulares físicos. La búsqueda espera una pausa de 220 ms; las listas anteriores se bloquean hasta mostrar el nuevo filtro. El formulario termina al recibir la escritura confirmada, mientras las lecturas se actualizan aparte y pueden informar sus propios errores.
+
+Cierre en producción, 12/10/2026: tras encender Docker Desktop se recuperaron los servicios y se registró el nuevo origen HTTPS del túnel temporal. Chrome real, ancho móvil 393 px, comprobó localhost y HTTPS: formulario del inicial abierto con nombre/cantidad y sin costo, alta ausente en Stock general, ajuste físico sin guardar, edición en Productos, filtros sin desbordamiento y lectura de Descuadres. No hubo errores de ejecución ni escrituras comerciales. El inicial del negocio sigue abierto, con cero de 37 productos contados; no se confirmó ni se reemplazó. Los seis conteos se conservan en el historial paginado. PostgreSQL conserva todos los identificadores previos de 21 pedidos, 37 productos, ocho clientes, 17 pagos, seis conteos y dos usuarios; stock contra movimientos, reservas contra sus saldos y totales de pedidos contra líneas devolvieron cero diferencias. Las pruebas de guardado y lectura de códigos quedaron en QA; su retirada conserva volúmenes. La lectura física desde el teléfono sigue pendiente de comprobación del usuario.
+
+### Compras y colores del robot · 12/10/2026
+
+Se reprodujo el recorte del alta en Compras: en Chrome móvil 390×844, el botón Crear producto quedaba a 956 px y no se movía al desplazar la pantalla. La ficha estaba dentro del bloque fijo de controles del paso 2. Formulario, catálogo paginado y continuación ahora comparten un área desplazable; se conserva la cabecera del proceso y el diseño de los campos. Crear guarda el producto; después hay que agregar su cantidad y costo a la recepción y revisar el paso 3 para confirmar la compra.
+
+Configuración > Apariencia incorpora colores del robot en reposo, escuchando y respondiendo, con selector visual y código hexadecimal. Se guardan en el JSON existente de configuracionesVisuales, mediante /apariencia y sus permisos actuales. Las configuraciones anteriores reciben valores predeterminados, sin migración ni tablas nuevas. No cambia el reconocimiento de audio.
+
+Validación actual: verificar completo y dos pruebas de caché aprobados; siete grupos de prueba:productos:compras en Chrome/API/PostgreSQL QA. La rueda real alcanza Crear producto en 320×480, 390×844, 390×400 (poca altura), 768×1024 y 1440×900. Una recepción de 12 paquetes a 1.200 dio 14.400 y permitió avanzar/confirmar; nombre, unidad, etiqueta, costo, importe, stock y ledger coincidieron en PostgreSQL. Otro ejercicio de siete botellas y cinco bolsas dio 20.600 y conservó una recepción ante reintentos concurrentes. En esta ejecución, alta 338 ms, recepción 322 ms y lectura del vendedor sin recargar 1.673 ms desde confirmar; no son garantías para otros equipos.
+
+Los tres colores personalizados se guardaron, coincidieron con PostgreSQL y se conservaron al recargar. Se comprobaron sus tres estados CSS sin activar audio. Un hexadecimal inválido y un intento del vendedor se rechazaron sin cambiar la configuración. La apariencia anterior de QA se restauró al terminar. Reproducir con npm run prueba:productos:compras, exclusivamente en QA.
+
+Producción actualizada y comprobada en localhost:8080 y el túnel HTTPS existente: Chrome móvil alcanzó Crear producto con la rueda y encontró los tres controles de color, sin errores de ejecución. El recorrido bloqueó escrituras comerciales; no guardó productos ni recepciones de prueba. La conciliación posterior conserva los 22 pedidos, 37 productos, ocho clientes, 18 pagos, seis conteos y dos usuarios de la instantánea previa; stock/movimientos, reservas y totales/líneas presentan cero diferencias. Se conservó un respaldo privado previo, leído con pg_restore sin restaurarlo; no equivale a un ensayo de recuperación. API/frontend se reemplazaron sin migraciones ni reiniciar la base. Los contenedores temporales de QA se retiran sin borrar volúmenes. Los tamaños y estados probados en Chrome no sustituyen la comprobación física desde el celular.
+
+Resultados actuales de laboratorio (13/10/2026, Bogotá): 41 casos controlados del agente y dos de caché aprobaron; los 18 casos de integración y el recorrido completo de paneles/formularios QA también aprobaron. Cliente y venta se confirmaron en 430,6 y 343 ms en el recorrido de formularios; la consulta posterior con Docker/psql observó los datos en 1.199,1 y 2.343,7 ms, incluyendo el tiempo de esa comprobación. No mide el instante interno del commit.
+
+La comparación en tres recorridos redujo el texto estático transferido de 609.658 a aproximadamente 180.335 bytes (70,4 %), las consultas al escribir Pepsi de cinco a una y la revisión de cinco productos de una mediana de 129 a 59 ms (rangos 124–158 y 42–105 ms). La carga inicial del catálogo fue 897 ms antes y 1.251 ms después en esa muestra (rangos 786–1.277 y 1.231–1.281 ms): no se acredita una mejora de carga general ni se extrapola a Internet. La corrección exclusiva de pago tardó 32–41 ms en tres solicitudes QA, sin proveedor; las correcciones combinadas siguen dependiendo de la conexión externa.
+
+Con OpenCode Go / deepseek-v4.1-flash, los tres ejercicios ficticios autorizados respondieron con herramienta válida: Pepsi 400 ml y Doritos queso 85 g, corrección a billetera y un Doritos conservando dos Pepsi, y transporte de 2.000 en efectivo. No guardaron pedidos. La medición del servicio fue 8.430/9.492/1.683 ms durante esa prueba; no representa un tiempo garantizado ni prueba de audio físico. El rechazo HTTP 400 previo y los límites externos no se ocultan. Chrome con transporte simulado comprobó que un rechazo conserva el micrófono y que saludo/detalle/corrección/muteo/reactivación/apagado funcionan.
+
+### Correcciones sucesivas, Notificaciones y Chat — 14/10/2026
+
+La revisión propone una referencia probable cuando se dicta solo la marca. Si encuentra varias, enuncia el producto elegido y hasta dos alternativas concretas. «La segunda» cambia esa línea mediante la misma API de revisión, sin otra llamada al proveedor. El borrador siguiente usa el nombre resuelto, conservando la transcripción literal en la burbuja. Se eliminó la instrucción contradictoria que exigía presentación. Un producto desconocido pide su nombre de nuevo y no bloquea las líneas válidas. El VAD retrasado no corta una locución cuando se está enviando silencio; un eco textual exacto reciente no genera un nuevo turno. Esto no acredita reconocimiento perfecto de cualquier audio físico.
+
+El historial de Notificaciones queda junto a Inicio, con cinco avisos por página en móvil y el paginador existente. Las altas de pedidos, cambios reales de estado y recepciones generan avisos en la transacción. Una primera lectura no repite todo el historial. El aviso breve se oculta a los nueve segundos o al cerrarlo; al tocarlo abre el documento exacto. Activar avisos y sonido solicita permiso del navegador desde el toque; Silenciar conserva el historial. Reactivar sonido después de abrir otra sesión o recargar requiere ese toque. La consulta periódica lee como máximo 30 avisos, sin contar todo el historial; el listado paginado sí muestra totales coherentes.
+
+No se envían mensajes a clientes/proveedores y no hay órdenes de compra nuevas: el módulo actual registra recepciones. Los avisos automáticos requieren la aplicación abierta; pestañas en segundo plano pueden ser limitadas por el navegador. No incluye Web Push con la aplicación cerrada. El uso de Service Worker para notificaciones móviles y el permiso por interacción siguen la [guía de MDN](https://developer.mozilla.org/en-US/docs/Web/API/Notifications_API/Using_the_Notifications_API).
+
+Chat queda antes de Configuración. Usa la misma conexión del agente y recupera datos mediante los servicios existentes, hasta diez resultados por consulta, con enlaces a los documentos. Es recuperación estructurada con permisos; no incorpora SQL libre, otra base de datos ni un servidor MCP independiente. También presenta las consultas dictadas desde el robot, sin otra llamada al modelo. Ventas, cobros, compras, gastos, estados y conteos usan la revisión y los formularios existentes. Chat presenta el detalle y confirma mediante las mismas acciones comerciales, permaneciendo en la conversación. «Cancelar» retira el borrador. Los mensajes viven solo en RAM, hasta 40, y no pasan de una sesión a otra.
+
+Validación de esta ejecución: 46 casos controlados del agente, dos de caché, 18 de integración y recorrido de todos los paneles sobre Docker QA aprobados. El nuevo recorrido de Notificaciones/Chat comprobó persistencia de los tres tipos de aviso, rollback sin avisos huérfanos, lectura idempotente, recepción exacta, roles/permisos, aviso y enlace en Chrome, consulta y corrección del chat sin guardar, y una única venta después del botón de confirmación. Chrome cubrió 390×844 y 1440×900 sin desbordamiento ni errores de ejecución. El recorrido del robot añadió dos cambios consecutivos de producto y rechazo del eco, conservando pago y cantidades. En estas pruebas, extracción del proveedor, transporte acústico y avisos del sistema operativo son simulados; las revisiones, formularios y PostgreSQL de QA son reales.
+
+Reproducir después de construir y encender QA:
+
+~~~powershell
+npm.cmd run prueba:agentes
+npm.cmd run prueba:cache
+npm.cmd run prueba:integracion
+node --env-file=.env Backend/scripts/probar-respuesta-agente-ui.cjs
+node --env-file=.env Backend/scripts/probar-notificaciones-chat-ui.cjs
+~~~
+
+Ejercicios manuales: dictar «Cliente ocasional, dos Chocorramo, efectivo, para preparar»; seleccionar la alternativa que se mencione; cambiar por un yogur y luego agregar otro producto, conservando el pago. Consultar «¿Cuánto stock tengo de Chocorramo?» en Chat. Preparar una recepción con proveedor registrado, revisar y cancelar primero; después confirmar otra solo cuando se quiera guardar. Mantener Notificaciones abierto en otra sesión y comprobar su aviso y enlace. Las opciones dependen del catálogo real: no dar por existentes los productos del ejemplo. Ver los 21 guiones en docs/ejemplos/guiones-agente.json. No ejecutar suites que escriben simultáneamente en la misma QA.
+
+### Confirmación, chat y continuidad — 14/10/2026
+
+Se corrigieron tres cierres del audio: máximo acumulado de dos minutos (incluía silencio), límite de tres minutos de conexión e inactividad de Pipecat de 90 segundos. El motor local instalado se precalienta al arrancar y se reutiliza, conservando procesadores separados por sesión. El cliente renueva conexiones interrumpidas con tickets nuevos y reintentos acotados, sin reproducir audio ni órdenes anteriores. Los eventos de diagnóstico no contienen transcripciones ni claves.
+
+Prueba actual de Pipecat/Whisper real en QA: 221,8 segundos de conexión, 6.483.040 bytes, silencio inicial de 205 segundos y después un pedido sintético de cafés, aguas y chocolatina. Recibió el turno completo; las dos aperturas medidas tardaron 144 y 87 ms desde abrir WebSocket hasta «listo», con pesos ya precalentados. No se llamó al proveedor ni se guardaron operaciones. Es una medición local del servicio, no del permiso de un celular ni de Internet.
+
+Chrome con voz/modelo simulados y API/PostgreSQL reales confirmó doce pedidos mediante los doce guiones de `docs/ejemplos/confirmaciones-agente.json`; repetir confirmar sin detalle no guardó otro pedido. Verificó reconexión, muteo/reactivación, ocultar burbuja y doble toque para apagar. El chat guardó una venta de tres unidades/$300 en billetera, un gasto de $100 en efectivo, una recepción de siete unidades a $55 ($385), un precio nuevo y un estado entregado, conservando `/admin/chat`. SQL confirmó cantidades, totales, pago, precio, estado e importe histórico de la factura. Crédito ocasional siguió bloqueado. Se despejó Enviar del robot en móvil.
+
+Las suites del agente, nuevas confirmaciones, caché e integración prueban controles y persistencia en QA. La prueba del reconocimiento acústico usa audio sintetizado; el usuario aún debe comprobar su micrófono, altavoces, ruido e interrupciones del navegador en el dispositivo físico. No se envió este catálogo QA a proveedores externos ni se escribieron operaciones de prueba en producción.
+
+Reproducir: `npm.cmd run prueba:agentes`; `node --env-file=.env Backend/scripts/probar-respuesta-agente-ui.cjs`; `node --env-file=.env Backend/scripts/probar-notificaciones-chat-ui.cjs`. Para continuidad, definir `AUDIO_PRUEBA_PCM` con un archivo ficticio PCM16 mono a 16 kHz y ejecutar `node --env-file=.env Backend/scripts/probar-continuidad-audio.cjs`; esta prueba solo acepta QA 8180 y requiere el modelo seleccionado ya instalado.

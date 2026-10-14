@@ -64,10 +64,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!usaApi) return;
     let vigente = true;
     const expirar = () => { limpiarConsultas(); setUsuario(null); };
-    window.addEventListener("ambie:sesion-expirada", expirar);
+    window.addEventListener("synchronic:sesion-expirada", expirar);
     void api<UsuarioSistema | null>("/auth/me").then((u) => { if (vigente) setUsuario(u); })
       .catch(() => {}).finally(() => { if (vigente) setCargando(false); });
-    return () => { vigente = false; window.removeEventListener("ambie:sesion-expirada", expirar); };
+    return () => { vigente = false; window.removeEventListener("synchronic:sesion-expirada", expirar); };
   }, []);
 
   function iniciarSesion(rol: RolUsuario) {
@@ -78,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function iniciarSesionConCredenciales(identificador: string, password: string): Promise<{ ok: boolean; error?: string; usuario?: UsuarioSistema }> {
+    if (!identificador.trim() || !password) return { ok: false, error: "Ingresa usuario y contraseña" };
     if (usaApi) {
       try {
         const sesion = await api<{ usuario: UsuarioSistema }>("/auth/login", "POST", { identifier: identificador.trim(), password });
@@ -87,7 +88,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) { return { ok: false, error: error instanceof Error ? error.message : "No se pudo iniciar sesión" }; }
     }
     const idOrEmail = identificador.trim().toLowerCase();
-    if (!idOrEmail || !password) return { ok: false, error: "Ingresa usuario y contraseña" };
     const usuarios = cargarUsuarios();
     const candidato = usuarios.find((u) => coincideUsuario(u, idOrEmail));
 

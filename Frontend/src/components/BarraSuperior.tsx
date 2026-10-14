@@ -23,7 +23,7 @@ export function BarraSuperior({
 }: BarraSuperiorProps) {
   const esHero = variante === "hero";
   return (
-    <header className={`sticky top-0 z-10 flex-shrink-0 bg-ink px-4 pt-[max(1rem,env(safe-area-inset-top))] text-white md:px-6 ${esHero ? "pb-7" : "pb-4"}`}>
+    <header className={`sticky top-0 z-10 flex-shrink-0 header-negocio px-4 pt-[max(1rem,env(safe-area-inset-top))] md:px-6 ${esHero ? "pb-7" : "pb-4"}`}>
       <div className={`flex gap-3 ${esHero ? "items-start" : "items-center"}`}>
         {onVolver ? (
           <button
@@ -37,7 +37,7 @@ export function BarraSuperior({
           <div className="w-1" />
         )}
         <div className="min-w-0 flex-1">
-          {etiqueta && <p className="text-[13px] text-accent">{etiqueta}</p>}
+          {etiqueta && <p className="text-[13px] text-header-ink">{etiqueta}</p>}
           <h1 className={`truncate font-display font-semibold leading-tight ${esHero ? "mt-1 text-2xl" : "text-[19px]"}`}>
             {titulo}
           </h1>

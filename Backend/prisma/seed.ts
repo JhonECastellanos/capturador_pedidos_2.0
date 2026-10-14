@@ -17,12 +17,14 @@ const PERMISOS = [
   { codigo: "cierre-diario", nombre: "Cierre diario", descripcion: "Ejecutar cierre del día" },
   { codigo: "clientes", nombre: "Clientes", descripcion: "Gestionar clientes" },
   { codigo: "cobros", nombre: "Cobros", descripcion: "Registrar abonos y cobros" },
+  { codigo: "notificaciones", nombre: "Notificaciones", descripcion: "Consultar avisos del negocio" },
+  { codigo: "chat", nombre: "Chat", descripcion: "Consultar y preparar operaciones para revisión" },
 ];
 
 /**
  * Permisos por rol, indexados por el `codigo` de `roles`.
  *
- * El código va en minúscula porque es el valor del contrato (`@ambie/contrato`)
+ * El código va en minúscula porque es el valor del contrato (`@synchronic-jo/contrato`)
  * y el `@map(...)` del enum en Prisma; los nombres del enum del cliente
  * (`RolUsuario.ADMINISTRADOR`) son otra cosa y no coinciden con esta columna.
  */

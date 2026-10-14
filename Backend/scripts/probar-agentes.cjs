@@ -1,0 +1,636 @@
+/* Pruebas aisladas: proveedor simulado y catálogo en memoria, sin datos del negocio. */
+const { test, after } = require('node:test');
+const assert = require('node:assert/strict');
+const http = require('node:http');
+const { Prisma, RolUsuario } = require('@prisma/client');
+const { InstruccionAgenteEsquema, problemaConexionAgente } = require('@synchronic-jo/contrato');
+const { AgentesService, autorizarOperacion } = require('../dist/agentes/agentes.service');
+const { probarProveedor, validarDestino, modelosProveedor, interpretarProveedor, permiteRespaldo } = require('../dist/agentes/proveedores');
+const { PedidosService } = require('../dist/pedidos/pedidos.service');
+
+const anteriorPruebas = process.env.AGENTES_PROVEEDORES_PRUEBA;
+process.env.AGENTES_PROVEEDORES_PRUEBA = 'true';
+let respuesta = { operacion: 'gasto', concepto: 'Transporte', monto: 1, metodo: 'efectivo' };
+let codigo = 200;
+let cuerpoProveedor;
+let ultimaRuta;
+let ultimoCuerpo;
+const servidor = http.createServer((req, res) => {
+  ultimaRuta = req.url;
+  let entrada = '';
+  req.on('data', parte => { entrada += parte; });
+  req.on('end', () => {
+  ultimoCuerpo = entrada ? JSON.parse(entrada) : undefined;
+  res.writeHead(codigo, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(cuerpoProveedor ?? { choices: [{ message: { tool_calls: [{ function: { name: 'preparar_operacion', arguments: JSON.stringify(respuesta) } }] } }] }));
+  });
+});
+const listo = new Promise(resolve => servidor.listen(0, '127.0.0.1', resolve));
+after(async () => { await new Promise(resolve => servidor.close(resolve)); if (anteriorPruebas === undefined) delete process.env.AGENTES_PROVEEDORES_PRUEBA; else process.env.AGENTES_PROVEEDORES_PRUEBA = anteriorPruebas; });
+const productos = [
+  { id: 'arepa', codigoInterno: 'PROD-0001', nombre: 'Arepa de queso', precioVenta: new Prisma.Decimal(4500), costoActual: new Prisma.Decimal(2000), stockFisico: 10, stockReservado: 1, activo: true, unidad: 'unidad' },
+  { id: 'empanada', codigoInterno: 'PROD-0002', nombre: 'Empanada de pollo', precioVenta: new Prisma.Decimal(3500), costoActual: new Prisma.Decimal(1500), stockFisico: 10, stockReservado: 0, activo: true, unidad: 'unidad' },
+  { id: 'cola', codigoInterno: 'PROD-0003', nombre: 'Coca-Cola pequeña', precioVenta: new Prisma.Decimal(3000), costoActual: new Prisma.Decimal(1800), stockFisico: 10, stockReservado: 0, activo: true, unidad: 'unidad' },
+];
+const servicio = new AgentesService({ producto: { findMany: async () => productos }, cliente: { findMany: async () => [] } });
+const usuario = { id: 'vendedor', rol: RolUsuario.VENDEDOR };
+const pedido = { operacion: 'pedido', ocasional: true, lineas: [{ producto: 'Arepa de queso', cantidad: 1 }, { producto: 'Empanada de pollo', cantidad: 1 }, { producto: 'Coca-Cola pequeña', cantidad: 2 }], metodo: 'efectivo', preparacion: 'pendiente' };
+
+test('instrucción completa conserva tres productos y calcula el total del catálogo', async () => {
+  const r = await servicio.revisar(pedido, usuario);
+  assert.deepEqual(r.faltantes, []); assert.equal(r.total, '14000.00');
+  assert.equal(r.datos.lineas.length, 3); assert.equal(r.ruta, '/vendedor/pedido');
+});
+test('corregir pago y cantidad mantiene el resto del pedido', async () => {
+  const antes = await servicio.revisar(pedido, usuario);
+  const r = await servicio.revisar({ ...pedido, metodo: 'billetera', lineas: pedido.lineas.map((l, i) => i === 2 ? { ...l, cantidad: 3 } : l) }, usuario, antes.id, 2);
+  assert.equal(r.id, antes.id); assert.equal(r.version, 2); assert.equal(r.total, '17000.00');
+  assert.equal(r.instruccion.preparacion, 'pendiente'); assert.equal(r.datos.metodo, 'billetera'); assert.notEqual(r.huella, antes.huella);
+});
+test('faltantes conservan líneas reconocidas sin completar el pago por intuición', async () => {
+  const r = await servicio.revisar({ operacion: 'pedido', lineas: pedido.lineas }, usuario);
+  assert.equal(r.datos.lineas.length, 3); assert.equal(r.faltantes.length, 3); assert.equal(r.datos.metodo, undefined);
+});
+test('producto desconocido y stock insuficiente impiden confirmar', async () => {
+  const r = await servicio.revisar({ ...pedido, lineas: [{ producto: 'Producto inexistente', cantidad: 1 }, { producto: 'Arepa de queso', cantidad: 10 }] }, usuario);
+  assert.equal(r.faltantes.length, 2); assert.match(r.faltantes.join(' '), /Solo hay 9/);
+});
+test('crédito ocasional no se permite y productos repetidos requieren aclaración', async () => {
+  const r = await servicio.revisar({ ...pedido, metodo: 'credito', lineas: [pedido.lineas[0], pedido.lineas[0]] }, usuario);
+  assert.equal(r.faltantes.length, 2);
+});
+test('permisos del agente respetan los roles del negocio', () => {
+  assert.throws(() => autorizarOperacion(RolUsuario.VENDEDOR, 'precio'), e => e.getStatus() === 403);
+  assert.throws(() => autorizarOperacion(RolUsuario.INVENTARIO, 'pedido'), e => e.getStatus() === 403);
+  assert.doesNotThrow(() => autorizarOperacion(RolUsuario.INVENTARIO, 'conteo'));
+});
+test('contrato rechaza importes infinitos y campos ajenos a una instrucción', () => {
+  assert.equal(InstruccionAgenteEsquema.safeParse({ operacion: 'gasto', monto: Infinity }).success, false);
+  assert.equal(InstruccionAgenteEsquema.safeParse({ operacion: 'pedido', apiKey: 'dato-no-admitido' }).success, false);
+});
+test('destinos privados y URLs con credenciales se rechazan', async () => {
+  await assert.rejects(validarDestino('https://192.168.1.10'));
+  await assert.rejects(validarDestino('https://usuario:clave@example.com'));
+  await assert.rejects(validarDestino('https://[::ffff:c0a8:101]'));
+});
+test('precio modificado después de revisar se rechaza antes de escribir el pedido', async () => {
+  let escrituras = 0;
+  const tx = { $queryRaw: async () => [], producto: { findMany: async () => [productos[0]] }, pedido: { create: async () => { escrituras++; } } };
+  const pedidos = new PedidosService({ $transaction: async fn => fn(tx) });
+  await assert.rejects(pedidos.crear({ metodo: 'efectivo', lineas: [{ productoId: 'arepa', cantidad: 1, precioEsperado: 4000 }] }, 'vendedor'), e => e.codigo === 'PRECIO_CAMBIO' && e.getStatus() === 409);
+  assert.equal(escrituras, 0);
+});
+test('el indicador distingue respuesta válida, campos inválidos y cuota agotada', async () => {
+  await listo;
+  const p = { nombre: 'Proveedor de pruebas', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' };
+  assert.equal((await probarProveedor(p)).estado, 'disponible');
+  respuesta = { operacion: 'inventada' }; assert.equal((await probarProveedor(p)).estado, 'error');
+  codigo = 429; assert.equal((await probarProveedor(p)).estado, 'limitado');
+  codigo = 503; assert.equal((await probarProveedor(p)).estado, 'error');
+});
+
+test('captura del micrófono convierte un segundo a PCM de 16 kHz sin reproducirlo', () => {
+  const fs = require('node:fs');
+  const vm = require('node:vm');
+  const path = require('node:path');
+  const codigo = fs.readFileSync(path.resolve(__dirname, '../../Frontend/src/modules/agentes/captura-audio.js'), 'utf8');
+  for (const frecuencia of [44100, 48000]) {
+    const paquetes = [];
+    let Captura;
+    const contexto = { sampleRate: frecuencia, AudioWorkletProcessor: class { constructor() { this.port = { postMessage: buffer => paquetes.push(buffer) }; } }, registerProcessor: (_nombre, clase) => { Captura = clase; } };
+    vm.runInNewContext(codigo, contexto);
+    const captura = new Captura();
+    const entrada = new Float32Array(frecuencia).fill(0.25);
+    for (let inicio = 0; inicio < frecuencia; inicio += 128) assert.equal(captura.process([[entrada.subarray(inicio, inicio + 128)]]), true);
+    assert.equal(paquetes.length, 10);
+    assert.equal(paquetes.reduce((suma, p) => suma + p.byteLength, 0), 32000);
+    assert.equal(new Int16Array(paquetes[0])[0], 8192);
+  }
+});
+
+test('configuración cifra claves, las conserva en edición y controla versiones', async () => {
+  const { ConfiguracionAgenteInicial } = require('@synchronic-jo/contrato');
+  const { randomUUID, randomBytes } = require('node:crypto');
+  const anterior = process.env.AGENT_CONFIG_SECRET;
+  process.env.AGENT_CONFIG_SECRET = randomBytes(32).toString('hex');
+  let registro = null;
+  const prisma = {
+    configuracionAgente: { findUnique: async () => registro, upsert: async ({ create, update }) => { registro = registro ? { ...registro, ...update, version: registro.version + 1 } : { ...create, version: 1 }; } },
+    $executeRaw: async () => 1,
+    enTransaccion: async trabajo => trabajo(prisma),
+  };
+  const agente = new AgentesService(prisma);
+  const clave = randomBytes(20).toString('hex');
+  const id = randomUUID();
+  const configuracion = { ...structuredClone(ConfiguracionAgenteInicial), proveedorId: id, proveedores: [{ id, nombre: 'Proveedor de pruebas', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba', apiKey: clave }] };
+  try {
+    const inicial = await agente.guardar(configuracion, 0);
+    assert.equal(inicial.version, 1); assert.equal(inicial.proveedores[0].tieneClave, true);
+    assert.equal(inicial.proveedores[0].apiKey, undefined);
+    assert.equal(JSON.stringify(registro.configuracion).includes(clave), false);
+    assert.equal(registro.secretos.includes(clave), false);
+    delete configuracion.proveedores[0].apiKey;
+    const segunda = await agente.guardar(configuracion, 1);
+    assert.equal(segunda.proveedores[0].tieneClave, true);
+    await assert.rejects(agente.guardar(configuracion, 1), error => error.codigo === 'CONFIGURACION_CAMBIO');
+    configuracion.proveedores[0].borrarClave = true;
+    const tercera = await agente.guardar(configuracion, 2);
+    assert.equal(tercera.proveedores[0].tieneClave, false);
+  } finally { if (anterior === undefined) delete process.env.AGENT_CONFIG_SECRET; else process.env.AGENT_CONFIG_SECRET = anterior; }
+});
+test('conteo usa el contexto abierto sin inventar cantidades y verifica la asignación', async () => {
+  await listo; codigo = 200; respuesta = { operacion: 'conteo', cantidad: 0 };
+  const conteoId = '7e604833-ef59-46cd-9c91-c1a98f157e43';
+  let asignado = true;
+  const contar = new AgentesService({
+    conteoInventario: { findUnique: async () => ({ id: conteoId }) },
+    conteoLinea: { findFirst: async ({ where }) => {
+      assert.equal(where.asignadoPorId, 'colaborador');
+      assert.equal(where.conteoId, conteoId);
+      assert.ok(where.asignadoHasta.gt instanceof Date);
+      return asignado ? { productoId: 'arepa', producto: productos[0], contadoEn: null, asignadoHasta: new Date(Date.now() + 300000) } : null;
+    } },
+  });
+  contar.leer = async () => ({ configuracion: { habilitado: true }, secretos: {} });
+  contar.catalogo = async () => [];
+  contar.proveedor = async () => ({ nombre: 'Prueba', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' });
+  const colaborador = { id: 'colaborador', rol: RolUsuario.INVENTARIO };
+  const contexto = { conteoId, producto: 'Arepa de queso' };
+  const r = await contar.interpretar('Conté cero', undefined, colaborador, undefined, 1, contexto);
+  assert.deepEqual(r.faltantes, []); assert.equal(r.datos.cantidad, 0); assert.equal(r.instruccion.conteoId, conteoId);
+  respuesta = { operacion: 'conteo' };
+  assert.match((await contar.interpretar('Contar', undefined, colaborador, undefined, 1, contexto)).faltantes.join(' '), /cantidad contada/);
+  assert.match((await contar.interpretar('Contar', undefined, colaborador)).faltantes.join(' '), /Abre el conteo/);
+  asignado = false; respuesta = { operacion: 'conteo', cantidad: 3 };
+  assert.match((await contar.interpretar('Conté tres', undefined, colaborador, undefined, 1, contexto)).faltantes.join(' '), /producto asignado/);
+  respuesta = { operacion: 'finalizar-conteo' };
+  await assert.rejects(contar.interpretar('Finalizar', undefined, colaborador, undefined, 1, contexto), e => e.getStatus() === 403);
+});
+
+test('formato de conexión detecta protocolo Google incorrecto y rutas completas', () => {
+  assert.match(problemaConexionAgente({ url: 'https://generativelanguage.googleapis.com/v1beta', protocolo: 'openai' }), /Google Gemini/);
+  assert.equal(problemaConexionAgente({ url: 'https://generativelanguage.googleapis.com/v1beta', protocolo: 'gemini' }), null);
+  assert.equal(problemaConexionAgente({ url: 'https://opencode.ai/zen/v1', protocolo: 'responses' }), null);
+  assert.match(problemaConexionAgente({ url: 'https://opencode.ai/zen/v1/chat/completions', protocolo: 'openai' }), /quita la ruta/);
+  assert.match(problemaConexionAgente({ url: 'https://opencode.ai/zen/v1?key=privada', protocolo: 'openai' }), /propio campo/);
+  assert.match(problemaConexionAgente({ url: '', protocolo: 'openai' }), /completa/);
+});
+test('rechazo de clave se explica sin exponer el cuerpo privado del proveedor', async () => {
+  await listo; codigo = 400;
+  cuerpoProveedor = { error: { message: 'No debe mostrarse: secreto de prueba', details: [{ reason: 'API_KEY_INVALID' }] } };
+  const p = { nombre: 'Prueba', protocolo: 'gemini', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' };
+  try { await assert.rejects(modelosProveedor(p), e => e.getStatus() === 422 && e.codigo === 'PROVEEDOR_CREDENCIALES' && !e.message.includes('secreto de prueba')); }
+  finally { codigo = 200; cuerpoProveedor = undefined; }
+});
+test('Responses utiliza su ruta y llamada estructurada sin conservar conversación remota', async () => {
+  await listo; codigo = 200;
+  cuerpoProveedor = { output: [{ type: 'function_call', name: 'preparar_operacion', arguments: JSON.stringify({ operacion: 'gasto', monto: 5, concepto: 'Prueba', metodo: 'efectivo' }) }] };
+  const p = { nombre: 'Responses', protocolo: 'responses', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' };
+  try {
+    assert.equal((await interpretarProveedor(p, [{ role: 'user', content: 'Prepara un gasto' }])).monto, 5);
+    assert.equal(ultimaRuta, '/responses'); assert.equal(ultimoCuerpo.store, false);
+    assert.equal(ultimoCuerpo.tools[0].name, 'preparar_operacion');
+  } finally { cuerpoProveedor = undefined; }
+});
+
+test('respaldo requiere autorización y no repite la solicitud al proveedor rechazado', async () => {
+  const { ErrorDominio } = require('../dist/common/errores');
+  assert.equal(permiteRespaldo(new ErrorDominio('PROVEEDOR_CREDENCIALES', 'Rechazada', 422)), true);
+  assert.equal(permiteRespaldo(new ErrorDominio('MODELO_HERRAMIENTAS', 'Inválida', 502)), true);
+  assert.equal(permiteRespaldo(new ErrorDominio('MODELO_SALIDA_LIMITADA', 'Incompleta', 422)), true);
+  assert.equal(permiteRespaldo(new ErrorDominio('PROVEEDOR_PARAMETROS', 'Inválida', 422)), false);
+  assert.equal(permiteRespaldo(new ErrorDominio('PROVEEDOR_LIMITE', 'Límite', 429)), true);
+  const instancia = new AgentesService({ producto: { findMany: async () => [] } });
+  instancia.estado = async () => ({ habilitado: true });
+  instancia.leer = async () => ({ configuracion: { habilitado: true, modo: 'hibrido', respaldoId: null } });
+  let consultas = 0;
+  instancia.proveedor = async id => { consultas++; return { nombre: id ? 'Respaldo' : 'Principal', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: id ? 'respaldo' : 'principal' }; };
+  instancia.revisar = async instruccion => ({ instruccion, faltantes: [] });
+  codigo = 429;
+  try {
+    await assert.rejects(instancia.interpretar('Prueba', undefined, usuario), e => e.codigo === 'PROVEEDOR_LIMITE');
+    assert.equal(consultas, 1);
+    instancia.leer = async () => ({ configuracion: { habilitado: true, modo: 'hibrido', respaldoId: 'autorizado' } });
+    instancia.proveedor = async id => { consultas++; if (id) { codigo = 200; respuesta = { operacion: 'gasto', concepto: 'Prueba', monto: 1 }; } return { nombre: id ? 'Respaldo' : 'Principal', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: id ? 'respaldo' : 'principal' }; };
+    const r = await instancia.interpretar('Prueba', undefined, usuario);
+    assert.equal(r.conexion.respaldo, true); assert.equal(r.conexion.proveedor, 'Respaldo');
+    assert.equal(consultas, 3);
+  } finally { codigo = 200; }
+});
+test('corrección incompleta usa el respaldo autorizado conservando borrador y sesión', async () => {
+  await listo; codigo = 200;
+  const instancia = new AgentesService({ producto: { findMany: async () => [] } });
+  instancia.estado = async () => ({ habilitado: true });
+  instancia.leer = async () => ({ configuracion: { habilitado: true, modo: 'hibrido', respaldoId: 'autorizado' } });
+  const visitas = [];
+  instancia.proveedor = async id => {
+    visitas.push(id ?? 'principal');
+    cuerpoProveedor = id ? undefined : { choices: [{ finish_reason: 'length', message: {} }] };
+    respuesta = { ...pedido, lineas: [...pedido.lineas, { producto: 'Limonada', cantidad: 1 }] };
+    return { nombre: id ? 'Respaldo' : 'Principal', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' };
+  };
+  instancia.revisar = async instruccion => ({ instruccion, faltantes: [] });
+  try {
+    const r = await instancia.interpretar('Agrega una limonada', pedido, usuario, 'borrador', 2, undefined, 'sesion');
+    assert.equal(r.conexion.respaldo, true);
+    assert.equal(r.instruccion.lineas.length, 4);
+    assert.equal(r.instruccion.metodo, pedido.metodo);
+    assert.match(ultimoCuerpo.messages[0].content, /Arepa de queso/);
+    assert.deepEqual(visitas, ['principal', 'autorizado']);
+  } finally { cuerpoProveedor = undefined; respuesta = { operacion: 'gasto', concepto: 'Transporte', monto: 1, metodo: 'efectivo' }; }
+});
+
+test('rechazo de acceso usa solo otro proveedor autorizado, sin volver a enviar a la clave rechazada', async () => {
+  await listo;
+  const instancia = new AgentesService({ producto: { findMany: async () => [] } });
+  instancia.estado = async () => ({ habilitado: true });
+  let respaldoId = null;
+  instancia.leer = async () => ({ configuracion: { habilitado: true, modo: 'hibrido', respaldoId } });
+  const visitas = [];
+  instancia.proveedor = async id => {
+    visitas.push(id ?? 'principal'); codigo = id ? 200 : 401; cuerpoProveedor = undefined;
+    respuesta = { ...pedido };
+    return { nombre: id ? 'Respaldo' : 'Principal', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' };
+  };
+  instancia.revisar = async instruccion => ({ instruccion, faltantes: [] });
+  try {
+    await assert.rejects(instancia.interpretar('Prueba', pedido, usuario), e => e.codigo === 'PROVEEDOR_CREDENCIALES');
+    assert.deepEqual(visitas, ['principal']);
+    visitas.length = 0; respaldoId = 'autorizado';
+    const r = await instancia.interpretar('Agrega un producto', pedido, usuario);
+    assert.equal(r.conexion.respaldo, true);
+    assert.deepEqual(visitas, ['principal', 'autorizado']);
+  } finally { codigo = 200; respuesta = { operacion: 'gasto', concepto: 'Transporte', monto: 1, metodo: 'efectivo' }; }
+});
+
+test('límite de salida y métricas provienen de la solicitud y respuesta reales', async () => {
+  await listo; codigo = 200;
+  cuerpoProveedor = { choices: [{ message: { tool_calls: [{ function: { name: 'preparar_operacion', arguments: JSON.stringify({ operacion: 'gasto', concepto: 'Prueba', monto: 1 }) } }] } }], usage: { prompt_tokens: 40, completion_tokens: 12, total_tokens: 52 } };
+  let uso;
+  try {
+    await interpretarProveedor({ nombre: 'Prueba', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba', maxTokens: 256 }, [{ role: 'user', content: 'Prueba' }], dato => { uso = dato; });
+    assert.equal(ultimoCuerpo.max_tokens, 256); assert.deepEqual(uso, { entrada: 40, salida: 12, total: 52 });
+  } finally { cuerpoProveedor = undefined; }
+});
+
+ test('Gemini envía JSON Schema en parametersJsonSchema, sin parameters incompatibles', async () => {
+  await listo; codigo = 200;
+  cuerpoProveedor = { candidates: [{ content: { parts: [{ functionCall: { name: 'preparar_operacion', args: { operacion: 'gasto', monto: 1 } } }] } }] };
+  try {
+    await interpretarProveedor({ nombre: 'Google', protocolo: 'gemini', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' }, [{ role: 'user', content: 'Prueba' }]);
+    const declaracion = ultimoCuerpo.tools[0].functionDeclarations[0];
+    assert.equal(declaracion.parameters, undefined);
+    assert.equal(declaracion.parametersJsonSchema.additionalProperties, false);
+    assert.equal(declaracion.parametersJsonSchema.properties.lineas.items.additionalProperties, false);
+  } finally { cuerpoProveedor = undefined; }
+});
+
+test('campos opcionales vacíos piden información, sin perder ceros ni líneas', () => {
+  const { limpiarInstruccionProveedor } = require('../dist/agentes/proveedores');
+  const dato = { operacion: 'conteo', cantidad: 0, descontarCaja: false, fecha: '', metodo: null, lineas: [{ producto: 'Prueba', cantidad: 0 }] };
+  assert.deepEqual(limpiarInstruccionProveedor(dato), { operacion: 'conteo', cantidad: 0, descontarCaja: false, lineas: dato.lineas });
+  assert.equal(InstruccionAgenteEsquema.safeParse(limpiarInstruccionProveedor({ operacion: '' })).success, false);
+  assert.equal(InstruccionAgenteEsquema.safeParse(limpiarInstruccionProveedor({ operacion: 'gasto', apiKey: '' })).success, false);
+  assert.equal(InstruccionAgenteEsquema.safeParse(limpiarInstruccionProveedor({ operacion: 'gasto', fecha: 'ayer' })).success, false);
+});
+
+test('indicador verde exige conservar el importe y el pago del ejercicio', async () => {
+  await listo; codigo = 200;
+  const anterior = respuesta;
+  try {
+    respuesta = { operacion: 'gasto', concepto: 'Prueba', monto: 1 };
+    const r = await probarProveedor({ nombre: 'Prueba', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' });
+    assert.equal(r.estado, 'error'); assert.match(r.mensaje, /importe y pago/);
+  } finally { respuesta = anterior; }
+});
+
+test('gratuito requiere valores de venta explícitos en cero, no valores ausentes o vacíos', () => {
+  const { precioGratuito } = require('../dist/agentes/proveedores');
+  assert.equal(precioGratuito({ prompt: '0', completion: '0' }), true);
+  assert.equal(precioGratuito({ prompt: '0.000', completion: '0', request: '0' }), true);
+  assert.equal(precioGratuito({ prompt: '0', completion: '0', request: '0.01' }), false);
+  assert.equal(precioGratuito({ prompt: '', completion: '' }), false);
+  assert.equal(precioGratuito({}), false);
+  assert.equal(precioGratuito({ prompt: '0.01', completion: '0' }), false);
+});
+
+test('respuesta truncada explica el límite de salida sin inventar una operación', async () => {
+  await listo; codigo = 200; cuerpoProveedor = { choices: [{ finish_reason: 'length', message: {} }] };
+  try { await assert.rejects(interpretarProveedor({ nombre: 'Prueba', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' }, [{ role: 'user', content: 'Prueba' }]), e => e.codigo === 'MODELO_SALIDA_LIMITADA' && e.getStatus() === 422); }
+  finally { cuerpoProveedor = undefined; }
+});
+
+test('micrófono muestra texto parcial sin interpretar y envía silencio durante el procesamiento', async () => {
+  const ts = require('typescript'), vm = require('node:vm'), fs = require('node:fs');
+  const fuente = fs.readFileSync('Frontend/src/modules/agentes/microfono.ts', 'utf8').replaceAll('import.meta.url', '"https://pruebas.invalid/captura.js"');
+  const codigo = ts.transpileModule(fuente, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  let socket, capturador, pausado = false, paradas = 0, cierres = 0, interrupciones = 0;
+  const parciales = [], finales = [], enviados = [], niveles = [];
+  class Conexion {
+    static OPEN = 1;
+    constructor() { socket = this; this.readyState = 1; this.bufferedAmount = 0; queueMicrotask(() => this.onmessage({ data: JSON.stringify({ tipo: 'listo' }) })); }
+    send(datos) { enviados.push(new Int16Array(datos)); }
+    close() { this.readyState = 3; this.onclose?.(); }
+  }
+  class Contexto {
+    constructor() { this.audioWorklet = { addModule: async () => {} }; }
+    async resume() {} async close() { cierres++; }
+    createMediaStreamSource() { return { connect() {} }; }
+    createAnalyser() { return { fftSize: 256, getFloatTimeDomainData: datos => datos.fill(.05) }; }
+  }
+  class Capturador { constructor() { capturador = this; this.port = {}; } connect() {} disconnect() {} }
+  const modulo = { exports: {} };
+  vm.runInNewContext(codigo, { module: modulo, exports: modulo.exports, require: () => ({ api: async () => ({ ticket: 'ticket-ficticio' }), baseApi: '/api/v1' }), CustomEvent: class { constructor(tipo, opciones) { this.type = tipo; this.detail = opciones.detail; } }, requestAnimationFrame: () => 1, cancelAnimationFrame: () => {}, window: { dispatchEvent: () => {}, isSecureContext: true, location: { href: 'https://pruebas.invalid/' }, speechSynthesis: { speaking: true, cancel: () => { interrupciones++; } } }, navigator: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [{ stop: () => { paradas++; } }], getAudioTracks: () => [] }) } }, AudioContext: Contexto, AudioWorkletNode: Capturador, WebSocket: Conexion, DOMException, URL, setTimeout, clearTimeout, ArrayBuffer, performance });
+  const detener = await modulo.exports.abrirMicrofono(v => finales.push(v), () => {}, () => {}, () => pausado, v => parciales.push(v), v => niveles.push(v));
+  assert.ok(niveles[0] > 0 && niveles[0] <= 1);
+  try {
+    socket.onmessage({ data: JSON.stringify({ tipo: 'texto', texto: 'Dos arepas con queso' }) });
+    assert.deepEqual(parciales, ['Dos arepas con queso']); assert.equal(finales.length, 0);
+    socket.onmessage({ data: JSON.stringify({ tipo: 'instruccion', texto: 'Dos arepas con queso y un yogur' }) });
+    assert.deepEqual(finales, ['Dos arepas con queso y un yogur']);
+    socket.onmessage({ data: JSON.stringify({ tipo: 'hablando' }) }); assert.equal(interrupciones, 1);
+    const pcm = new Int16Array([25, -40]);
+    pausado = true; capturador.port.onmessage({ data: pcm.buffer }); assert.deepEqual([...enviados.at(-1)], [0, 0]);
+    socket.onmessage({ data: JSON.stringify({ tipo: 'hablando' }) }); assert.equal(interrupciones, 1, 'Un VAD retrasado no interrumpe la respuesta mientras se envía silencio');
+    pausado = false; capturador.port.onmessage({ data: pcm.buffer }); assert.deepEqual([...enviados.at(-1)], [25, -40]);
+  } finally { detener(); }
+  detener(); assert.equal(niveles.at(-1), 0); assert.equal(paradas, 1); assert.equal(cierres, 1);
+  socket.onmessage({ data: JSON.stringify({ tipo: 'instruccion', texto: 'No debe enviarse' }) }); assert.equal(finales.length, 1);
+});
+
+test('Chocorramo aproximado propone una referencia y sucesivas correcciones reemplazan los avisos anteriores', async () => {
+  const catalogo = ['Chocorramo 70 g', 'Chocorramo mini', 'Yogur fresa', 'Yogur mora'].map((nombre, n) => ({ ...productos[0], id: 'choco-' + n, nombre, codigoInterno: 'PROD-C' + n, stockFisico: 100 }));
+  const agente = new AgentesService({ producto: { findMany: async () => catalogo }, cliente: { findMany: async () => [] } });
+  let r = await agente.revisar({ ...pedido, lineas: [{ producto: 'choco ramo', cantidad: 2 }] }, usuario);
+  assert.deepEqual(r.faltantes, []); assert.equal(r.datos.lineas[0].nombre, 'Chocorramo 70 g');
+  assert.match(r.resumen, /También tengo Chocorramo mini/); assert.doesNotMatch(r.resumen, /Repite|presentación/);
+  assert.equal(r.instruccion.lineas[0].producto, 'Chocorramo 70 g');
+  for (const nombre of ['Yogur', 'Chocorramo mini', 'chocoramo', 'Yogur mora']) {
+    r = await agente.revisar({ ...r.instruccion, lineas: [{ producto: nombre, cantidad: 2 }] }, usuario, r.id, r.version + 1);
+    assert.deepEqual(r.faltantes, [], nombre); assert.equal(r.datos.lineas.length, 1);
+    assert.equal(r.instruccion.metodo, 'efectivo'); assert.equal(r.instruccion.lineas[0].cantidad, 2);
+    assert.doesNotMatch(r.resumen, /Repite|venta por|presentación/);
+  }
+  const fallo = await agente.revisar({ ...r.instruccion, lineas: [{ producto: 'Galletas inventadas', cantidad: 2 }] }, usuario);
+  assert.match(fallo.resumen, /No encontré/);
+  const arreglado = await agente.revisar({ ...fallo.instruccion, lineas: [{ producto: 'Chocorramo mini', cantidad: 2 }] }, usuario);
+  assert.deepEqual(arreglado.faltantes, []); assert.doesNotMatch(arreglado.resumen, /No encontré/);
+});
+
+test('producto genérico del proveedor se recupera solo si el texto literal identifica una referencia', async () => {
+  await listo; codigo = 200;
+  const catalogo = [{ ...productos[0], nombre: 'Chocorramo 70 g' }];
+  const agente = new AgentesService({ producto: { findMany: async () => catalogo }, cliente: { findMany: async () => [] } });
+  agente.leer = async () => ({ configuracion: { habilitado: true, modo: 'hibrido' }, secretos: {} });
+  agente.proveedor = async () => ({ nombre: 'Prueba', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' });
+  const previa = respuesta;
+  try {
+    respuesta = { ...pedido, lineas: [{ producto: 'venta', cantidad: 2 }] };
+    const r = await agente.interpretar('Quiero dos chocorramo en efectivo para preparar', undefined, usuario);
+    assert.deepEqual(r.faltantes, []); assert.equal(r.datos.lineas[0].nombre, 'Chocorramo 70 g');
+    const desconocido = await agente.interpretar('Quiero dos galletas desconocidas', undefined, usuario);
+    assert.equal(desconocido.datos.lineas.length, 0); assert.match(desconocido.resumen, /nombre del producto/);
+  } finally { respuesta = previa; }
+});
+
+test('una alternativa dictada conserva el resto del borrador y el eco no se interpreta como una corrección', () => {
+  const ts = require('typescript'), vm = require('node:vm'), fs = require('node:fs');
+  function cargar(ruta, extras) {
+    const m = { exports: {} };
+    const codigo = ts.transpileModule(fs.readFileSync(ruta, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+    vm.runInNewContext(codigo, { module: m, exports: m.exports, require: () => ({}), setTimeout: () => 0, clearTimeout: () => {}, ...extras }); return m.exports;
+  }
+  const operaciones = cargar('Frontend/src/modules/agentes/operacion-agente.ts');
+  const opcion = operaciones.elegirOpcionDictada('la segunda', { instruccion: pedido, opcionesProducto: [{ texto: pedido.lineas[0].producto, opciones: [{ nombre: 'Arepa pequeña' }, { nombre: 'Arepa grande' }] }] });
+  assert.equal(opcion.lineas[0].producto, 'Arepa grande'); assert.equal(opcion.lineas[0].cantidad, 1);
+  assert.equal(opcion.lineas[1].producto, pedido.lineas[1].producto); assert.equal(opcion.metodo, 'efectivo');
+  const eventos = [], audio = cargar('Frontend/src/modules/agentes/audio.ts', { Date, SpeechSynthesisUtterance: class { constructor(t) { this.text = t; } }, CustomEvent: class { constructor(t) { this.type = t; } }, window: { dispatchEvent: e => eventos.push(e), speechSynthesis: { cancel() {}, getVoices: () => [], speak() {} } } });
+  audio.hablar('Elegí Chocorramo 70 g. También tengo Chocorramo mini.', { idioma: 'es', velocidad: 1, volumen: 1 });
+  assert.equal(audio.esEcoDelAsistente('Elegí Chocorramo 70 g. También tengo Chocorramo mini.'), true);
+  assert.equal(audio.esEcoDelAsistente('Cambia por Chocorramo mini'), false);
+});
+
+test('chat consulta servicios paginados, respeta permisos y prepara cambios sin ejecutar escrituras', async () => {
+  const { ChatService } = require('../dist/agentes/chat.service');
+  let instruccion, ultima, consultas = 0;
+  const leer = async (...args) => { consultas++; ultima = args; return { data: [], meta: { total: 0 } }; };
+  const chat = new ChatService({ interpretar: async () => ({ instruccion, resumen: 'Listo. Revisa y confirma.', faltantes: [] }) }, { listar: leer }, { listar: leer }, { listarRecepciones: leer, listarProveedores: leer }, { resumen: async args => { ultima = args; return { ventas: 0, pedidos: 0, ticketPromedio: 0 }; } });
+  const admin = { id: 'admin', rol: RolUsuario.ADMINISTRADOR, permisosDenegados: [] };
+  for (const recurso of ['productos', 'pedidos', 'compras', 'proveedores']) {
+    instruccion = { operacion: 'consulta', recurso, busqueda: 'prueba', periodo: 'ayer' };
+    const r = await chat.responder('Consultar', admin);
+    assert.deepEqual(r.resultados, []); assert.equal(r.revision, undefined);
+    assert.ok(JSON.stringify(ultima).includes('10'), 'Consulta acotada');
+  }
+  instruccion = { operacion: 'consulta', recurso: 'resumen', periodo: 'ayer' };
+  await chat.responder('Resumen de ayer', admin); assert.equal(ultima.desde, ultima.hasta);
+  instruccion = { operacion: 'consulta', recurso: 'productos' };
+  const antes = consultas;
+  await assert.rejects(chat.responder('Stock', { ...admin, permisosDenegados: ['inventario'] }), e => e.getStatus() === 403);
+  assert.equal(consultas, antes);
+  instruccion = pedido;
+  const borrador = await chat.responder('Prepara pedido', admin);
+  assert.deepEqual(borrador.revision.instruccion, pedido); assert.equal(consultas, antes, 'Preparar no guarda ni consulta datos adicionales');
+});
+
+test('chat descarta respuestas de una sesión anterior y retira el borrador confirmado', () => {
+  const ts = require('typescript'), vm = require('node:vm'), fs = require('node:fs');
+  let sesion = 1; const eventos = {};
+  const modulo = { exports: {} };
+  const codigo = ts.transpileModule(fs.readFileSync('Frontend/src/modules/agentes/chat-estado.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  vm.runInNewContext(codigo, { module: modulo, exports: modulo.exports, crypto: require('node:crypto'), require: () => ({ claveConsulta: r => ['api', sesion, r] }), window: { addEventListener: (n, fn) => { eventos[n] = fn; } } });
+  const chat = modulo.exports, antes = chat.sesionChat('admin');
+  chat.actualizarChat(antes, { revision: { id: 'operacion' }, mensajes: [{ texto: 'mensaje' }] });
+  eventos['synchronic:agente-guardado']({ detail: 'operacion' }); assert.equal(antes.revision, undefined);
+  sesion++;
+  chat.actualizarChat(antes, { revision: { id: 'respuesta-vieja' } });
+  assert.equal(chat.sesionChatVigente(antes), false); assert.equal(antes.revision, undefined);
+  const nueva = chat.sesionChat('admin'); assert.equal(nueva.mensajes.length, 0);
+  assert.notEqual(nueva.conversacionId, antes.conversacionId);
+});
+
+
+test('saludos y agradecimientos no se confunden con pedidos ni correcciones', () => {
+  const ts = require('typescript'), vm = require('node:vm'), fs = require('node:fs');
+  const fuente = fs.readFileSync('Frontend/src/modules/agentes/conversacion.ts', 'utf8');
+  const codigo = ts.transpileModule(fuente, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  const modulo = { exports: {} }; vm.runInNewContext(codigo, { module: modulo, exports: modulo.exports });
+  const responder = modulo.exports.respuestaCordial;
+  for (const texto of ['Hola buenas tardes', '¡Hola!', 'Buenos días', '¿Cómo estás?', 'Muchas gracias']) assert.ok(responder(texto));
+  for (const texto of ['Hola, quiero cinco cafés', 'Buenas tardes, cambia el pago a billetera', 'Gracias, agrega dos aguas', 'Quiero un pan', 'confirmar']) assert.equal(responder(texto), null);
+});
+
+test('pedido ya entregado conserva el significado sin aplicar estado a otro pedido', () => {
+  const { limpiarInstruccionProveedor } = require('../dist/agentes/proveedores');
+  assert.equal(limpiarInstruccionProveedor({ operacion: 'pedido', estado: 'entregado' }).preparacion, 'entregado');
+  assert.equal(limpiarInstruccionProveedor({ operacion: 'pedido', estado: 'entregado', preparacion: 'pendiente' }).preparacion, 'pendiente');
+  assert.equal(limpiarInstruccionProveedor({ operacion: 'estado', estado: 'entregado' }).preparacion, undefined);
+});
+
+
+test('unidades dictadas en mililitros coinciden con ml sin inventar productos', async () => {
+  const agua = { ...productos[0], id: 'agua', nombre: 'Agua Cristal 600 ml', codigoInterno: 'PROD-AGUA', precioVenta: new Prisma.Decimal(2500) };
+  const prueba = new AgentesService({ producto: { findMany: async () => [agua] }, cliente: { findMany: async () => [] } });
+  const r = await prueba.revisar({ operacion: 'pedido', ocasional: true, lineas: [{ producto: 'agua Cristal de 600 mililitros', cantidad: 3 }], metodo: 'efectivo', preparacion: 'pendiente' }, usuario);
+  assert.deepEqual(r.faltantes, []); assert.equal(r.total, '7500.00'); assert.equal(r.datos.lineas[0].productoId, 'agua');
+});
+
+
+test('preparar una instrucción responde sin refrescar listas; los guardados sí invalidan', async () => {
+  const ts = require('typescript'), vm = require('node:vm'), fs = require('node:fs');
+  const fuente = fs.readFileSync('Frontend/src/data/api.ts', 'utf8').replaceAll('import.meta.env', '{}');
+  const codigo = ts.transpileModule(fuente, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  let invalidaciones = 0;
+  const consultas = { invalidateQueries: async () => { invalidaciones++; } };
+  const modulo = { exports: {} }; vm.runInNewContext(codigo, { module: modulo, exports: modulo.exports, require: ruta => ruta === './query' ? { consultas, claveConsulta: ruta => ['api', 'sesion-ficticia', ruta] } : { claveGuardado: async () => undefined, resolverGuardado() {} }, fetch: async () => ({ ok: true, status: 201, json: async () => ({ data: { listo: true } }) }), AbortSignal, Date, DOMException });
+  for (const ruta of ['/agentes/interpretar', '/agentes/revisar', '/agentes/audio/sesion', '/agentes/audio/transcribir']) assert.deepEqual(JSON.parse(JSON.stringify(await modulo.exports.api(ruta, 'POST', {}))), { listo: true });
+  assert.equal(invalidaciones, 0);
+  await modulo.exports.api('/pedidos', 'POST', {}); assert.equal(invalidaciones, 1);
+  await modulo.exports.api('/agentes/configuracion', 'PUT', {}); assert.equal(invalidaciones, 2);
+});
+
+
+test('conversación conserva la sesión del proveedor sin reutilizar identificadores de operaciones', async () => {
+  const modulo = require('../dist/agentes/proveedores'); const original = modulo.interpretarProveedor; const sesiones = [];
+  modulo.interpretarProveedor = async p => { sesiones.push(p.sesion); return { operacion: 'gasto', concepto: 'Prueba', monto: 100, metodo: 'efectivo' }; };
+  const prueba = new AgentesService({ producto: { findMany: async () => [] } }); prueba.leer = async () => ({ configuracion: { habilitado: true }, secretos: {} }); prueba.proveedor = async () => ({ nombre: 'Prueba', modelo: 'modelo' });
+  try {
+    const primero = await prueba.interpretar('Gasto ficticio', undefined, { rol: RolUsuario.ADMINISTRADOR }, 'operacion-1', 1, undefined, 'sesion-conversacion');
+    const segundo = await prueba.interpretar('Otro gasto ficticio', undefined, { rol: RolUsuario.ADMINISTRADOR }, 'operacion-2', 1, undefined, 'sesion-conversacion');
+    assert.deepEqual(sesiones, ['sesion-conversacion', 'sesion-conversacion']); assert.notEqual(primero.id, segundo.id);
+  } finally { modulo.interpretarProveedor = original; }
+});
+
+
+test('si fallan principal y respaldo, informa ambas causas sin exponer respuestas privadas', async () => {
+  await listo;
+  const instancia = new AgentesService({ producto: { findMany: async () => [] } });
+  instancia.estado = async () => ({ habilitado: true });
+  instancia.leer = async () => ({ configuracion: { habilitado: true, modo: 'hibrido', respaldoId: 'autorizado' } });
+  instancia.proveedor = async id => { codigo = id ? 503 : 403; cuerpoProveedor = { error: { message: 'contenido-privado-no-publicar' } }; return { nombre: 'Prueba', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' }; };
+  try {
+    await assert.rejects(instancia.interpretar('Prueba', pedido, usuario), e => e.codigo === 'AGENTE_PROVEEDORES' && e.getStatus() === 502 && /PROVEEDOR_CREDENCIALES/.test(e.message) && /PROVEEDOR_RESPUESTA/.test(e.message) && !e.message.includes('contenido-privado-no-publicar'));
+  } finally { codigo = 200; cuerpoProveedor = undefined; }
+});
+
+test('cliente ocasional literal se normaliza sin confundir una persona registrada', () => {
+  const { limpiarInstruccionProveedor } = require('../dist/agentes/proveedores');
+  assert.deepEqual(limpiarInstruccionProveedor({ operacion: 'pedido', cliente: 'Cliente ocasional' }), { operacion: 'pedido', ocasional: true });
+  assert.deepEqual(limpiarInstruccionProveedor({ operacion: 'pedido', cliente: 'María' }), { operacion: 'pedido', cliente: 'María' });
+  assert.equal(limpiarInstruccionProveedor({ operacion: 'pedido', cliente: 'cliente ocasional', ocasional: false }).ocasional, false);
+});
+
+test('coincidencias corrigen errores breves, pero no adivinan tamaños, sabores ni códigos', () => {
+  const { elegirProducto } = require('../dist/agentes/coincidencias');
+  const catalogo = [{ nombre: 'Doritos queso', codigoInterno: 'PROD-10' }, { nombre: 'Agua Cristal 600 ml', codigoInterno: 'PROD-11' }, { nombre: 'Agua Cristal 1000 ml', codigoInterno: 'PROD-12' }, { nombre: 'Yogur fresa', codigoInterno: 'PROD-13' }, { nombre: 'Yogur mora', codigoInterno: 'PROD-14' }];
+  assert.equal(elegirProducto('Doritoz queso', catalogo).codigoInterno, 'PROD-10');
+  assert.equal(elegirProducto('agua Cristal de 600 mililitros', catalogo).codigoInterno, 'PROD-11');
+  for (const texto of ['Agua Cristal', 'Yogur', 'Agua Cristal 650 ml', 'Galletas chocolate', 'PROD-15']) assert.equal(elegirProducto(texto, catalogo), null, texto);
+});
+
+test('varias líneas exactas comparten una lectura y la referencia resuelta no altera el texto de entrada', async () => {
+  let lecturas = 0;
+  const agente = new AgentesService({ producto: { findMany: async () => { lecturas++; return productos; } }, cliente: { findMany: async () => [] } });
+  const r = await agente.revisar(pedido, usuario);
+  assert.equal(lecturas, 1); assert.equal(r.datos.lineas.length, 3);
+  const literal = 'Arepas de quezo';
+  const entrada = { ...pedido, lineas: [{ producto: literal, cantidad: 2 }] };
+  const corregido = await agente.revisar(entrada, usuario);
+  assert.equal(entrada.lineas[0].producto, literal);
+  assert.equal(corregido.instruccion.lineas[0].producto, 'Arepa de queso');
+  assert.equal(corregido.datos.lineas[0].nombre, 'Arepa de queso');
+  assert.equal(corregido.resumen, 'Listo. Revisa y confirma.');
+});
+
+test('confirmación no espera una lectura lenta y mantiene la invalidación del negocio', async () => {
+  const ts = require('typescript'), vm = require('node:vm'), fs = require('node:fs');
+  const codigo = ts.transpileModule(fs.readFileSync('Frontend/src/data/api.ts', 'utf8').replaceAll('import.meta.env', '{}'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  let resolver, invalidaciones = 0;
+  const consultas = { invalidateQueries: () => { invalidaciones++; return new Promise(r => { resolver = r; }); } };
+  const modulo = { exports: {} };
+  vm.runInNewContext(codigo, { module: modulo, exports: modulo.exports, require: ruta => ruta === './query' ? { consultas, claveConsulta: ruta => ['api', 'sesion', ruta] } : { claveGuardado: async () => undefined, resolverGuardado() {} }, fetch: async () => ({ ok: true, status: 201, json: async () => ({ data: { confirmado: true } }) }), AbortSignal, Date, DOMException });
+  try {
+    const confirmado = await Promise.race([modulo.exports.api('/pedidos', 'POST', {}), new Promise((_, reject) => setTimeout(() => reject(new Error('La confirmación está esperando la lectura')), 1000))]);
+    assert.equal(confirmado.confirmado, true); assert.equal(invalidaciones, 1);
+  } finally { resolver?.(); }
+});
+
+test('guiones de todos los módulos revisan los datos sin ejecutar escrituras', async () => {
+  const guiones = require('../../docs/ejemplos/guiones-agente.json');
+  const nombres = ['Pepsi 400 ml', 'Doritos queso', 'Leche entera', 'Pan integral', 'Café americano', 'Agua Cristal 600 ml'];
+  const catalogo = nombres.map((nombre, n) => ({ ...productos[0], id: 'producto-' + n, nombre, codigoInterno: 'PROD-' + n, stockFisico: 100 }));
+  const agente = new AgentesService({ producto: { findMany: async () => catalogo }, cliente: { findMany: async () => [{ id: 'cliente-prueba', nombre: 'Isabel Rojas' }] }, proveedor: { findMany: async () => [{ id: 'proveedor-prueba' }] }, pedido: { findFirst: async () => ({ id: 'pedido-prueba' }) }, conteoInventario: { findUnique: async () => ({ id: guiones[12].instruccion.conteoId }) }, conteoLinea: { findFirst: async () => ({ productoId: catalogo[0].id, producto: catalogo[0], contadoEn: null, asignadoHasta: new Date(Date.now() + 300000) }) } });
+  const operaciones = new Set();
+  for (const guion of guiones) {
+    const i = InstruccionAgenteEsquema.parse(guion.instruccion);
+    const r = await agente.revisar(i, { id: 'admin', rol: RolUsuario.ADMINISTRADOR });
+    assert.equal(r.ruta, guion.ruta, guion.caso);
+    if (guion.falta) assert.ok(r.faltantes.some(f => f.includes(guion.falta)), guion.caso);
+    else assert.deepEqual(r.faltantes, [], guion.caso);
+    assert.deepEqual(r.instruccion, guion.instruccion);
+    operaciones.add(i.operacion);
+  }
+  assert.equal(operaciones.size, 13);
+});
+
+test('proveedor recibe el texto literal y contexto de catálogo con una lectura de configuración', async () => {
+  await listo; codigo = 200; respuesta = pedido;
+  const agente = new AgentesService({ producto: { findMany: async () => productos }, cliente: { findMany: async () => [] } });
+  let lecturas = 0;
+  agente.leer = async () => { lecturas++; return { configuracion: { habilitado: true, modo: 'hibrido' }, secretos: {} }; };
+  agente.proveedor = async () => ({ nombre: 'Prueba', protocolo: 'openai', url: `http://127.0.0.1:${servidor.address().port}`, modelo: 'prueba' });
+  const literal = 'Dos arepas de quezo y una empanada de pollo';
+  try {
+    await agente.interpretar(literal, undefined, usuario);
+    assert.equal(ultimoCuerpo.messages[1].content, literal);
+    assert.match(ultimoCuerpo.messages[0].content, /Nombres del catálogo/);
+    assert.match(ultimoCuerpo.messages[0].content, /Arepa de queso/);
+    assert.equal(lecturas, 1);
+  } finally { respuesta = { operacion: 'gasto', concepto: 'Transporte', monto: 1, metodo: 'efectivo' }; }
+});
+
+test('DeepSeek usa extracción sin thinking solo en proveedores que admiten ese parámetro', () => {
+  const { opcionesExtraccion } = require('../dist/agentes/proveedores');
+  for (const url of ['https://opencode.ai/zen/go/v1', 'https://opencode.ai/zen/v1', 'https://api.deepseek.com']) {
+    assert.deepEqual(opcionesExtraccion({ url, modelo: 'deepseek-v4.1-flash' }), { thinking: { type: 'disabled' } });
+  }
+  for (const p of [{ url: 'https://openrouter.ai/api/v1', modelo: 'deepseek-v4-flash' }, { url: 'https://opencode.ai/zen/go/v1', modelo: 'kimi-k2.6' }, { url: 'https://api.openai.com/v1', modelo: 'gpt-6-luna' }]) assert.deepEqual(opcionesExtraccion(p), {});
+});
+
+test('corrección inequívoca de pago usa la revisión existente y no espera al proveedor', async () => {
+  const agente = new AgentesService({ producto: { findMany: async () => productos }, cliente: { findMany: async () => [] } });
+  agente.leer = async () => ({ configuracion: { habilitado: true }, secretos: {} });
+  agente.proveedor = async () => { throw new Error('No debe consultar al proveedor para cambiar solo el pago'); };
+  const r = await agente.interpretar('Cambia el pago a billetera', pedido, usuario, 'borrador', 2);
+  assert.equal(r.instruccion.metodo, 'billetera'); assert.deepEqual(r.instruccion.lineas, pedido.lineas);
+  assert.equal(r.id, 'borrador'); assert.equal(r.version, 2); assert.deepEqual(r.faltantes, []);
+  const credito = await agente.interpretar('Pago en crédito', pedido, usuario);
+  assert.match(credito.faltantes[0], /cliente registrado/);
+  await assert.rejects(agente.interpretar('Cambia el pago a billetera y agrega un producto', pedido, usuario), /No debe consultar/);
+});
+
+test('un guardado descarta una lectura anterior y el refresco nuevo conserva el dato confirmado', async () => {
+  const { consultas, claveConsulta, limpiarConsultas } = await import('../../Frontend/src/data/query.ts');
+  const { QueryObserver } = require('@tanstack/react-query');
+  const ts = require('typescript'), vm = require('node:vm'), fs = require('node:fs');
+  const codigo = ts.transpileModule(fs.readFileSync('Frontend/src/data/api.ts', 'utf8').replaceAll('import.meta.env', '{}'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  limpiarConsultas();
+  const clave = claveConsulta('/productos?page=1');
+  consultas.setQueryData(clave, { version: 1 });
+  let lecturas = 0, resolverAnterior, cancelada = false;
+  const observador = new QueryObserver(consultas, { queryKey: clave, queryFn: ({ signal }) => {
+    if (++lecturas === 1) return new Promise(resolve => { resolverAnterior = resolve; signal.addEventListener('abort', () => { cancelada = true; }); });
+    return { version: 2 };
+  } });
+  const retirar = observador.subscribe(() => {});
+  const lecturaVieja = observador.refetch();
+  const modulo = { exports: {} };
+  vm.runInNewContext(codigo, { module: modulo, exports: modulo.exports, require: ruta => ruta === './query' ? { consultas, claveConsulta } : { claveGuardado: async () => undefined, resolverGuardado() {} }, fetch: async () => ({ ok: true, status: 201, json: async () => ({ data: { confirmado: true } }) }), AbortSignal, Date, DOMException });
+  try {
+    assert.equal((await modulo.exports.api('/productos', 'POST', {})).confirmado, true);
+    await consultas.fetchQuery({ queryKey: clave });
+    assert.equal(cancelada, true); assert.equal(lecturas, 2);
+    resolverAnterior({ version: 1 }); await lecturaVieja;
+    assert.deepEqual(consultas.getQueryData(clave), { version: 2 });
+  } finally { retirar(); limpiarConsultas(); }
+});

@@ -1,4 +1,4 @@
-# Oportunidades de mejora — AMBIÉ · Capturador de pedidos
+# Oportunidades de mejora — Synchronic.JO
 
 ## Estado actualizado — conteos y listas, 09/10/2026
 
@@ -166,7 +166,7 @@ Cada oportunidad tiene el mismo formato:
 
 **Por qué:** formularios usan `required/minLength/min` nativo (`CajaAdmin.tsx:143-145`, `FormularioProducto.tsx:60-63`, `FormularioGasto.tsx:29-36`); precio/stock viajan como `string` y se convierten al vuelo. El backend valida con Zod pero el frontend no comparte el schema: doble fuente de verdad y `NaN` si pegan `$12.000`.
 
-**Solución:** reutilizar el `zod` de `@ambie/contrato` con `react-hook-form` + resolver, inputs numéricos con `valueAsNumber` y errores por campo en español.
+**Solución:** reutilizar el `zod` de `@synchronic-jo/contrato` con `react-hook-form` + resolver, inputs numéricos con `valueAsNumber` y errores por campo en español.
 
 **Integración sin romper:** migrar formulario por formulario manteniendo los mismos mensajes visibles; el contrato ya existe, solo se importa. Validar que los errores del frontend coincidan con los del backend.
 
@@ -277,7 +277,7 @@ Cada oportunidad tiene el mismo formato:
 - `productos.service.ts:40-54`: `findMany` **sin** `skip/take`, filtra `stockEstado` en JS y luego `slice`. Con 50k productos trae todo a Node.
 - `usuarios.service.ts:17-35`: sin paginación + N+1 de permisos (BE-06).
 - `inventario.service.ts:188-199`: `listarConteos/listarAjustes` sin paginación + `include:{lineas:true}` (un conteo general = miles de líneas).
-- Extras: `productos.historialPrecios` acepta `limite` sin validar `NaN`; `caja.service.ts:41-48` calcula totales globales aunque el listado vaya filtrado.
+- Extras: `productos.historialProducto` acepta `limite` sin validar `NaN`; `caja.service.ts:41-48` calcula totales globales aunque el listado vaya filtrado.
 
 **Solución:** `where` SQL para `stockEstado` (`stockFisico - stockReservado <= stockMinimo`), `skip/take` en BD, paginar usuarios/conteos/ajustes/archivos, validar `limite` con Zod, y totales de caja con el mismo filtro del listado.
 
@@ -325,7 +325,7 @@ Cada oportunidad tiene el mismo formato:
 
 ## API-03 — Envelopes y `meta` inconsistentes · Severidad: MEDIA-BAJA
 
-**Por qué:** la convención `{data}` / `{data, meta}` se respeta en pedidos/pagos/caja/clientes/productos/auditoría, pero `productos.historialPrecios` devuelve `meta:{total}` sin `pagina/porPagina`, y `clientes.cartera` / `cierres.previsualizar` devuelven objetos crudos con formas distintas. `FiltroErrores` unifica a `{code,message}` pero `HTTP_ERROR` pierde el código de negocio.
+**Por qué:** la convención `{data}` / `{data, meta}` se respeta en pedidos/pagos/caja/clientes/productos/auditoría, pero `productos.historialProducto` devuelve `meta:{total}` sin `pagina/porPagina`, y `clientes.cartera` / `cierres.previsualizar` devuelven objetos crudos con formas distintas. `FiltroErrores` unifica a `{code,message}` pero `HTTP_ERROR` pierde el código de negocio.
 
 **Solución:** congelar `meta` como `{pagina, porPagina, total}` siempre; documentarlo en `docs/diccionario-contrato-api.md`; conservar `code` de negocio en errores HTTP.
 

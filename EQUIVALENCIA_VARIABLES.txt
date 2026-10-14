@@ -1,7 +1,16 @@
 ================================================================================
 EQUIVALENCIA DE VARIABLES · FRONTEND / API / BASE DE DATOS
-Proyecto AMBIÉ · Capturador de pedidos
-APP_VERSION: Frontend/src/config.ts muestra V4P2; no cambia el formato de datos.
+Proyecto Synchronic.JO
+APP_VERSION: Frontend/src/config.ts muestra V8P4; no cambia el formato de datos.
+
+Preferencia de cámara: synchronic:camara-preferida (sessionStorage del navegador).
+Solo guarda el identificador local de la cámara elegida durante esa sesión;
+no viaja a la API ni tiene columna en PostgreSQL. Si ya no existe, se descarta
+y se vuelve a la cámara trasera disponible. No se guardan imágenes del escáner.
+Salir del conteo -> POST compartidos/:id/asignar?liberar=true -> libera solo
+asignadoPorId/asignadoHasta del usuario; conserva stockFisico/contadoPorId/contadoEn.
+Cancelar definitivamente -> POST conteos/:id/cancelar -> estado cancelado,
+finalizadoEn y asignaciones liberadas en la misma transacción; historial intacto.
 ================================================================================
 
 Este archivo muestra, campo por campo, cómo se llama la misma variable en las
@@ -747,7 +756,7 @@ Para regenerar la lista de enums verificados: npm run contrato:verificar
 ================================================================================
   /auth/me.data.expiraEn       RequestAutenticado.expiraAccesoEn  JWT verificado exp; fecha ISO, sin nuevo campo en BD
   expiraEn/revisionAcceso      Frontend data/api.ts               Solo RAM; renovacion previa con margen de 30 segundos
-  sesionExpirada              ambie:sesion-expirada               Bloquea lecturas tras revocacion/logout; login habilita de nuevo
+  sesionExpirada              synchronic:sesion-expirada               Bloquea lecturas tras revocacion/logout; login habilita de nuevo
 
 V5P3 — Conteos diarios y páginas adaptadas al dispositivo
   Conteo.fechaDiaria          fechaDiaria                   conteosInventario.fechaDiaria (DATE Bogotá, nullable)
@@ -765,7 +774,7 @@ V5P3 — Conteos diarios y páginas adaptadas al dispositivo
   pedido seleccionado        GET /pedidos/:id              detalle independiente de la pagina visible
   proveedor seleccionado     GET /proveedores/:id          seleccionado independiente de busqueda y pagina
   producto seleccionado      carrito en RAM                lineas conservadas al paginar; API valida precio y stock al guardar
-  precio historial           /productos/:id/precios        limite=3; solo cambios del producto elegido
+  precio historial           /productos/:id/historial        limite=3; solo cambios del producto elegido
   stockEstado=alerta/ok       /productos?stockEstado        fisico-reservado frente a minimo; filtro antes de LIMIT
   vendedorNombre             JOIN usuarios del pedido      nombre de visualizacion; no nueva columna duplicada
   historial.usuarioNombre    JOIN usuarios del historial   responsable de cambio; no descarga global de usuarios
@@ -776,7 +785,7 @@ V5P3 — Conteos diarios y páginas adaptadas al dispositivo
 
   CSV.codigoInterno          codigoInterno                productos.codigoInterno; vacío en nuevos -> siguienteCodigo(PROD)
   CSV.nombre                 nombre                       productos.nombre; coincidencia sin código ignora mayúsculas y espacios repetidos
-  CSV.precioVenta            precioVenta                  productos.precioVenta y cambiosPrecio; precios históricos de pedidoLineas intactos
+  CSV.precioVenta            precioVenta                  productos.precioVenta y cambiosPrecio; valores de venta históricos de pedidoLineas intactos
   CSV.costoActual            costoActual                  productos.costoActual; el costo inicial confirmado no se recalcula
   CSV.cantidadInicial        productos[].stock            nuevo: stockFisico + movimiento inicial; existente: conteoLineas.stockFisico antes de aplicar
   CSV.stockMinimo            stockMinimo                  productos.stockMinimo
@@ -805,3 +814,116 @@ cantidadInicial CSV vacía -> stock undefined -> producto nuevo stockFisico=0 / 
 cantidadInicial CSV 0 -> stock 0 -> producto nuevo stockFisico=0 / línea inicial 0
 
 corregir cantidad -> contadoEnEsperado opcional -> compara conteoLineas.contadoEn dentro del bloqueo transaccional; si cambió devuelve 409
+
+AGENTES V6P4 (10/10/2026)
+Configuración > Agentes IA -> ConfiguracionAgente -> configuracionesAgente.configuracion JSON sin claves
+Clave proveedor -> secretos cifrados AES-256-GCM -> configuracionesAgente.secretos (nunca DTO público)
+Versión ajustes -> ConfiguracionAgentePublica.version -> configuracionesAgente.version (control 409 concurrente)
+AGENT_CONFIG_SECRET -> cifrado estable de claves; si vacío utiliza secreto de autenticación del servidor
+VOICE_AGENT_TOKEN -> autorización interna y firma HMAC de tickets de audio; nunca frontend
+OLLAMA_URL -> conexión interna permitida para Local; no ejecuta instalación de modelos
+VOICE_AGENT_URL -> servicio optativo de audio http://voice-agent:7860
+VOICE_PROXY_TARGET -> proxy WebSocket de desarrollo, localhost:7860 por defecto
+Texto o audio -> InstruccionAgente -> RevisionAgente RAM -> formulario actual o detalle Chat -> acciones/API comercial existente
+Precio revisado -> LineaPedidoEsquema.precioEsperado -> comparación producto.precioVenta dentro de transacción; 409 si cambió
+Ticket micrófono -> /agentes/audio/sesion -> WSS /agentes/audio/conversar -> un uso, 30 segundos
+Confirmación voz y botón -> mismo callback y promesa pendiente -> misma clave idempotente existente
+VOICE_BUILD_TARGET -> Docker build target voz-hibrida por defecto / voz-local optativo para etapa Ollama
+
+ContextoAgente: conteoId y producto asignado de la pantalla abierta → POST /agentes/interpretar → revisión de asignación vigente por usuario. No aporta cantidades ni pagos predeterminados.
+
+V6P4 proveedores: protocolo responses → POST /responses, function_call → InstruccionAgente validada. OpenCode Zen usa https://opencode.ai/zen/v1; el protocolo depende del endpoint del modelo.
+ConfiguracionAgente.proveedores[].maxTokens → max_tokens / max_output_tokens / maxOutputTokens / options.num_predict; salida por solicitud, 256..8192, por defecto 2000.
+ConfiguracionAgente.respaldoId → conexión alternativa autorizada solo en Híbrido ante fallos transitorios; null desactiva respaldo.
+RevisionAgente.conexion → proveedor/modelo/respaldo/milisegundos/uso; uso conserva solo tokens enteros informados por el proveedor, sin prompts ni credenciales.
+PROVEEDOR_CREDENCIALES / PROVEEDOR_RUTA / PROVEEDOR_PARAMETROS → HTTP 422; no caduca la sesión del negocio. PROVEEDOR_LIMITE → 429; fallo del proveedor → 502.
+
+V6P4 — catálogo de agentes y conexiones (2026-10-10)
+API agentes/proveedores/:id/modelos -> PanelAgentes.Modelo: gratis (precio publicado), incluido (catálogo Go), protocolo (metadatos públicos), herramientas (compatibilidad declarada).
+Gemini herramienta.parameters -> functionDeclarations.parametersJsonSchema; no modifica el contrato comercial.
+RevisionAgente.id -> Proveedor.sesion -> cabecera x-opencode-session, solo OpenCode; identificador del borrador, sin tokens ni cuerpos privados.
+Modelo opcional null/"" -> faltante antes de validar InstruccionAgente; 0/false/líneas se conservan.
+
+V6P4 audio: Pipecat TranscriptionFrame -> WebSocket tipo:texto -> vistaPrevia -> Asistente.texto (no interpreta). on_user_turn_stopped -> tipo:instruccion -> interpretarActual -> revisión existente.
+Asistente.bloqueo/estado de guardado -> abrirMicrofono.pausado -> PCM silencio; fallo de interpretación -> detenerMicrofono y conservar texto/revisión.
+Whisper.Settings.hotwords <- VOCABULARIO_AUDIO compartido para archivos y WebSocket; ConfiguracionAgente.audio.modeloStt selecciona tiny/base/small sin instalar pesos al guardar.
+
+Audio híbrido: VADParams.stop_secs=2.0 y SpeechTimeoutUserTurnStopStrategy.user_speech_timeout=0.6 agrupan pausas breves antes de enviar tipo=instruccion. tipo=texto muestra la transcripción sin ejecutar la interpretación.
+
+conversacionId (frontend en memoria) -> POST /agentes/interpretar -> x-opencode-session (proveedor): UUID de conversación, distinto del ID del borrador; no se persiste. Audio tipo=hablando -> speechSynthesis.cancel(): permite interrumpir la respuesta sin interpretar el evento como texto.
+
+RobotAsistente.estado <- escuchando/ocupado/synchronic:agente-hablando (frontend); abrirMicrofono.nivel <- RMS AudioContext -> CSS --nivel, sin persistencia ni envío adicional. SpeechSynthesisUtterance.onstart/onend/onerror -> synchronic:agente-hablando. RobotAsistente.posicion vive en memoria y no cambia datos del negocio.
+
+
+V7P4 · lectura de productos y conteos (11/10/2026)
+ProductoDTO.precioPendiente ↔ productos.precioPendiente: productos nuevos del inicial sin importe y legado sin parametrizar; Productos/CSV confirma el importe. Las altas de Compras/Productos requieren importe explícito, incluso cero.
+ProductoDTO.codigosLectura[] ↔ codigosProducto.codigo WHERE retiradoEn IS NULL: alias del mismo productoId; no sustituyen codigoInterno.
+codigosProducto: id, codigo (único, texto conserva ceros), productoId (FK productos), creadoEn, retiradoEn (retiro administrativo sin borrar historia).
+GET /productos/codigo/lectura?codigo=... ↔ alias activo o codigoInterno exacto; desconocido retorna null, retirado/inactivo devuelve conflicto.
+Alta comercial -> POST /productos (administrador), desde Compras o Productos. Inicial -> POST /productos/inicial/:conteoId (administrador/inventario), solo inicial abierto: producto/alias/línea/cantidad/participante en una transacción.
+POST /inventario/compartidos/:conteoId/asignar {productoId?}: reserva de cinco minutos, bloqueada por conteo. Sin productoId conserva el siguiente producto habitual.
+Conteo diario: tipo aleatorio, fechaDiaria America/Bogota, cinco productos; selección rota también jornadas abiertas anteriores, conservadas en historial.
+VENDEDOR ↔ conteo diario abierto; INVENTARIO ↔ inicial/general abiertos y catálogo sin existencias/costos; ADMINISTRADOR ↔ historial, cierre, ajuste y retiro de códigos.
+POST /productos/:productoId/precio: nuevoPrecio, costoActual?, stockMinimo?; conserva cantidades e históricos de documentos.
+CSV codigosLectura: varios códigos separados por |; campo opcional, cantidades vacías/0 mantienen su significado existente.
+ambie:ui:ancho-asistente: preferencia local de ancho (200–440 px, limitada al viewport), sin guardar transcripciones ni datos privados.
+Sincronización: codigosProducto usa invalidar_sincronizacion diferido; mismas lecturas agrupadas 250 ms e intervalo frontend dos segundos.
+
+
+RECUPERACIÓN DE SESIÓN V7P4 (11/10/2026)
+/auth/me.renovable -> AuthService.puedeRenovar -> sesiones.tokenHash / revocadoEn / expiraEn / usuarios.activo.
+Cookie existente sin sesión vigente -> renovable=false, data=null, cookies retiradas -> expirarSesion -> synchronic:sesion-expirada -> limpieza de consultas y usuario.
+JWT vencido con renovación vigente -> data=null, renovable=true -> POST /auth/refresh -> nueva sesión y cookies HttpOnly -> consulta de usuario.
+SesionOpcional permite consultar estado sin acceso válido; las demás rutas conservan AuthGuard y permisos.
+
+
+SYNCHRONIC.JO V8P4
+APP_NOMBRE / APP_VERSION -> pestaña, acceso, encabezado, manifest -> Synchronic.JO / V8P4.
+AparienciaEsquema -> PUT /apariencia -> configuracionesVisuales.configuracion -> AparienciaProvider -> tokens CSS de todos los módulos.
+GET /apariencia es público y no almacena documentos ni credenciales. Imagen pública hasta 300 KB; portadas predeterminadas SVG propias.
+Usuario.permisosDenegados -> DTO / AuthGuard / RutaProtegida / navegación; cambiar permisos revoca sesiones.
+DELETE /usuarios/:id -> activo=false / eliminadoEn / auditoría; conserva contadoPorId y responsable histórico.
+COMPOSE_PROJECT_NAME -> identifica los volúmenes del negocio; las instalaciones anteriores conservan su valor privado al actualizar.
+PWA manifest display=standalone; sw.js solo ofrece retorno seguro ante desconexión, sin CacheStorage privado ni guardados diferidos.
+
+Ajustes V8P4: Producto.productoBaseId → productos.productoBaseId (FK al principal); extension → productos.extension; API/vista SQL rowid = COALESCE(productoBaseId,id), rowid_ext = id; precio admite nombre/extension para edición transaccional. VOICE_MODELS_VOLUME/VOICE_MODELS_EXTERNAL permiten reutilizar un volumen existente de reconocimiento sin descargar modelos.
+
+Presentación principal V8P4: extension es opcional también en el producto principal; nombreBase se deriva del nombre sin el sufijo. El índice único cubre COALESCE(productoBaseId,id) + extension normalizada. No se cambia el ID al editar su presentación; categorías se conservan/heredan.
+
+V8P4 · excepción del inicial y etiquetas compartidas
+ProductoInicialEsquema.nombre/unidad/categoria/extension/productoBaseId -> productos; precioPendiente=true, stockFisico=0 al crear. No admite costos/importes.
+ProductoInicialEsquema.cantidad -> conteoLineas.stockFisico y contadoPorId/contadoEn; 0 válido. Un producto ya contado conserva sus cantidades al vincular otra etiqueta.
+familiaCompartidaId -> resolverCodigo devuelve el padre cuando su etiqueta sirve a varias presentaciones. GET /productos?familiaId pagina las opciones; el usuario elige el rowid_ext exacto.
+rowid -> productoBaseId ?? id; rowid_ext -> id de la presentación. El barcode de la familia se guarda una vez en codigosProducto del padre; no duplica identidades ni cantidades.
+Etiquetas anteriores -> codigosProducto.retiradoEn al cumplir 180 días desde la etiqueta activa más reciente del mismo producto. Mantenimiento al arrancar y cada seis horas; siempre conserva la más reciente activa, sin borrar relaciones históricas.
+
+V8P4 · apariencia del robot
+Apariencia.robotReposo / robotEscuchando / robotHablando -> AparienciaEsquema (hexadecimal de seis dígitos) -> PUT /apariencia -> configuracionesVisuales.configuracion (JSON existente) -> AparienciaProvider -> --color-robot-reposo / --color-robot-escuchando / --color-robot-hablando.
+Las configuraciones anteriores sin esos campos reciben valores predeterminados al leer; no requieren migración. Configuración > Apariencia permite vista previa, guardar y descartar usando el mismo proceso existente.
+
+V8P4 · respuesta breve y lecturas acotadas
+Texto reconocido -> POST /agentes/interpretar.texto, conservado literal; copia normalizada -> palabrasProducto / coincidencias / sugerenciasCatalogo. La búsqueda exacta de todas las líneas se agrupa en una consulta; solo pendientes usan una consulta aproximada acotada a 120 candidatos. Si se excede el límite, no se presume unicidad. El proveedor recibe como máximo 24 nombres/unidades, sin importes, IDs ni clientes del catálogo.
+RevisionAgente.faltantes conserva todas las validaciones; resumen contiene solo la primera o «Listo. Revisa y confirma.». No cambia el contrato ni las tablas. Una corrección exclusivamente de pago sobre un pedido previo reutiliza revisar, sin proveedor, manteniendo la prohibición de crédito ocasional.
+DeepSeek V4/Flash en opencode.ai y api.deepseek.com -> thinking.type=disabled en Chat Completions, compatible con tool_choice de extracción; otros destinos/modelos conservan su cuerpo.
+usePaginaApi: q espera 220 ms de pausa antes de leer; texto del input inmediato, lista anterior inerte mientras cambia la consulta. Página y demás filtros siguen operando mediante sus claves de sesión/ruta.
+Respuesta de escritura confirmada -> invalidación asíncrona de consultas; errores de lectura se informan por sus hooks y no cambian el resultado del guardado. cancelRefetch=false permite compartir un refresco en curso. La fachada remota conserva acciones/documentos individuales y ya no fabrica snapshots vacíos por pantalla.
+Nginx gzip comprime JS/CSS/SVG estáticos. API mantiene no-store y los documentos privados no se añaden al caché del navegador.
+
+V8P4 · correcciones, notificaciones y chat (14/10/2026)
+RevisionAgente.instruccion.lineas[].producto contiene el nombre resuelto del catálogo para el siguiente turno; no modifica el texto literal enviado por el micrófono. opcionesProducto[] reúne texto (referencia del borrador), elegidoId y hasta tres opciones id/nombre. «La segunda» cambia esa línea mediante /agentes/revisar, conserva cantidad/pago y no llama al proveedor. Las presentaciones probables se proponen para revisión; los tamaños numéricos incompatibles no se inventan.
+audio.locucion vive 30 segundos en RAM para ignorar eco textual exacto. VAD hablando no interrumpe TTS mientras se envía silencio. Reactivar el micrófono conserva la interrupción manual.
+Notificacion -> notificaciones (id/tipo/titulo/ruta/creadoEn). Triggers en pedidos (alta/estado) y recepcionesCompra (alta) dentro de la transacción; rollback no deja avisos. LecturaNotificacion -> lecturasNotificacion PK notificacionId/usuarioId, leidoEn, FKs a notificaciones/usuarios. GET /notificaciones paginado con pendientes; POST /notificaciones/:id/leer idempotente por usuario.
+AvisosNegocio consulta cada 5 segundos mientras el panel administrativo está abierto; no usa sincronización del negocio ni guarda registros en localStorage. Primera lectura no repite avisos históricos. ambie:ui:avisos:<usuarioId> guarda solo preferencia de avisos. Permiso del navegador y AudioContext se activan por toque. sw.js notificationclick abre rutas /admin del mismo origen. No incluye entrega push con el navegador cerrado.
+GET /notificaciones?recientes=true devuelve solo {data}, máximo 30; evita counts del historial en cada intervalo. GET normal devuelve data/meta con total/pendientes bajo RepeatableRead. El toast se oculta a los nueve segundos, sin eliminar el aviso persistido ni la notificación del sistema.
+POST /agentes/chat usa la configuración existente. operacion=consulta recibe recurso/busqueda/periodo y llama a Productos/Pedidos/Compras/Dashboard, máximo diez resultados; no ofrece SQL arbitrario ni interpreta documentos como instrucciones. Las consultas de voz reutilizan ChatService.consultar y muestran resultados en Chat. El resumen usa el mismo calendario y servicio existente.
+Chat conserva hasta 40 mensajes y un borrador en RAM por usuario y generación de sesión; cancelar/confirmar/log out no reutilizan borradores guardados ni respuestas anteriores. synchronic:agente-guardado elimina la revisión preparada al confirmar con el formulario habitual o el detalle Chat. Los permisos chat/notificaciones son administrativos, editables y comprobados por API; consultas y operaciones conservan los permisos del módulo destino.
+GET /recepciones-compra/:id devuelve el DTO del documento exacto, sin depender de la página del historial. /admin/compras?recepcion=<id> abre su detalle y Volver retira ese parámetro.
+
+V8P4 · confirmación y continuidad (14/10/2026)
+esConfirmacion -> expresiones de aceptación locales, con negación/pregunta/condición excluidas; asunto compatible con RevisionAgente.instruccion.operacion. Sin revisión o faltantes no hay escritura.
+guardarDesdeChat -> fachada OperacionesContext y rutas comerciales vigentes; useOperacionAgente revalida huella y serializa el guardado; volverAlInicio=false mantiene /admin/chat. Sin tablas ni endpoints nuevos.
+Ventas.Paso -> 1 cliente, 2 productos, 3 detalle con entrega y pago; FlujoVenta compartido entre roles.
+WhisperCompartido -> caché de un motor CPU instalado, lru_cache(maxsize=1), procesador independiente por conexión. Precalentamiento sin descargas durante inicio del servicio.
+Audio WebSocket -> sin límite acumulativo de silencio/audio; PipelineWorker.idle_timeout_secs=None; renovación después de 3600 s entre turnos; mantiene dos sesiones, ticket 30 s/un uso y bloques PCM <=12800 bytes.
+synchronic:audio-diagnostico -> fase/milisegundos/codigo, solo evento RAM; logs audio-listo/audio-cerrado sin audio, ticket ni transcripción. Reconexión solicita nuevo ticket y descarta audio acumulado; cierre manual no reabre el micrófono.
+audio.turnoVoz -> callbacks TTS solo para locución vigente; watchdog libera el estado de habla si falta onend.

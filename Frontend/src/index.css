@@ -2,22 +2,24 @@
 
 
 /*
- * Paleta de marca AMBIÉ (café & antojos):
- * verde bosque como tinta principal, fondo crema, naranja como acento,
- * toques de marrón café y rosa antojos.
+ * Paleta inicial Synchronic.JO: superficies claras, tinta oscura y naranja.
+ * Los tokens permiten personalizar todas las pantallas sin duplicar flujos.
  */
 @theme {
-  --color-ink: #304d25;
-  --color-ink-soft: #5a6b4f;
-  --color-ink-faint: #8a957e;
+  --color-header: #ffffff;
+  --color-header-ink: #182638;
+  --color-accent-ink: #182638;
+  --color-ink: #182638;
+  --color-ink-soft: #506075;
+  --color-ink-faint: #64748b;
 
-  --color-paper: #f6f1e4;
-  --color-paper-raised: #fffdf6;
-  --color-paper-sunken: #ece4d0;
+  --color-paper: #f5f7fa;
+  --color-paper-raised: #ffffff;
+  --color-paper-sunken: #edf0f5;
 
-  --color-accent: #e88f2a;
-  --color-accent-dark: #bd6f14;
-  --color-accent-soft: #fbeed7;
+  --color-accent: #f97316;
+  --color-accent-dark: #c2410c;
+  --color-accent-soft: #fff0e5;
 
   --color-teal: #4a7c3a;
   --color-teal-soft: #e2ecd9;
@@ -32,7 +34,7 @@
   --color-danger: #b5442e;
   --color-danger-soft: #f3ded9;
 
-  --color-line: #ddd5c2;
+  --color-line: #dce2ea;
 
   --font-display: "Space Grotesk", ui-sans-serif, sans-serif;
   --font-sans: "Inter", ui-sans-serif, sans-serif;
@@ -238,3 +240,81 @@ body {
 .animate-slide-in {
   animation: slide-in 0.3s ease-out forwards;
 }
+
+/* Navegación y listas compactas; mantiene las áreas táctiles y los pasos reales. */
+.header-negocio { background: var(--color-header); color: var(--color-header-ink); border-color: var(--color-line); }
+.header-negocio .text-white\/60, .header-negocio .text-white\/70, .header-negocio .text-white\/80 { color: color-mix(in srgb, var(--color-header-ink) 80%, var(--color-header)); }
+.header-negocio .border-white\/20, .header-negocio .border-white\/15, .header-negocio .border-white\/10 { border-color: color-mix(in srgb, var(--color-header-ink) 20%, var(--color-header)); }
+.header-negocio .bg-white\/10, .header-negocio .bg-white\/15 { background: color-mix(in srgb, var(--color-header-ink) 10%, var(--color-header)); }
+.header-negocio nav a[aria-current="page"] { color: var(--color-accent-ink); }
+@media (max-width: 1023px) {
+  .admin-contenido { padding: clamp(8px, 1.5vw, 14px); }
+  .admin-cuerpo > header nav a { border-radius: 10px; padding: 6px 10px; font-size: 11px; }
+  .lista-datos { border-radius: 14px; }
+  .lista-datos article { box-shadow: none; }
+  .lista-datos article:not(.tarjeta-pedido) { padding: 10px 12px; }
+}
+@media (display-mode: standalone) {
+  .app-viewport-outer { padding: 0; }
+  .app-viewport { height: 100dvh; min-height: 0; border-radius: 0; border: 0; }
+}
+
+.bg-accent.text-ink { color: var(--color-accent-ink); }
+
+/* La paginación limita los registros; las listas se desplazan con la pantalla. */
+.lista-datos, .admin-pantalla .lista-datos, .lista-productos, .admin-pantalla .lista-productos {
+  height: auto !important;
+  max-height: none !important;
+  overflow-y: visible !important;
+  flex: none;
+}
+.admin-pantalla .overflow-y-auto:has(.lista-datos), .admin-pantalla .overflow-y-auto:has(.lista-productos) {
+  overflow-y: visible;
+  height: auto;
+  flex: none;
+}
+
+/* En celulares se evita sumar margen del panel, lista y tarjeta. El escritorio
+   conserva su composición; no se reduce el tamaño táctil ni el texto del usuario. */
+@media (max-width: 639px) {
+  .app-viewport :where(main, header, footer, form, section, article, .lista-datos, .lista-productos, .flex, .grid):is(.px-4, .px-5, .px-6) { padding-inline: 8px; }
+  .app-viewport :where(section, article, form, .flex, .grid):is(.p-4, .p-5, .p-6) { padding: 10px; }
+  .app-viewport :where(section, article, form, .flex, .grid):is(.p-3, .p-3\.5) { padding: 8px; }
+  .app-viewport :where(.lista-datos, .lista-productos):is(.p-2, .p-3) { padding-inline: 4px; }
+  .app-viewport .lista-datos article:not(.tarjeta-pedido) { padding: 8px; }
+  .app-viewport :where(.gap-3, .gap-4, .gap-5, .gap-6) { gap: 8px; }
+  .app-viewport :where(.space-y-3, .space-y-4, .space-y-5, .space-y-6) > :not(:last-child) { margin-block-end: 8px; }
+  .app-viewport :where(.mb-4, .mb-5, .mb-6) { margin-bottom: 10px; }
+  .app-viewport :where(.mt-4, .mt-5, .mt-6) { margin-top: 10px; }
+  .app-viewport h1 { font-size: clamp(18px, 5vw, 24px); }
+  .app-viewport h2 { font-size: clamp(16px, 4.5vw, 20px); }
+  .app-viewport .min-w-0 :where(p, h1, h2, h3) { overflow-wrap: anywhere; }
+  .app-viewport .ticket-edge { margin-inline: -8px; }
+  .admin-cuerpo > header nav { margin-inline: -8px; padding-inline: 8px; margin-top: 8px; }
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  .app-viewport :where(main, header, footer):is(.px-5, .px-6) { padding-inline: 14px; }
+}
+@media (max-width: 1023px) {
+  .admin-cuerpo { min-width: 0; }
+  .admin-contenido { padding-inline: max(8px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right)); }
+  .app-viewport :where(main, section, form) { max-width: 100%; }
+}
+
+/* Controles coherentes con la navegación; las insignias y fotografías conservan
+   su forma. Solo las filas extensas de opciones tienen desplazamiento horizontal. */
+.app-viewport button.rounded-full,
+.app-viewport .inline-flex.rounded-full,
+.header-negocio nav a { border-radius: 10px; }
+.app-viewport .inline-flex.rounded-full { min-width: 0; max-width: 100%; overflow-x: auto; }
+.app-viewport .inline-flex.rounded-full > button { flex-shrink: 0; white-space: nowrap; }
+.app-viewport :is(h1,h2,h3,h4,p,label,legend,span).uppercase { text-transform: none; letter-spacing: normal; }
+.admin-pantalla > .h-full:has(.titulo-modulo) > .overflow-y-auto,
+.admin-pantalla > .h-full:has(.titulo-modulo) > .flex > .overflow-y-auto {
+  height: auto;
+  max-height: none;
+  overflow-y: visible;
+  flex: none;
+}
+.admin-pantalla .cabecera-modulo,
+.admin-pantalla :where(div,header):has(> .cabecera-modulo) { position: static; padding-block: 0; border-bottom: 0; }

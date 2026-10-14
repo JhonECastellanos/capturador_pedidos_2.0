@@ -14,7 +14,7 @@ Validación del 30/09/2026. Se reutilizó la API NestJS/Prisma existente y el `.
 
 El detalle de los gráficos ahora se puede consultar y cerrar con un toque, manteniendo el hover de escritorio. El paso de productos compartido por administrador y vendedor presenta cinco tarjetas en un contenedor con scroll propio y deja Continuar debajo. Las listas administrativas principales tienen altura estable, scroll interno y desplazamiento exterior. No se cambiaron reglas comerciales, tablas ni endpoints.
 
-Aprobaron compilación/contrato/tipos, caché, los recorridos reales de paneles QA y los 18 casos de integración. Se comprobó cliente y venta contra PostgreSQL, pago, caja y precios históricos. La versión actual se construyó y activó en localhost:8080; el túnel temporal HTTPS responde y sirve los mismos recursos. Se preservaron los datos y un respaldo previo. Detalles, tiempos y límites de estas comprobaciones: [validación de formularios y base de datos](VALIDACION_FORMULARIOS_Y_BASE_DATOS.md).
+Aprobaron compilación/contrato/tipos, caché, los recorridos reales de paneles QA y los 18 casos de integración. Se comprobó cliente y venta contra PostgreSQL, pago, caja y valores de venta históricos. La versión actual se construyó y activó en localhost:8080; el túnel temporal HTTPS responde y sirve los mismos recursos. Se preservaron los datos y un respaldo previo. Detalles, tiempos y límites de estas comprobaciones: [validación de formularios y base de datos](VALIDACION_FORMULARIOS_Y_BASE_DATOS.md).
 
 El acceso autenticado por el enlace público y la prueba en teléfono físico todavía requieren comprobación; no se presentan como realizados. La auditoría de dependencias actual informa siete paquetes afectados (tres altos y cuatro moderados). Para instalar de forma habitual, completar restauración integral, copias externas programadas, perfil LAN/HTTPS, dirección externa estable y validación de arranque del equipo. Se consolidaron estos pendientes en [oportunidades de mejora](OPORTUNIDADES_MEJORA.md), sin crear otra guía.
 
@@ -66,7 +66,7 @@ Workflow de verificación y despliegue desde la rama principal preparado para Li
 
 Pendiente de escalabilidad general: migrar los snapshots de Inicio/Ventas/Créditos/Cierre y sus agregaciones del frontend a consultas específicas del servidor, acotar catálogos/adjuntos globales y proporcionar exportación completa en streaming. No se realizó una prueba de carga de 100.000 pedidos o de usuarios concurrentes; aumentar RAM/CPU no elimina por sí solo estas tareas.
 
-- `npm.cmd run prueba:integracion`: **14 casos aprobados** en `ambie-integracion`, API localhost:3100, PostgreSQL y MinIO independientes. Incluye permisos, sesión, venta ocasional, validación, reserva, FIFO/cancelación, dos carreras concurrentes, conteo, adjuntos, compras/precios/gastos, tablero/auditoría y cierre de pedido pagado con rechazo de duplicados. El cierre de esta ejecución se creó sobre la fecha local del 30/09. En repeticiones posteriores un cierre existente se conserva y esa parte solo comprueba el rechazo de duplicados. Las comprobaciones de caja y cierres recorren la paginación completa y filtran por fecha contable, no por creación UTC.
+- `npm.cmd run prueba:integracion`: **14 casos aprobados** en `ambie-integracion`, API localhost:3100, PostgreSQL y MinIO independientes. Incluye permisos, sesión, venta ocasional, validación, reserva, FIFO/cancelación, dos carreras concurrentes, conteo, adjuntos, compras/valores de venta/gastos, tablero/auditoría y cierre de pedido pagado con rechazo de duplicados. El cierre de esta ejecución se creó sobre la fecha local del 30/09. En repeticiones posteriores un cierre existente se conserva y esa parte solo comprueba el rechazo de duplicados. Las comprobaciones de caja y cierres recorren la paginación completa y filtran por fecha contable, no por creación UTC.
 - Script de humo existente: **20 pasos aprobados** nuevamente sobre localhost:3100, sin opción de limpieza. Conservó los cuatro recursos QA creados.
 - Respaldo previo: `.local/backups/ambie-antes-integracion-20260930.dump`, 89.245 bytes, formato PostgreSQL custom y lectura completa con `pg_restore --file=/dev/null`. Excluido de Git y del contexto Docker. No equivale a un ensayo de restauración en otra base.
 
@@ -78,8 +78,15 @@ Pendiente de escalabilidad general: migrar los snapshots de Inicio/Ventas/Crédi
 
 Comandos y seguridad del despliegue: [infra/README.md](../../infra/README.md). La instalación admite servidores con Docker, sin depender de un proveedor de infraestructura.
 
-La pantalla final y el detalle muestran todas las líneas persistidas con cantidades, precios unitarios y subtotales históricos. También funciona para ventas ocasionales. La lectura individual recupera pedidos ausentes del snapshot y distingue fallo de lectura de fallo de guardado.
+La pantalla final y el detalle muestran todas las líneas persistidas con cantidades, valores de venta unitarios y subtotales históricos. También funciona para ventas ocasionales. La lectura individual recupera pedidos ausentes del snapshot y distingue fallo de lectura de fallo de guardado.
 
 Instalación local actualizada: seis servicios saludables, migración terminada con código 0; cantidades de pedidos/clientes/productos antes y después iguales (9/8/32). Respaldo privado previo de 126.383 bytes, comprobado mediante lectura completa con pg_restore, no restauración. QA retirado sin eliminar volúmenes. Escaneo de 279 archivos sin patrones sensibles detectados; no sustituye revisión del historial.
 
 Aplicación local recompilada y reiniciada en `http://localhost:8080`: seis servicios saludables, migración con código 0; raíz, `/salud` y `/api/v1/salud` responden 200. Se comprobó que el archivo servido incluye la nueva revisión directa. Respaldo privado previo `.local/backups/antes-despliegue-20261009T170002796Z.dump`, 146.152 bytes, leído completamente con `pg_restore --file=/dev/null`; no equivale a restauración ensayada. Contenedores QA retirados sin eliminar sus volúmenes. Revisión final de tipos/compilación/lint aprobada y escaneo de 301 archivos sin patrones sensibles detectados.
+
+
+### Revisión V8P4 · 11/10/2026
+
+La cuenta system de QA coexistía con una cuenta inactiva cuyo correo difería únicamente en mayúsculas. La consulta anterior elegía una coincidencia arbitraria y rechazaba el acceso válido. La búsqueda actual prioriza la identidad técnica y coincidencias exactas, y bloquea nuevas duplicaciones sin distinguir mayúsculas. No se cambiaron contraseñas ni se eliminaron usuarios históricos.
+
+La revisión de dependencias de producción reportó siete avisos (tres altos, cuatro moderados), asociados a Prisma/MinIO y dependencias transitivas. Las propuestas automáticas requieren retroceder versiones; no se aplicaron cambios forzados que pudieran romper migraciones o archivos. Este pendiente se conserva para una revisión específica; compilación y pruebas no equivalen a ausencia de vulnerabilidades.

@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { mkdirSync, writeFileSync } = require('node:fs');
 const { chromium } = require('playwright');
-const { seleccionarConteoDiario } = require('@ambie/contrato');
+const { seleccionarConteoDiario } = require('@synchronic-jo/contrato');
 const base = 'http://localhost:8180';
 const compose = ['compose', '-p', 'ambie-integracion', '-f', 'docker-compose.yml', '-f', 'docker-compose.pruebas.yml'];
 const usuarioBd = execFileSync('docker.exe', [...compose, 'exec', '-T', 'postgres', 'printenv', 'POSTGRES_USER'], { encoding: 'utf8' }).trim();
@@ -92,7 +92,7 @@ async function main() {
       pagina.on('response', r => { if(r.url().includes('/api/v1/') && r.status()>=400) resultados.errores.push(`${r.status()} ${r.url()}`); });
       const modulos = [];
       try {
-        for (const modulo of ['pedidos', 'inventario', 'creditos', 'compras', 'precios', 'caja', 'cierre', 'usuarios', 'auditoria']) {
+        for (const modulo of ['pedidos', 'inventario', 'creditos', 'compras', 'productos', 'caja', 'cierre', 'usuarios', 'auditoria']) {
           await pagina.goto(base + '/admin/' + modulo);
           if (modulo === 'inventario') await pagina.getByRole('button', { name: /Stock general/ }).click();
           const lista = pagina.locator('.lista-datos').first(); await lista.waitFor();
@@ -111,7 +111,7 @@ async function main() {
           await pagina.screenshot({ path: `.local/pruebas-criterios/${modulo}-${ancho}.png` });
           modulos.push({ modulo, ...medidas });
         }
-        await pagina.goto(base+'/admin/precios');
+        await pagina.goto(base+'/admin/productos');
         const lista=pagina.locator('.lista-datos').first(), nav=pagina.getByRole('navigation',{name:'Paginación'}).first();
         const tamaño=ancho<1024 ? 5 : 15;
         for(const cantidad of cantidades) {
@@ -165,8 +165,7 @@ async function main() {
           await paginasProductos.getByRole('button',{name:'Página siguiente'}).click();
           await respuestaPagina;
           await pagina.getByRole('button',{name:/^Agregar /}).first().click();
-          await pagina.getByRole('button',{name:/Continuar a entrega/}).click();
-          await pagina.getByRole('button',{name:/Continuar al pago/}).click();
+          await pagina.getByRole('button',{name:/Revisar pedido/}).click();
           assert.equal(await pagina.getByRole('region',{name:'Detalle de productos'}).locator('li').count(),2,'Conserva ambos productos al cambiar de página');
           resultados.interacciones.push({ancho,carritoEntrePaginas:true,lineasConservadas:2,sinConfirmarVenta:true});
         }

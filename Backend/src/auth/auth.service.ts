@@ -25,7 +25,7 @@ export class AuthService {
       where: { rol: { codigo: codigoDeRol(usuario.rol) } },
       include: { permiso: true },
     });
-    return vinculos.map((v) => v.permiso.codigo);
+    return vinculos.map((v) => v.permiso.codigo).filter(p => !usuario.permisosDenegados.includes(p));
   }
 
   async bootstrap(email: string, password: string) {
@@ -61,7 +61,7 @@ export class AuthService {
   async login(identificador: string, password: string) {
     const usuario = await this.buscarPorIdentificador(identificador);
 
-    if (!usuario || !usuario.activo) {
+    if (!usuario || !usuario.activo || usuario.eliminadoEn) {
       throw new ErrorDominio("CREDENCIALES_INVALIDAS", "Usuario no encontrado o inactivo", 401);
     }
 
@@ -90,7 +90,7 @@ export class AuthService {
       include: { usuario: true },
     });
 
-    if (!sesion || sesion.revocadoEn || sesion.expiraEn < new Date()) {
+    if (!sesion || sesion.revocadoEn || sesion.expiraEn <= new Date()) {
       throw new ErrorDominio("REFRESH_INVALIDO", "La sesión expiró, vuelve a iniciar sesión", 401);
     }
     if (!sesion.usuario.activo) {
@@ -108,6 +108,16 @@ export class AuthService {
     });
 
     return { ...emitido, usuario: await this.dtoUsuario(sesion.usuario) };
+  }
+
+  /** La presencia de una cookie no demuestra que su sesión siga vigente. */
+  async puedeRenovar(refreshToken: string | undefined): Promise<boolean> {
+    if (!refreshToken) return false;
+    const sesion = await this.prisma.sesion.findUnique({
+      where: { tokenHash: hashToken(refreshToken) },
+      select: { revocadoEn: true, expiraEn: true, usuario: { select: { activo: true } } },
+    });
+    return Boolean(sesion && !sesion.revocadoEn && sesion.expiraEn > new Date() && sesion.usuario.activo);
   }
 
   /** Cierra la sesión actual. Si es `todas`, cierra todas las del usuario. */
@@ -132,15 +142,17 @@ export class AuthService {
     const texto = identificador.trim();
     if (!texto) return null;
     if (texto.toLowerCase() === "system") return this.prisma.usuario.findFirst({ where: { esSistema: true } });
-    return this.prisma.usuario.findFirst({
-      where: {
-        OR: [
-          { email: { equals: texto, mode: "insensitive" } },
-          { codigo: { equals: texto, mode: "insensitive" } },
-          { nombre: { contains: texto, mode: "insensitive" } },
-        ],
-      },
+    // Correo/código exactos preceden cualquier búsqueda por nombre.
+    // La identidad técnica tiene prioridad sobre colisiones históricas de mayúsculas.
+    const exacto = await this.prisma.usuario.findFirst({
+      where: { OR: [{ email: { equals: texto, mode: "insensitive" } }, { codigo: { equals: texto, mode: "insensitive" } }] },
+      orderBy: [{ esSistema: "desc" }, { activo: "desc" }],
     });
+    if (exacto) return exacto;
+    const nombre = await this.prisma.usuario.findFirst({ where: { nombre: { equals: texto, mode: "insensitive" } }, orderBy: { activo: "desc" } });
+    if (nombre) return nombre;
+    const coincidencias = await this.prisma.usuario.findMany({ where: { nombre: { contains: texto, mode: "insensitive" } }, take: 2 });
+    return coincidencias.length === 1 ? coincidencias[0] : null;
   }
 
   /**
@@ -191,6 +203,7 @@ export class AuthService {
     rol: RolUsuario;
     activo: boolean;
     esSistema?: boolean;
+    permisosDenegados?: string[];
     codigo: string;
     creadoEn?: Date;
     ultimoAccesoEn?: Date | null;
@@ -203,6 +216,7 @@ export class AuthService {
       email: usuario.email,
       rol: codigoDeRol(usuario.rol),
       permisos,
+      permisosDenegados: usuario.permisosDenegados ?? [],
       activo: usuario.activo,
       esSistema: usuario.esSistema ?? false,
       creadoEn: usuario.creadoEn ?? null,

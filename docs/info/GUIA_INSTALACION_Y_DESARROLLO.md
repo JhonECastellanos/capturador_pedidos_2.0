@@ -2,9 +2,9 @@
 
 Contenido trasladado del README el 10/10/2026. Se conserva íntegro como referencia; las cifras y pendientes históricos corresponden a las fechas de sus secciones. Las novedades de CSV y descuadres se explican en [guardado y conciliación](GUARDADO_Y_CONCILIACION_V4P2.md).
 
-# AMBIÉ · Capturador de pedidos
+# Synchronic.JO
 
-Aplicación para llevar el día a día de un negocio de ventas: clientes, productos, pedidos, cobros, inventario, compras, precios y caja.
+Aplicación para llevar el día a día de un negocio de ventas: clientes, productos, pedidos, cobros, inventario, compras, valores de venta y caja.
 
 La interfaz está pensada como una app móvil dentro del navegador: pasos claros, botones grandes, scroll interno y acciones siempre accesibles.
 
@@ -141,7 +141,7 @@ npm run front:dev                       # http://localhost:5173
 
 Dos cosas que conviene tener presentes:
 
-- La API no aplica migraciones al arrancar: se aplican con el paso `migrate` de arriba (o `npm run prisma:deploy --workspace ambie-backend`).
+- La API no aplica migraciones al arrancar: se aplican con el paso `migrate` de arriba (o `npm run prisma:deploy --workspace synchronic-jo-backend`).
 - Al correr la API fuera de Docker necesita sus propias variables: crea `Backend/.env` con `DATABASE_URL` apuntando a `localhost` (`postgresql://ambie:<clave>@localhost:5432/ambie?schema=public`), no al nombre del servicio del compose, y con el resto de secretos del `.env` de la raíz.
 
 ## Autenticación
@@ -173,7 +173,7 @@ El acceso usa dos tokens:
 
 La firma del JWT se verifica localmente; además, cada solicitud consulta sesión y usuario para aplicar revocaciones, actividad y rol actual. El token de refresco es opaco, se almacena hasheado y se rota en cada uso.
 
-Las rutas de administración exigen rol de administrador: usuarios, cierre del día, egresos, ajustes de inventario, cambio de precios, compras y gastos.
+Las rutas de administración exigen rol de administrador: usuarios, cierre del día, egresos, ajustes de inventario, cambio de valores de venta, compras y gastos.
 
 ## Probar la API
 
@@ -196,7 +196,7 @@ Una instalación nueva arranca vacía, con el acceso técnico system y los catá
 ### Vendedor
 
 - Crear clientes con los datos esenciales.
-- Tomar un pedido en cuatro pasos: cliente, productos, entrega y pago.
+- Tomar un pedido en tres pasos: cliente, productos y revisión final con entrega y pago.
 - Consultar los pedidos del día.
 - Cambiar el estado de un pedido y cobrarlo al entregarlo.
 - Recibir abonos y ver los pedidos que debe cada cliente.
@@ -207,7 +207,7 @@ Una instalación nueva arranca vacía, con el acceso técnico system y los catá
 - Consultar la serie diaria y los productos y clientes con más movimiento.
 - Consultar ventas, gastos, compras, compras más gastos y ticket promedio del mes calendario en Inicio. El detalle de los gráficos aparece al pasar el mouse o enfocar un punto.
 - Registrar una sola vez el inventario inicial desde Inventario, usando el conteo guiado y la confirmación existentes; comparar cantidades y costos de partida con el stock y sus movimientos.
-- Administrar pedidos, créditos, inventario, compras, precios, caja, cierre y usuarios.
+- Administrar pedidos, créditos, inventario, compras, valores de venta, caja, cierre y usuarios.
 
 El [diccionario de datos](DICCIONARIO_DATOS_V4P2.md) describe cada tabla y campo. El [flujo de guardado y conciliación](GUARDADO_Y_CONCILIACION_V4P2.md) explica los reintentos sin duplicar documentos, las transacciones y las consultas SQL para contrastar la información visible con PostgreSQL.
 
@@ -378,10 +378,222 @@ docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.prue
 
 La venta ocasional registra un pedido y una factura sin crear un cliente. Solo admite efectivo o billetera; el crédito se bloquea en la API y PostgreSQL.
 
-La pantalla final y el detalle muestran todas las líneas, cantidades, precios unitarios y subtotales guardados. No recalculan facturas históricas con precios nuevos del catálogo. Si falla la lectura posterior al guardado, se reintenta sin registrar otro pedido.
+La pantalla final y el detalle muestran todas las líneas, cantidades, valores de venta unitarios y subtotales guardados. No recalculan facturas históricas con valores de venta nuevos del catálogo. Si falla la lectura posterior al guardado, se reintenta sin registrar otro pedido.
 
 Configuración conserva su ruta administrativa y permite acceder a Usuarios y Auditoría.
 
 - [Equivalencia de variables](../../EQUIVALENCIA_VARIABLES.txt)
 - [Imágenes de productos](../../Frontend/public/assets/productos/README.md)
 - [Comprobantes](../../Frontend/public/assets/comprobantes/README.md)
+
+## Agentes V6P4: implementación y pruebas por etapas
+
+La primera etapa utiliza Híbrido: reconocimiento local de audio y un proveedor remoto para interpretar la instrucción. Local y API Live tienen su configuración separada. No se descarga ningún modelo de Ollama al construir, iniciar o guardar ajustes. API Live todavía no inicia una conversación nativa; se valida después del circuito Híbrido.
+
+Configuración > Agentes IA permite agregar proveedores, conservar o retirar claves, consultar modelos, probar llamadas con herramientas, seleccionar voz del navegador, transcribir archivos y ensayar instrucciones sin crear documentos comerciales. Las claves se cifran en el servidor y no regresan al navegador. El asistente solo solicita el micrófono al pulsar Hablar; cerrar el panel o terminar la sesión detiene la captura.
+
+El texto interpretado abre el detalle de los formularios existentes. Las correcciones mantienen el borrador y la confirmación utiliza sus mismos guardados. La API vuelve a resolver productos, permisos y valores de venta antes de confirmar. Si un precio cambia entre revisión y escritura, devuelve 409 sin registrar el pedido; debe revisarse nuevamente. Los pedidos manuales también aprovechan esta comprobación.
+
+### Orden de validación
+
+1. Ejecutar `npm run verificar` y `npm run prueba:agentes`. Las pruebas aisladas utilizan catálogo en memoria y proveedor simulado; no demuestran funcionamiento de una API real.
+2. Ejecutar `python Agentes/voz/probar_autorizacion.py`: firma, expiración, límite de conexiones y autorización de un solo uso, sin descargar modelos.
+3. En QA, aplicar la migración aditiva de configuración. Configurar `VOICE_AGENT_TOKEN` privado y `AGENT_CONFIG_SECRET` estable, ambos con al menos 32 caracteres. Conservarlos fuera del repositorio. La voz es un perfil optativo de Docker; los formularios manuales funcionan sin él.
+4. Preparar únicamente Whisper tiny desde Configuración si se va a probar audio. Este modelo es de transcripción, independiente de Ollama. Moonshine español permanece deshabilitado hasta verificar la licencia comercial aplicable.
+5. Agregar una API desde la pantalla, guardar y probar un modelo con herramientas. Un modelo listado no equivale a un modelo probado. Verde confirma la respuesta de esa prueba; amarillo indica límite temporal, no acredita agotamiento diario; rojo indica fallo de la prueba y no una indisponibilidad permanente.
+6. Dictar: «Cliente ocasional, una arepa de queso, una empanada de pollo y dos Coca-Colas pequeñas; efectivo y para preparar». Debe abrir directamente el detalle del pedido. Corregir «paga con billetera» y comprobar que conserva cliente, productos y preparación. Confirmar una vez y conciliar pedido, factura, pagos y caja en PostgreSQL QA.
+7. Repetir con productos inexistentes, cantidades superiores al disponible, datos faltantes, pérdida de red y doble confirmación. Debe conservar el detalle; no crear documentos incompletos ni repetir cobros. Probar también permisos de vendedor e inventario.
+8. Validar micrófono físico en celular mediante HTTPS, suspensión de pestaña y cierre de sesión. La conexión de audio usa WebSocket con una autorización de 30 segundos, de un solo uso; la conexión se renueva a la hora, sin acumular un límite de dos minutos de audio o silencio. No se guardan audios ni transcripciones en el navegador.
+9. Después del circuito Híbrido real, instalar voluntariamente un modelo Ollama con herramientas y repetir los mismos ejercicios. Después validar API Live con su proveedor y audio nativo.
+
+### Estado comprobado y pendientes
+
+Se comprobó visualmente Configuración a 390 px y 1440 px, y una instrucción completa abrió la revisión existente de venta con tres líneas, cuatro unidades y total de $14.000. Este recorrido usó respuestas simuladas y no guardó una venta. Las pruebas actuales no equivalen a pruebas con micrófono físico, proveedores reales ni producción.
+
+Están pendientes la conversación nativa API Live, los canales WhatsApp y Hermes/Telegram, y sus pruebas de aislamiento, permisos y aprobación. La construcción del servicio híbrido y la conciliación de configuración y borradores con PostgreSQL QA ya se comprobaron. Todavía falta transcribir audio y conversar con un proveedor real antes de publicar. Producción permanece en su versión anterior.
+
+Referencias: [Pipecat Whisper](https://github.com/pipecat-ai/pipecat/blob/v1.12.0/src/pipecat/services/whisper/stt.py), [licencias de modelos Moonshine por idioma](https://github.com/moonshine-ai/moonshine/blob/main/language-bindings/python/src/moonshine_voice/download.py).
+
+La construcción inicial usa `VOICE_BUILD_TARGET=voz-hibrida`. La etapa posterior usa `VOICE_BUILD_TARGET=voz-local` para incorporar el motor Ollama al mismo servicio de voz; requiere reconstruir únicamente ese servicio. Ninguna etapa ejecuta `ollama pull`. Hasta activar esa etapa, consultar modelos locales informa que la conexión no está disponible; no se presenta como prueba aprobada.
+
+### Comprobaciones actuales adicionales
+
+Se aplicaron las migraciones pendientes únicamente en `ambie_test`. Una configuración de prueba se confirmó, se releyó tras desconectar/reconectar PostgreSQL, conservó la clave cifrada y rechazó una versión antigua. Pedidos y productos mantuvieron sus cantidades de registros; la configuración ficticia se retiró al terminar. El ejercicio completo tomó 4.906 ms; esta cifra incluye varias lecturas y una reconexión y no representa la latencia de un solo guardado.
+
+El servicio de voz QA confirmó salud HTTP 200, rechazo 401 sin autorización privada, estado 200 y aviso 409 al intentar transcribir sin preparar el reconocimiento. El WebSocket validó el ticket y devolvió el aviso de preparación. Estas pruebas no transcribieron un audio ni descargaron modelos.
+
+Scripts adicionales: `node Backend/scripts/probar-configuracion-agentes-db.cjs` usa exclusivamente PostgreSQL QA en 127.0.0.1:5433; `node Backend/scripts/probar-audio-agentes.cjs` usa exclusivamente audio QA en 127.0.0.1:7861 y un token privado dentro de `.local/`. No ejecutarlos contra producción ni reutilizar sus claves de pruebas para el negocio.
+
+La prueba HTTP QA confirmó que la revisión usa los identificadores y valores de venta reales del catálogo PostgreSQL; cambiar efectivo por billetera mantuvo las líneas y el total, sin crear pedidos. La regresión de guardados realizó 23 solicitudes de QA: confirmó cuatro intenciones legítimas y un solo pedido/cobro por clave. La inicialización real de Pipecat, Silero, Smart Turn y su agregador terminó correctamente a 16 kHz; todavía no equivale a transcripción de un audio ni a conversación con un proveedor real.
+
+Se comprobó además el arranque del motor Ollama CPU en un contenedor temporal: respondió con una lista vacía de modelos. Se retiró el contenedor sin descargar modelos. Esto comprueba el motor preparado, no su capacidad de interpretar órdenes; esa prueba requiere instalar voluntariamente un modelo después del circuito Híbrido.
+
+Un borrador con datos pendientes no se confirma ni por voz ni por botón. Primero se aclara por texto o voz el dato que falta. Esto evita que los valores predeterminados del formulario completen un pago por intuición o que desaparezca un producto no reconocido al volver a validar. Un borrador completo sí permite corregir los campos manualmente y revisar el cambio antes de confirmar.
+
+En Chrome QA se intentó confirmar un borrador con un producto inexistente dos veces desde el formulario y una desde el asistente: permaneció en la vista de detalle, conservó el aviso del producto pendiente y no envió solicitudes de creación de pedidos. PostgreSQL conservó la cantidad de pedidos. En este ejercicio se simuló exclusivamente la interpretación; la revisión previa procedía de la API y del catálogo QA reales.
+
+En conteos, abre el inventario y toma un producto antes de dictar «Conté cinco». La pantalla aporta únicamente el identificador del conteo y el producto asignado; la cantidad debe indicarse. La API vuelve a comprobar propietario y vencimiento de la asignación. Un colaborador no puede cerrar ni aplicar el conteo. Prueba adicional: contar cero, omitir la cantidad y repetir tras vencer o perder la asignación; solo el primer caso completo debe permitir confirmar.
+
+Comprobación final de esta etapa V6P4: verificar completó compilación, tipos y revisión del frontend sin errores (mantiene advertencias de efectos/render). Pasaron 13 pruebas aisladas del asistente, seis de autorización de audio y la revisión HTTP real contra PostgreSQL QA. La repetición del ejercicio de configuración confirmó persistencia tras reconexión en 162 ms para el ejercicio completo; no es una medición de una escritura individual. No se descargaron modelos y no se modificó producción. El entorno de revisión está en http://127.0.0.1:8180/admin/configuracion, separado del negocio en 8080.
+
+### Configurar un proveedor externo y probarlo en desarrollo
+
+El frontend de trabajo conserva la dirección `http://127.0.0.1:8180/admin/configuracion`, ahora con Vite en desarrollo y actualización automática. La API de pruebas sigue en 3100 y utiliza `ambie_test`; producción en 8080 permanece independiente. No se crea otro túnel público en esta etapa.
+
+| Campo | Qué debes colocar |
+|---|---|
+| Nombre | Una etiqueta para reconocer la conexión, por ejemplo OpenCode Zen. |
+| Protocolo | El formato admitido por el modelo: Chat Completions, Responses, Gemini o Anthropic. No se identifica por la marca de la clave. |
+| URL base | Dirección oficial del servicio, sin la ruta de modelos o conversación, sin claves ni parámetros. Para Zen: `https://opencode.ai/zen/v1`. |
+| Clave de acceso | La clave de esa misma conexión, sin el prefijo Bearer. Vacía conserva la guardada. Nunca va en documentos, URL ni frontend compilado. |
+| Modelo | Identificador exacto del catálogo. En Zen se usa el ID sin el prefijo `opencode/` de su cliente. |
+| Máximo de tokens de respuesta | Límite de salida por solicitud, entre 256 y 8192; predeterminado 2000. No limita los tokens de entrada ni el saldo mensual. |
+| Proveedor alternativo autorizado | Otra conexión con modelo, optativa. Autoriza enviar la misma instrucción al respaldo ante desconexión, límite temporal o fallo del proveedor. No se usa para ocultar una clave rechazada ni un formato inválido. |
+
+Consulta la [tabla oficial de OpenCode Zen](https://opencode.ai/docs/zen/#endpoints) para elegir protocolo: los modelos que usan `/chat/completions` corresponden a Chat Completions; `/responses` a Responses; `/messages` a Anthropic y `/models/<id>` a Gemini. Las rutas especializadas como `/systemone` no tienen adaptador comercial y no deben tratarse como Chat Completions. La lista del proveedor informa existencia, pero solo una prueba de herramientas válida demuestra disponibilidad para esta operación y esta clave, en ese momento.
+
+Ejercicio inicial: elegir Zen, conservar su URL base, escoger `big-pickle` si sigue en el catálogo y utilizar Chat Completions. Guardar y probar conexión. Una marca blanca significa sin probar; verde significa que respondió con una herramienta válida; amarillo indica límite temporal y rojo una prueba fallida. El proveedor puede cambiar sus modelos, valores de venta, permisos y cuotas. Las mediciones de tokens solo se muestran cuando el proveedor las informa; no se estiman costos ni saldo disponible.
+
+Para una URL incorrecta, la pantalla muestra el campo que debe corregirse antes del PUT. La API también valida formato y combinación conocida de protocolo/host. Si otro administrador guardó cambios, «Recargar ajustes guardados» recupera la versión actual y descarta las ediciones no guardadas. Durante un guardado o prueba se bloquean los controles para evitar sobrescribir ediciones hechas a mitad de la solicitud.
+
+Pruebas actuales: 18 regresiones aisladas pasaron, con Responses, privacidad de errores, asignaciones de conteo, cifras reportadas y respaldo autorizado. La consulta real de Zen devolvió 82 modelos. La prueba real de Big Pickle rechazó la clave o sus permisos: no se presenta como conversación aprobada. Se corrigió la conexión que había recibido una clave Zen bajo el nombre y URL de Google, conservando la clave cifrada. En navegador se comprobó que una URL terminada en `/chat/completions` produce un aviso y no envía PUT. Los documentos comerciales no se modificaron por estas pruebas de configuración.
+
+Después de reemplazar la clave en la pantalla y obtener una prueba verde, habilitar el asistente y repetir el pedido completo, la corrección del pago y la confirmación única en QA. Preparar Whisper tiny únicamente si se va a probar audio: no descarga modelos Ollama. Repetir las pruebas de caída del proveedor y preservación del borrador antes de avanzar a conversación Live y canales externos.
+
+
+### Corrección de proveedores y selector · V6P4, 10 de octubre de 2026
+
+La pantalla utiliza un único selector de proveedor, clave y catálogo buscable. URL, protocolo y límites quedan en Ajustes avanzados; audio y respaldo también se pliegan. Seleccionar un proveedor completa su conexión oficial y evita crear otra conexión idéntica. Una clave guardada no se muestra ni se sustituye al dejar el campo vacío.
+
+- Gemini: se corrigió la declaración de herramientas para enviar `parametersJsonSchema`. El campo anterior `parameters` rechazaba `additionalProperties` con HTTP 400. El catálogo híbrido excluye modelos que únicamente admiten audio Live.
+- OpenCode Go: es distinto de Zen; base `https://opencode.ai/zen/go/v1`. Envía identificación real `AMBIE/1.0` y `x-opencode-session`, estable al corregir el mismo borrador. La conexión QA conserva su clave cifrada y utiliza `mimo-v2.6-pro`, que completó un gasto ficticio y corrigió su pago. `glm-5.3-flash` respondió al transporte, pero omitió datos del ejercicio completo; no se considera validado para ese ejercicio.
+- Zen: base `https://opencode.ai/zen/v1`. La clave probada corresponde a Go y Zen rechazó su acceso; el catálogo público no demuestra autorización. No se cambian claves entre servicios automáticamente.
+- OpenRouter: el filtro inicial muestra modelos gratuitos según valores de venta publicados de entrada, salida y solicitud; la búsqueda permite encontrar los demás. Se consultaron 458 modelos, 19 gratuitos en ese momento. Los que declaran no admitir herramientas quedan deshabilitados. La prueba real aprobó `apodex/apodex-1.1-mini:free`.
+- OpenCode complementa el catálogo con metadatos públicos de Models.dev, sin enviar claves ni datos comerciales. Caché de cinco minutos, límite de ocho MB y diez segundos; si falla, el catálogo principal sigue disponible y los ajustes avanzados permiten revisar el protocolo. Solo se marca incluido en Go si figura en sus metadatos. Las cuotas, modelos y valores de venta pueden cambiar.
+
+La lista muestra hasta 30 coincidencias; busca por nombre o identificador. Blanco significa sin probar, verde significa ejercicio estructurado completo, amarillo significa límite de uso y rojo significa prueba fallida. Rojo no afirma una falla permanente; amarillo no afirma que la cuota diaria se agotó. La prueba exige concepto, importe y forma de pago del ejercicio, no solo una respuesta HTTP exitosa.
+
+Ejercicio rápido en `http://127.0.0.1:8180/admin/configuracion`: seleccionar proveedor, cargar modelos, elegir uno y Guardar y probar conexión. Para probar instrucciones, marcar Habilitar asistente, escribir «Prepara un gasto de transporte por un peso en efectivo» y Guardar y probar conversación. No confirma ningún gasto. Corregir desde el asistente con «Cambia solamente el pago a billetera» debe conservar concepto e importe. Los campos opcionales nulos o vacíos se tratan como faltantes; se conservan ceros, false y todas las líneas. Un dato inválido no vacío sigue siendo rechazado.
+
+Evidencia actual: Gemini, OpenRouter y Go completaron un borrador ficticio y la corrección del pago mediante la API real. Una repetición de Gemini recibió HTTP 503 temporal del proveedor; una respuesta previa exitosa no garantiza disponibilidad continua. Las pruebas no enviaron productos ni datos del negocio a servicios externos y no llamaron rutas de guardado comercial. Producción permanece sin cambios y Ollama sin modelos descargados. Las pruebas de audio real y API Live continúan pendientes de sus etapas.
+
+
+Comprobación posterior en navegador: OpenRouter completó el ejercicio mediante Guardar y probar conversación. Go con `mimo-v2.6-pro` aprobó un borrador y una corrección por API, pero algunas repeticiones desde la pantalla no devolvieron herramienta; no se afirma estabilidad de ese modelo. La alternativa `mimo-v2.6-flash` sí completó el ejercicio desde el frontend y queda como selección inicial para una conexión Go nueva. El límite configurado de Go en QA se amplió a 8192; es un máximo por respuesta, no una garantía de disponibilidad. Si el proveedor indica `finish_reason=length`, ahora se muestra el límite de salida en lugar de atribuirlo a una clave inválida. Las 23 regresiones actuales aprobaron, incluyendo valores de venta gratuitos explícitos, conservación de campos y respuestas truncadas. Interfaz comprobada a 390×844 y 1440×900, sin desbordamiento horizontal y con ajustes avanzados plegados.
+
+
+Límite observado: una repetición posterior de Go Flash por API tampoco devolvió herramienta. Su prueba visible aprobada no garantiza todas las instrucciones ni correcciones; Go sigue sujeto a esa irregularidad y no se presenta como integración estable. Gemini también repitió HTTP 503 del proveedor después de una prueba aprobada. OpenRouter queda como conexión principal de QA para continuar la validación; no se autoriza un respaldo automático ni se alteran datos comerciales. Conviene comprobar cada modelo con el ejercicio antes de usarlo y confirmar siempre el detalle.
+
+
+### Audio y asistente compacto · V6P4
+
+El reconocimiento Tiny confundió términos de un pedido dictado por el usuario. Se preparó Base en español en QA, manteniendo Go y su modelo `space-bunny`. Base es un modelo de transcripción; no se instaló ningún modelo de lenguaje de Ollama. Configuración > Audio y voz ofrece Tiny, Base y Small; preparar y guardar son acciones explícitas. Para reproducir esta configuración en otra instalación se debe preparar Base allí: los pesos no se incluyen en Git ni se descargan al arrancar.
+
+Whisper utiliza vocabulario comercial español con arepas, queso y yogur en archivos y micrófono. Pipecat publica una vista previa por segmentos (`tipo:texto`) y solo interpreta el mensaje final (`tipo:instruccion`). La vista previa no confirma ni guarda. Durante interpretación o guardado el capturador envía silencio para evitar capturar otra orden o la voz reproducida. Si interpretar falla, continúa la escucha y se conserva la transcripción y el borrador previo; el usuario puede corregir y reintentar. Una respuesta tardía de una sesión anterior no detiene el micrófono de una sesión nueva.
+
+El panel mide 288 px de ancho y el recuadro tiene dos líneas. Se eliminó el párrafo introductorio; el texto reconocido se mantiene visible y editable. No promete transcripción palabra por palabra: un pedido sintético conservó dos arepas, queso, un yogur, efectivo y preparación, pero omitió la preposición «con». Go interpretó las dos líneas, cantidades y pago; la API pidió aclarar los nombres que no coincidían exactamente con el catálogo y no se confirmó ningún pedido.
+
+Validación actual: 24 regresiones aprobaron; seis pruebas de autorización de voz también. Audio WAV ficticio -> Whisper Base -> Go respondió correctamente (transcripción 7115 ms; interpretación 1754 ms en ese ejercicio). Un gasto sintético con Tiny -> Go también respondió. Estos tiempos son mediciones puntuales con audio sintetizado, no validación del micrófono físico del usuario. En navegador, vista previa generó cero solicitudes; el turno final produjo una solicitud ante un 502 simulado, conservó el texto y cerró pista y conexión. A 390 px no apareció desbordamiento horizontal. La precisión con acento, ruido y micrófono reales debe comprobarla el usuario tras recargar.
+
+El cierre del turno usa Silero con dos segundos de silencio y la espera nativa de Pipecat de 0,6 segundos. Las pausas breves entre cliente, productos y pago no deben enviar operaciones parciales. La prueba WebSocket real con audio sintético a 16 kHz recibió en un solo turno: «Quiero hacer un pedido para un cliente ocasional, dos arepas con queso y un yogur. El pago es en efectivo y es para preparar». Se comprobó que el texto final conserva productos, pago y preparación; no se confirmó ni guardó un pedido. Esta prueba no sustituye validar el micrófono físico y el ruido del negocio.
+
+Para repetirlo en desarrollo (127.0.0.1:8180): recargar la pestaña, abrir Asistente, pulsar Hablar y dictar esa operación completa, dejando las pausas finales para cuando se termine de hablar. Revisar el texto visible y el detalle. Si el nombre no coincide con el catálogo, indicar el producto exacto; no confirmar hasta revisar cantidades y pago. Para comprobar un error, usar la prueba de proveedor de Configuración; el asistente debe conservar el texto y permitir reintentar sin duplicar la operación. Producción 8080 permanece sin publicar estos cambios.
+
+
+### Conversación y respuestas · V6P4 · 10/10/2026
+
+El asistente responde saludos breves y agradecimientos sin enviarlos como transacciones al modelo. Al activar el micrófono se presenta; al recibir una operación anuncia que la está revisando. Silero mantiene dos segundos de silencio para no cortar pausas entre productos, y Pipecat añade 0,6 segundos para cerrar el turno. El reconocimiento es por segmentos: no equivale todavía a audio Live nativo, y la preparación del detalle sigue dependiendo del tiempo de transcripción y de la respuesta del proveedor.
+
+Cuando se detecta voz (`hablando`), el navegador cancela su respuesta hablada y permite escuchar al usuario. Se conserva la cancelación de eco del dispositivo. Durante la interpretación y el guardado se pausa la captura para evitar operaciones superpuestas. La interrupción se probó con eventos controlados; confirmar con micrófono físico, altavoces y ruido del negocio antes de darla por validada.
+
+`conversacionId` es un UUID en memoria por sesión del asistente; viaja a `/agentes/interpretar` y se usa en `x-opencode-session`, independiente de los IDs y versiones de las operaciones. Se renueva al cambiar de usuario/rol o terminar la sesión. OpenCode Go pide una sesión estable por conversación en su [documentación oficial](https://docs.opencode.ai/docs/go/). Se mantiene la identidad real del cliente, sin simular solicitudes de otro programa.
+
+Un fallo de interpretación conserva el texto y el borrador anterior, muestra el mensaje en el panel y lo lee si estaba usando voz. El micrófono se detiene para evitar reintentos involuntarios. Los códigos HTTP no se ocultan: se reprodujo 502 cuando un saludo no devolvía herramienta, y 422 por rechazo de credenciales/permisos desde el proveedor. Las pruebas posteriores también obtuvieron respuestas correctas. No se puede afirmar que el proveedor responderá siempre; comprobar su acceso en Configuración si reaparece el rechazo.
+
+Interpretar, revisar, abrir audio y transcribir ya no invalidan todas las listas ni esperan esos refrescos; los guardados reales y cambios de configuración mantienen la invalidación. «Ya entregado» se conserva como preparación del pedido cuando el modelo lo devuelve como estado. «Mililitros» y «ml» son equivalentes al buscar el producto, sin modificar su nombre almacenado ni escoger uno ambiguo.
+
+Ejercicios rápidos en desarrollo (recargar 127.0.0.1:8180):
+
+1. Hablar y saludar «Hola, buenas tardes». Debe presentarse sin navegar ni crear un borrador. Interrumpir la presentación con una instrucción y comprobar que deja de hablar.
+2. Dictar «Cliente ocasional, un café americano y dos aguas Cristal 600 ml, efectivo y para preparar». En QA el total del catálogo es $8.500. Revisar productos, cantidades y pago antes de confirmar.
+3. Corregir «Cambia el café a tres y el pago a billetera, conserva las dos aguas». Debe conservar cliente y preparación; el total QA esperado es $15.500.
+4. Dictar varios productos: dos cafés, tres aguas y una chocolatina Jet, billetera y entregado. El audio sintético conservó cantidades y pago, pero inicialmente transcribió la marca incorrectamente. Debe pedir aclaración del producto y conservar el resto. Corregir usando el nombre exacto o código del catálogo.
+5. Dictar un gasto de transporte por cinco mil pesos en efectivo (administrador); solo revisar. Comprobar monto y método, sin confirmación automática.
+6. Probar un rechazo del proveedor: debe aparecer un aviso visible, mantener lo dictado y permitir corregir/reintentar. En Chrome se verificaron 422 y 502 simulados, con el texto conservado; se observaron también rechazos reales de Go.
+
+Para validar voz real, adjuntar tres audios de 10–25 segundos (WAV, MP3, M4A, OGG o WebM, hasta 5 MB): saludo seguido de una operación; pedido con varios productos y pausas normales; corrección de cantidad o pago. Acompañar cada archivo con la frase pretendida y productos exactos del catálogo, sin datos personales ni claves. Comparar transcripción, detalle y tiempo desde la última palabra; no confirmar hasta que cuadre. Los audios adjuntos prueban reconocimiento, pero la interrupción de altavoces exige una prueba en vivo en el dispositivo.
+
+Validación final: 29 pruebas del asistente, seis de autorización, compilación completa y dos de caché aprobadas. Con `conversacionId` estable, el pedido de café/aguas obtuvo $8.500 y su corrección a tres cafés/billetera conservó los demás campos y obtuvo $15.500. Las llamadas medidas tardaron 14.139 y 5.295 ms; no se considera respuesta instantánea. Tras ampliar el vocabulario, el WebSocket de audio sintético recibió completa la chocolatina Jet y 600 ml sin los errores de marca anteriores. No se confirmó ninguna transacción ni se publicaron cambios en producción.
+
+### Configuración y pedidos variados · V6P4 · 10/10/2026
+
+Se reprodujo en Chrome el 400 `RESPALDO_INVALIDO`: al elegir como principal la conexión que era respaldo, ambos campos quedaban iguales. Ahora seleccionar ese proveedor elimina únicamente su selección como respaldo. Se conserva la validación de la API y las conexiones guardadas. La misma acción pasó a responder 200 y permitió consultar modelos; después se restauró la selección original Go con Zen de respaldo.
+
+La venta ocasional ofrece solo efectivo y billetera. Si una instrucción pide crédito, se conservan sus productos para corregirla, aparece el aviso y el botón de guardado queda deshabilitado. La API también rechaza esta operación. En Chrome, confirmar el borrador incompleto no envió ningún guardado; cambiar únicamente a billetera mantuvo dos sándwiches de pollo y $23.000, habilitando la confirmación.
+
+Ejercicios con el proveedor real y catálogo QA, sin confirmar ventas:
+
+| Instrucción | Resultado esperado y comprobado |
+| --- | --- |
+| Dos jugos naturales de mango y tres maníes salados de 50 g, efectivo, para preparar | $18.600; cantidades, valores de venta y método correctos. |
+| Un sándwich de jamón y queso, dos Pepsi de 400 ml y cuatro Cheetos de 75 g, billetera, entregado | Detectó que solo había una Pepsi. Corregir a una conservó el resto: $27.700. |
+| Un yogur de fresa de 200 ml, dos de durazno de 200 ml, tres empanadas de carne y una limonada natural, efectivo | $24.100; cuatro productos y sus cantidades correctos. |
+| Cliente ocasional, dos sándwiches de pollo, crédito, para preparar | Solicitó cliente registrado para crédito. Corregir solamente a billetera dejó $23.000 y ningún dato faltante. |
+
+Las interpretaciones medidas tardaron aproximadamente 7–11 segundos. El primer ejercicio de Pepsi falló en la expectativa de la prueba porque solicitaba más existencias de las disponibles; se ajustó para comprobar el bloqueo y su corrección, y pasó. No se confunde esto con respuesta instantánea ni con prueba de micrófono físico. Pasaron las 29 pruebas del asistente y `npm run verificar` (con advertencias de React existentes). Cambios disponibles en desarrollo, http://127.0.0.1:8180; producción no se modificó.
+
+### Robot y recuperación de correcciones · V6P4 · 10/10/2026
+
+Se reprodujo un 422 real en Chrome cuyo mensaje fue «El proveedor rechazó la clave o sus permisos», después de una prueba correcta con la misma conexión. No se ha determinado el motivo interno del rechazo de OpenCode. Una suscripción no permite garantizar disponibilidad continua. No se cambian claves ni se ocultan errores: se conserva texto y borrador.
+
+En modo híbrido, los fallos de conexión/cuota/respuesta, la salida incompleta, la ausencia de herramienta y el rechazo de acceso pueden usar una sola vez el proveedor alternativo expresamente autorizado en Configuración. No se repite contra la clave rechazada; sin respaldo autorizado se presenta el error. No se ejecuta ninguna escritura al interpretar. Si respondió el respaldo se indica en la burbuja. Las pruebas aisladas verificaron tanto la ausencia de autorización como la recuperación, conservando el pedido previo.
+
+El botón es un robot de 56 px, arrastrable con ratón o tacto; la burbuja mide 224 px de ancho y tiene fondo semitransparente. Mantiene visible el texto reconocido después de preparar el detalle. Las acciones secundarias están en «Más opciones». Azul al escuchar, con intensidad RMS real del micrófono; naranja al hablar, con animación ligada al inicio/fin de la voz del navegador. Esa animación de respuesta no analiza una onda acústica de síntesis. Se respetan preferencias de movimiento reducido y se liberan el micrófono y la animación al detenerlo.
+
+Prueba real en Chrome: cliente ocasional, dos jugos de mango y tres maníes salados, efectivo y para preparar: $18.600 (5.663 ms). «Me faltaron dos empanadas de carne, agrégalas» conservó las dos líneas originales, cliente, pago y preparación: $24.600 (7.918 ms), respuesta 201. No se confirmó la venta. Arrastre y límites de la burbuja comprobados en 390×844 y diseño revisado en 1440×900. Los estados visuales de voz se verificaron mediante eventos controlados; falta validación con micrófono físico del usuario. 31 pruebas del asistente aprobadas. Desarrollo en 127.0.0.1:8180; producción intacta.
+
+### Diferenciar 422 y 502 · V6P4 · 10/10/2026
+
+Estos códigos pertenecen a la respuesta de la API; la consola del navegador solo los muestra. 422 puede ser PROVEEDOR_CREDENCIALES (401/403 del proveedor), PROVEEDOR_RUTA, PROVEEDOR_PARAMETROS o MODELO_SALIDA_LIMITADA. 502 puede ser PROVEEDOR_CONEXION (incluido el límite de espera de 20 segundos), PROVEEDOR_RESPUESTA o MODELO_HERRAMIENTAS. No basta el número para atribuirlo a cuota o navegador: revisar code y message en la respuesta de Red y el aviso del asistente.
+
+Si el principal y el respaldo fallan, AGENTE_PROVEEDORES muestra los motivos de ambos, sin publicar el cuerpo privado ni credenciales, y usa el estado del último fallo. Por eso un rechazo de acceso inicial puede terminar en 502 del respaldo. Se conserva el borrador; interpretar no guarda una transacción.
+
+La documentación oficial consultada en https://docs.opencode.ai/docs/go/#where-can-i-use-it indica que Go está orientado a agentes de programación y supervisa el tráfico. Synchronic.JO envía User-Agent propio y x-opencode-session estable, pero sus pedidos comerciales no son tráfico de programación; esto podría contribuir al rechazo, sin que se haya confirmado su causa interna. No se simula otro cliente. Para el negocio se debe elegir un proveedor que admita aplicaciones comerciales; comprobar sus permisos y cuota en su consola. Go tiene ventanas de cinco horas, semana y mes según modelo; Step 5 Preview Free aparece sin límite de uso por tiempo limitado en la documentación, por lo que no se atribuye su rechazo observado a cuota agotada sin evidencia. Zen permite restringir modelos desde su consola (https://docs.opencode.ai/docs/zen/).
+
+Prueba actual con proveedor configurado: dos sándwiches de pollo, cliente ocasional y crédito quedaron bloqueados; corregir únicamente a billetera conservó los productos y $23.000, con respuestas en 1.951 y 1.551 ms. No se confirmó ninguna venta. No se garantiza disponibilidad del proveedor ni se modificó producción.
+Validación actual: 32 pruebas del asistente aprobadas, incluida la combinación principal 403 y respaldo 503; ambas causas permanecen visibles y el cuerpo privado no se publica.
+
+
+### V7P4 · robot, cámara y conteos · 11/10/2026
+
+Esta revisión reemplaza los botones Hablar/Detener de la burbuja: tocar el robot controla el audio y tocar fuera solo oculta el texto. El ancho se personaliza, la transcripción ocupa dos líneas y el robot sigue siendo movible. Las instrucciones completas, correcciones y confirmaciones conservan los formularios existentes.
+
+El lector de QR/barras se integra al buscador de ventas y conteos, con bip y liberación de la cámara al volver. General/diario alternan cámara y cantidad al confirmar; inicial permite registrar productos y varias etiquetas del mismo producto. Productos incluye creación y parametrización sin cantidades, gestión de etiquetas y CSV compatible con códigos opcionales. Historial administrativo usa listas, paginación responsive y detalle separado. Consultar [modelo de datos](modelo-datos.md) y [ejercicios y SQL](VALIDACION_FORMULARIOS_Y_BASE_DATOS.md#ejercicios-v7p4--robot-y-lectura-de-códigos).
+
+No incluye VibeVoice, descargas de modelos locales ni cambio de la rama principal o despliegue del negocio. Antes de publicar en producción: respaldo, migración no destructiva, compilación, salud de servicios y prueba HTTPS en un teléfono físico. Las pruebas de cámara sintética y transporte simulado se distinguen de esa prueba.
+
+
+## Synchronic.JO · V8P4
+
+La marca y los workspaces son Synchronic.JO; la versión aparece en el acceso y el encabezado. Una instalación existente conserva su `COMPOSE_PROJECT_NAME`, sus volúmenes, correos, cookies y claves históricas de compatibilidad. Renombrar estos identificadores sin migrarlos produciría otra base vacía; el cambio visual no borra ni reemplaza los documentos.
+
+Configuración → Apariencia permite elegir una paleta, colores con selector o código hexadecimal, fuente, tres portadas empresariales y una imagen propia. La vista previa no guarda hasta pulsar Guardar apariencia. Los ajustes se confirman en PostgreSQL y llegan a los otros dispositivos mediante la revisión compartida y una lectura de respaldo. Se valida contraste y contenido de imágenes; estas portadas son públicas porque aparecen antes del ingreso. No subir imágenes con datos privados.
+
+La instalación abre el mismo aplicativo en modo independiente, conservando roles y pantallas. En Chrome/Edge/Android usa Instalar aplicación; si no aparece el diálogo, sigue el menú del navegador. En iPhone/iPad: Safari → Compartir → Agregar a inicio. Requiere HTTPS para teléfonos; un enlace por IP y HTTP permite navegar en la red, pero no asegura cámara ni instalación. En computador se puede validar con localhost. El service worker no almacena API, cookies, comprobantes ni documentos; ante desconexión presenta Reintentar y no ejecuta operaciones en segundo plano. No es un modo de ventas sin conexión.
+
+System se autentica con `system`, su código o el correo de la instalación y una contraseña propia. No hay contraseña universal ni accesos sin validación. La búsqueda prioriza la cuenta técnica frente a colisiones históricas de mayúsculas. Repetir la semilla conserva credenciales. El administrador del negocio crea y asigna roles; puede desactivar, retirar usuarios o quitar los permisos propios de su rol. Retirar conserva usuario, fecha y relaciones de conteos, y revoca sesiones. System y el propio acceso están protegidos.
+
+Fuente primaria de instalación: https://web.dev/learn/pwa/installation y https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Secure_Contexts.
+
+### Confirmación y continuidad de voz — 14/10/2026
+
+«Confirmar», «confirma el pedido», «confirma la venta», «sí, confirma el pedido» y expresiones equivalentes se resuelven localmente, sin pedir interpretación al proveedor. Primero debe existir un detalle válido: faltantes, crédito ocasional, cambios de precio/stock o una confirmación de otra operación impiden escribir. La revalidación y el guardado son los mismos que usa el botón. Repetir la confirmación después de guardar no prepara otra transacción. Los doce guiones y controles están en `docs/ejemplos/confirmaciones-agente.json`.
+
+Chat muestra productos, cantidades, importes, pago y los datos propios de cada operación. Confirmar por texto o con su botón conserva `/admin/chat` y utiliza la fachada comercial existente; conteos y cierres reutilizan sus rutas actuales. Cancelar elimina solo el borrador. Los mensajes continúan en RAM y se descartan al cambiar de sesión.
+
+El servicio precalienta un motor Faster-Whisper ya instalado antes de declarar salud y lo reutiliza, con procesadores independientes por conversación. No instala pesos ni Ollama automáticamente. Pipecat ya no cancela por 90 segundos de inactividad, ni cuenta el silencio hacia un máximo de dos minutos. Una conexión se renueva a la hora entre turnos. Se conservan tickets de un solo uso, autorización, dos sesiones simultáneas y límites por bloque/instrucción.
+
+El capturador prepara su módulo en paralelo al permiso del navegador. Ante un corte de red solicita un ticket nuevo, con hasta tres reintentos fallidos, conservando el micrófono, muteo y borrador. Descarta el audio del corte y no repite órdenes anteriores. Un cierre voluntario o la pérdida del dispositivo requiere volver a tocar el robot. La locución dispone de recuperación si el navegador omite su evento de finalización. Una suspensión de audio intenta reanudarse; si el navegador exige un gesto, se indica tocar el robot.
+
+Para diagnosticar una interrupción en DevTools: `monitorEvents(window, "synchronic:audio-diagnostico")`. Muestra fase, tiempo y código de cierre, sin transcripciones ni claves. Los logs de `voice-agent` añaden `audio-listo` con tiempo y `audio-cerrado` con duración y categoría de cierre. Comparar estos eventos con Network > WS; detener el seguimiento con `unmonitorEvents`.
+
+Ventas comparte el flujo entre administrador/vendedor: Cliente → Productos → Revisar pedido. «Entregado ahora» y «Por preparar» quedan después de las líneas y antes del pago. El crédito exige un cliente registrado.

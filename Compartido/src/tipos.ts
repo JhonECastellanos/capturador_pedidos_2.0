@@ -61,6 +61,7 @@ export interface AuditoriaEventoDTO {
 // ─── Identidad ────────────────────────────────────────────────────
 
 export interface UsuarioDTO {
+  permisosDenegados?: string[];
   /** Identidad protegida del desarrollador, no un rol adicional. */
   esSistema?: boolean;
   id: string;
@@ -146,7 +147,20 @@ export interface CarteraDTO {
 
 // ─── Productos ────────────────────────────────────────────────────
 
+export interface CodigoProductoDTO {
+  id: string; codigo: string; productoId: string; creadoEn: string; retiradoEn: string | null;
+}
+
 export interface ProductoDTO {
+  nombreBase?: string;
+  productoBaseId?: string | null;
+  extension?: string;
+  rowid?: string;
+  rowid_ext?: string;
+  precioPendiente?: boolean;
+  codigosLectura?: string[];
+  /** Una etiqueta de la familia exige elegir su presentación antes de contar/vender. */
+  familiaCompartidaId?: string;
   id: string;
   codigoInterno: string;
   nombre: string;
@@ -444,6 +458,26 @@ export interface LineaAjusteDTO {
   stockTeorico: number;
   stockFisico: number;
   diferencia: number;
+}
+
+/** Historial único de diferencias, sin duplicar los ajustes de un conteo. */
+export interface DescuadreInventarioDTO {
+  id: string;
+  conteoId: string | null;
+  productoId: string;
+  nombre: string;
+  stockTeorico: number;
+  stockFisico: number;
+  diferencia: number;
+  turno: string;
+  usuarioId: string;
+  usuario?: string;
+  finalizadoEn: string;
+  yaAjustado: boolean;
+  tipo: "conteo" | "manual";
+  comentario?: string | null;
+  costoUnitario?: number | null;
+  valorDiferencia?: number | null;
 }
 
 export interface AjusteInventarioDTO {

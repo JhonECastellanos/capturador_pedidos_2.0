@@ -112,7 +112,7 @@ async function exigir<T = unknown>(
 type Usuario = { id: string; codigo: string; nombre: string; rol: string; permisos: string[] };
 
 async function main() {
-  console.log(negrita(`\nAMBIÉ · prueba de humo → ${BASE}\n`));
+  console.log(negrita(`\nSynchronic.JO · prueba de humo → ${BASE}\n`));
 
   await paso("la sonda de salud responde sin credenciales", async () => {
     const res = await llamar<{ data?: { estado?: string; baseDeDatos?: string } }>("GET", "/api/v1/salud", undefined, {
@@ -262,9 +262,9 @@ async function main() {
     afirmar(res.status >= 400, `la API lo rechazara (respondió ${res.status})`);
   });
 
-  await paso("el historial de precios responde", async () => {
+  await paso("el historial de valores de venta responde", async () => {
     await exigir("POST", `/api/v1/productos/${productoId}/precio`, { nuevoPrecio: 13500 });
-    const historial = await exigir<unknown[]>("GET", `/api/v1/productos/${productoId}/precios`);
+    const historial = await exigir<unknown[]>("GET", `/api/v1/productos/${productoId}/historial`);
     afirmar(historial.length > 0, "hubiera al menos un cambio de precio");
   });
 

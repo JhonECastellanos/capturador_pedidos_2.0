@@ -7,6 +7,7 @@ services:
   cloudflared:
     profiles: !override ["no-usar-en-pruebas"]
   postgres:
+    ports: !override ["127.0.0.1:5433:5432"]
     environment:
       POSTGRES_DB: ambie_test
     healthcheck:

@@ -35,7 +35,7 @@ const marca = 'QA-CSV-' + Date.now();
       assert.equal((await vendedorContexto.request.post(base + '/api/v1/auth/login', { data: { identifier: 'qa-vendedor@pruebas.invalid', password: 'SoloPruebas2026!' } })).status(), 200);
       assert.equal((await vendedorContexto.request.post(base + '/api/v1/productos/importar', { data: { prepararInicial: false, productos: [{ nombre: marca, precioVenta: 1 }] } })).status(), 403);
     } finally { await vendedorContexto.close(); }
-    await page.goto(base + '/admin/precios');
+    await page.goto(base + '/admin/productos');
     const sinCantidades = 'codigoInterno,nombre,categoria,unidad,precioVenta,costoActual,cantidadInicial,stockMinimo\n' +
       `,${marca} vacío,Preparados,unidad,1200,500,,1\n,${marca} cero,Preparados,unidad,1300,600,0,2\n`;
     await page.getByLabel('Archivo CSV de productos').setInputFiles({name:'sin-existencias.csv',mimeType:'text/csv',buffer:Buffer.from(sinCantidades)});
@@ -93,7 +93,7 @@ const marca = 'QA-CSV-' + Date.now();
     const csv = '\uFEFFcodigoInterno,nombre,categoria,unidad,precioVenta,costoActual,cantidadInicial,stockMinimo\n' +
       '"","' + nombre.replaceAll('"', '""') + '",Preparados,unidad,2500,900,7,2\n' +
       `${previo.codigoInterno},${previo.nombre},,unidad,1500,400,10,1\n`;
-    await page.goto(base + '/admin/precios');
+    await page.goto(base + '/admin/productos');
     const entrada = page.getByLabel('Archivo CSV de productos');
     await entrada.setInputFiles({ name: 'productos.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
     await page.getByText('Revisar 2 productos antes de guardar', { exact: true }).waitFor();
@@ -140,7 +140,7 @@ const marca = 'QA-CSV-' + Date.now();
     assert.equal(cerrada.status, 409); assert.equal((await api('/productos/' + previo.id)).cuerpo.data.precioVenta, 1500);
     assert.equal((await api('/productos/importar', 'POST', { prepararInicial: false, productos: [{ codigoInterno: previo.codigoInterno, nombre: previo.nombre, precioVenta: 1800, stock: 999 }] })).status, 201);
     assert.equal((await api('/productos/' + previo.id)).cuerpo.data.stockFisico, 10);
-    await page.goto(base + '/admin/precios');
+    await page.goto(base + '/admin/productos');
     const descarga = page.waitForEvent('download'); await page.getByRole('button', { name: 'Exportar CSV', exact: true }).click();
     const exportado = await descarga; const texto = readFileSync(await exportado.path(), 'utf8');
     assert.ok(texto.includes('cantidadInicial')); assert.ok(texto.includes(nombre.replaceAll('"', '""'))); assert.ok(texto.includes(previo.codigoInterno));

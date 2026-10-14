@@ -27,6 +27,8 @@ async function main() {
   await page.addInitScript(() => { window.__documentoPrueba = Math.random(); });
   async function reposo() {
     await page.waitForTimeout(100);
+    // La búsqueda espera una pausa breve; una lista anterior permanece inerte hasta actualizarse.
+    await page.waitForFunction(() => !document.querySelector('.admin-pantalla [inert]'));
     for (let i = 0; lecturas.size && i < 200; i++) await page.waitForTimeout(100);
     assert.equal(lecturas.size, 0, 'Las lecturas deben terminar: ' + [...lecturas].map(r => r.url()).join(', '));
     await page.waitForTimeout(50);
@@ -45,7 +47,7 @@ async function main() {
       window.__panelPrueba = panel; window.__scrollPrueba = lista;
       return { documento: window.__documentoPrueba, scroll: lista?.scrollTop ?? 0 };
     });
-    for (let i = 0; i < 3; i++) { await page.evaluate(() => window.dispatchEvent(new Event('ambie:datos-actualizados'))); await reposo(); }
+    for (let i = 0; i < 3; i++) { await page.evaluate(() => window.dispatchEvent(new Event('synchronic:datos-actualizados'))); await reposo(); }
     const despues = await page.evaluate(() => ({ documento: window.__documentoPrueba, panelConservado: window.__panelPrueba === document.querySelector('.admin-pantalla'), listaConservada: !window.__scrollPrueba || window.__scrollPrueba.isConnected, scroll: window.__scrollPrueba?.scrollTop ?? 0 }));
     assert.equal(despues.documento, anterior.documento, nombre + ': sin recargar documento');
     if (!despues.panelConservado || !despues.listaConservada) await page.screenshot({ path: resolve('.local/pruebas-ui', `fallo-nodos-${nombre.toLowerCase()}.png`) });
@@ -89,8 +91,9 @@ async function main() {
     await page.getByRole('button', { name: /Crear Pedido/ }).click(); await reposo();
     await page.getByPlaceholder('Buscar por nombre, alias o teléfono').fill('Isabel Rojas'); await reposo();
     await page.getByRole('button', { name: 'Isabel Rojas', exact: true }).click();
+    await page.getByRole('heading', { name: 'Agregar productos', exact: true }).waitFor();
     await page.getByRole('button', { name: 'Volver', exact: true }).click();
-    await page.getByText('Paso 1 de 4 · Cliente', { exact: true }).waitFor();
+    await page.getByText('Paso 1 de 3 · Cliente', { exact: true }).waitFor();
     await page.getByRole('button', { name: 'Volver', exact: true }).click(); await reposo();
     console.log('✓ Ventas: cliente → productos → cliente → inicio');
 
@@ -123,16 +126,16 @@ async function main() {
     await page.getByRole('button', { name: 'Volver', exact: true }).click(); await reposo();
     console.log('✓ Compras: nueva recepción → historial sin guardar');
 
-    await abrir('Precios', '/admin/precios'); await estable('Precios');
+    await abrir('Productos', '/admin/productos'); await estable('Productos');
     await filtro('Buscar por nombre, código o categoría', 'Pepsi', 'Pepsi 400 ml');
     await page.getByPlaceholder('Buscar por nombre, código o categoría').fill('Pepsi 400'); await reposo();
     await page.locator('.admin-pantalla .overflow-y-auto button').filter({ hasText: 'Pepsi 400 ml' }).first().click();
-    await page.locator('input[type=number]').fill('3700');
+    await page.locator('input[type=number][placeholder="0"]').fill('3700');
     await page.getByRole('button', { name: /Revisar/ }).click();
     await page.getByRole('button', { name: 'Volver', exact: true }).click();
-    assert.equal(await page.locator('input[type=number]').inputValue(), '3700');
+    assert.equal(await page.locator('input[type=number][placeholder="0"]').inputValue(), '3700');
     await page.getByRole('button', { name: 'Volver', exact: true }).click(); await reposo();
-    console.log('✓ Precios: revisión → edición conserva el precio, sin escritura');
+    console.log('✓ Productos: revisión → edición conserva el precio, sin escritura');
 
     await abrir('Caja', '/admin/caja'); await estable('Caja');
     await page.locator('.admin-pantalla button').filter({ has: page.getByText('Efectivo', { exact: true }) }).click(); await reposo();
@@ -172,13 +175,13 @@ async function main() {
     await abrir('Inicio', '/admin'); console.log('✓ Configuración general y regreso');
 
     for (const viewport of [{ width: 390, height: 844 }, { width: 390, height: 320 }, { width: 1440, height: 320 }]) {
-      await page.setViewportSize(viewport); await abrir('Precios', '/admin/precios');
+      await page.setViewportSize(viewport); await abrir('Productos', '/admin/productos');
       const tarjeta = page.locator('.admin-pantalla .overflow-y-auto button').first();
       const altura = (await tarjeta.boundingBox()).height; assert.ok(altura >= 64, 'La tarjeta no se aplasta');
       const lista = await tarjeta.evaluate(el => el.parentElement.clientHeight); assert.ok(lista >= 160, 'La lista conserva altura mínima');
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Sin desborde horizontal');
       if (viewport.height === 320) assert.ok(await page.locator('.admin-contenido').evaluate(el => el.scrollHeight > el.clientHeight), 'Ventana baja desplaza el panel');
-      await page.screenshot({ path: resolve('.local/pruebas-ui', `precios-${viewport.width}x${viewport.height}.png`) });
+      await page.screenshot({ path: resolve('.local/pruebas-ui', `valores de venta-${viewport.width}x${viewport.height}.png`) });
     }
     console.log('✓ 390×844, 390×320 y 1440×320: tarjetas ≥64 px, lista ≥160 px y scroll del panel');
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -207,7 +210,7 @@ async function main() {
       await barras.tap();
       await tactil.screenshot({ path: resolve('.local/pruebas-ui', 'grafica-toque.png') });
       console.log('✓ Gráficos: toque muestra y segundo toque oculta las etiquetas en móvil');
-      for (const ruta of ['pedidos', 'creditos', 'inventario', 'compras', 'precios', 'caja', 'cierre']) {
+      for (const ruta of ['pedidos', 'creditos', 'inventario', 'compras', 'productos', 'caja', 'cierre']) {
         await tactil.goto(base + '/admin/' + ruta);
         if (ruta === 'inventario') await tactil.getByRole('button', { name: /Stock general/ }).click();
         const lista = tactil.locator('.lista-datos').first();
@@ -234,7 +237,7 @@ async function main() {
       });
       assert.equal(capacidad.filas, 5, 'La página móvil ofrece cinco productos: ' + JSON.stringify(capacidad));
       const caja = await productos.boundingBox();
-      const continuar = await tactil.getByRole('button', { name: /Continuar a entrega/ }).boundingBox();
+      const continuar = await tactil.getByRole('button', { name: /Revisar pedido/ }).boundingBox();
       assert.ok(continuar.y >= caja.y + caja.height, 'Continuar queda debajo del contenedor');
       await tactil.screenshot({ path: resolve('.local/pruebas-ui', 'productos-movil.png') });
       console.log('✓ Listas administrativas estables y cinco productos con continuación debajo');
@@ -251,7 +254,7 @@ async function main() {
       await venta.getByRole('button', {name:/^Agregar /}).first().waitFor();
       assert.equal(await venta.getByRole("button", { name: /^Agregar / }).count(), 5);
       await venta.getByRole('button', { name: /^Agregar / }).first().tap();
-      const continuar = venta.getByRole('button', { name: /Continuar a entrega/ });
+      const continuar = venta.getByRole('button', { name: /Revisar pedido/ });
       assert.ok((await continuar.boundingBox()).y >= (await lista.boundingBox()).y + (await lista.boundingBox()).height);
       await continuar.tap();
       await venta.getByRole('button', { name: /Entregado ahora/ }).waitFor();
@@ -294,9 +297,8 @@ async function main() {
       await page.getByRole('button', { name: `Agregar ${producto.nombre}`, exact: true }).click();
       for (let n = 0; n < i + 1; n++) await page.getByRole('button', { name: 'Aumentar cantidad', exact: true }).click();
     }
-    await page.getByRole('button', { name: /Continuar a entrega/ }).click();
+    await page.getByRole('button', { name: /Revisar pedido/ }).click();
     await page.getByRole('button', { name: /Entregado ahora/ }).click();
-    await page.getByRole('button', { name: /Continuar al pago/ }).click();
     const guardadoFactura = page.waitForResponse(r => r.url().endsWith('/api/v1/pedidos') && r.request().method() === 'POST');
     const inicioFactura = performance.now();
     await page.getByRole('button', { name: /Confirmar pedido/ }).click();
@@ -327,7 +329,7 @@ async function main() {
     await page.reload(); await detalleFactura.waitFor();
     assert.ok(!(await detalleFactura.innerText()).includes('9.000'));
     await page.screenshot({ path: resolve('.local/pruebas-ui', 'factura-real-qa.png') });
-    console.log('✓ Factura móvil: venta real QA de dos productos, cantidades 2/3, persistencia y precios históricos tras cambio y recarga');
+    console.log('✓ Factura móvil: venta real QA de dos productos, cantidades 2/3, persistencia y valores de venta históricos tras cambio y recarga');
     const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Bogota' });
     const resumen = (await (await context.request.get(base + `/api/v1/dashboard/resumen?desde=${hoy}&hasta=${hoy}`)).json()).data;
     const totalesBd = sql(`SELECT json_build_object('ventas', COALESCE(SUM(total),0), 'pedidos', COUNT(*)) FROM pedidos WHERE "fechaOperacion"='${hoy}'::date AND estado<>'cancelado';`);

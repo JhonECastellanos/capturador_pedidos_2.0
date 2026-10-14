@@ -14,6 +14,7 @@ import { TarjetaMetrica } from "../../administracion/components/TarjetaMetrica";
 
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
+import { useOperacionAgente } from "../../agentes/operacion-agente";
 
 type FiltroMedio = "ingresos" | "egresos" | "efectivo" | "billetera" | "credito" | null;
 type VistaCaja = "movimientos" | "ganancias";
@@ -36,6 +37,13 @@ export function CajaAdmin() {
       setNuevoEgreso(false); setConceptoEgreso(""); setMontoEgreso(""); mostrarAviso("Egreso registrado", "exito"); return true;
     } finally { setGuardandoEgreso(false); }
   }
+
+  const confirmarEgresoCompartido = useOperacionAgente("egreso", r => {
+    setNuevoEgreso(true);
+    setConceptoEgreso(r.instruccion.concepto ?? "");
+    setMontoEgreso(r.instruccion.monto === undefined ? "" : String(r.instruccion.monto));
+    if (r.instruccion.metodo === "efectivo" || r.instruccion.metodo === "billetera") setMetodoEgreso(r.instruccion.metodo);
+  }, guardarEgreso, () => ({ operacion: "egreso", concepto: conceptoEgreso, ...(montoEgreso.trim() ? { monto: Number(montoEgreso) } : {}), metodo: metodoEgreso }));
 
   const [periodo, setPeriodo] = useState<Periodo>("hoy");
   const [vistaCaja, setVistaCaja] = useState<VistaCaja>("movimientos");
@@ -130,8 +138,8 @@ export function CajaAdmin() {
   return (
     <div className="flex h-full flex-col min-h-0">
       <div className="flex-shrink-0 flex items-center justify-between gap-3 border-b border-line pb-2.5">
-        <div className="flex items-center gap-2">
-          <h2 className="font-display text-[18px] font-semibold text-ink">Cuadre de caja</h2>
+        <div className="cabecera-modulo flex items-center gap-2">
+          <h2 className="titulo-modulo sr-only">Cuadre de caja</h2>
           <GuiaAyuda
             pantalla="Cuadre de caja"
             pasos={[
@@ -146,7 +154,7 @@ export function CajaAdmin() {
         <button type="button" onClick={() => setNuevoEgreso(true)} className="min-h-11 rounded-xl border border-line px-3 text-xs font-semibold text-ink">Nuevo egreso</button>
       </div>
 
-      {nuevoEgreso && <form onSubmit={e => { e.preventDefault(); void guardarEgreso(); }} className="my-2 flex-shrink-0 space-y-2 rounded-xl border border-line bg-paper-raised p-3">
+      {nuevoEgreso && <form onSubmit={e => { e.preventDefault(); void confirmarEgresoCompartido(); }} className="my-2 flex-shrink-0 space-y-2 rounded-xl border border-line bg-paper-raised p-3">
         <p className="text-sm font-semibold text-ink">Egreso de caja</p>
         <label className="block text-xs text-ink-soft">Concepto<input required minLength={2} value={conceptoEgreso} onChange={e => setConceptoEgreso(e.target.value)} className="mt-1 min-h-11 w-full rounded-lg border border-line bg-paper px-3" /></label>
         <div className="grid grid-cols-2 gap-2">

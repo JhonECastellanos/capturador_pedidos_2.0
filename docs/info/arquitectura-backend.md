@@ -1,4 +1,4 @@
-# Arquitectura backend — AMBIÉ
+# Arquitectura backend — Synchronic.JO
 
 ## Stack
 

@@ -123,8 +123,8 @@ export function Resumen() {
     <div className="flex h-full flex-col min-h-0">
       {usaApi && [remotoHoy, remotoMes, remotoAyer, remotoBarras, remotoLinea, remotoTops, remotoDescuadres].some((c) => c.error) && <p role="alert" className="shrink-0 rounded-xl bg-danger-soft p-3 text-sm text-danger">No se pudo actualizar el tablero. Se muestra la última lectura. <button type="button" onClick={() => [remotoHoy, remotoMes, remotoAyer, remotoBarras, remotoLinea, remotoTops, remotoDescuadres].forEach((c) => { void c.refetch(); })}>Reintentar</button></p>}
       <div className="flex-shrink-0 flex items-center justify-between border-b border-line pb-2.5">
-        <div className="flex items-center gap-2">
-          <h2 className="font-display text-[18px] font-semibold text-ink">Inicio</h2>
+        <div className="cabecera-modulo flex items-center gap-2">
+          <h2 className="titulo-modulo sr-only">Inicio</h2>
           <GuiaAyuda
             pantalla="Inicio"
             pasos={[

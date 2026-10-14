@@ -64,7 +64,7 @@ export class AuthController {
 
     // El navegador usa cookies HttpOnly; las integraciones leen
     // los tokens del cuerpo y envían `Authorization: Bearer`.
-    this.ponerCookies(reply, emitido.accessToken, emitido.refreshToken);
+    this.ponerCookies(reply, emitido.accessToken, emitido.refreshToken, req);
 
     return {
       data: {
@@ -92,7 +92,7 @@ export class AuthController {
     if (!refreshToken) throw new ErrorDominio("REFRESH_INVALIDO", "No hay sesión para renovar", 401);
 
     const emitido = await this.auth.refrescar(refreshToken);
-    this.ponerCookies(reply, emitido.accessToken, emitido.refreshToken);
+    this.ponerCookies(reply, emitido.accessToken, emitido.refreshToken, req);
 
     return {
       data: {
@@ -124,18 +124,27 @@ export class AuthController {
 
   @Get("me")
   @SesionOpcional()
-  async me(@UsuarioActual() usuario: Usuario, @Req() req: FastifyRequest) {
-    if (!usuario) return { data: null, renovable: Boolean((req as unknown as RequestAutenticado).cookies?.[COOKIE_REFRESH]) };
+  async me(@UsuarioActual() usuario: Usuario, @Req() req: FastifyRequest, @Res({ passthrough: true }) reply: FastifyReply) {
+    if (!usuario) {
+      const renovable = await this.auth.puedeRenovar((req as unknown as RequestAutenticado).cookies?.[COOKIE_REFRESH]);
+      if (!renovable) {
+        reply.clearCookie(COOKIE_ACCESO, { path: "/" });
+        reply.clearCookie(COOKIE_REFRESH, { path: "/" });
+      }
+      return { data: null, renovable };
+    }
     return { data: { ...await this.auth.me(usuario.id), expiraEn: (req as unknown as RequestAutenticado).expiraAccesoEn } };
   }
 
-  private ponerCookies(reply: FastifyReply, accessToken: string, refreshToken: string) {
+  private ponerCookies(reply: FastifyReply, accessToken: string, refreshToken: string, req: FastifyRequest) {
     reply.setCookie(COOKIE_ACCESO, accessToken, {
       ...COOKIE_OPCIONES,
+      secure: COOKIE_OPCIONES.secure || req.protocol === "https",
       maxAge: TokensService.ttlAcceso(),
     });
     reply.setCookie(COOKIE_REFRESH, refreshToken, {
       ...COOKIE_OPCIONES,
+      secure: COOKIE_OPCIONES.secure || req.protocol === "https",
       maxAge: TokensService.ttlRefresh() / 1000,
     });
   }

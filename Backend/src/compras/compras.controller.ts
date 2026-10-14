@@ -47,6 +47,9 @@ export class ComprasController {
     const p = paginacion(page, pageSize);
     return this.compras.listarRecepciones(p.pagina, p.porPagina, q, periodo);
   }
+  @Roles(RolUsuario.ADMINISTRADOR)
+  @Get("recepciones-compra/:id")
+  async obtenerRecepcion(@Param("id") id: string) { return { data: await this.compras.obtenerRecepcion(z.string().uuid().parse(id)) }; }
 
   @Get("gastos")
   listarGastos(

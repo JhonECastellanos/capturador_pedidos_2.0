@@ -3,7 +3,7 @@ import { RolUsuario, Usuario } from "@prisma/client";
 import { FastifyReply } from "fastify";
 import { Roles, UsuarioActual } from "../common/guards";
 import { ErrorDominio } from "../common/errores";
-import { AdjuntoEsquema } from "@ambie/contrato";
+import { AdjuntoEsquema } from "@synchronic-jo/contrato";
 import { ArchivosService } from "./archivos.service";
 
 @Controller("archivos")

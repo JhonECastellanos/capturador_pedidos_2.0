@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
+import { z } from "zod";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { paginacion } from "../common/paginacion";
 import { RolUsuario, Usuario } from "@prisma/client";
 import { UsuariosService } from "./usuarios.service";
 import { Roles, UsuarioActual } from "../common/guards";
-import { CambiarRolUsuarioEsquema, CrearUsuarioEsquema } from "@ambie/contrato";
+import { CambiarRolUsuarioEsquema, CrearUsuarioEsquema, PERMISOS_EDITABLES } from "@synchronic-jo/contrato";
 import { ErrorDominio } from "../common/errores";
 
 @Roles(RolUsuario.ADMINISTRADOR)
@@ -35,4 +36,12 @@ export class UsuariosController {
     if (!datos.success) throw new ErrorDominio("VALIDACION", "Rol inválido");
     return { data: await this.usuarios.cambiarRol(usuarioId, datos.data.rol, actor.id) };
   }
+  @Delete(":usuarioId")
+  async retirar(@Param("usuarioId") id: string, @UsuarioActual() actor: Usuario) { return { data: await this.usuarios.retirar(id, actor.id) }; }
+  @Patch(":usuarioId/permisos")
+  async permisos(@Param("usuarioId") id: string, @Body() body: unknown, @UsuarioActual() actor: Usuario) {
+    const datos = z.object({ permisosDenegados: z.array(z.string()).max(PERMISOS_EDITABLES.administrador.length) }).strict().parse(body);
+    return { data: await this.usuarios.cambiarPermisos(id, datos.permisosDenegados, actor.id) };
+  }
+
 }

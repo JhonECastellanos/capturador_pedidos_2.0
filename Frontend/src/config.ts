@@ -1,1 +1,2 @@
-export const APP_VERSION = "V5P3";
+export const APP_VERSION = "V8P4";
+export const APP_NOMBRE = "Synchronic.JO";

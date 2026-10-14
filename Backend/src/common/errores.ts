@@ -42,6 +42,11 @@ export class FiltroErrores implements ExceptionFilter {
       return;
     }
 
+    if (exception && typeof exception === "object" && "statusCode" in exception && exception.statusCode === 429) {
+      void response.status(HttpStatus.TOO_MANY_REQUESTS).send({ code: "LIMITE_SOLICITUDES", message: "Hay muchas solicitudes seguidas. Espera unos segundos y reintenta; los datos guardados se conservan" });
+      return;
+    }
+
     // eslint-disable-next-line no-console
     console.error(exception);
     void response.status(HttpStatus.INTERNAL_SERVER_ERROR).send({

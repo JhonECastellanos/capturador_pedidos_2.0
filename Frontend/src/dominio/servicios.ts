@@ -1,4 +1,4 @@
-import { seleccionarConteoDiario } from "@ambie/contrato";
+import { seleccionarConteoDiario } from "@synchronic-jo/contrato";
 import type {
   AbonoCredito,
   AbonoCreditoParcial,
@@ -535,7 +535,7 @@ export function aplicarAjusteEnInventario(inventario: Producto[], ajuste: Ajuste
   });
 }
 
-// ─── Precios ──────────────────────────────────────────────────────
+// ─── Productos ──────────────────────────────────────────────────────
 
 export function construirCambioPrecio(
   productoId: string,

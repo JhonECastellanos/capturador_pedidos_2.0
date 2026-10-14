@@ -1,4 +1,4 @@
-# Guía para agentes — AMBIÉ
+# Guía para agentes — Synchronic.JO
 
 ## Alcance y fuentes de verdad
 
@@ -29,7 +29,7 @@ Un enum nuevo/modificado va primero en `Backend/prisma/schema.prisma` y luego en
 
 Un módulo por área con controlador, servicio y módulo. Lógica de negocio en servicios; controladores validan con Zod y devuelven `{ data }` o envelope paginado con `meta`. Usar `ErrorDominio` y `FiltroErrores`. Agregaciones con SQL parametrizado/`Prisma.sql`, sin traer todo el historial a JavaScript.
 
-`AuthGuard` exige cookie `ambie_access` o Bearer salvo `@Public()`. Verifica firma y consulta sesión/usuario para aplicar revocaciones, actividad y rol actual. Operaciones administrativas llevan `@Roles(RolUsuario.ADMINISTRADOR)`: usuarios, cierres, egresos, ajustes, precios, compras y gastos. Ocultar controles no sustituye autorización. Auditoría guarda metadatos, nunca cuerpos, contraseñas ni tokens.
+`AuthGuard` exige cookie `ambie_access` o Bearer salvo `@Public()`. Verifica firma y consulta sesión/usuario para aplicar revocaciones, actividad y rol actual. Operaciones administrativas llevan `@Roles(RolUsuario.ADMINISTRADOR)`: usuarios, cierres, egresos, ajustes, valores de venta, compras y gastos. Ocultar controles no sustituye autorización. Auditoría guarda metadatos, nunca cuerpos, contraseñas ni tokens.
 
 ### Cuenta system
 
@@ -45,13 +45,15 @@ React 19, TypeScript, Vite, Tailwind 4 y React Router 7. `main.tsx` contiene ra�
 
 Preservar pantalla → contexto/fachada (`OperacionesContext.tsx`) → dominio (`dominio/servicios.ts`) → repositorios/API. `OperacionesApiContext.tsx` implementa fachada remota. Reutilizar `modules/ventas/screens/RutasVentas.tsx` entre roles.
 
-Reutilizar BuscadorInput, SegmentoControl, ListaVacia, TarjetaClicable, SelectorOpciones, TarjetaAccion, MetricaFiltro, PantallaCompletaAdmin y utilidades `utils/fechas.ts`, `utils/estados.ts`. Conservar tokens de `index.css`, interfaz mobile-first, áreas táctiles, pies fijos y scroll interno. Login debe desplazarse con poca altura: conservar overflow-y-auto, contenido sin encogimiento y márgenes automáticos; evitar centrado que recorte formularios.
+Reutilizar BuscadorInput, SegmentoControl, ListaVacia, TarjetaClicable, SelectorOpciones, TarjetaAccion, MetricaFiltro, PantallaCompletaAdmin y utilidades `utils/fechas.ts`, `utils/estados.ts`. Conservar tokens de `index.css`, interfaz mobile-first, áreas táctiles y desplazamiento de formularios. Las listas paginadas no tienen scroll interno: se desplazan con la pantalla; mantener sus cinco registros en móvil y la continuación debajo de productos. Login debe desplazarse con poca altura: conservar overflow-y-auto, contenido sin encogimiento y márgenes automáticos; evitar centrado que recorte formularios.
 
 Hooks separados de proveedores para Fast Refresh, utilidades fuera de módulos de componentes. Nombres intermedios con guion (`auth-context.ts`), porque Windows no distingue mayúsculas. Revisar composición/HMR ante errores de hooks fuera de Provider.
 
 Esperar confirmación de escritura antes de cerrar formularios. Si falla la lectura posterior, indicar que ya se guardó, para evitar duplicados. Conservar borradores y filtros al recibir actualizaciones remotas.
 
 ## Persistencia e invariantes
+
+Alta de productos desde Productos, Compras > Nueva recepción e Inventario inicial abierto, con la ficha compartida de códigos. Stock general no ofrece alta. El inicial permite al administrador y colaboradores crear, vincular etiquetas y contar en una sola transacción; sin costos ni importes. Stock general abre la corrección al tocar el nombre y permite ir a la edición existente en Productos. Usar stockFisico para la corrección, sin confundirlo con disponible tras reservas. Descuadres reúne ajustes manuales aplicados y conteos confirmados, excluye el inicial y no duplica un conteo al aplicarlo.
 
 PostgreSQL es la fuente de verdad en API. Imágenes/comprobantes en MinIO privado, con autenticación y validación de formato/tamaño. Semilla crea accesos y catálogos, sin datos comerciales demo.
 
@@ -75,7 +77,7 @@ Backend usa @nestjs/cache-manager compatible con CommonJS, Keyv y Redis interno,
 
 `Compartido/src/sincronizacion.ts` define RevisionDatosDTO e intervalo. `/sincronizacion/revision` está autenticado, sin caché HTTP, y devuelve una revisión opaca. Triggers de sincronización cubren tablas operativas; agregar cobertura cuando aparezcan nuevas tablas que afecten pantallas.
 
-`useSincronizacion` consulta cada dos segundos con sesión/pestaña visible, sin superponer solicitudes; cambios confirmados disparan `ambie:datos-actualizados`. Reconexión/visibilidad reanudan lecturas. Es actualización casi en tiempo real, intervalo más latencia, no entrega instantánea garantizada. No reintroducir la banda blanca «Datos compartidos / Actualizar»: conservar indicador de desconexión con Reintentar y refresco periódico de respaldo. Una actualización mantiene el snapshot de la misma sesión y referencias compartidas, sin desmontar pantallas ni perder scroll/borradores. Los placeholders de consultas paginadas solo pertenecen a la misma sesión y recurso; indicar actualización y bloquear acciones sobre páginas anteriores.
+`useSincronizacion` consulta cada dos segundos con sesión/pestaña visible, sin superponer solicitudes; cambios confirmados disparan `synchronic:datos-actualizados`. Reconexión/visibilidad reanudan lecturas. Es actualización casi en tiempo real, intervalo más latencia, no entrega instantánea garantizada. No reintroducir la banda blanca «Datos compartidos / Actualizar»: conservar indicador de desconexión con Reintentar y refresco periódico de respaldo. Una actualización mantiene el snapshot de la misma sesión y referencias compartidas, sin desmontar pantallas ni perder scroll/borradores. Los placeholders de consultas paginadas solo pertenecen a la misma sesión y recurso; indicar actualización y bloquear acciones sobre páginas anteriores.
 
 Listas operativas: `POR_PAGINA=30`, filtros sobre el conjunto completo antes de paginar. Selectores y pendientes extensos muestran máximo 30 con buscador. Nunca recortar saldos, totales, FIFO o líneas de un documento por este límite visual. Panel administrativo con mínimo de 600 px de contenido y scroll exterior al reducir altura; listas mínimo 160 px, tarjetas mínimo 64 px. Boton usa type=button por defecto; formularios que guardan deben indicar type=submit.
 
@@ -109,7 +111,7 @@ Carga: registrar cantidad, concurrencia, errores, p95 y comprobar persistencia/s
 
 ## Git y producción
 
-Rama activa solicitada: V5P3. Revisar diff, archivos nuevos y secretos antes de commit; incluir código, configuraciones de ejemplo y documentación de desarrollo. Mensaje descriptivo sin atribuciones automáticas. No hacer push ni cambiar rama principal remota salvo petición.
+Rama activa solicitada: V8P4. Revisar diff, archivos nuevos y secretos antes de commit; incluir código, configuraciones de ejemplo y documentación de desarrollo. Mensaje descriptivo sin atribuciones automáticas. No hacer push ni cambiar rama principal remota salvo petición.
 
 Workflow detecta rama principal de GitHub. Despliegue desactivado hasta configurar DEPLOY_ENABLED, AMBIE_DEPLOY_PATH, environment produccion y runner dedicado ambie-produccion. No ejecutar PRs en el servidor. Serializar despliegues, respaldar y comprobar salud. Construir/reiniciar tarda; recargar pestañas para nueva compilación, sin perder formularios automáticamente.
 
@@ -117,7 +119,7 @@ No ejecutar docker:limpiar, down -v, podas de volúmenes ni restauraciones sobre
 
 ## Activos
 
-La factura usa todas las líneas persistidas y sus precios históricos; PedidoCompletado puede consultar el documento individual.
+La factura usa todas las líneas persistidas y sus valores de venta históricos; PedidoCompletado puede consultar el documento individual.
 
 - [Imágenes de productos](Frontend/public/assets/productos/README.md)
 - [Comprobantes](Frontend/public/assets/comprobantes/README.md)

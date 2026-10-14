@@ -1,4 +1,4 @@
-// Esquema de datos de AMBIÉ (PostgreSQL).
+// Esquema de datos de Synchronic.JO (PostgreSQL).
 // Convención: nombres de campo en camelCase para que frontend, backend y base
 // compartan la misma nomenclatura. Los nombres de tabla son plurales camelCase.
 // Dinero: Decimal(18,2) · Cantidades: Int · Instantes UTC: timestamp(3) · Días: date.
@@ -10,6 +10,24 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// Ajustes opcionales; no contienen documentos comerciales ni audio.
+model ConfiguracionAgente {
+  id String @id @default("principal")
+  configuracion Json
+  secretos String
+  version Int @default(1)
+  actualizadoEn DateTime @updatedAt
+  @@map("configuracionesAgente")
+}
+
+// Apariencia pública de una instalación, sin documentos ni credenciales.
+model ConfiguracionVisual {
+  id String @id @default("principal")
+  configuracion Json
+  actualizadoEn DateTime @updatedAt
+  @@map("configuracionesVisuales")
 }
 
 // ─── Enumeraciones ────────────────────────────────────────────────
@@ -110,6 +128,8 @@ model Usuario {
   rol           RolUsuario
   activo        Boolean    @default(true)
   esSistema     Boolean    @default(false)
+  permisosDenegados String[] @default([])
+  eliminadoEn DateTime?
   creadoEn      DateTime   @default(now())
   actualizadoEn DateTime   @updatedAt
   ultimoAccesoEn DateTime?
@@ -128,6 +148,7 @@ model Usuario {
   gastos         Gasto[]
   movimientosCaja MovimientoCaja[]
   cierres        CierreDia[]
+  notificacionesLeidas LecturaNotificacion[]
 
   @@map("usuarios")
 }
@@ -214,6 +235,27 @@ model AuditoriaEvento {
   @@map("auditoriaEventos")
 }
 
+// Avisos del negocio creados por triggers en la misma transacción del documento.
+model Notificacion {
+  id String @id @default(uuid())
+  tipo String
+  titulo String
+  ruta String
+  creadoEn DateTime @default(now())
+  lecturas LecturaNotificacion[]
+  @@index([creadoEn, id])
+  @@map("notificaciones")
+}
+model LecturaNotificacion {
+  notificacionId String
+  usuarioId String
+  leidoEn DateTime @default(now())
+  notificacion Notificacion @relation(fields: [notificacionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  @@id([notificacionId, usuarioId])
+  @@map("lecturasNotificacion")
+}
+
 // Confirmación técnica del guardado; no es otro documento de negocio.
 model EscrituraConfirmada {
   usuarioId String
@@ -278,8 +320,14 @@ model Cliente {
 
 
 model Producto {
+  productoBaseId String?
+  extension String @default("")
+  productoBase Producto? @relation("PresentacionesProducto", fields: [productoBaseId], references: [id], onDelete: Restrict)
+  presentaciones Producto[] @relation("PresentacionesProducto")
   id             String   @id @default(uuid())
   codigoInterno  String   @unique
+  precioPendiente Boolean @default(false)
+  codigosLectura CodigoProducto[]
   nombre         String
   categoriaId    String?
   unidad         String   @default("unidad")
@@ -304,6 +352,7 @@ model Producto {
   reservasStock       ReservaStock[]
 
   @@index([nombre])
+  @@index([productoBaseId], map: "productos_productoBaseId_idx")
   @@map("productos")
 }
 
@@ -769,4 +818,17 @@ model ParticipacionConteo {
   usuario Usuario @relation(fields: [usuarioId], references: [id])
   @@id([conteoId, usuarioId])
   @@map("participantesConteo")
+}
+
+
+// Los códigos del fabricante son alias: nunca reemplazan el consecutivo interno.
+model CodigoProducto {
+  id String @id @default(uuid())
+  codigo String @unique
+  productoId String
+  creadoEn DateTime @default(now())
+  retiradoEn DateTime?
+  producto Producto @relation(fields: [productoId], references: [id], onDelete: Restrict)
+  @@index([productoId, retiradoEn])
+  @@map("codigosProducto")
 }

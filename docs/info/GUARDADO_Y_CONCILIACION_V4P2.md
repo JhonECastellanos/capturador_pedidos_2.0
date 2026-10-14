@@ -74,7 +74,7 @@ Usar el UUID que devuelve el POST, no solo el nombre del cliente o el producto. 
 | Dato visible | Comprobación correcta |
 |---|---|
 | Stock general `stock` | `productos.stockFisico - productos.stockReservado` (disponible), no solo físico |
-| Total del pedido | `pedidos.total` y suma de `pedidoLineas.subtotal`; precios históricos de las líneas |
+| Total del pedido | `pedidos.total` y suma de `pedidoLineas.subtotal`; valores de venta históricos de las líneas |
 | Pagado / saldo | aplicaciones no revertidas de pagos activos; saldo no negativo, excluyendo cancelados de cartera |
 | Caja | ingresos menos egresos de `movimientosCaja` por fecha contable y medio; no sumar otra vez el total de ventas |
 | Ventas del mes | pedidos no cancelados por `fechaOperacion`, desde primer día hasta hoy en Bogotá; incluye ventas a crédito |
@@ -229,9 +229,9 @@ node Backend/scripts/probar-guardado-ui.cjs
 
 `prueba:guardados` comprueba conservación de clave, reenvíos secuenciales/simultáneos, otra intención, conflicto y rollback; consulta pedidos, pagos y stock directamente. `prueba:inventario:inicial` comprueba unicidad, conteo completo, stock que cambió, rechazo sin escritura parcial, cancelación antes de aplicar, costos conservados, compra repetida y paginación sin recortar totales. Si QA ya tiene un inicio aplicado, lo conserva y valida la comparación; no borra la base para repetir el recorrido.
 
-## Catálogo CSV desde Precios
+## Catálogo CSV desde Productos
 
-Precios ofrece Exportar CSV, Plantilla CSV e Importar CSV. La exportación incluye el catálogo completo, aunque la pantalla esté paginada o filtrada. Columnas: codigoInterno,nombre,categoria,unidad,precioVenta,costoActual,cantidadInicial,stockMinimo. Nombre y precioVenta son obligatorios; las demás columnas son opcionales. Máximo 200 filas y 2 MB por carga. Admite coma o punto y coma, texto entre comillas dobles, comillas escapadas y saltos dentro de celdas. Los números no llevan separador de miles; las cantidades son enteros no negativos.
+Productos ofrece Exportar CSV, Plantilla CSV e Importar CSV. La exportación incluye el catálogo completo, aunque la pantalla esté paginada o filtrada. Columnas: codigoInterno,nombre,categoria,unidad,precioVenta,costoActual,cantidadInicial,stockMinimo. Nombre y precioVenta son obligatorios; las demás columnas son opcionales. Máximo 200 filas y 2 MB por carga. Admite coma o punto y coma, texto entre comillas dobles, comillas escapadas y saltos dentro de celdas. Los números no llevan separador de miles; las cantidades son enteros no negativos.
 
 Deja codigoInterno vacío para nuevos productos. Se busca primero por nombre normalizado (mayúsculas/espacios); si ya existe, se conserva su identidad. Si varios productos comparten nombre, exige el código. Un código desconocido se rechaza, nunca se inventa ni se reutiliza. Los productos nuevos reciben el consecutivo central PROD dentro de la transacción. Se rechazan filas repetidas y nombres que renombren un código sobre otro producto.
 
@@ -239,13 +239,13 @@ Al importar se muestra una revisión antes de Confirmar importación. La API val
 
 Con Preparar inventario inicial marcado, crea o completa el borrador inicial. cantidadInicial se guarda como cantidad contada, con responsable y fecha. El stock de productos anteriores cambia solo al revisar, confirmar y aplicar ese inventario con el mecanismo habitual. Las líneas no incluidas permanecen pendientes de conteo. El catálogo activo se incorpora al borrador sin borrar conteos existentes.
 
-Si el inicio ya está confirmado, se rechaza la preparación inicial sin guardar ninguna fila; desmarca esa opción para actualizar catálogo/precios. En ese modo, se conservan las existencias de productos anteriores, aunque el CSV traiga otra cantidad; los nuevos se crean con su cantidad y el movimiento inicial existente. Las comparaciones del inicio conservan nombres/costos históricos y no incluyen automáticamente productos creados después de ese inicio. No uses un CSV de precios para reemplazar el stock diario: utiliza conteos, compras o ajustes.
+Si el inicio ya está confirmado, se rechaza la preparación inicial sin guardar ninguna fila; desmarca esa opción para actualizar catálogo/valores de venta. En ese modo, se conservan las existencias de productos anteriores, aunque el CSV traiga otra cantidad; los nuevos se crean con su cantidad y el movimiento inicial existente. Las comparaciones del inicio conservan nombres/costos históricos y no incluyen automáticamente productos creados después de ese inicio. No uses un CSV de valores de venta para reemplazar el stock diario: utiliza conteos, compras o ajustes.
 
-Persistencia: productos y categorias identifican el catálogo; cambiosPrecio registra precio anterior/nuevo y usuario; movimientosInventario conserva la creación; conteosInventario y conteoLineas contienen la preparación inicial; ajustesInventario, ajusteLineas y el ledger registran su aplicación. No modifica facturas, pedidos ni precios de ventas ya guardadas. La invalidación y la revisión de sincronización existentes actualizan las otras pantallas tras el commit.
+Persistencia: productos y categorias identifican el catálogo; cambiosPrecio registra precio anterior/nuevo y usuario; movimientosInventario conserva la creación; conteosInventario y conteoLineas contienen la preparación inicial; ajustesInventario, ajusteLineas y el ledger registran su aplicación. No modifica facturas, pedidos ni valores de venta de ventas ya guardadas. La invalidación y la revisión de sincronización existentes actualizan las otras pantallas tras el commit.
 
 ### Archivo de ejemplo y campos
 
-El [CSV completo de ejemplo](../ejemplos/catalogo-inicial.csv) contiene tres productos ficticios identificados con el prefijo Ejemplo CSV. Se carga en QA desde Precios → Importar CSV → revisar → Confirmar importación. No cargarlo en un negocio real salvo que se desee registrar esos productos. Para comenzar un negocio, reemplaza sus nombres y valores por tu catálogo y conserva el encabezado.
+El [CSV completo de ejemplo](../ejemplos/catalogo-inicial.csv) contiene tres productos ficticios identificados con el prefijo Ejemplo CSV. Se carga en QA desde Productos → Importar CSV → revisar → Confirmar importación. No cargarlo en un negocio real salvo que se desee registrar esos productos. Para comenzar un negocio, reemplaza sus nombres y valores por tu catálogo y conserva el encabezado.
 
 | Campo | Qué escribir | Ejemplo | Cómo se guarda |
 |---|---|---|---|
@@ -287,11 +287,11 @@ La caché del tablero usa formato v2 y revisión transaccional también para cab
 
 ## CSV y conteos compartidos — 10/10/2026
 
-En Precios → Importar CSV, la opción «Preparar inventario inicial con las cantidades» comienza desmarcada. Para crear solo el catálogo, deja cantidadInicial vacía o en 0: los productos nuevos quedan con cero existencias y no se crea un conteo. Una cantidad positiva se carga al producto nuevo. En productos existentes siempre se conservan las existencias; para modificarlas usa compras o un conteo confirmado. El código vacío recibe un consecutivo automático; un nombre existente se reconoce y no se duplica.
+En Productos → Importar CSV, la opción «Preparar inventario inicial con las cantidades» comienza desmarcada. Para crear solo el catálogo, deja cantidadInicial vacía o en 0: los productos nuevos quedan con cero existencias y no se crea un conteo. Una cantidad positiva se carga al producto nuevo. En productos existentes siempre se conservan las existencias; para modificarlas usa compras o un conteo confirmado. El código vacío recibe un consecutivo automático; un nombre existente se reconoce y no se duplica.
 
 Si marcas «Preparar inventario inicial», la celda vacía queda pendiente de conteo; 0 guarda un conteo de cero unidades; un entero positivo guarda esa cantidad. Revisa las líneas en Inventario → Conteo guiado y confirma el inicio. No se aplica automáticamente un ajuste al inventario existente.
 
-Cada colaborador necesita su propia cuenta: Usuarios → Nuevo usuario → rol Inventario. Este rol entra en /inventario, ve los conteos abiertos y puede contar productos; no accede a ventas, clientes, caja, precios, usuarios ni ajustes. El administrador inicia el inventario inicial/general o el conteo diario. Al solicitar un inventario compartido del mismo tipo se continúa el abierto, sin crear otra copia.
+Cada colaborador necesita su propia cuenta: Usuarios → Nuevo usuario → rol Inventario. Este rol entra en /inventario, ve los conteos abiertos y puede contar productos; no accede a ventas, clientes, caja, valores de venta, usuarios ni ajustes. El administrador inicia el inventario inicial/general o el conteo diario. Al solicitar un inventario compartido del mismo tipo se continúa el abierto, sin crear otra copia.
 
 «Tomar siguiente producto» asigna un pendiente por cinco minutos, usando el bloqueo transaccional del conteo. Otro colaborador no puede tomarlo ni guardar una cantidad en esa línea. «Renovar tiempo» prolonga la asignación propia; «Liberar producto» la devuelve a pendientes. Al vencer, otro usuario puede recuperarla; una pantalla vieja no puede guardar sin una asignación vigente. Se recomienda una cuenta distinta por persona, no compartir la misma sesión. Recargar y tomar un producto recupera la asignación propia vigente.
 
@@ -304,3 +304,57 @@ El conteo diario incluye cinco productos aleatorios (todos si hay menos). La rot
 Las pantallas se sincronizan con el mecanismo existente cada dos segundos más la latencia. Guardar espera la confirmación real de PostgreSQL, no una promesa de escritura instantánea ni la caché local.
 
 El administrador puede usar Corregir sobre una línea contada mientras el documento siga abierto. La corrección envía contadoEnEsperado y se rechaza si la lectura cambió desde que se abrió; conserva a los participantes anteriores y no modifica el stock hasta aplicar el conteo.
+
+## V8P4 · Productos, compras y correcciones de cantidades
+
+Productos reemplaza el nombre del módulo anterior. Ruta del panel: /admin/productos; historial del importe: GET /api/v1/productos/:id/historial. La tabla productos y sus campos precioVenta/costoActual no cambian. Crear productos se ofrece en Productos, Compras > Nueva recepción e Inventario inicial abierto, con la misma ficha. El colaborador de inventario puede dar de alta y contar únicamente dentro del inicial abierto; no puede dar altas generales ni modificar costos/importes. Stock general mantiene exclusivamente consulta, fotos y correcciones de cantidades.
+
+En Stock general, toca el nombre para corregir las cantidades. El formulario muestra stockFisico, incluyendo unidades reservadas, y mantiene el motivo y la confirmación. Editar nombre, presentación, costo o importe se hace con el acceso a Productos. Una corrección guarda ajustesInventario, ajusteLineas y movimientosInventario en una transacción. No puede dejar el físico por debajo de las reservas. Descuadres lista los conteos confirmados y ajustes manuales; el inicial es el punto de partida y no se presenta como pérdida. Aplicar un conteo no duplica su diferencia. Inicio calcula faltantes/sobrantes con el costo histórico, sin revalorizarlos cuando cambie el catálogo.
+
+Consultas de solo lectura para comparar la pantalla:
+
+~~~sql
+SELECT p."codigoInterno", p.nombre, p."stockFisico", p."stockReservado",
+       p."stockFisico" - p."stockReservado" AS disponible, p."costoActual", p."precioVenta"
+FROM productos p ORDER BY p.nombre;
+
+SELECT r.numero, v.nombre AS proveedor, r."creadoEn", r.total,
+       l.nombre, l.cantidad, l."costoUnitario", l.subtotal
+FROM "recepcionesCompra" r JOIN proveedores v ON v.id=r."proveedorId"
+JOIN "recepcionLineas" l ON l."recepcionCompraId"=r.id
+ORDER BY r."creadoEn" DESC, l.nombre;
+
+SELECT a."creadoEn", u.nombre AS responsable, p.nombre, a.motivo, a.comentario,
+       l."stockTeorico", l."stockFisico", l.diferencia, l."costoUnitario",
+       l.diferencia*l."costoUnitario" AS valor_diferencia
+FROM "ajustesInventario" a JOIN "ajusteLineas" l ON l."ajusteInventarioId"=a.id
+JOIN productos p ON p.id=l."productoId" JOIN usuarios u ON u.id=a."usuarioId"
+WHERE a."conteoId" IS NULL AND a.estado='aplicado' ORDER BY a."creadoEn" DESC;
+~~~
+
+Ejercicio reproducible, únicamente en QA: node Backend/scripts/probar-productos-compras-stock.cjs. Crea dos proveedores ficticios y tres productos: 12 paquetes a costo 1.200 (14.400), 7 botellas a 800 y 5 bolsas a 3.000 (20.600). Compras debe aumentar 35.000. Una corrección de 12 a 10 paquetes registra -2 y 2.400 de faltante; de 10 a 13 registra +3 y 3.600 de sobrante. Comprueba cada formulario, PostgreSQL, caché del tablero, reintento concurrente y catálogo del vendedor ya abierto. Los registros se conservan en QA, sin contaminar el negocio.
+
+### Conciliar avisos y operaciones preparadas en Chat
+
+Después de la migración, una venta nueva y cada cambio real de estado generan un aviso. Una recepción genera otro. Cancelar un borrador o consultar stock desde Chat no crea ventas, movimientos ni avisos. Abrir el detalle tampoco guarda: se confirma con el botón habitual del módulo. El historial de notificaciones es por instalación; su lectura es individual y respeta los módulos habilitados del administrador.
+
+~~~sql
+SELECT n.id, n.tipo, n.titulo, n.ruta, n."creadoEn",
+       u.nombre AS lector, l."leidoEn"
+FROM notificaciones n
+LEFT JOIN "lecturasNotificacion" l ON l."notificacionId" = n.id
+LEFT JOIN usuarios u ON u.id = l."usuarioId"
+ORDER BY n."creadoEn" DESC, n.id DESC LIMIT 30;
+
+-- Una única marca por persona y aviso: esta consulta debe devolver cero filas.
+SELECT "notificacionId", "usuarioId", count(*)
+FROM "lecturasNotificacion"
+GROUP BY "notificacionId", "usuarioId" HAVING count(*) > 1;
+
+-- Para contrastar una recepción abierta desde un aviso, usar su UUID real.
+SELECT r.id, r.numero, r.total, sum(l.subtotal) AS total_lineas
+FROM "recepcionesCompra" r JOIN "recepcionLineas" l ON l."recepcionCompraId"=r.id
+GROUP BY r.id, r.numero, r.total HAVING r.total <> sum(l.subtotal);
+~~~
+
+Las consultas no modifican el negocio. No comparar la cantidad de avisos con todo el historial: los anteriores a la migración no reciben un aviso retrospectivo.

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { BarraInferior } from "../../../components/BarraInferior";
 import { BarraSuperior } from "../../../components/BarraSuperior";
+import { FichaProductoCodigo } from "../../../components/FichaProductoCodigo";
 import { Boton } from "../../../components/Boton";
 import { BuscadorInput } from "../../../components/BuscadorInput";
 import { ConfirmarAccion } from "../../../components/ConfirmarAccion";
@@ -21,6 +22,8 @@ import { construirLineaRecepcion } from "../../../dominio/servicios";
 import { ETIQUETA_PERIODO, PERIODOS, dentroDePeriodo, type Periodo } from "../../../utils/fechas";
 import { formatoMoneda } from "../../../utils/formato";
 import { FormularioGasto } from "../components/FormularioGasto";
+import { useOperacionAgente, useRevisionAgente } from "../../agentes/operacion-agente";
+import { useSearchParams } from "react-router-dom";
 
 type TabCompras = "compras" | "gastos";
 type Vista = "historial" | "recepcion" | "detalle";
@@ -38,6 +41,10 @@ export function ComprasAdmin() {
   const [busqueda, setBusqueda] = useState("");
   const [pagina, setPagina] = useState(1);
   const [detalle, setDetalle] = useState<RecepcionCompra | null>(null);
+  const [parametros, setParametros] = useSearchParams();
+  const recepcionEnlace = parametros.get("recepcion");
+  const detalleEnlace = useRegistroApi<RecepcionCompra>(`/recepciones-compra/${recepcionEnlace}`, !!recepcionEnlace);
+  useEffect(() => { if (recepcionEnlace && detalleEnlace.data?.id === recepcionEnlace) { setDetalle(detalleEnlace.data); setVista("detalle"); } }, [detalleEnlace.data, recepcionEnlace]);
 
   // Wizard recepción
   const [paso, setPaso] = useState<PasoRecepcion>(1);
@@ -153,6 +160,7 @@ export function ComprasAdmin() {
   }
 
   function cerrarDetalle() {
+    if (recepcionEnlace) setParametros({}, { replace: true });
     setDetalle(null);
     setVista("historial");
   }
@@ -220,6 +228,19 @@ export function ComprasAdmin() {
     return true;
   }
 
+  const revisionOperacion = useRevisionAgente();
+  useEffect(() => {
+    if (revisionOperacion?.instruccion.operacion === "gasto") { setVista("historial"); setTab("gastos"); }
+  }, [revisionOperacion]);
+  const confirmarRecepcionCompartida = useOperacionAgente("compra", r => {
+    setProveedorId(typeof r.datos.proveedorId === "string" ? r.datos.proveedorId : null);
+    const productos = r.datos.productos as Producto[];
+    const recibidas = r.datos.lineas as Array<Omit<LineaRecepcion, "codigoInterno">>;
+    setLineas(recibidas.map(l => ({ ...l, codigoInterno: productos.find(p => p.id === l.productoId)?.codigoInterno ?? "" })));
+    setDescontarCaja(r.instruccion.descontarCaja ?? true);
+    setVista("recepcion"); setPaso(3);
+  }, confirmarRecepcion, () => ({ operacion: "compra", proveedor: proveedorActual?.nombre, descontarCaja, lineas: lineas.map(l => ({ producto: l.nombre, cantidad: l.cantidad, costoUnitario: l.costoUnitario })) }));
+
   async function guardarProductoInline(e: FormEvent) {
     e.preventDefault();
     const prod = await crearProducto({
@@ -247,12 +268,12 @@ export function ComprasAdmin() {
         {/* Zona fija: título, pestañas, periodo, buscador */}
         <div className="flex-shrink-0 border-b border-line pb-2.5">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <h2 className="font-display text-[18px] font-semibold text-ink">Compras y gastos</h2>
+            <div className="cabecera-modulo flex items-center gap-2">
+              <h2 className="titulo-modulo sr-only">Compras y gastos</h2>
               <GuiaAyuda
                 pantalla="Compras y gastos"
                 pasos={[
-                  { titulo: "1 · Historial", texto: "COMPRAS lista recepciones y GASTOS egresos. Filtros hoy/ayer/semana/mes/todo y buscador siempre visibles. Toca una compra para ver su detalle." },
+                  { titulo: "1 · Historial", texto: "Compras lista recepciones y Gastos egresos. Usa los filtros de período y el buscador. Toca una compra para ver su detalle." },
                   { titulo: "2 · Nueva recepción", texto: "Botón + Recepción arriba. Paso 1 proveedor, paso 2 productos (cada uno confirma con toast y Deshacer), paso 3 confirmar. La flecha te lleva al paso anterior o al inicio." },
                   { titulo: "3 · Facturación", texto: "Lo que facturaste en la compra se ve en otra pantalla: toca cualquier recepción del historial para abrir su detalle con líneas y total." },
                   { titulo: "4 · Efecto", texto: "Al confirmar sube el stock, actualiza el último costo y, si marcas descontar, crea el egreso en caja. Los gastos se descuentan de caja automáticamente." },
@@ -276,16 +297,12 @@ export function ComprasAdmin() {
                 type="button"
                 onClick={() => setTab("compras")}
                 className={`rounded-full px-3.5 py-1 text-[12px] font-semibold transition-colors ${tab === "compras" ? "bg-ink text-white" : "text-ink-soft hover:text-ink"}`}
-              >
-                COMPRAS
-              </button>
+              >Compras</button>
               <button
                 type="button"
                 onClick={() => setTab("gastos")}
                 className={`rounded-full px-3.5 py-1 text-[12px] font-semibold transition-colors ${tab === "gastos" ? "bg-ink text-white" : "text-ink-soft hover:text-ink"}`}
-              >
-                GASTOS
-              </button>
+              >Gastos</button>
             </div>
           </div>
 
@@ -308,8 +325,8 @@ export function ComprasAdmin() {
 
           {tab === "gastos" && (
             <FormularioGasto
-              alGuardar={async (concepto, monto) => {
-                if (!await registrarGasto(concepto, monto)) return false;
+              alGuardar={async (concepto, monto, metodo) => {
+                if (!await registrarGasto(concepto, monto, metodo)) return false;
                 mostrarToast(`Gasto "${concepto}" descontado de caja`, "exito");
                 return true;
               }}
@@ -566,8 +583,8 @@ export function ComprasAdmin() {
       )}
 
       {paso === 2 && (
-        <>
-          {/* Fijo: proveedor, buscador, crear producto */}
+        <main aria-label="Productos de la recepción" className="min-h-0 flex-1 overflow-y-auto">
+          {/* El alta y el catálogo comparten el desplazamiento del paso. */}
           <div className="flex-shrink-0 space-y-2.5 px-5 pt-4 md:px-6 lg:px-8">
             <div className="flex items-center justify-between gap-2 rounded-xl bg-teal-soft px-3 py-2 text-[12.5px] text-teal">
               <span className="min-w-0 truncate">
@@ -596,7 +613,7 @@ export function ComprasAdmin() {
               </button>
             </div>
 
-            {mostrarCrearProd && (
+            {mostrarCrearProd && (usaApi ? <FichaProductoCodigo categoriaInicial="Abarrotes" onCerrar={() => setMostrarCrearProd(false)} onGuardado={r => { setMostrarCrearProd(false); setBusquedaProd(r.producto.nombre); mostrarToast(r.aviso ?? `Producto ${r.producto.nombre} listo · agrega cantidad y costo`, r.aviso ? "error" : "exito"); }} /> : (
               <form onSubmit={guardarProductoInline} className="rounded-xl border border-line bg-paper-sunken p-3">
                 <div className="grid grid-cols-2 gap-2">
                   <input
@@ -625,11 +642,11 @@ export function ComprasAdmin() {
                   Crear producto (código auto)
                 </Boton>
               </form>
-            )}
+            ))}
           </div>
 
           <Paginacion pagina={paginaProducto} totalPaginas={Math.max(1,Math.ceil((usaApi ? productosRemotos.total : productosFiltrados.length)/POR_PAGINA))} total={usaApi ? productosRemotos.total : productosFiltrados.length} porPagina={POR_PAGINA} onChange={setPaginaProducto}/>
-          {/* Contenedor fijo: catálogo con scroll propio */}
+          {/* La lista paginada se desplaza junto al formulario y la continuación. */}
           <div className="flex min-h-0 flex-1 flex-col px-5 py-3 md:px-6 lg:px-8">
             <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-line bg-paper-sunken/30">
               <div className="flex flex-shrink-0 items-center justify-between border-b border-line bg-paper-raised px-3 py-2">
@@ -713,7 +730,7 @@ export function ComprasAdmin() {
               Revisar y confirmar →
             </Boton>
           </BarraInferior>
-        </>
+        </main>
       )}
 
       {paso === 3 && (
@@ -764,7 +781,7 @@ export function ComprasAdmin() {
           {tiraToast}
 
           <BarraInferior>
-            <Boton onClick={confirmarRecepcion}>Confirmar recepción · {formatoMoneda(totalRecepcion)}</Boton>
+            <Boton onClick={confirmarRecepcionCompartida}>Confirmar recepción · {formatoMoneda(totalRecepcion)}</Boton>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <button
                 type="button"

@@ -1,5 +1,5 @@
 /**
- * Enums canónicos de AMBIÉ.
+ * Enums canónicos de Synchronic.JO.
  *
  * Cada valor coincide exactamente con el `@map(...)` del enum en
  * `Backend/prisma/schema.prisma` y con el texto que viaja por la API.

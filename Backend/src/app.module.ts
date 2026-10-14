@@ -1,3 +1,4 @@
+import { AparienciaModule } from "./apariencia/apariencia.module";
 import { Module } from "@nestjs/common";
 import { SincronizacionModule } from "./sincronizacion/sincronizacion.module";
 import { ConfigModule } from "@nestjs/config";
@@ -21,6 +22,8 @@ import { CajaModule } from "./caja/caja.module";
 import { UsuariosModule } from "./usuarios/usuarios.module";
 import { CierresModule } from "./cierres/cierres.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
+import { AgentesModule } from "./agentes/agentes.module";
+import { NotificacionesModule } from "./notificaciones/notificaciones.module";
 
 @Module({
   imports: [
@@ -44,6 +47,9 @@ import { DashboardModule } from "./dashboard/dashboard.module";
     DashboardModule,
     AuditoriaModule,
     ArchivosModule,
+    AgentesModule,
+    NotificacionesModule,
+    AparienciaModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: AuthGuard }, { provide: APP_INTERCEPTOR, useClass: GuardadoInterceptor }, { provide: APP_INTERCEPTOR, useClass: AuditoriaInterceptor }],
 })

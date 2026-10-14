@@ -247,8 +247,8 @@ export function CreditosAdmin() {
   return (
     <div className="flex h-full flex-col min-h-0">
       <div className="flex-shrink-0 flex items-start justify-between gap-3 border-b border-line pb-2.5">
-        <div className="flex items-center gap-2">
-          <h2 className="font-display text-[18px] font-semibold text-ink">Créditos</h2>
+        <div className="cabecera-modulo flex items-center gap-2">
+          <h2 className="titulo-modulo sr-only">Créditos</h2>
           <GuiaAyuda
             pantalla="Créditos"
             pasos={[

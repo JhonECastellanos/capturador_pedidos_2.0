@@ -334,7 +334,7 @@ function OperacionesLocalProvider({ children }: { children: ReactNode }) {
     return recepcion;
   }, [usuario]);
 
-  const registrarGasto = useCallback((concepto: string, monto: number) => {
+  const registrarGasto = useCallback((concepto: string, monto: number, metodo: "efectivo" | "billetera" = "efectivo") => {
     const id = nuevoId();
     const creadoEn = new Date().toISOString();
     const usuarioId = usuario?.id ?? "sistema";
@@ -344,7 +344,7 @@ function OperacionesLocalProvider({ children }: { children: ReactNode }) {
       guardarGastos(siguientes);
       return siguientes;
     });
-    const movimiento = egresoCajaDeGasto(gasto, nuevoId());
+    const movimiento = { ...egresoCajaDeGasto(gasto, nuevoId()), metodo };
     setMovimientosCaja((actuales) => {
       const siguientes = [movimiento, ...actuales];
       guardarMovimientosCaja(siguientes);

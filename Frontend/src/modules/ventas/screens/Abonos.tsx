@@ -19,6 +19,7 @@ import type { AbonoCredito, Pedido } from "../../../types";
 import { formatoMoneda } from "../../../utils/formato";
 import { BadgeMora } from "../components/BadgeMora";
 import { FormularioAbono } from "../components/FormularioAbono";
+import { useOperacionAgente } from "../../agentes/operacion-agente";
 
 interface AbonosProps {
   onVolver: () => void;
@@ -106,6 +107,13 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
     return true;
   }
 
+  const confirmarAbonoCompartido = useOperacionAgente("cobro", r => {
+    setClienteId(typeof r.datos.clienteId === "string" ? r.datos.clienteId : null);
+    setMonto(r.instruccion.monto === undefined ? "" : String(r.instruccion.monto));
+    if (r.instruccion.metodo === "efectivo" || r.instruccion.metodo === "billetera") setMetodo(r.instruccion.metodo);
+    setConfirmarCobro(r.faltantes.length === 0);
+  }, confirmarAbono, () => ({ operacion: "cobro", cliente: detalle?.cliente?.nombre, ...(monto.trim() ? { monto: Number(monto) } : {}), metodo }));
+
   // ─── Detalle de cliente ───
   if (detalle) {
     const cliente = detalle.cliente;
@@ -180,7 +188,7 @@ export function Abonos({ onVolver, titulo = "Recibir abonos" }: AbonosProps) {
           textoConfirmar="Sí, recibir"
           tono="exito"
           alCancelar={() => setConfirmarCobro(false)}
-          alConfirmar={confirmarAbono}
+          alConfirmar={confirmarAbonoCompartido}
         />
       </div>
     );

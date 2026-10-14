@@ -336,7 +336,7 @@ Claves e índices declarados: `@@index([clienteId])`; `@@index([fechaOperacion])
 
 ## pedidoLineas (PedidoLinea)
 
-Productos vendidos con cantidades y precios/costos históricos. Cambiar el catálogo no modifica estas líneas.
+Productos vendidos con cantidades y valores de venta/costos históricos. Cambiar el catálogo no modifica estas líneas.
 
 | Columna | Tipo Prisma / almacenamiento especial | Nulo | Generación y restricciones | Significado |
 |---|---|---|---|---|
@@ -554,7 +554,7 @@ Una línea por producto del conteo. Los valores nulos distinguen lo todavía no 
 | `productoId` | String  | No | Sin default; lo proporciona el servicio | Producto relacionado. |
 | `cicloDiario` | Int / integer | Sí | Debe ser positivo cuando existe; índice con productoId | Ciclo de cobertura al que pertenece esta línea diaria. |
 | `contadoPorId` | String / text | Sí | FK usuarios(id), ON DELETE SET NULL | Usuario autenticado que guardó la última cantidad; no se recibe del formulario. |
-| `costoUnitarioConteo` | Decimal / numeric(18,2) | Sí | CHECK >= 0; sin default | Costo del catálogo guardado al digitar la cantidad. No cambia al editar precios o costos después. NULL identifica registros anteriores sin valoración conocida. |
+| `costoUnitarioConteo` | Decimal / numeric(18,2) | Sí | CHECK >= 0; sin default | Costo del catálogo guardado al digitar la cantidad. No cambia al editar valores de venta o costos después. NULL identifica registros anteriores sin valoración conocida. |
 | `stockTeorico` | Int  | No | Sin default; lo proporciona el servicio | Físico que se tomó como referencia al abrir el conteo o ajuste. |
 | `stockFisico` | Int  | Sí | Sin default; lo proporciona el servicio | Existencias físicas. En conteos es la cantidad digitada, nula mientras no se cuenta. |
 | `diferencia` | Int  | Sí | Sin default; lo proporciona el servicio | Físico menos teórico; en cierre contado menos esperado. |
@@ -809,3 +809,11 @@ RolUsuario agrega inventario; roles/rolPermisos le asignan solo inventario. La A
 conteoLineas.asignadoPorId: FK a usuarios, nullable; identifica quién está contando. asignadoHasta: instante UTC nullable; vence a los cinco minutos. Ambos se limpian al guardar o liberar. contadoPorId/contadoEn identifican el guardado confirmado; stockFisico NULL sigue pendiente, 0 es contado. Índice conteoId/stockFisico/asignadoHasta para recuperar pendientes. La unicidad conteoId/productoId impide duplicar una línea.
 
 participantesConteo: PK compuesta conteoId/usuarioId; FK a conteosInventario y usuarios. primeroEn/ultimoEn: primera y última cantidad guardada por ese usuario. No almacena otra copia de cantidades ni balances. La migración conserva participantes históricos conocidos a partir de las líneas con responsable y fecha. Los antiguos registros sin responsable no reciben un colaborador inventado. Trigger diferido de sincronización publica cambios solo al confirmar la transacción.
+
+### Avisos comerciales — 14/10/2026
+
+`notificaciones`: `id` UUID textual, PK; `tipo` pedido/compra; `titulo` breve con consecutivo y estado; `ruta` al detalle administrativo; `creadoEn` instante UTC. Índice creadoEn/id para paginar de forma estable. El trigger genera el aviso en la misma transacción del alta de pedido, cambio real de estado o recepción. No copia las líneas, importes ni clientes y no altera el historial comercial. No reconstruye avisos de operaciones anteriores a la migración.
+
+`lecturasNotificacion`: PK compuesta notificacionId/usuarioId; FKs al aviso y al usuario, con borrado en cascada de esas relaciones; `leidoEn` instante UTC de la primera lectura. El upsert evita duplicados y otro administrador mantiene su propia marca de lectura. El retiro de usuarios del aplicativo es lógico: no elimina documentos comerciales.
+
+Los mensajes y borradores del chat permanecen en RAM por sesión. Las operaciones confirmadas se guardan en sus tablas actuales. No hay una segunda tabla de ventas, cantidades, pagos ni transacciones del chat. Los avisos se leen mediante consulta paginada propia; no requieren incrementar la revisión operativa de sincronización.

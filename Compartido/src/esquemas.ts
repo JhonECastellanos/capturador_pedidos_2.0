@@ -7,9 +7,12 @@
 
 import { z } from "zod";
 
+export const CodigoLecturaEsquema = z.string().trim().min(1).max(128).regex(/^[^\x00-\x1f\x7f]+$/, "El código contiene caracteres inválidos");
+
 export const ImportarProductosEsquema = z.object({
   prepararInicial: z.boolean(),
   productos: z.array(z.object({
+    codigosLectura: z.array(CodigoLecturaEsquema).max(20).optional(),
     codigoInterno: z.string().trim().max(40).optional(),
     nombre: z.string().trim().min(1).max(200),
     categoria: z.string().trim().max(100).optional(),
@@ -112,7 +115,24 @@ export const FiltroClientesEsquema = z.object({
 
 // ─── Productos ────────────────────────────────────────────────────
 
+export const VincularCodigoEsquema = z.object({ codigo: CodigoLecturaEsquema, conteoId: z.string().uuid().optional() });
+
+/** Alta o nueva etiqueta exclusivamente dentro de un inicial abierto. */
+export const ProductoInicialEsquema = z.object({
+  nombre: texto.min(2).max(200),
+  unidad: texto.min(1).max(40),
+  categoria: texto.max(100).optional(),
+  codigo: CodigoLecturaEsquema.optional(),
+  productoId: z.string().uuid().optional(),
+  productoBaseId: z.string().uuid().optional(),
+  extension: texto.max(80).optional(),
+  cantidad: cantidad.min(0).optional(),
+}).strict().refine(d => !!d.productoId || d.cantidad !== undefined, { message: "Indica la cantidad inicial, incluyendo 0 si no hay unidades", path: ["cantidad"] });
+
 export const NuevoProductoEsquema = z.object({
+  productoBaseId: z.string().uuid().optional(),
+  extension: texto.max(80).optional(),
+  codigosLectura: z.array(CodigoLecturaEsquema).max(20).optional(),
   nombre: texto.min(2, "El nombre es obligatorio"),
   categoria: texto.optional(),
   unidad: texto.default("unidad"),
@@ -123,6 +143,10 @@ export const NuevoProductoEsquema = z.object({
 });
 
 export const CambiarPrecioEsquema = z.object({
+  nombre: texto.min(2).max(200).optional(),
+  extension: texto.max(80).optional(),
+  costoActual: monto.min(0).optional(),
+  stockMinimo: cantidad.min(0).optional(),
   nuevoPrecio: monto.min(0, "El precio no puede ser negativo"),
 });
 
@@ -139,6 +163,7 @@ export const FiltroProductosEsquema = z.object({
 export const LineaPedidoEsquema = z.object({
   productoId: z.string().min(1),
   cantidad: cantidad.min(1, "La cantidad debe ser al menos 1"),
+  precioEsperado: monto.min(0).optional(),
 });
 
 export const NuevoPedidoEsquema = z.object({
