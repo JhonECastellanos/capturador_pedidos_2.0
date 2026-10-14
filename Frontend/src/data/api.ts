@@ -101,7 +101,10 @@ export async function respuestaApi<T>(ruta: string, metodo = "GET", datos?: unkn
   if (metodo === "GET" && !ruta.startsWith("/auth/") && ruta !== "/salud") return consultas.fetchQuery({ queryKey: claveConsulta(ruta), queryFn: ({ signal }) => respuestaRed<T>(ruta, "GET", undefined, signal) });
   const respuesta = await respuestaRed<T>(ruta, metodo, datos);
   // Interpretar, revisar y transcribir no modifican los datos del negocio.
-  if (metodo !== "GET" && !ruta.startsWith("/auth/") && (!ruta.startsWith("/agentes/") || ruta === "/agentes/configuracion")) await consultas.invalidateQueries({ queryKey: ["api"] });
+  if (metodo !== "GET" && !ruta.startsWith("/auth/") && (!ruta.startsWith("/agentes/") || ruta === "/agentes/configuracion")) {
+    // El guardado termina con la respuesta de PostgreSQL; las lecturas se actualizan aparte.
+    void consultas.invalidateQueries({ queryKey: ["api"] }).catch(() => {});
+  }
   return respuesta;
 }
 

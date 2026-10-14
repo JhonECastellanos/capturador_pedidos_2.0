@@ -56,7 +56,7 @@ export default function Asistente() {
     if (bloqueo.current || agenteGuardando()) return;
     bloqueo.current = true; setOcupado(true);
     const turno = generacion.current;
-    try { await tarea(); } catch (e) { if (turno === generacion.current) { const aviso = e instanceof Error ? e.message : "No se pudo completar la instrucción"; setMensaje(aviso); if (estado && vozActiva.current) hablar(aviso, estado.audio); } }
+    try { await tarea(); } catch (e) { if (turno === generacion.current) { const aviso = e instanceof Error ? e.message : "No se pudo completar la instrucción"; setMensaje(aviso); if (estado && vozActiva.current && !ordenesPendientes.current.length) hablar("No pude responder. Puedes repetir la instrucción.", estado.audio); } }
     finally { if (turno === generacion.current) { bloqueo.current = false; setOcupado(false); const pendiente = ordenesPendientes.current.shift(); if (pendiente) void interpretarActual.current(pendiente); } }
   }
   async function interpretar(instruccion = texto) {
@@ -69,12 +69,8 @@ export default function Asistente() {
       const anterior = revisionAgente();
       if (/^confirmar(?:\s+(?:pedido|operación|operacion))?[.!]?$/i.test(orden)) { await confirmarDesdeAgente(); return; }
       if (/^cancelar(?:\s+(?:instrucción|instruccion))?[.!]?$/i.test(orden)) { cambiarRevisionAgente(null); setTexto(""); setMensaje("Instrucción cancelada. No se guardó una operación"); return; }
-      setMensaje("Estoy preparando el detalle. No se ha guardado ninguna operación");
-      if (estado && vozActiva.current) hablar("Claro, voy a revisar lo que me indicaste.", estado.audio);
-      const resultado = await api<RevisionAgente>("/agentes/interpretar", "POST", { texto: orden, conversacionId: conversacionId.current, contexto: contextoAgente(), ...(anterior ? { anterior: anterior.instruccion, id: anterior.id, version: anterior.version + 1 } : {}) }).catch(error => {
-        if (turno === generacion.current) { detenerMicrofono.current?.(); detenerMicrofono.current = null; silenciarMicrofono.current = null; setEscuchando(false); }
-        throw new Error(`${error instanceof Error ? error.message : "No se pudo interpretar"}. El texto se conserva; toca el robot y vuelve a dictar la corrección`);
-      });
+      setMensaje("Preparando detalle…");
+      const resultado = await api<RevisionAgente>("/agentes/interpretar", "POST", { texto: orden, conversacionId: conversacionId.current, contexto: contextoAgente(), ...(anterior ? { anterior: anterior.instruccion, id: anterior.id, version: anterior.version + 1 } : {}) });
       if (turno !== generacion.current || revisionAgente() !== anterior || agenteGuardando()) return;
       cambiarRevisionAgente(resultado); setMensaje(resultado.resumen + (resultado.conexion?.respaldo ? ` · Respondió el respaldo: ${resultado.conexion.proveedor}` : "")); setTexto(orden); navegar(resultado.ruta);
       if (estado && vozActiva.current && !ordenesPendientes.current.length) hablar(resultado.resumen, estado.audio);
@@ -128,7 +124,7 @@ export default function Asistente() {
       nivel => { robot.current?.style.setProperty("--nivel", String(nivel)); }, contextoAudio);
       if (turno !== generacionAudio.current) { detener(); return; }
       detenerMicrofono.current = detener; setEscuchando(true);
-      const saludo = "Hola, soy el asistente de Synchronic.JO. Puedes decirme la operación completa.";
+      const saludo = "Hola. Te escucho.";
       if (!reanudando) { setMensaje(saludo); hablar(saludo, configuracion.audio); }
       else setMensaje("Te escucho. Puedes completar o corregir la operación.");
     } catch (error) {

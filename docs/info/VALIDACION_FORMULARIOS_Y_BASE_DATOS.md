@@ -512,7 +512,46 @@ Ejercicio inicial: crear Camisa con cinco unidades; volver a la misma etiqueta y
 
 Retirada automática aprobada: no retira a los 179 días; después del plazo de 180 días retira la anterior y conserva la última activa y todas sus relaciones históricas. El servicio revisa al arrancar y cada seis horas. No hay borrado físico ni migración. En la integración se detectó un agotamiento de la transacción al crear líneas una por una; se sustituyó por createMany en la misma transacción y los 18 casos volvieron a pasar, sin ampliar el timeout.
 
-Reproducir exclusivamente en QA: node Backend/scripts/probar-codigos-inventario.cjs y node Backend/scripts/probar-escaner-ui.cjs --solo-escaner. La opción limita el segundo recorrido al lector; los casos antiguos de voz permanecen en el script pero no forman parte de esta validación.
+Reproducir exclusivamente en QA: node Backend/scripts/probar-codigos-inventario.cjs y node Backend/scripts/probar-escaner-ui.cjs --solo-escaner. La opción limita el segundo recorrido al lector; los casos antiguos de voz permanecen en el script pero no forman parte de esa validación histórica.
+
+## Respuestas y rendimiento del agente · V8P4
+
+La transcripción permanece literal en la burbuja y en la solicitud. Se compara una copia sin tildes para buscar nombres: primero coincidencias exactas, luego errores breves de escritura y plurales. Los números de una presentación deben coincidir. «Agua Cristal» con dos tamaños disponibles o «Yogur» con dos sabores requiere aclaración; no se escoge por orden de la lista. La búsqueda aproximada está acotada: más de 120 candidatos requiere una indicación más precisa. El modelo recibe hasta 24 nombres y unidades ordenados por parecido, junto al borrador anterior, para conservar cantidades, pago y preparación al corregir. No recibe una descarga completa del catálogo.
+
+Un saludo recibe una respuesta corta sin proveedor. Al preparar una operación no se reproduce una locución previa. Con información completa responde «Listo. Revisa y confirma.»; cuando falta algo menciona solo el primer dato. Las demás validaciones siguen en el detalle. Un error de interpretación mantiene el texto, el borrador y la escucha; cortar el micrófono sigue permitiendo terminar una respuesta y dos toques apagan el agente. Ningún mensaje de preparación ejecuta la transacción: confirmar sigue usando el mismo formulario, revisión actualizada y guardado del negocio.
+
+«Cambia el pago a billetera» sobre un pedido ya preparado usa directamente su revisión existente. Una frase con más cambios, como «Cambia el pago a billetera y agrega otro producto», pasa al modelo para interpretar toda la corrección. El crédito de un cliente ocasional continúa bloqueado.
+
+DeepSeek no admite una herramienta obligatoria con razonamiento activado. En sus conexiones directas y OpenCode se envía `thinking.type=disabled` para esta extracción. No se cambia el modelo, la clave ni el límite de tokens; tampoco se envía ese parámetro a OpenRouter u otros proveedores. Referencia: [API de DeepSeek](https://api-docs.deepseek.com/api/create-chat-completion/). Los errores de cuota, credencial y disponibilidad siguen explicándose; una suscripción no garantiza una respuesta sin fallos.
+
+### Ejercicios rápidos
+
+Los [16 guiones de prueba](../ejemplos/guiones-agente.json) describen la frase y los campos que deben aparecer en cada detalle. Son datos ficticios; cambia nombres, proveedor y consecutivo por referencias existentes en tu instalación. Para una prueba sin movimiento comercial, revisa y cancela sin decir confirmar. Los guiones incluyen ventas con dos y tres tipos de producto, correcciones, efectivo/billetera, crédito registrado y ocasional rechazado, abonos, estado de pedidos, compras con costo, gastos, egresos, precio, apertura/guardado/finalización/aplicación de conteos y cierre con cero válido. Los permisos reales del rol se siguen aplicando.
+
+1. Toca el robot y di «Hola buenas tardes». Debe saludar brevemente y no preparar una venta.
+2. Dicta «Cliente ocasional, dos Pepsi 400 ml y tres Doritos queso, efectivo, para preparar». Comprueba las dos referencias, cantidades, total y estado del detalle.
+3. Di «Cambia el pago a billetera». Debe conservar referencias, cantidades y preparación. Después di «Deja solo un Doritos, conserva las Pepsi»: cambia esa cantidad y comprueba el total.
+4. Usa otra combinación: «Una leche entera, cuatro panes integrales y dos cafés americanos, cliente ocasional, efectivo, ya entregado». Verifica las tres líneas; si esos nombres no están activos, pide aclaración con los de tu catálogo.
+5. Prueba «Cliente ocasional, un Doritos a crédito». Debe solicitar un cliente registrado. No debe confirmarse con el cliente ocasional.
+6. En un conteo abierto, toma un producto y di «Conté cero». Comprueba el cero y la asignación. Revisa el cierre o ajuste antes de confirmar; estos pueden modificar existencias.
+7. Mientras prepara un detalle, toca una vez para mutear: el resultado debe llegar. Reactiva y corrige; tocar fuera solo oculta la burbuja. Dos toques rápidos deben apagar la voz.
+
+### Reproducir y medir en QA
+
+Con las imágenes actuales y QA en 8180/3100, ejecutar desde la raíz:
+
+~~~powershell
+npm.cmd run prueba:agentes
+npm.cmd run prueba:cache
+npm.cmd run prueba:integracion
+node --env-file=.env Backend/scripts/probar-paneles-ui.cjs
+node --env-file=.env Backend/scripts/probar-respuesta-agente-ui.cjs
+node --env-file=.env Backend/scripts/medir-rendimiento.cjs actual
+~~~
+
+Ejecutar las suites que escriben en QA por separado: comparten revisiones, catálogo e inventario. El recorrido del robot usa audio/proveedor simulados y revisión API/PostgreSQL real; comprueba saludo, error recuperable, detalle, corrección, muteo, reactivación y apagado sin crear pedidos. Los 16 guiones prueban preparación y validaciones de los doce tipos de operación; no acreditan reconocimiento acústico o extracción del proveedor real para cada módulo.
+
+La medición de rendimiento realiza tres recorridos con Chrome, 390×844, caché nueva, red local y sin limitación de CPU; registra duración hasta el catálogo, bytes transferidos, solicitudes al escribir y revisión de uno/cinco productos. Guarda JSON y trazas privadas en `.local/rendimiento`. Son observaciones de laboratorio; no datos de usuarios reales ni garantía de tiempos en celulares físicos. La búsqueda espera una pausa de 220 ms; las listas anteriores se bloquean hasta mostrar el nuevo filtro. El formulario termina al recibir la escritura confirmada, mientras las lecturas se actualizan aparte y pueden informar sus propios errores.
 
 Cierre en producción, 12/10/2026: tras encender Docker Desktop se recuperaron los servicios y se registró el nuevo origen HTTPS del túnel temporal. Chrome real, ancho móvil 393 px, comprobó localhost y HTTPS: formulario del inicial abierto con nombre/cantidad y sin costo, alta ausente en Stock general, ajuste físico sin guardar, edición en Productos, filtros sin desbordamiento y lectura de Descuadres. No hubo errores de ejecución ni escrituras comerciales. El inicial del negocio sigue abierto, con cero de 37 productos contados; no se confirmó ni se reemplazó. Los seis conteos se conservan en el historial paginado. PostgreSQL conserva todos los identificadores previos de 21 pedidos, 37 productos, ocho clientes, 17 pagos, seis conteos y dos usuarios; stock contra movimientos, reservas contra sus saldos y totales de pedidos contra líneas devolvieron cero diferencias. Las pruebas de guardado y lectura de códigos quedaron en QA; su retirada conserva volúmenes. La lectura física desde el teléfono sigue pendiente de comprobación del usuario.
 
@@ -527,3 +566,9 @@ Validación actual: verificar completo y dos pruebas de caché aprobados; siete 
 Los tres colores personalizados se guardaron, coincidieron con PostgreSQL y se conservaron al recargar. Se comprobaron sus tres estados CSS sin activar audio. Un hexadecimal inválido y un intento del vendedor se rechazaron sin cambiar la configuración. La apariencia anterior de QA se restauró al terminar. Reproducir con npm run prueba:productos:compras, exclusivamente en QA.
 
 Producción actualizada y comprobada en localhost:8080 y el túnel HTTPS existente: Chrome móvil alcanzó Crear producto con la rueda y encontró los tres controles de color, sin errores de ejecución. El recorrido bloqueó escrituras comerciales; no guardó productos ni recepciones de prueba. La conciliación posterior conserva los 22 pedidos, 37 productos, ocho clientes, 18 pagos, seis conteos y dos usuarios de la instantánea previa; stock/movimientos, reservas y totales/líneas presentan cero diferencias. Se conservó un respaldo privado previo, leído con pg_restore sin restaurarlo; no equivale a un ensayo de recuperación. API/frontend se reemplazaron sin migraciones ni reiniciar la base. Los contenedores temporales de QA se retiran sin borrar volúmenes. Los tamaños y estados probados en Chrome no sustituyen la comprobación física desde el celular.
+
+Resultados actuales de laboratorio (13/10/2026, Bogotá): 41 casos controlados del agente y dos de caché aprobaron; los 18 casos de integración y el recorrido completo de paneles/formularios QA también aprobaron. Cliente y venta se confirmaron en 430,6 y 343 ms en el recorrido de formularios; la consulta posterior con Docker/psql observó los datos en 1.199,1 y 2.343,7 ms, incluyendo el tiempo de esa comprobación. No mide el instante interno del commit.
+
+La comparación en tres recorridos redujo el texto estático transferido de 609.658 a aproximadamente 180.335 bytes (70,4 %), las consultas al escribir Pepsi de cinco a una y la revisión de cinco productos de una mediana de 129 a 59 ms (rangos 124–158 y 42–105 ms). La carga inicial del catálogo fue 897 ms antes y 1.251 ms después en esa muestra (rangos 786–1.277 y 1.231–1.281 ms): no se acredita una mejora de carga general ni se extrapola a Internet. La corrección exclusiva de pago tardó 32–41 ms en tres solicitudes QA, sin proveedor; las correcciones combinadas siguen dependiendo de la conexión externa.
+
+Con OpenCode Go / deepseek-v4.1-flash, los tres ejercicios ficticios autorizados respondieron con herramienta válida: Pepsi 400 ml y Doritos queso 85 g, corrección a billetera y un Doritos conservando dos Pepsi, y transporte de 2.000 en efectivo. No guardaron pedidos. La medición del servicio fue 8.430/9.492/1.683 ms durante esa prueba; no representa un tiempo garantizado ni prueba de audio físico. El rechazo HTTP 400 previo y los límites externos no se ocultan. Chrome con transporte simulado comprobó que un rechazo conserva el micrófono y que saludo/detalle/corrección/muteo/reactivación/apagado funcionan.

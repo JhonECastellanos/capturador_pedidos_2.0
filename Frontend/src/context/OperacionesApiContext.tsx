@@ -1,16 +1,14 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { api, baseApi } from "../data/api";
+import { api } from "../data/api";
 import { consultas } from "../data/query";
-import { replaceEqualDeep } from "@tanstack/react-query";
 import { normalizarConteo } from "../utils/inventario";
 import type { ConteoInventarioDTO } from "@synchronic-jo/contrato";
 import { useRegistroApi } from "../data/usePaginaApi";
 import { useSincronizacion } from "../data/useSincronizacion";
 import { archivoAImagenDataUrl } from "../utils/imagen";
 import { useAuth } from "./auth";
-import { useLocation } from "react-router-dom";
 import { OperacionesContext, type OperacionesContextValue } from "./operaciones-context";
-import type { Cliente, Pedido, Producto, MovimientoCaja, Proveedor, RecepcionCompra, Gasto, AjusteInventario, CambioPrecio, AbonoCredito, CierreDia } from "../types";
+import type { Cliente, Pedido, Producto, Proveedor, RecepcionCompra, Gasto, AbonoCredito, CierreDia } from "../types";
 
 type Datos = Pick<OperacionesContextValue, "clientes" | "pedidos" | "inventario" | "movimientosCaja" | "usuarios" | "proveedores" | "recepciones" | "gastos" | "conteos" | "ajustes" | "cambiosPrecio" | "abonos" | "cierres">;
 const vacios: Datos = { clientes: [], pedidos: [], inventario: [], movimientosCaja: [], usuarios: [], proveedores: [], recepciones: [], gastos: [], conteos: [], ajustes: [], cambiosPrecio: [], abonos: [], cierres: [] };
@@ -18,8 +16,6 @@ const vacios: Datos = { clientes: [], pedidos: [], inventario: [], movimientosCa
 export function OperacionesApiProvider({ children }: { children: ReactNode }) {
   const { usuario } = useAuth();
   const conectado = useSincronizacion(usuario?.id);
-  const { pathname } = useLocation();
-  const esTablero = pathname === "/admin" || pathname === "/admin/" || ["/admin/usuarios", "/admin/auditoria", "/admin/configuracion"].includes(pathname) || (pathname === "/" && usuario?.rol === "administrador");
   const [datos, setDatos] = useState<Datos>(vacios);
   const [clienteActivoId, setClienteActivoId] = useState<string | null>(null);
   const clienteRemoto=useRegistroApi<Cliente>(`/clientes/${clienteActivoId}`,!!clienteActivoId);
@@ -28,9 +24,6 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
   const [guardando, setGuardando] = useState(false);
   const ocupado = useRef(false);
   const refrescoPendiente = useRef(false);
-  const sesionId = useRef(usuario?.id);
-  const revision = useRef(0);
-  const datosSesion = useRef<string | undefined>(undefined);
 
   useEffect(() => {
     const mostrarError = (evento: Event) => setError((evento as CustomEvent<string>).detail);
@@ -40,48 +33,13 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
 
   const cargar = useCallback(async () => {
     if (!usuario) return;
-    if (esTablero) {
-      if (datosSesion.current !== usuario.id) setDatos(vacios);
-      datosSesion.current = usuario.id;
-      setCargadoPara(usuario.id);
-      return;
-    }
-    const claveSnapshot = ["operaciones", usuario.id, pathname];
-    const anterior = consultas.getQueryData<Datos>(claveSnapshot);
-    // Un refresco no debe volver atrás a un snapshot de otra pantalla.
-    if (anterior && datosSesion.current !== usuario.id) { setDatos(anterior); setCargadoPara(usuario.id); }
-    const lectura = ++revision.current;
-
-    const [clientes, pedidos, inventario, abonos, movimientosCaja, usuarios, proveedores, recepciones, gastos, conteos, ajustes, cambiosPrecio, cierres, archivos] = await Promise.all([
-      Promise.resolve([] as Cliente[]), Promise.resolve([] as Pedido[]), Promise.resolve([] as Producto[]), Promise.resolve([] as AbonoCredito[]),
-      Promise.resolve([] as MovimientoCaja[]),
-      Promise.resolve([usuario]),
-      Promise.resolve([] as Proveedor[]),
-      Promise.resolve([] as RecepcionCompra[]),
-      Promise.resolve([] as Gasto[]),
-      Promise.resolve([] as ConteoInventarioDTO[]),
-      Promise.resolve([] as AjusteInventario[]),
-      Promise.resolve([] as CambioPrecio[]),
-      Promise.resolve([] as CierreDia[]),
-      Promise.resolve([] as Array<{id:string;productoId:string|null;pedidoId:string|null;nombre:string}>),
-    ]);
-    if (sesionId.current !== usuario.id || lectura !== revision.current) return;
-    const nuevosDatos: Datos = { ...vacios, clientes: clientes.map((c) => ({ ...c, identificacion: c.identificacion ?? "", alias: c.alias || c.nombre })), pedidos: pedidos.map((p) => { const archivo = archivos.find((a) => a.pedidoId === p.id); return { ...p, comprobantePagoUrl: archivo ? `${baseApi}/archivos/${archivo.id}` : undefined, comprobantePagoNombre: archivo?.nombre }; }),
-      inventario: inventario.map((p: Producto & { stockDisponible?: number }) => { const archivo = archivos.find((a) => a.productoId === p.id); return { ...p, stock: p.stockDisponible ?? p.stock, imagenUrl: archivo ? `${baseApi}/archivos/${archivo.id}` : p.imagenUrl }; }),
-      abonos: abonos.map((a) => ({ ...a, pedidosAfectados: a.pedidosAfectados.map((p) => ({ ...p, numero: pedidos.find((pedido) => pedido.id === p.pedidoId)?.numero ?? "" })) })),
-      movimientosCaja, usuarios, proveedores, recepciones, gastos, ajustes, cambiosPrecio, cierres: cierres.map((c) => ({ ...c, fecha: c.fecha.slice(0, 10) })),
-      conteos: conteos.map(normalizarConteo),
-    };
-    consultas.setQueryData(claveSnapshot, nuevosDatos);
-    const mismaSesion = datosSesion.current === usuario.id;
-    setDatos((actuales) => mismaSesion ? replaceEqualDeep(actuales, nuevosDatos) : nuevosDatos);
-    datosSesion.current = usuario.id;
+    // Las pantallas ya consultan páginas y documentos. No fabricar snapshots vacíos por ruta.
+    setDatos(actuales => actuales.usuarios[0] === usuario ? actuales : { ...vacios, usuarios: [usuario] });
     setCargadoPara(usuario.id);
-  }, [usuario, esTablero, pathname]);
+  }, [usuario]);
 
   useEffect(() => {
-    sesionId.current = usuario?.id;
-    if (!usuario) { revision.current++; datosSesion.current = undefined; setDatos(vacios); setClienteActivoId(null); setCargadoPara(null); setError(""); return; }
+    if (!usuario) { setDatos(vacios); setClienteActivoId(null); setCargadoPara(null); setError(""); return; }
     const refrescar = () => {
       if (ocupado.current) { refrescoPendiente.current = true; return; }
       void cargar().catch((e: Error) => setError(e.message));
@@ -89,14 +47,14 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
     refrescar();
     const intervalo = window.setInterval(refrescar, 30000);
     window.addEventListener("focus", refrescar);
-    const forzar = () => { void consultas.invalidateQueries({ queryKey: ["api"] }).then(refrescar); };
+    const forzar = () => { void consultas.invalidateQueries({ queryKey: ["api"] }, { cancelRefetch: false }).then(refrescar); };
     window.addEventListener("synchronic:datos-actualizados", forzar);
-    return () => { sesionId.current = undefined; window.clearInterval(intervalo); window.removeEventListener("focus", refrescar); window.removeEventListener("synchronic:datos-actualizados", forzar); };
+    return () => { window.clearInterval(intervalo); window.removeEventListener("focus", refrescar); window.removeEventListener("synchronic:datos-actualizados", forzar); };
   }, [usuario, cargar]);
 
   async function ejecutar<T>(ruta: string, metodo: string, cuerpo?: unknown): Promise<T | null> {
     if (ocupado.current) return null;
-    ocupado.current = true; revision.current++; setGuardando(true); setError("");
+    ocupado.current = true; setGuardando(true); setError("");
     try {
       const resultado = await api<T>(ruta, metodo, cuerpo);
       // Si falla la lectura posterior, la escritura ya está confirmada: no inducir a duplicarla.

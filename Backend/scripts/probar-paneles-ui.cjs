@@ -27,6 +27,8 @@ async function main() {
   await page.addInitScript(() => { window.__documentoPrueba = Math.random(); });
   async function reposo() {
     await page.waitForTimeout(100);
+    // La búsqueda espera una pausa breve; una lista anterior permanece inerte hasta actualizarse.
+    await page.waitForFunction(() => !document.querySelector('.admin-pantalla [inert]'));
     for (let i = 0; lecturas.size && i < 200; i++) await page.waitForTimeout(100);
     assert.equal(lecturas.size, 0, 'Las lecturas deben terminar: ' + [...lecturas].map(r => r.url()).join(', '));
     await page.waitForTimeout(50);

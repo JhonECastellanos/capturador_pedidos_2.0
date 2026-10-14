@@ -8,6 +8,12 @@ import { InstruccionAgenteEsquema, problemaConexionAgente, type ConfiguracionAge
 
 type Proveedor = Omit<ConfiguracionAgente["proveedores"][number], "maxTokens"> & { maxTokens?: number; sesion?: string };
 type Mensaje = { role: "system" | "user"; content: string };
+export function opcionesExtraccion(p: Pick<Proveedor, "url" | "modelo">) {
+  // DeepSeek no admite una herramienta obligatoria en thinking: enabled.
+  // Referencia: https://api-docs.deepseek.com/api/create-chat-completion/
+  return /^deepseek-(?:v4|flash)/i.test(p.modelo) && ["opencode.ai", "api.deepseek.com"].includes(new URL(p.url).hostname)
+    ? { thinking: { type: "disabled" as const } } : {};
+}
 export function privado(ip: string) {
   const limpio = ip.toLowerCase().replace(/^::ffff:/, "");
   return limpio === "::1" || limpio === "::" || ip.toLowerCase().startsWith("::ffff:") || /^(fc|fd|fe[89ab]|ff|64:ff9b:)/.test(limpio) || /^(0\.|10\.|127\.|169\.254\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.)/.test(limpio);
@@ -151,7 +157,7 @@ export async function interpretarProveedor(p: Proveedor, mensajes: Mensaje[], me
     if (llamada) return llamada.input;
   } else {
     const local = p.protocolo === "ollama";
-    const r = await solicitud(p, local ? "/api/chat" : "/chat/completions", { model: p.modelo, messages: mensajes, tools: [{ type: "function", function: herramienta }], ...(local ? { stream: false, options: { temperature: 0, num_predict: p.maxTokens ?? 2000 }, keep_alive: "2m" } : { temperature: 0, max_tokens: p.maxTokens ?? 2000, tool_choice: { type: "function", function: { name: herramienta.name } } }) });
+    const r = await solicitud(p, local ? "/api/chat" : "/chat/completions", { model: p.modelo, messages: mensajes, tools: [{ type: "function", function: herramienta }], ...(local ? { stream: false, options: { temperature: 0, num_predict: p.maxTokens ?? 2000 }, keep_alive: "2m" } : { temperature: 0, max_tokens: p.maxTokens ?? 2000, tool_choice: { type: "function", function: { name: herramienta.name } }, ...opcionesExtraccion(p) }) });
     medir?.(usoProveedor(local ? r : r.usage, local ? "ollama" : "openai"));
     if (!local && r.choices?.[0]?.finish_reason === "length") throw new ErrorDominio("MODELO_SALIDA_LIMITADA", "El modelo agotó el límite de respuesta antes de completar la operación. Aumenta el máximo de tokens en Ajustes avanzados o elige un modelo con menor consumo", 422);
     const mensaje = local ? r.message : r.choices?.[0]?.message;

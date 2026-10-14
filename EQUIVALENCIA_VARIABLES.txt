@@ -900,3 +900,11 @@ Etiquetas anteriores -> codigosProducto.retiradoEn al cumplir 180 días desde la
 V8P4 · apariencia del robot
 Apariencia.robotReposo / robotEscuchando / robotHablando -> AparienciaEsquema (hexadecimal de seis dígitos) -> PUT /apariencia -> configuracionesVisuales.configuracion (JSON existente) -> AparienciaProvider -> --color-robot-reposo / --color-robot-escuchando / --color-robot-hablando.
 Las configuraciones anteriores sin esos campos reciben valores predeterminados al leer; no requieren migración. Configuración > Apariencia permite vista previa, guardar y descartar usando el mismo proceso existente.
+
+V8P4 · respuesta breve y lecturas acotadas
+Texto reconocido -> POST /agentes/interpretar.texto, conservado literal; copia normalizada -> palabrasProducto / coincidencias / sugerenciasCatalogo. La búsqueda exacta de todas las líneas se agrupa en una consulta; solo pendientes usan una consulta aproximada acotada a 120 candidatos. Si se excede el límite, no se presume unicidad. El proveedor recibe como máximo 24 nombres/unidades, sin importes, IDs ni clientes del catálogo.
+RevisionAgente.faltantes conserva todas las validaciones; resumen contiene solo la primera o «Listo. Revisa y confirma.». No cambia el contrato ni las tablas. Una corrección exclusivamente de pago sobre un pedido previo reutiliza revisar, sin proveedor, manteniendo la prohibición de crédito ocasional.
+DeepSeek V4/Flash en opencode.ai y api.deepseek.com -> thinking.type=disabled en Chat Completions, compatible con tool_choice de extracción; otros destinos/modelos conservan su cuerpo.
+usePaginaApi: q espera 220 ms de pausa antes de leer; texto del input inmediato, lista anterior inerte mientras cambia la consulta. Página y demás filtros siguen operando mediante sus claves de sesión/ruta.
+Respuesta de escritura confirmada -> invalidación asíncrona de consultas; errores de lectura se informan por sus hooks y no cambian el resultado del guardado. cancelRefetch=false permite compartir un refresco en curso. La fachada remota conserva acciones/documentos individuales y ya no fabrica snapshots vacíos por pantalla.
+Nginx gzip comprime JS/CSS/SVG estáticos. API mantiene no-store y los documentos privados no se añaden al caché del navegador.
