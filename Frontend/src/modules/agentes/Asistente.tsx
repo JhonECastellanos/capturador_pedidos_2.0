@@ -3,11 +3,11 @@ import { useNavigate } from "react-router-dom";
 import type { ConfiguracionAgente, RevisionAgente } from "@synchronic-jo/contrato";
 import { useAuth } from "../../context/auth";
 import { api, usaApi } from "../../data/api";
-import { agenteGuardando, contextoAgente, cambiarRevisionAgente, confirmarDesdeAgente, revisionAgente, elegirOpcionDictada } from "./operacion-agente";
+import { agenteGuardando, avisoAgente, contextoAgente, cambiarRevisionAgente, confirmarDesdeAgente, revisionAgente, elegirOpcionDictada } from "./operacion-agente";
 import { esEcoDelAsistente, hablar } from "./audio";
 import { abrirMicrofono } from "./microfono";
 import { RobotAsistente } from "./RobotAsistente";
-import { respuestaCordial } from "./conversacion";
+import { esConfirmacion, respuestaCordial } from "./conversacion";
 import { consultaDictada, type MensajeChat } from "./chat-estado";
 
 type Estado = { habilitado: boolean; modo: string; configurado: boolean; audio: ConfiguracionAgente["audio"] };
@@ -43,10 +43,10 @@ export default function Asistente() {
     return () => { generacion.current++; generacionAudio.current++; vozActiva.current = false; detenerMicrofono.current?.(); detenerMicrofono.current = null; silenciarMicrofono.current = null; cambiarRevisionAgente(null); window.speechSynthesis?.cancel(); window.removeEventListener("synchronic:sesion-expirada", limpiar); };
   }, [usuario?.id, usuario?.rol]);
   useEffect(() => {
-    const aviso = (e: Event) => setMensaje(String((e as CustomEvent<unknown>).detail));
+    const aviso = (e: Event) => { const valor = String((e as CustomEvent<unknown>).detail); setMensaje(valor); if (estado && vozActiva.current) hablar(valor, estado.audio); };
     window.addEventListener("ambie:agente-aviso", aviso);
     return () => window.removeEventListener("ambie:agente-aviso", aviso);
-  }, []);
+  }, [estado]);
   useEffect(() => {
     if (!usuario || !usaApi) return;
     let vigente = true;
@@ -68,7 +68,7 @@ export default function Asistente() {
     await ejecutar(async () => {
       const turno = generacion.current;
       const anterior = revisionAgente();
-      if (/^confirmar(?:\s+(?:pedido|operación|operacion))?[.!]?$/i.test(orden)) { await confirmarDesdeAgente(); return; }
+      if (esConfirmacion(orden)) { if (anterior && !esConfirmacion(orden, anterior.instruccion.operacion)) avisoAgente("Esa confirmación corresponde a otra operación. Revisa el detalle preparado"); else await confirmarDesdeAgente(); return; }
       if (/^cancelar(?:\s+(?:instrucción|instruccion))?[.!]?$/i.test(orden)) { cambiarRevisionAgente(null); setTexto(""); setMensaje("Instrucción cancelada. No se guardó una operación"); return; }
       setMensaje("Preparando detalle…");
       const opcion = elegirOpcionDictada(orden, anterior);
@@ -128,7 +128,7 @@ export default function Asistente() {
         if (turno !== generacionAudio.current) return;
         setMensaje(aviso); if (aviso === "Micrófono desconectado") { setEscuchando(false); detenerMicrofono.current = null; silenciarMicrofono.current = null; }
       }, (detener, silenciar) => { if (turno !== generacionAudio.current) detener(); else { detenerMicrofono.current = detener; silenciarMicrofono.current = silenciar; } },
-      () => agenteGuardando() || hablandoActual.current, valor => { if (turno === generacionAudio.current) setTexto(valor); },
+      () => agenteGuardando() || (hablandoActual.current && window.speechSynthesis?.speaking !== false), valor => { if (turno === generacionAudio.current) setTexto(valor); },
       nivel => { robot.current?.style.setProperty("--nivel", String(nivel)); }, contextoAudio);
       if (turno !== generacionAudio.current) { detener(); return; }
       detenerMicrofono.current = detener; setEscuchando(true);

@@ -49,6 +49,8 @@ async def conversar(socket: WebSocket):
     identificador = None
     runner = None
     tarea = None
+    inicio_sesion = time.monotonic()
+    causa = "desconexion"
     try:
         datos = autorizar(socket.query_params.get("ticket", ""))
         identificador = datos["id"]
@@ -68,11 +70,12 @@ async def conversar(socket: WebSocket):
         from pipecat.pipeline.pipeline import Pipeline
         from pipecat.pipeline.worker import PipelineWorker, PipelineParams
         from pipecat.workers.runner import WorkerRunner
-        from pipecat.services.whisper.stt import WhisperSTTService
+        from motor_audio import WhisperCompartido as WhisperSTTService
         from pipecat.transcriptions.language import Language
 
         from pipecat.frames.frames import TranscriptionFrame, VADUserStartedSpeakingFrame
         texto_parcial = ""
+        turno_abierto = False
 
         class Entrada(FrameProcessor):
             def __init__(self, mostrar=False):
@@ -80,9 +83,10 @@ async def conversar(socket: WebSocket):
                 self.mostrar = mostrar
 
             async def process_frame(self, frame: Frame, direction: FrameDirection):
-                nonlocal texto_parcial
+                nonlocal texto_parcial, turno_abierto
                 await super().process_frame(frame, direction)
                 if self.mostrar and isinstance(frame, VADUserStartedSpeakingFrame):
+                    turno_abierto = True
                     await socket.send_json({"tipo": "hablando"})
                 if self.mostrar and isinstance(frame, TranscriptionFrame) and frame.text.strip():
                     texto_parcial = (texto_parcial + " " + frame.text.strip()).strip()[:6000]
@@ -95,15 +99,16 @@ async def conversar(socket: WebSocket):
 
         @usuario.event_handler("on_user_turn_stopped")
         async def turno_completo(_agregador, _estrategia, mensaje):
-            nonlocal texto_parcial
+            nonlocal texto_parcial, turno_abierto
             if mensaje.content and len(mensaje.content) > 6000:
                 await socket.send_json({"tipo": "error", "mensaje": "La instrucción es demasiado larga. Divide la operación y vuelve a dictarla"})
             elif mensaje.content:
                 await socket.send_json({"tipo": "instruccion", "texto": mensaje.content})
             texto_parcial = ""
+            turno_abierto = False
             contexto.set_messages([])
 
-        worker = PipelineWorker(Pipeline([Entrada(), VADProcessor(vad_analyzer=SileroVADAnalyzer(params=VADParams(stop_secs=2.0))), stt, Entrada(mostrar=True), usuario, Entrada()]), idle_timeout_secs=90, enable_rtvi=False, params=PipelineParams(audio_in_sample_rate=16000))
+        worker = PipelineWorker(Pipeline([Entrada(), VADProcessor(vad_analyzer=SileroVADAnalyzer(params=VADParams(stop_secs=2.0))), stt, Entrada(mostrar=True), usuario, Entrada()]), idle_timeout_secs=None, enable_rtvi=False, params=PipelineParams(audio_in_sample_rate=16000))
         preparado = asyncio.Event()
 
         @worker.event_handler("on_pipeline_started")
@@ -115,22 +120,35 @@ async def conversar(socket: WebSocket):
         tarea = asyncio.create_task(runner.run())
         await asyncio.wait_for(preparado.wait(), timeout=25)
         await socket.send_json({"tipo": "listo"})
+        print(json.dumps({"evento": "audio-listo", "milisegundos": round((time.monotonic() - inicio_sesion) * 1000)}), flush=True)
         inicio = time.monotonic()
-        bytes_recibidos = 0
-        while time.monotonic() - inicio < 180 and not tarea.done():
+        while not tarea.done():
+            if time.monotonic() - inicio >= 3600 and not texto_parcial and not turno_abierto:
+                await socket.send_json({"tipo": "reconectar", "mensaje": "Renovando la conexión de audio"})
+                causa = "renovacion"
+                break
             audio = await asyncio.wait_for(socket.receive_bytes(), timeout=30)
-            bytes_recibidos += len(audio)
-            if not audio or len(audio) % 2 or len(audio) > 12800 or bytes_recibidos > 120 * 16000 * 2:
-                raise ValueError("Se alcanzó el límite de audio. Detén el micrófono y vuelve a iniciarlo")
+            if not audio or len(audio) % 2 or len(audio) > 12800:
+                raise ValueError("El bloque de audio recibido no tiene un formato válido")
             await worker.queue_frames([InputAudioRawFrame(audio, 16000, 1)])
+        if tarea.done() and not tarea.cancelled() and tarea.exception():
+            raise tarea.exception()
     except WebSocketDisconnect:
         pass
+    except asyncio.TimeoutError:
+        causa = "sin-audio"
+        try:
+            await socket.send_json({"tipo": "reconectar", "mensaje": "La captura se interrumpió. Reconectando el audio"})
+        except Exception:
+            pass
     except Exception as error:
+        causa = type(error).__name__
         try:
             await socket.send_json({"tipo": "error", "mensaje": str(error) if isinstance(error, ValueError) else "No se pudo procesar el audio. Puedes continuar con texto"})
         except Exception:
             pass
     finally:
+        print(json.dumps({"evento": "audio-cerrado", "causa": causa, "segundos": round(time.monotonic() - inicio_sesion, 1)}), flush=True)
         if runner:
             await runner.cancel()
         if tarea:

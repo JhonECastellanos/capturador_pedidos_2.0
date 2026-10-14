@@ -10,10 +10,11 @@ async function main() {
     const login = await context.request.post(base + '/api/v1/auth/login', { data: { identifier: 'system', password: process.env.SYSTEM_PASSWORD || process.env.BOOTSTRAP_PASSWORD } });
     assert.equal(login.status(), 200);
     const antes = (await (await context.request.get(base + '/api/v1/pedidos')).json()).meta.total;
-    const catalogo = (await (await context.request.get(base + '/api/v1/productos?pageSize=200&activo=true')).json()).data;
-    const producto = catalogo.find(p => p.stock >= 3), otro = catalogo.find(p => p.stock >= 3 && p.id !== producto?.id);
-    assert.ok(producto && producto.stock >= 3);
-    assert.ok(otro, 'QA debe tener dos productos disponibles');
+    async function crearProducto(nombre) {
+      const r=await context.request.post(base+'/api/v1/productos',{data:{nombre:'QA confirmación '+Date.now()+' '+nombre,precioVenta:100,costoActual:40,stock:50,unidad:'unidad'}});
+      assert.equal(r.status(),201);return (await r.json()).data;
+    }
+    const producto=await crearProducto('A'),otro=await crearProducto('B');
     const instruccion = { operacion: 'pedido', ocasional: true, lineas: [{ producto: producto.nombre, cantidad: 2 }], metodo: 'efectivo', preparacion: 'pendiente' };
     async function revisar(i, version) {
       const r = await context.request.post(base + '/api/v1/agentes/revisar', { data: { id, version, instruccion: i } });
@@ -31,7 +32,7 @@ async function main() {
     await context.route('**/agentes/interpretar', async r => {
       llamadas++; ordenes.push(r.request().postDataJSON());
       if (llamadas === 1) await r.fulfill({ status: 422, json: { message: 'El proveedor rechazó esta solicitud de prueba' } });
-      else { await new Promise(resolve => setTimeout(resolve, 250)); await r.fulfill({ json: { data: llamadas === 2 ? original : llamadas === 3 ? correccion : llamadas === 4 ? cambio : segundoCambio } }); }
+      else { await new Promise(resolve => setTimeout(resolve, 250)); const detalle = llamadas <= 5 ? (llamadas === 2 ? original : llamadas === 3 ? correccion : llamadas === 4 ? cambio : segundoCambio) : await revisar({ ...instruccion, lineas: [{ producto: producto.nombre, cantidad: 1 }] }, llamadas); await r.fulfill({ json: { data: detalle } }); }
     });
     await context.addInitScript(() => {
       window.__locuciones = [];
@@ -71,11 +72,25 @@ async function main() {
     await page.waitForTimeout(350); await robot.click();
     assert.equal(await robot.getAttribute('aria-pressed'), 'true');
     assert.equal(conexiones, 1, 'Reactivar conserva la conexión');
+    socket.close({code:1012,reason:'Prueba de reconexión'});
+    await page.waitForFunction(() => [...document.querySelectorAll('p')].some(p=>p.textContent.includes('Escuchando. Puedes dictar')));
+    assert.equal(conexiones,2,'La caída de red renueva el ticket sin cerrar el micrófono');
+    const guiones=require('../../docs/ejemplos/confirmaciones-agente.json').confirmaciones;
+    for (const [n,frase] of guiones.entries()) {
+      if(n) { socket.send(JSON.stringify({tipo:'instruccion',texto:'Nuevo pedido de una unidad'})); await page.getByRole('button',{name:/Confirmar pedido/}).waitFor(); }
+      const respuesta=page.waitForResponse(r=>r.url().endsWith('/api/v1/pedidos')&&r.request().method()==='POST');
+      socket.send(JSON.stringify({tipo:'instruccion',texto:frase}));
+      assert.equal((await respuesta).status(),201,frase);await page.waitForURL(base+'/admin');
+      assert.equal((await (await context.request.get(base+'/api/v1/pedidos')).json()).meta.total,antes+n+1,frase);
+      assert.equal(await robot.getAttribute('aria-pressed'),'true','Guardar conserva la escucha');
+    }
+    socket.send(JSON.stringify({tipo:'instruccion',texto:'confirma el pedido'}));await page.waitForTimeout(350);
+    assert.equal((await (await context.request.get(base+'/api/v1/pedidos')).json()).meta.total,antes+guiones.length,'Confirmar sin detalle no escribe');
     await page.waitForTimeout(350); await robot.dblclick({ delay: 80 });
     assert.equal(await robot.getAttribute('aria-pressed'), 'false');
     assert.deepEqual(errores, []);
-    assert.equal((await (await context.request.get(base + '/api/v1/pedidos')).json()).meta.total, antes);
-    console.log('Chrome QA: saludo breve sin proveedor; rechazo conserva escucha; detalle y corrección conservan borrador; tocar fuera, mutear, reactivar y apagar funcionan. Ningún pedido guardado. Audio y modelo simulados; revisión con API/PostgreSQL reales.');
+    assert.equal((await (await context.request.get(base + '/api/v1/pedidos')).json()).meta.total, antes + guiones.length);
+    console.log('Chrome QA: saludo breve sin proveedor; rechazo conserva escucha; detalle y corrección conservan borrador; tocar fuera, mutear, reactivar y apagar funcionan. Doce guiones confirmaron doce pedidos en QA, sin duplicar al repetir. Reconexión conserva escucha y borrador. Audio y modelo simulados; revisión y guardado con API/PostgreSQL reales.');
     await context.close();
   } finally { await browser.close(); }
 }

@@ -32,7 +32,7 @@ export async function confirmarDesdeAgente() {
   return confirmar();
 }
 /** Voz y botón comparten la misma función y una sola escritura en curso. */
-export function useOperacionAgente(operacion: InstruccionAgente["operacion"], aplicar: (r: RevisionAgente) => void, guardar: () => Promise<boolean>, leer?: () => InstruccionAgente) {
+export function useOperacionAgente(operacion: InstruccionAgente["operacion"], aplicar: (r: RevisionAgente) => void, guardar: () => Promise<boolean>, leer?: () => InstruccionAgente, volverAlInicio = true) {
   const r = useRevisionAgente(), navegar = useNavigate();
   const funciones = useRef({ aplicar, guardar, leer });
   useEffect(() => { funciones.current = { aplicar, guardar, leer }; }, [aplicar, guardar, leer]);
@@ -59,12 +59,12 @@ export function useOperacionAgente(operacion: InstruccionAgente["operacion"], ap
         finally { escriturasPendientes--; }
         if (!resultado) { if (propia) avisoAgente("No se confirmó el guardado. El detalle sigue disponible para corregir o reintentar"); return false; }
         if (propia) window.dispatchEvent(new CustomEvent("synchronic:agente-guardado", { detail: propia.id }));
-        if (propia && revisionAgente() === anterior) { cambiarRevisionAgente(null); avisoAgente("Operación guardada correctamente"); navegar(propia.ruta.startsWith("/admin") ? "/admin" : propia.ruta.startsWith("/inventario") ? "/inventario" : "/vendedor", { replace: true }); }
+        if (propia && revisionAgente() === anterior) { cambiarRevisionAgente(null); avisoAgente("Operación guardada correctamente"); if (volverAlInicio) navegar(propia.ruta.startsWith("/admin") ? "/admin" : propia.ruta.startsWith("/inventario") ? "/inventario" : "/vendedor", { replace: true }); }
         return true;
       } catch (e) { avisoAgente(e instanceof Error ? e.message : "No se pudo confirmar; conserva el detalle y reintenta"); return false; }
     })().finally(() => { pendiente.current = null; });
     return pendiente.current;
-  }, [operacion, navegar]);
+  }, [operacion, navegar, volverAlInicio]);
   useEffect(() => { confirmaciones.set(operacion, confirmar); const lector = () => funciones.current.leer?.(); lectores.set(operacion, lector); return () => { if (lectores.get(operacion) === lector) lectores.delete(operacion); if (confirmaciones.get(operacion) === confirmar) confirmaciones.delete(operacion); }; }, [operacion, confirmar]);
   return confirmar;
 }

@@ -824,7 +824,7 @@ VOICE_AGENT_TOKEN -> autorización interna y firma HMAC de tickets de audio; nun
 OLLAMA_URL -> conexión interna permitida para Local; no ejecuta instalación de modelos
 VOICE_AGENT_URL -> servicio optativo de audio http://voice-agent:7860
 VOICE_PROXY_TARGET -> proxy WebSocket de desarrollo, localhost:7860 por defecto
-Texto o audio -> InstruccionAgente -> RevisionAgente RAM -> formulario actual -> API comercial existente
+Texto o audio -> InstruccionAgente -> RevisionAgente RAM -> formulario actual o detalle Chat -> acciones/API comercial existente
 Precio revisado -> LineaPedidoEsquema.precioEsperado -> comparación producto.precioVenta dentro de transacción; 409 si cambió
 Ticket micrófono -> /agentes/audio/sesion -> WSS /agentes/audio/conversar -> un uso, 30 segundos
 Confirmación voz y botón -> mismo callback y promesa pendiente -> misma clave idempotente existente
@@ -916,5 +916,14 @@ Notificacion -> notificaciones (id/tipo/titulo/ruta/creadoEn). Triggers en pedid
 AvisosNegocio consulta cada 5 segundos mientras el panel administrativo está abierto; no usa sincronización del negocio ni guarda registros en localStorage. Primera lectura no repite avisos históricos. ambie:ui:avisos:<usuarioId> guarda solo preferencia de avisos. Permiso del navegador y AudioContext se activan por toque. sw.js notificationclick abre rutas /admin del mismo origen. No incluye entrega push con el navegador cerrado.
 GET /notificaciones?recientes=true devuelve solo {data}, máximo 30; evita counts del historial en cada intervalo. GET normal devuelve data/meta con total/pendientes bajo RepeatableRead. El toast se oculta a los nueve segundos, sin eliminar el aviso persistido ni la notificación del sistema.
 POST /agentes/chat usa la configuración existente. operacion=consulta recibe recurso/busqueda/periodo y llama a Productos/Pedidos/Compras/Dashboard, máximo diez resultados; no ofrece SQL arbitrario ni interpreta documentos como instrucciones. Las consultas de voz reutilizan ChatService.consultar y muestran resultados en Chat. El resumen usa el mismo calendario y servicio existente.
-Chat conserva hasta 40 mensajes y un borrador en RAM por usuario y generación de sesión; cancelar/confirmar/log out no reutilizan borradores guardados ni respuestas anteriores. synchronic:agente-guardado elimina la revisión preparada al confirmar con el formulario habitual. Los permisos chat/notificaciones son administrativos, editables y comprobados por API; consultas y operaciones conservan los permisos del módulo destino.
+Chat conserva hasta 40 mensajes y un borrador en RAM por usuario y generación de sesión; cancelar/confirmar/log out no reutilizan borradores guardados ni respuestas anteriores. synchronic:agente-guardado elimina la revisión preparada al confirmar con el formulario habitual o el detalle Chat. Los permisos chat/notificaciones son administrativos, editables y comprobados por API; consultas y operaciones conservan los permisos del módulo destino.
 GET /recepciones-compra/:id devuelve el DTO del documento exacto, sin depender de la página del historial. /admin/compras?recepcion=<id> abre su detalle y Volver retira ese parámetro.
+
+V8P4 · confirmación y continuidad (14/10/2026)
+esConfirmacion -> expresiones de aceptación locales, con negación/pregunta/condición excluidas; asunto compatible con RevisionAgente.instruccion.operacion. Sin revisión o faltantes no hay escritura.
+guardarDesdeChat -> fachada OperacionesContext y rutas comerciales vigentes; useOperacionAgente revalida huella y serializa el guardado; volverAlInicio=false mantiene /admin/chat. Sin tablas ni endpoints nuevos.
+Ventas.Paso -> 1 cliente, 2 productos, 3 detalle con entrega y pago; FlujoVenta compartido entre roles.
+WhisperCompartido -> caché de un motor CPU instalado, lru_cache(maxsize=1), procesador independiente por conexión. Precalentamiento sin descargas durante inicio del servicio.
+Audio WebSocket -> sin límite acumulativo de silencio/audio; PipelineWorker.idle_timeout_secs=None; renovación después de 3600 s entre turnos; mantiene dos sesiones, ticket 30 s/un uso y bloques PCM <=12800 bytes.
+synchronic:audio-diagnostico -> fase/milisegundos/codigo, solo evento RAM; logs audio-listo/audio-cerrado sin audio, ticket ni transcripción. Reconexión solicita nuevo ticket y descarta audio acumulado; cierre manual no reabre el micrófono.
+audio.turnoVoz -> callbacks TTS solo para locución vigente; watchdog libera el estado de habla si falta onend.

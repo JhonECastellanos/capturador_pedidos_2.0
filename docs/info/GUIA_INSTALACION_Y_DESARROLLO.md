@@ -196,7 +196,7 @@ Una instalación nueva arranca vacía, con el acceso técnico system y los catá
 ### Vendedor
 
 - Crear clientes con los datos esenciales.
-- Tomar un pedido en cuatro pasos: cliente, productos, entrega y pago.
+- Tomar un pedido en tres pasos: cliente, productos y revisión final con entrega y pago.
 - Consultar los pedidos del día.
 - Cambiar el estado de un pedido y cobrarlo al entregarlo.
 - Recibir abonos y ver los pedidos que debe cada cliente.
@@ -403,7 +403,7 @@ El texto interpretado abre el detalle de los formularios existentes. Las correcc
 5. Agregar una API desde la pantalla, guardar y probar un modelo con herramientas. Un modelo listado no equivale a un modelo probado. Verde confirma la respuesta de esa prueba; amarillo indica límite temporal, no acredita agotamiento diario; rojo indica fallo de la prueba y no una indisponibilidad permanente.
 6. Dictar: «Cliente ocasional, una arepa de queso, una empanada de pollo y dos Coca-Colas pequeñas; efectivo y para preparar». Debe abrir directamente el detalle del pedido. Corregir «paga con billetera» y comprobar que conserva cliente, productos y preparación. Confirmar una vez y conciliar pedido, factura, pagos y caja en PostgreSQL QA.
 7. Repetir con productos inexistentes, cantidades superiores al disponible, datos faltantes, pérdida de red y doble confirmación. Debe conservar el detalle; no crear documentos incompletos ni repetir cobros. Probar también permisos de vendedor e inventario.
-8. Validar micrófono físico en celular mediante HTTPS, suspensión de pestaña y cierre de sesión. La conexión de audio usa WebSocket con una autorización de 30 segundos, de un solo uso; la captura se limita a dos minutos. No se guardan audios ni transcripciones en el navegador.
+8. Validar micrófono físico en celular mediante HTTPS, suspensión de pestaña y cierre de sesión. La conexión de audio usa WebSocket con una autorización de 30 segundos, de un solo uso; la conexión se renueva a la hora, sin acumular un límite de dos minutos de audio o silencio. No se guardan audios ni transcripciones en el navegador.
 9. Después del circuito Híbrido real, instalar voluntariamente un modelo Ollama con herramientas y repetir los mismos ejercicios. Después validar API Live con su proveedor y audio nativo.
 
 ### Estado comprobado y pendientes
@@ -488,7 +488,7 @@ Límite observado: una repetición posterior de Go Flash por API tampoco devolvi
 
 El reconocimiento Tiny confundió términos de un pedido dictado por el usuario. Se preparó Base en español en QA, manteniendo Go y su modelo `space-bunny`. Base es un modelo de transcripción; no se instaló ningún modelo de lenguaje de Ollama. Configuración > Audio y voz ofrece Tiny, Base y Small; preparar y guardar son acciones explícitas. Para reproducir esta configuración en otra instalación se debe preparar Base allí: los pesos no se incluyen en Git ni se descargan al arrancar.
 
-Whisper utiliza vocabulario comercial español con arepas, queso y yogur en archivos y micrófono. Pipecat publica una vista previa por segmentos (`tipo:texto`) y solo interpreta el mensaje final (`tipo:instruccion`). La vista previa no confirma ni guarda. Durante interpretación o guardado el capturador envía silencio para evitar capturar otra orden o la voz reproducida. Si interpretar falla, se detiene el micrófono, se conserva la transcripción y el borrador previo; el usuario puede corregir y reintentar. Una respuesta tardía de una sesión anterior no detiene el micrófono de una sesión nueva.
+Whisper utiliza vocabulario comercial español con arepas, queso y yogur en archivos y micrófono. Pipecat publica una vista previa por segmentos (`tipo:texto`) y solo interpreta el mensaje final (`tipo:instruccion`). La vista previa no confirma ni guarda. Durante interpretación o guardado el capturador envía silencio para evitar capturar otra orden o la voz reproducida. Si interpretar falla, continúa la escucha y se conserva la transcripción y el borrador previo; el usuario puede corregir y reintentar. Una respuesta tardía de una sesión anterior no detiene el micrófono de una sesión nueva.
 
 El panel mide 288 px de ancho y el recuadro tiene dos líneas. Se eliminó el párrafo introductorio; el texto reconocido se mantiene visible y editable. No promete transcripción palabra por palabra: un pedido sintético conservó dos arepas, queso, un yogur, efectivo y preparación, pero omitió la preposición «con». Go interpretó las dos líneas, cantidades y pago; la API pidió aclarar los nombres que no coincidían exactamente con el catálogo y no se confirmó ningún pedido.
 
@@ -583,3 +583,17 @@ La instalación abre el mismo aplicativo en modo independiente, conservando role
 System se autentica con `system`, su código o el correo de la instalación y una contraseña propia. No hay contraseña universal ni accesos sin validación. La búsqueda prioriza la cuenta técnica frente a colisiones históricas de mayúsculas. Repetir la semilla conserva credenciales. El administrador del negocio crea y asigna roles; puede desactivar, retirar usuarios o quitar los permisos propios de su rol. Retirar conserva usuario, fecha y relaciones de conteos, y revoca sesiones. System y el propio acceso están protegidos.
 
 Fuente primaria de instalación: https://web.dev/learn/pwa/installation y https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Secure_Contexts.
+
+### Confirmación y continuidad de voz — 14/10/2026
+
+«Confirmar», «confirma el pedido», «confirma la venta», «sí, confirma el pedido» y expresiones equivalentes se resuelven localmente, sin pedir interpretación al proveedor. Primero debe existir un detalle válido: faltantes, crédito ocasional, cambios de precio/stock o una confirmación de otra operación impiden escribir. La revalidación y el guardado son los mismos que usa el botón. Repetir la confirmación después de guardar no prepara otra transacción. Los doce guiones y controles están en `docs/ejemplos/confirmaciones-agente.json`.
+
+Chat muestra productos, cantidades, importes, pago y los datos propios de cada operación. Confirmar por texto o con su botón conserva `/admin/chat` y utiliza la fachada comercial existente; conteos y cierres reutilizan sus rutas actuales. Cancelar elimina solo el borrador. Los mensajes continúan en RAM y se descartan al cambiar de sesión.
+
+El servicio precalienta un motor Faster-Whisper ya instalado antes de declarar salud y lo reutiliza, con procesadores independientes por conversación. No instala pesos ni Ollama automáticamente. Pipecat ya no cancela por 90 segundos de inactividad, ni cuenta el silencio hacia un máximo de dos minutos. Una conexión se renueva a la hora entre turnos. Se conservan tickets de un solo uso, autorización, dos sesiones simultáneas y límites por bloque/instrucción.
+
+El capturador prepara su módulo en paralelo al permiso del navegador. Ante un corte de red solicita un ticket nuevo, con hasta tres reintentos fallidos, conservando el micrófono, muteo y borrador. Descarta el audio del corte y no repite órdenes anteriores. Un cierre voluntario o la pérdida del dispositivo requiere volver a tocar el robot. La locución dispone de recuperación si el navegador omite su evento de finalización. Una suspensión de audio intenta reanudarse; si el navegador exige un gesto, se indica tocar el robot.
+
+Para diagnosticar una interrupción en DevTools: `monitorEvents(window, "synchronic:audio-diagnostico")`. Muestra fase, tiempo y código de cierre, sin transcripciones ni claves. Los logs de `voice-agent` añaden `audio-listo` con tiempo y `audio-cerrado` con duración y categoría de cierre. Comparar estos eventos con Network > WS; detener el seguimiento con `unmonitorEvents`.
+
+Ventas comparte el flujo entre administrador/vendedor: Cliente → Productos → Revisar pedido. «Entregado ahora» y «Por preparar» quedan después de las líneas y antes del pago. El crédito exige un cliente registrado.

@@ -82,14 +82,15 @@ async function main() {
     await page.waitForURL(base + '/admin/ventas/pedido/' + nuevo.id);
     console.log('✓ Chrome móvil: aviso del navegador y toast, permiso por toque, enlace a compra/pedido y retorno correctos. Aviso del sistema simulado.');
 
-    let ultimo;
+    let ultimo, preparadaExtra;
     const instruccion = { operacion: 'pedido', ocasional: true, lineas: [{ producto: producto.nombre, cantidad: 2 }], metodo: 'efectivo', preparacion: 'pendiente' };
     const id = randomUUID();
     const revision = (await api('/agentes/revisar', 'POST', { id, version: 1, instruccion })).data;
     const corregido = (await api('/agentes/revisar', 'POST', { id, version: 2, instruccion: { ...instruccion, metodo: 'billetera', lineas: [{ producto: producto.nombre, cantidad: 3 }] } })).data;
     await context.route('**/agentes/chat', async r => {
       ultimo = r.request().postDataJSON();
-      if (/consulta/i.test(ultimo.texto)) await r.fulfill({ json: { data: { respuesta: 'Encontré un registro.', resultados: [{ titulo: producto.nombre, detalle: 'Producto consultado en QA', ruta: '/admin/inventario' }] } } });
+      if(preparadaExtra) await r.fulfill({json:{data:{respuesta:preparadaExtra.resumen,revision:preparadaExtra,resultados:[]}}});
+      else if (/consulta/i.test(ultimo.texto)) await r.fulfill({ json: { data: { respuesta: 'Encontré un registro.', resultados: [{ titulo: producto.nombre, detalle: 'Producto consultado en QA', ruta: '/admin/inventario' }] } } });
       else await r.fulfill({ json: { data: { respuesta: 'Listo. Revisa y confirma.', revision: /cambia/i.test(ultimo.texto) ? corregido : revision, resultados: [] } } });
     });
     await page.getByRole('link', { name: 'Chat', exact: true }).click();
@@ -101,17 +102,40 @@ async function main() {
     await enviar('Cambia a tres y billetera');
     assert.equal(ultimo.anterior.lineas[0].cantidad, 2); assert.equal(ultimo.anterior.metodo, 'efectivo');
     assert.equal((await api('/pedidos')).meta.total, pedidosAntesChat, 'Chat no guarda antes de confirmar');
-    await page.getByRole('button', { name: 'Abrir detalle para revisar y confirmar', exact: true }).click();
-    await page.getByRole('button', { name: /Confirmar pedido/ }).waitFor();
-    assert.equal((await api('/pedidos')).meta.total, pedidosAntesChat, 'Abrir formulario tampoco guarda');
-    await page.getByRole('button', { name: /Confirmar pedido/ }).click();
-    await page.waitForURL(base + '/admin');
-    assert.equal((await api('/pedidos')).meta.total, pedidosAntesChat + 1, 'Solo la confirmación real guarda');
-    await page.getByRole('link', { name: 'Chat', exact: true }).click();
-    assert.equal(await page.getByRole('button', { name: 'Abrir detalle para revisar y confirmar', exact: true }).count(), 0, 'No vuelve a ofrecer un borrador ya guardado');
+    const guardado = page.waitForResponse(r => r.url().endsWith('/api/v1/pedidos') && r.request().method() === 'POST');
+    await enviar('sí, confirma la venta');
+    const respuestaGuardado = await guardado; assert.equal(respuestaGuardado.status(), 201);
+    const ventaChat = (await respuestaGuardado.json()).data;
+    await page.getByRole('log').getByText('Operación guardada correctamente.', { exact: true }).waitFor();
+    assert.equal(new URL(page.url()).pathname, '/admin/chat', 'Confirmar no sale del chat');
+    assert.equal((await api('/pedidos')).meta.total, pedidosAntesChat + 1);
+    assert.equal(await page.getByRole('button', { name: 'Confirmar operación', exact: true }).count(), 0);
+    assert.equal(sql(`SELECT total::text || '|' || metodo::text FROM pedidos WHERE id='${ventaChat.id}'`), '300.00|billetera');
+    assert.equal(sql(`SELECT cantidad::text FROM "pedidoLineas" WHERE "pedidoId"='${ventaChat.id}'`), '3');
+    await enviar('confirma el pedido');
+    assert.equal((await api('/pedidos')).meta.total, pedidosAntesChat + 1, 'Repetir confirmación no crea otra venta');
+    async function ensayar(i,frase) {
+      preparadaExtra=(await api('/agentes/revisar','POST',{id:randomUUID(),version:1,instruccion:i})).data;
+      await enviar('Prepara la operación QA');
+      await page.getByRole('button',{name:'Confirmar operación',exact:true}).waitFor();
+      const antes=(await api('/pedidos')).meta.total;
+      if(preparadaExtra.faltantes.length){assert.equal(await page.getByRole('button',{name:'Confirmar operación',exact:true}).isDisabled(),true);await enviar('confirma el pedido');assert.equal((await api('/pedidos')).meta.total,antes);await enviar('cancelar');}
+      else {await enviar(frase);await page.waitForFunction(()=>!document.querySelector('[aria-label="Detalle por confirmar"]'));assert.equal(new URL(page.url()).pathname,'/admin/chat');}
+      preparadaExtra=undefined;
+    }
+    await ensayar({...instruccion,metodo:'credito'},'confirma el pedido');
+    await ensayar({operacion:'gasto',concepto:marca+' transporte',monto:100,metodo:'efectivo'},'confirma el gasto');
+    assert.equal(sql(`SELECT monto::text FROM gastos WHERE concepto='${marca} transporte'`),'100.00');
+    await ensayar({operacion:'compra',proveedor:proveedor.nombre,descontarCaja:false,lineas:[{producto:producto.nombre,cantidad:7,costoUnitario:55}]},'confirmar la compra');
+    assert.equal(sql(`SELECT total::text FROM "recepcionesCompra" WHERE "proveedorId"='${proveedor.id}' ORDER BY "creadoEn" DESC LIMIT 1`),'385.00');
+    await ensayar({operacion:'precio',producto:producto.nombre,precio:200},'confirma la operación');
+    assert.equal(sql(`SELECT "precioVenta"::text FROM productos WHERE id='${producto.id}'`),'200.00');
+    await ensayar({operacion:'estado',referencia:nuevo.numero,estado:'entregado'},'confirma el cambio');
+    assert.equal(sql(`SELECT estado::text FROM pedidos WHERE id='${nuevo.id}'`),'entregado');
+    assert.equal(sql(`SELECT total::text FROM pedidos WHERE id='${ventaChat.id}'`),'300.00','Cambio de precio conserva factura');
     await enviar('Prepara otro pedido');
     await enviar('cancelar');
-    assert.equal(await page.getByRole('button', { name: 'Abrir detalle para revisar y confirmar', exact: true }).count(), 0, 'Cancelar retira el borrador');
+    assert.equal(await page.getByRole('button', { name: 'Confirmar operación', exact: true }).count(), 0, 'Cancelar retira el borrador');
     assert.equal((await api('/pedidos')).meta.total, pedidosAntesChat + 1);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     await mkdir('.local/pruebas-ui', { recursive: true });
@@ -120,7 +144,7 @@ async function main() {
     await page.screenshot({ path: '.local/pruebas-ui/chat-escritorio.png' });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
     assert.deepEqual(errores, []);
-    console.log('✓ Chat móvil/escritorio: consulta, borrador, corrección, confirmación mediante formulario y una sola venta; no desbordamiento ni errores de ejecución.');
+    console.log('✓ Chat móvil/escritorio: consulta, borrador, corrección, confirmación dentro del chat y una sola venta conciliada con PostgreSQL; no desbordamiento ni errores de ejecución.');
     await context.close();
   } finally { await browser.close(); }
 }

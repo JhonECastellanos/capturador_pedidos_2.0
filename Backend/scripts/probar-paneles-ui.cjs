@@ -91,8 +91,9 @@ async function main() {
     await page.getByRole('button', { name: /Crear Pedido/ }).click(); await reposo();
     await page.getByPlaceholder('Buscar por nombre, alias o teléfono').fill('Isabel Rojas'); await reposo();
     await page.getByRole('button', { name: 'Isabel Rojas', exact: true }).click();
+    await page.getByRole('heading', { name: 'Agregar productos', exact: true }).waitFor();
     await page.getByRole('button', { name: 'Volver', exact: true }).click();
-    await page.getByText('Paso 1 de 4 · Cliente', { exact: true }).waitFor();
+    await page.getByText('Paso 1 de 3 · Cliente', { exact: true }).waitFor();
     await page.getByRole('button', { name: 'Volver', exact: true }).click(); await reposo();
     console.log('✓ Ventas: cliente → productos → cliente → inicio');
 
@@ -236,7 +237,7 @@ async function main() {
       });
       assert.equal(capacidad.filas, 5, 'La página móvil ofrece cinco productos: ' + JSON.stringify(capacidad));
       const caja = await productos.boundingBox();
-      const continuar = await tactil.getByRole('button', { name: /Continuar a entrega/ }).boundingBox();
+      const continuar = await tactil.getByRole('button', { name: /Revisar pedido/ }).boundingBox();
       assert.ok(continuar.y >= caja.y + caja.height, 'Continuar queda debajo del contenedor');
       await tactil.screenshot({ path: resolve('.local/pruebas-ui', 'productos-movil.png') });
       console.log('✓ Listas administrativas estables y cinco productos con continuación debajo');
@@ -253,7 +254,7 @@ async function main() {
       await venta.getByRole('button', {name:/^Agregar /}).first().waitFor();
       assert.equal(await venta.getByRole("button", { name: /^Agregar / }).count(), 5);
       await venta.getByRole('button', { name: /^Agregar / }).first().tap();
-      const continuar = venta.getByRole('button', { name: /Continuar a entrega/ });
+      const continuar = venta.getByRole('button', { name: /Revisar pedido/ });
       assert.ok((await continuar.boundingBox()).y >= (await lista.boundingBox()).y + (await lista.boundingBox()).height);
       await continuar.tap();
       await venta.getByRole('button', { name: /Entregado ahora/ }).waitFor();
@@ -296,9 +297,8 @@ async function main() {
       await page.getByRole('button', { name: `Agregar ${producto.nombre}`, exact: true }).click();
       for (let n = 0; n < i + 1; n++) await page.getByRole('button', { name: 'Aumentar cantidad', exact: true }).click();
     }
-    await page.getByRole('button', { name: /Continuar a entrega/ }).click();
+    await page.getByRole('button', { name: /Revisar pedido/ }).click();
     await page.getByRole('button', { name: /Entregado ahora/ }).click();
-    await page.getByRole('button', { name: /Continuar al pago/ }).click();
     const guardadoFactura = page.waitForResponse(r => r.url().endsWith('/api/v1/pedidos') && r.request().method() === 'POST');
     const inicioFactura = performance.now();
     await page.getByRole('button', { name: /Confirmar pedido/ }).click();

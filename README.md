@@ -35,13 +35,13 @@ curl http://localhost:8080/api/v1/salud
 npm run verificar
 ~~~
 
-Las pruebas operativas se ejecutan en QA aislada, nunca sobre los datos reales. V8P4 incorpora un servicio optativo de voz y ajustes en Configuración > Agentes IA. Primero se valida Híbrido; Local queda preparado sin modelos y API Live conserva sus ajustes para la siguiente etapa. Los agentes revisan operaciones antes de confirmarlas mediante los formularios existentes. Consulta la guía para activar audio, ver sus logs y conocer las pruebas pendientes.
+Las pruebas operativas se ejecutan en QA aislada, nunca sobre los datos reales. V8P4 incorpora un servicio optativo de voz y ajustes en Configuración > Agentes IA. Primero se valida Híbrido; Local queda preparado sin modelos y API Live conserva sus ajustes para la siguiente etapa. La voz revisa operaciones en los formularios existentes; Chat presenta y confirma dentro de la conversación, usando las mismas acciones del negocio. Consulta la guía para activar audio, ver sus logs y conocer las pruebas pendientes.
 
 ## Funcionamiento esperado
 
 Cada formulario espera la confirmación de guardado en PostgreSQL. Pedidos, pagos, caja e inventario se actualizan mediante transacciones; la sincronización mantiene las pantallas al día. El historial conserva documentos y valores de venta anteriores. Productos permite exportar/importar CSV; Inventario permite revisar el inicio del negocio y conteos. Inicio muestra ventas, compras, gastos y descuadres por período al costo guardado.
 
-Notificaciones conserva avisos comerciales y abre su detalle. Chat usa la conexión configurada para consultar datos o preparar operaciones: se revisan y confirman mediante los formularios habituales. Los avisos del navegador requieren permiso y la aplicación abierta.
+Notificaciones conserva avisos comerciales y abre su detalle. Chat usa la conexión configurada para consultar datos o preparar operaciones: se revisan y confirman dentro del chat, sin cambiar de pantalla. Los avisos del navegador requieren permiso y la aplicación abierta.
 
 - [Guía completa de instalación y desarrollo](docs/info/GUIA_INSTALACION_Y_DESARROLLO.md).
 - [Modelo, consultas y ejemplos de CSV](docs/info/GUARDADO_Y_CONCILIACION_V4P2.md).

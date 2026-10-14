@@ -165,8 +165,7 @@ async function main() {
           await paginasProductos.getByRole('button',{name:'Página siguiente'}).click();
           await respuestaPagina;
           await pagina.getByRole('button',{name:/^Agregar /}).first().click();
-          await pagina.getByRole('button',{name:/Continuar a entrega/}).click();
-          await pagina.getByRole('button',{name:/Continuar al pago/}).click();
+          await pagina.getByRole('button',{name:/Revisar pedido/}).click();
           assert.equal(await pagina.getByRole('region',{name:'Detalle de productos'}).locator('li').count(),2,'Conserva ambos productos al cambiar de página');
           resultados.interacciones.push({ancho,carritoEntrePaginas:true,lineasConservadas:2,sinConfirmarVenta:true});
         }

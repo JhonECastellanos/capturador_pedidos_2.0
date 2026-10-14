@@ -1,0 +1,33 @@
+{
+  "confirmaciones": [
+    "confirmar",
+    "confirmar el pedido",
+    "confirma",
+    "confirma la venta",
+    "confirma el pedido",
+    "sí, confirma el pedido",
+    "listo, confirmemos la venta",
+    "procede a confirmar la operación",
+    "confírmalo por favor",
+    "confirmo el pedido",
+    "bueno, confirma este pedido",
+    "confirma el pedido ahora"
+  ],
+  "noConfirmar": [
+    "no confirmes el pedido",
+    "¿Puedes confirmar el pedido?",
+    "confirmar cuando cambie el producto",
+    "confirma pero agrega uno más",
+    "todavía no confirmar",
+    "confirma la venta después",
+    "confirmar, falta el pago"
+  ],
+  "controles": [
+    "Sin detalle: solicitar preparar una operación, sin guardar ni llamar al proveedor.",
+    "Falta pago: conservar productos y solicitar el pago.",
+    "Cliente ocasional con crédito: impedir confirmación.",
+    "Cambió precio o stock: actualizar detalle y exigir nueva confirmación.",
+    "Dos confirmaciones seguidas: un documento y un pago.",
+    "Corte de red: conservar borrador y no repetir audio anterior."
+  ]
+}

@@ -340,7 +340,7 @@ test('micrófono muestra texto parcial sin interpretar y envía silencio durante
   }
   class Capturador { constructor() { capturador = this; this.port = {}; } connect() {} disconnect() {} }
   const modulo = { exports: {} };
-  vm.runInNewContext(codigo, { module: modulo, exports: modulo.exports, require: () => ({ api: async () => ({ ticket: 'ticket-ficticio' }), baseApi: '/api/v1' }), CustomEvent: class { constructor(tipo, opciones) { this.type = tipo; this.detail = opciones.detail; } }, requestAnimationFrame: () => 1, cancelAnimationFrame: () => {}, window: { dispatchEvent: () => {}, isSecureContext: true, location: { href: 'https://pruebas.invalid/' }, speechSynthesis: { speaking: true, cancel: () => { interrupciones++; } } }, navigator: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [{ stop: () => { paradas++; } }], getAudioTracks: () => [] }) } }, AudioContext: Contexto, AudioWorkletNode: Capturador, WebSocket: Conexion, DOMException, URL, setTimeout, clearTimeout, ArrayBuffer });
+  vm.runInNewContext(codigo, { module: modulo, exports: modulo.exports, require: () => ({ api: async () => ({ ticket: 'ticket-ficticio' }), baseApi: '/api/v1' }), CustomEvent: class { constructor(tipo, opciones) { this.type = tipo; this.detail = opciones.detail; } }, requestAnimationFrame: () => 1, cancelAnimationFrame: () => {}, window: { dispatchEvent: () => {}, isSecureContext: true, location: { href: 'https://pruebas.invalid/' }, speechSynthesis: { speaking: true, cancel: () => { interrupciones++; } } }, navigator: { mediaDevices: { getUserMedia: async () => ({ getTracks: () => [{ stop: () => { paradas++; } }], getAudioTracks: () => [] }) } }, AudioContext: Contexto, AudioWorkletNode: Capturador, WebSocket: Conexion, DOMException, URL, setTimeout, clearTimeout, ArrayBuffer, performance });
   const detener = await modulo.exports.abrirMicrofono(v => finales.push(v), () => {}, () => {}, () => pausado, v => parciales.push(v), v => niveles.push(v));
   assert.ok(niveles[0] > 0 && niveles[0] <= 1);
   try {
@@ -398,7 +398,7 @@ test('una alternativa dictada conserva el resto del borrador y el eco no se inte
   function cargar(ruta, extras) {
     const m = { exports: {} };
     const codigo = ts.transpileModule(fs.readFileSync(ruta, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
-    vm.runInNewContext(codigo, { module: m, exports: m.exports, require: () => ({}), ...extras }); return m.exports;
+    vm.runInNewContext(codigo, { module: m, exports: m.exports, require: () => ({}), setTimeout: () => 0, clearTimeout: () => {}, ...extras }); return m.exports;
   }
   const operaciones = cargar('Frontend/src/modules/agentes/operacion-agente.ts');
   const opcion = operaciones.elegirOpcionDictada('la segunda', { instruccion: pedido, opcionesProducto: [{ texto: pedido.lineas[0].producto, opciones: [{ nombre: 'Arepa pequeña' }, { nombre: 'Arepa grande' }] }] });

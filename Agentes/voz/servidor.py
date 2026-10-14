@@ -23,6 +23,13 @@ async def ciclo_vida(_app):
     # Instalar el motor no instala modelos; serve nunca ejecuta ollama pull.
     proceso = await asyncio.create_subprocess_exec("ollama", "serve", stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL) if shutil.which("ollama") else None
     try:
+        # Solo archivos ya instalados. Cargar el motor antes de declarar salud.
+        from motor_audio import precalentar
+        for nombre in ("base", "tiny", "small"):
+            ruta = Path(os.environ.get("HF_HOME", "/data/modelos")) / f"whisper-{nombre}"
+            if (ruta / "model.bin").is_file():
+                await asyncio.to_thread(precalentar, ruta)
+                break
         yield
     finally:
         if proceso and proceso.returncode is None:
@@ -166,7 +173,7 @@ async def transcribir(audio: Audio):
     async with ocupado:
         try:
             pcm = await convertir(datos)
-            from pipecat.services.whisper.stt import WhisperSTTService
+            from motor_audio import WhisperCompartido as WhisperSTTService
             from pipecat.transcriptions.language import Language
             from pipecat.frames.frames import TranscriptionFrame, ErrorFrame
             if motor_id != identificador:

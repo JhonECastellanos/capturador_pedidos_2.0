@@ -36,7 +36,7 @@
     "prueba:humo": "npm run prueba:humo --workspace synchronic-jo-backend",
     "prueba:integracion": "npm run prueba:integracion --workspace synchronic-jo-backend",
     "prueba:cache": "node --test scripts/probar-cache-query.mjs",
-    "prueba:agentes": "npm run contrato:build && npm run api:build && node --test Backend/scripts/probar-agentes.cjs",
+    "prueba:agentes": "npm run contrato:build && npm run api:build && node --test Backend/scripts/probar-agentes.cjs Backend/scripts/probar-confirmaciones-agente.cjs",
     "prueba:carga": "node Backend/scripts/probar-carga.cjs",
     "prueba:persistencia": "node Backend/scripts/probar-persistencia.cjs",
     "prueba:guardados": "node --test scripts/probar-guardados.mjs && node Backend/scripts/probar-reintento.cjs",
