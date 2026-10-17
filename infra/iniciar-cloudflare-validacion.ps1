@@ -21,7 +21,7 @@ try {
         if (-not $taskTunnel.State.Running -or $taskTunnel.Config.Cmd -notcontains '--url') { throw 'El túnel existente no es una instancia temporal activa.' }
     }
     $taskOrigin = $null
-    for ($taskAttempt = 0; $taskAttempt -lt 20; $taskAttempt++) {
+    for ($taskAttempt = 0; $taskAttempt -lt 60; $taskAttempt++) {
         # cloudflared escribe avisos normales por stderr; no tratarlos como fallos de PowerShell 5.
         $taskPriorErrorAction = $ErrorActionPreference
         $ErrorActionPreference = 'Continue'
