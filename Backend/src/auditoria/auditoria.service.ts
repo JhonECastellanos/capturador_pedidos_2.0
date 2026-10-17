@@ -4,8 +4,8 @@ import { PrismaService } from "../common/prisma.module";
 @Injectable()
 export class AuditoriaService {
   constructor(private readonly prisma: PrismaService) {}
-  async listar(filtro: { page: number; pageSize: number; entidad?: string }) {
-    const where = filtro.entidad ? { entidadTipo: filtro.entidad } : {};
+  async listar(filtro: { page: number; pageSize: number; entidad?: string; pruebas?: "todas" | "si" | "no" }) {
+    const where = { ...(filtro.entidad ? { entidadTipo: filtro.entidad } : {}), ...(filtro.pruebas && filtro.pruebas !== "todas" ? { esPrueba: filtro.pruebas === "si" } : {}) };
     const [total, eventos] = await this.prisma.$transaction([
       this.prisma.auditoriaEvento.count({ where }),
       this.prisma.auditoriaEvento.findMany({ where, orderBy: { creadoEn: "desc" }, skip: (filtro.page - 1) * filtro.pageSize, take: filtro.pageSize }),

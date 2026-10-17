@@ -6,7 +6,7 @@ import { ErrorDominio } from "../common/errores";
 import { siguienteCodigo } from "../common/consecutivos";
 import { codigoDeRol } from "../common/roles";
 import { RolUsuario } from "@prisma/client";
-import { PERMISOS_EDITABLES, CrearUsuarioEsquema } from "@synchronic-jo/contrato";
+import { PERMISOS_EDITABLES, CrearUsuarioEsquema } from "@abinova/contrato";
 
 const CrearUsuarioSchema = CrearUsuarioEsquema;
 

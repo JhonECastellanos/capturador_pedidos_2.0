@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { api } from "../data/api";
 import { consultas } from "../data/query";
 import { normalizarConteo } from "../utils/inventario";
-import type { ConteoInventarioDTO } from "@synchronic-jo/contrato";
+import type { ConteoInventarioDTO } from "@abinova/contrato";
 import { useRegistroApi } from "../data/usePaginaApi";
 import { useSincronizacion } from "../data/useSincronizacion";
 import { archivoAImagenDataUrl } from "../utils/imagen";
@@ -27,8 +27,8 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const mostrarError = (evento: Event) => setError((evento as CustomEvent<string>).detail);
-    window.addEventListener("synchronic:error-lectura", mostrarError);
-    return () => window.removeEventListener("synchronic:error-lectura", mostrarError);
+    window.addEventListener("abinova:error-lectura", mostrarError);
+    return () => window.removeEventListener("abinova:error-lectura", mostrarError);
   }, []);
 
   const cargar = useCallback(async () => {
@@ -48,8 +48,8 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
     const intervalo = window.setInterval(refrescar, 30000);
     window.addEventListener("focus", refrescar);
     const forzar = () => { void consultas.invalidateQueries({ queryKey: ["api"] }, { cancelRefetch: false }).then(refrescar); };
-    window.addEventListener("synchronic:datos-actualizados", forzar);
-    return () => { window.clearInterval(intervalo); window.removeEventListener("focus", refrescar); window.removeEventListener("synchronic:datos-actualizados", forzar); };
+    window.addEventListener("abinova:datos-actualizados", forzar);
+    return () => { window.clearInterval(intervalo); window.removeEventListener("focus", refrescar); window.removeEventListener("abinova:datos-actualizados", forzar); };
   }, [usuario, cargar]);
 
   async function ejecutar<T>(ruta: string, metodo: string, cuerpo?: unknown): Promise<T | null> {
@@ -59,12 +59,12 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
       const resultado = await api<T>(ruta, metodo, cuerpo);
       // Si falla la lectura posterior, la escritura ya está confirmada: no inducir a duplicarla.
       await cargar().catch(() => setError("Guardado correctamente. No se pudo actualizar la lista; pulsa Reintentar."));
-      window.dispatchEvent(new Event("synchronic:datos-actualizados"));
+      window.dispatchEvent(new Event("abinova:datos-actualizados"));
       return resultado;
     } catch (e) { setError(e instanceof Error ? e.message : "No se pudo guardar"); return null; }
     finally {
       ocupado.current = false; setGuardando(false);
-      if (refrescoPendiente.current) { refrescoPendiente.current = false; window.dispatchEvent(new Event("synchronic:datos-actualizados")); }
+      if (refrescoPendiente.current) { refrescoPendiente.current = false; window.dispatchEvent(new Event("abinova:datos-actualizados")); }
     }
   }
   const accion = async (ruta: string, cuerpo?: unknown, metodo = "POST") => (await ejecutar(ruta, metodo, cuerpo)) !== null;
@@ -113,7 +113,7 @@ export function OperacionesApiProvider({ children }: { children: ReactNode }) {
   if (usuario && cargadoPara !== usuario.id) return <div className="p-6 text-ink-soft"><p role="status">Cargando datos del negocio…</p>{error && <p role="alert" className="mt-3 text-danger">{error}</p>}<button className="mt-4 rounded-xl border border-line px-4 py-3" onClick={() => void cargar().catch((e: Error) => setError(e.message))}>Reintentar</button></div>;
   return <OperacionesContext.Provider value={value}><div className="operaciones-remotas">
     {usuario && !conectado && <p role="status" className="shrink-0 bg-danger-soft px-4 py-2 text-xs text-danger">Sin conexión. Se muestra la última lectura; la sincronización se reanudará automáticamente.</p>}
-    {error && <div role="alert" className="flex shrink-0 items-center gap-2 bg-danger-soft px-4 py-3 text-sm text-danger"><span className="flex-1">{error}</span><button type="button" disabled={guardando} className="min-h-11 px-2" onClick={() => { setError(""); window.dispatchEvent(new Event("synchronic:datos-actualizados")); }}>Reintentar</button><button type="button" className="min-h-11 px-2" onClick={() => setError("")}>Cerrar</button></div>}
+    {error && <div role="alert" className="flex shrink-0 items-center gap-2 bg-danger-soft px-4 py-3 text-sm text-danger"><span className="flex-1">{error}</span><button type="button" disabled={guardando} className="min-h-11 px-2" onClick={() => { setError(""); window.dispatchEvent(new Event("abinova:datos-actualizados")); }}>Reintentar</button><button type="button" className="min-h-11 px-2" onClick={() => setError("")}>Cerrar</button></div>}
     <fieldset disabled={guardando} className="contents">{children}</fieldset>
   </div></OperacionesContext.Provider>;
 }

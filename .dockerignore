@@ -6,8 +6,12 @@
 **/node_modules
 **/*.tsbuildinfo
 **/dist
+**/dist-operador
 **/.vite
 **/coverage
+**/__pycache__
+**/.pytest_cache
+.pytest_cache
 
 .git
 .gitignore
@@ -16,13 +20,17 @@
 !.env.example
 *.log
 .local
+.abinova-config
 .ambie-config
 **/.ambie-config
+**/.abinova-config
 
 docs
 scripts
-.ambie-config
-**/.ambie-config
+!scripts/
+!scripts/*.mjs
+.abinova-config
+**/.abinova-config
 .agents
 .codex
 .claude
@@ -38,3 +46,8 @@ AGENTS.md
 **/*.db
 .aws
 .github
+marketing/**
+!marketing/12-landing-page/
+!marketing/12-landing-page/**
+!marketing/datos/
+!marketing/datos/planes-propuestos.json

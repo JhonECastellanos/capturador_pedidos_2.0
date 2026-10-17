@@ -12,6 +12,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Última licencia recibida del control. Permite operar si la central se desconecta.
+model ConfiguracionAccesoComercial {
+  id String @id @default("principal")
+  configuracion Json
+  actualizadoEn DateTime @updatedAt
+  @@map("configuracionesAccesoComercial")
+}
+
 // Ajustes opcionales; no contienen documentos comerciales ni audio.
 model ConfiguracionAgente {
   id String @id @default("principal")
@@ -229,9 +237,13 @@ model AuditoriaEvento {
   datosDespues Json?
   usuarioId   String?
   requestId   String?
+  esPrueba    Boolean  @default(false)
+  empresaId   String?
+  usuarioObjetivoId String?
   creadoEn    DateTime @default(now())
 
   @@index([entidadTipo, entidadId])
+  @@index([esPrueba, creadoEn])
   @@map("auditoriaEventos")
 }
 

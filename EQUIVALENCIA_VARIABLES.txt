@@ -1,9 +1,12 @@
 ================================================================================
 EQUIVALENCIA DE VARIABLES · FRONTEND / API / BASE DE DATOS
-Proyecto Synchronic.JO
+Proyecto ABINOVA
+Marca (16/10/2026): ABINOVA identifica el producto y ABI al agente. La landing pública se sirve en /comercial/ y, en este equipo, en 127.0.0.1:8790 mediante el servicio marketing. No comparte acceso privado ni ejecuta operaciones comerciales.
+POSTGRES_DATA_VOLUME / MINIO_DATA_VOLUME + *_EXTERNAL -> reutilización explícita de volúmenes existentes al cambiar la agrupación Docker; no renombra cuentas ni borra datos.
+Modo local: escribe abinova:v2: y permite leer ambie:v2: si no hay valor nuevo; no importa ni elimina registros, excluye v1. El historial de migraciones, las identidades existentes y los nombres físicos de volúmenes se conservan por compatibilidad.
 APP_VERSION: Frontend/src/config.ts muestra V8P4; no cambia el formato de datos.
 
-Preferencia de cámara: synchronic:camara-preferida (sessionStorage del navegador).
+Preferencia de cámara: abinova:camara-preferida (sessionStorage del navegador).
 Solo guarda el identificador local de la cámara elegida durante esa sesión;
 no viaja a la API ni tiene columna en PostgreSQL. Si ya no existe, se descarta
 y se vuelve a la cámara trasera disponible. No se guardan imágenes del escáner.
@@ -148,8 +151,8 @@ ultimoAccesoEn  (no existe)         ultimoAccesoEn         Usuario.ultimoAccesoE
                                                            (nulo o datetime)
 sesion          (no existe)         (JWT + cookie)          Sesion               RENOMBRADO
 accessToken                       Authorization: Bearer
-refreshToken                      cookie ambie_access
-                                   cookie ambie_refresh
+refreshToken                      cookie abinova_access
+                                   cookie abinova_refresh
 
 Nota: el frontend antes guardaba la contrasena en texto plano en localStorage.
 Ahora solo existe el hash en la base de datos y nunca sale por la API.
@@ -730,11 +733,10 @@ Para regenerar la lista de enums verificados: npm run contrato:verificar
   INTERVALO_SINCRONIZACION_MS useSincronizacion             2000 ms, solo pestana visible
   conectado                  Revision autenticada          Indicador de ultima lectura/conexion
   useTamanoPagina=5/15        pageSize=5/15                 Limite visual, no modifica totales/FIFO
-  BASE_PRUEBAS_UI            prueba:paneles                Solo http://localhost:8180 (QA)
   Pedido.facturaNumero      PedidoDTO.facturaNumero       Numero de factura persistido
   DetalleProductosPedido    PedidoDTO.lineas              nombre/cantidad/precioUnitario/subtotal historicos
   DEPLOY_ENABLED             GitHub Actions                Activa despliegue de rama principal
-  AMBIE_DEPLOY_PATH           Runner produccion             Carpeta persistente con .env privado
+  ABINOVA_DEPLOY_PATH           Runner produccion             Carpeta persistente con .env privado
   Idempotency-Key             GuardadoInterceptor           escriturasConfirmadas.(usuarioId,clave)
   guardado pendiente          SHA-256 + UUID                sessionStorage de pestana; sin formulario/respuesta
   huella de solicitud         Cuerpo canonico SHA-256       escriturasConfirmadas.huella (sin cuerpo original)
@@ -750,13 +752,12 @@ Para regenerar la lista de enums verificados: npm run contrato:verificar
   comprasYGastosMes           compras + gastos              DashboardResumenDTO existente; suma frontend
   ventas/gastos/comprasMes    GET /dashboard/resumen        fechaOperacion desde dia 1 hasta hoy Bogota
   ticketPromedioMes           DashboardResumenDTO           ventas / pedidos no cancelados del mes
-  BASE_PRUEBAS inventario     prueba:inventario:inicial      Solo QA 8180/ambie_test; conserva inicio aplicado
 
   cantidadConsumida/liberada  Estado de ReservaStock        Igual a reservada al consumir/liberar; CHECK y correccion historica V4P2
 ================================================================================
   /auth/me.data.expiraEn       RequestAutenticado.expiraAccesoEn  JWT verificado exp; fecha ISO, sin nuevo campo en BD
   expiraEn/revisionAcceso      Frontend data/api.ts               Solo RAM; renovacion previa con margen de 30 segundos
-  sesionExpirada              synchronic:sesion-expirada               Bloquea lecturas tras revocacion/logout; login habilita de nuevo
+  sesionExpirada              abinova:sesion-expirada               Bloquea lecturas tras revocacion/logout; login habilita de nuevo
 
 V5P3 — Conteos diarios y páginas adaptadas al dispositivo
   Conteo.fechaDiaria          fechaDiaria                   conteosInventario.fechaDiaria (DATE Bogotá, nullable)
@@ -852,7 +853,7 @@ Audio híbrido: VADParams.stop_secs=2.0 y SpeechTimeoutUserTurnStopStrategy.user
 
 conversacionId (frontend en memoria) -> POST /agentes/interpretar -> x-opencode-session (proveedor): UUID de conversación, distinto del ID del borrador; no se persiste. Audio tipo=hablando -> speechSynthesis.cancel(): permite interrumpir la respuesta sin interpretar el evento como texto.
 
-RobotAsistente.estado <- escuchando/ocupado/synchronic:agente-hablando (frontend); abrirMicrofono.nivel <- RMS AudioContext -> CSS --nivel, sin persistencia ni envío adicional. SpeechSynthesisUtterance.onstart/onend/onerror -> synchronic:agente-hablando. RobotAsistente.posicion vive en memoria y no cambia datos del negocio.
+RobotAsistente.estado <- escuchando/ocupado/abinova:agente-hablando (frontend); abrirMicrofono.nivel <- RMS AudioContext -> CSS --nivel, sin persistencia ni envío adicional. SpeechSynthesisUtterance.onstart/onend/onerror -> abinova:agente-hablando. RobotAsistente.posicion vive en memoria y no cambia datos del negocio.
 
 
 V7P4 · lectura de productos y conteos (11/10/2026)
@@ -866,19 +867,19 @@ Conteo diario: tipo aleatorio, fechaDiaria America/Bogota, cinco productos; sele
 VENDEDOR ↔ conteo diario abierto; INVENTARIO ↔ inicial/general abiertos y catálogo sin existencias/costos; ADMINISTRADOR ↔ historial, cierre, ajuste y retiro de códigos.
 POST /productos/:productoId/precio: nuevoPrecio, costoActual?, stockMinimo?; conserva cantidades e históricos de documentos.
 CSV codigosLectura: varios códigos separados por |; campo opcional, cantidades vacías/0 mantienen su significado existente.
-ambie:ui:ancho-asistente: preferencia local de ancho (200–440 px, limitada al viewport), sin guardar transcripciones ni datos privados.
+abinova:ui:ancho-asistente: preferencia local de ancho (200–440 px, limitada al viewport), sin guardar transcripciones ni datos privados.
 Sincronización: codigosProducto usa invalidar_sincronizacion diferido; mismas lecturas agrupadas 250 ms e intervalo frontend dos segundos.
 
 
 RECUPERACIÓN DE SESIÓN V7P4 (11/10/2026)
 /auth/me.renovable -> AuthService.puedeRenovar -> sesiones.tokenHash / revocadoEn / expiraEn / usuarios.activo.
-Cookie existente sin sesión vigente -> renovable=false, data=null, cookies retiradas -> expirarSesion -> synchronic:sesion-expirada -> limpieza de consultas y usuario.
+Cookie existente sin sesión vigente -> renovable=false, data=null, cookies retiradas -> expirarSesion -> abinova:sesion-expirada -> limpieza de consultas y usuario.
 JWT vencido con renovación vigente -> data=null, renovable=true -> POST /auth/refresh -> nueva sesión y cookies HttpOnly -> consulta de usuario.
 SesionOpcional permite consultar estado sin acceso válido; las demás rutas conservan AuthGuard y permisos.
 
 
-SYNCHRONIC.JO V8P4
-APP_NOMBRE / APP_VERSION -> pestaña, acceso, encabezado, manifest -> Synchronic.JO / V8P4.
+ABINOVA V8P4
+APP_NOMBRE / APP_VERSION -> pestaña, acceso, encabezado, manifest -> ABINOVA / V8P4.
 AparienciaEsquema -> PUT /apariencia -> configuracionesVisuales.configuracion -> AparienciaProvider -> tokens CSS de todos los módulos.
 GET /apariencia es público y no almacena documentos ni credenciales. Imagen pública hasta 300 KB; portadas predeterminadas SVG propias.
 Usuario.permisosDenegados -> DTO / AuthGuard / RutaProtegida / navegación; cambiar permisos revoca sesiones.
@@ -913,10 +914,10 @@ V8P4 · correcciones, notificaciones y chat (14/10/2026)
 RevisionAgente.instruccion.lineas[].producto contiene el nombre resuelto del catálogo para el siguiente turno; no modifica el texto literal enviado por el micrófono. opcionesProducto[] reúne texto (referencia del borrador), elegidoId y hasta tres opciones id/nombre. «La segunda» cambia esa línea mediante /agentes/revisar, conserva cantidad/pago y no llama al proveedor. Las presentaciones probables se proponen para revisión; los tamaños numéricos incompatibles no se inventan.
 audio.locucion vive 30 segundos en RAM para ignorar eco textual exacto. VAD hablando no interrumpe TTS mientras se envía silencio. Reactivar el micrófono conserva la interrupción manual.
 Notificacion -> notificaciones (id/tipo/titulo/ruta/creadoEn). Triggers en pedidos (alta/estado) y recepcionesCompra (alta) dentro de la transacción; rollback no deja avisos. LecturaNotificacion -> lecturasNotificacion PK notificacionId/usuarioId, leidoEn, FKs a notificaciones/usuarios. GET /notificaciones paginado con pendientes; POST /notificaciones/:id/leer idempotente por usuario.
-AvisosNegocio consulta cada 5 segundos mientras el panel administrativo está abierto; no usa sincronización del negocio ni guarda registros en localStorage. Primera lectura no repite avisos históricos. ambie:ui:avisos:<usuarioId> guarda solo preferencia de avisos. Permiso del navegador y AudioContext se activan por toque. sw.js notificationclick abre rutas /admin del mismo origen. No incluye entrega push con el navegador cerrado.
+AvisosNegocio consulta cada 5 segundos mientras el panel administrativo está abierto; no usa sincronización del negocio ni guarda registros en localStorage. Primera lectura no repite avisos históricos. abinova:ui:avisos:<usuarioId> guarda solo preferencia de avisos. Permiso del navegador y AudioContext se activan por toque. sw.js notificationclick abre rutas /admin del mismo origen. No incluye entrega push con el navegador cerrado.
 GET /notificaciones?recientes=true devuelve solo {data}, máximo 30; evita counts del historial en cada intervalo. GET normal devuelve data/meta con total/pendientes bajo RepeatableRead. El toast se oculta a los nueve segundos, sin eliminar el aviso persistido ni la notificación del sistema.
 POST /agentes/chat usa la configuración existente. operacion=consulta recibe recurso/busqueda/periodo y llama a Productos/Pedidos/Compras/Dashboard, máximo diez resultados; no ofrece SQL arbitrario ni interpreta documentos como instrucciones. Las consultas de voz reutilizan ChatService.consultar y muestran resultados en Chat. El resumen usa el mismo calendario y servicio existente.
-Chat conserva hasta 40 mensajes y un borrador en RAM por usuario y generación de sesión; cancelar/confirmar/log out no reutilizan borradores guardados ni respuestas anteriores. synchronic:agente-guardado elimina la revisión preparada al confirmar con el formulario habitual o el detalle Chat. Los permisos chat/notificaciones son administrativos, editables y comprobados por API; consultas y operaciones conservan los permisos del módulo destino.
+Chat conserva hasta 40 mensajes y un borrador en RAM por usuario y generación de sesión; cancelar/confirmar/log out no reutilizan borradores guardados ni respuestas anteriores. abinova:agente-guardado elimina la revisión preparada al confirmar con el formulario habitual o el detalle Chat. Los permisos chat/notificaciones son administrativos, editables y comprobados por API; consultas y operaciones conservan los permisos del módulo destino.
 GET /recepciones-compra/:id devuelve el DTO del documento exacto, sin depender de la página del historial. /admin/compras?recepcion=<id> abre su detalle y Volver retira ese parámetro.
 
 V8P4 · confirmación y continuidad (14/10/2026)
@@ -925,8 +926,41 @@ guardarDesdeChat -> fachada OperacionesContext y rutas comerciales vigentes; use
 Ventas.Paso -> 1 cliente, 2 productos, 3 detalle con entrega y pago; FlujoVenta compartido entre roles.
 WhisperCompartido -> caché de un motor CPU instalado, lru_cache(maxsize=1), procesador independiente por conexión. Precalentamiento sin descargas durante inicio del servicio.
 Audio WebSocket -> sin límite acumulativo de silencio/audio; PipelineWorker.idle_timeout_secs=None; renovación después de 3600 s entre turnos; mantiene dos sesiones, ticket 30 s/un uso y bloques PCM <=12800 bytes.
-synchronic:audio-diagnostico -> fase/milisegundos/codigo, solo evento RAM; logs audio-listo/audio-cerrado sin audio, ticket ni transcripción. Reconexión solicita nuevo ticket y descarta audio acumulado; cierre manual no reabre el micrófono.
+abinova:audio-diagnostico -> fase/milisegundos/codigo, solo evento RAM; logs audio-listo/audio-cerrado sin audio, ticket ni transcripción. Reconexión solicita nuevo ticket y descarta audio acumulado; cierre manual no reabre el micrófono.
 audio.turnoVoz -> callbacks TTS solo para locución vigente; watchdog libera el estado de habla si falta onend.
 
 Arranque voz -> importación de la canalización Pipecat antes de salud; precarga Tiny instalado (modelo actual), Base/Small como alternativas si falta; cache sigue limitada a un motor. Cambiar de modelo puede necesitar carga inicial.
 uvicorn.error -> filtro de entradas con ticket=; los diagnósticos de cierre/apertura no incluyen autorizaciones temporales.
+
+
+Workflows Python (16/10/2026)
+WORKFLOW_ROLE -> control o empresa; procesos y volúmenes separados. WORKFLOW_TENANT_ID -> identidad fija del worker y acceso de su administrador. No cambia el esquema comercial por instalación.
+WORKFLOW_CONTROL_TOKEN_FILE -> API a control; WORKFLOW_REGISTRY_FILE -> registro privado de workers provisionados; WORKFLOW_TOKEN_FILE -> token del servicio correspondiente. Los clientes no eligen URLs ni envían tokens del control.
+WORKFLOW_BRIDGE_TOKEN_FILE / WORKFLOW_MODEL_URL -> worker a puente de texto autenticado, sin herramientas ni SQL. Reutiliza transporte/validación de proveedores del aplicativo. WORKFLOW_INCLUDED_PROVIDER_FILE -> conexión incluida privada, fuera de la configuración editable del cliente.
+GET/PUT /comercial/planes -> SQLite oferta del control: versión, precio y creditosMensuales. GET es público sin caché; PUT exige system y versión actual. Usuarios, agentes y descuento no son editables por esta ruta.
+/workflows/empresas/:id -> registro validado; administrador ve solo su instalación. Solo system asigna cupos; el administrador de la empresa autoriza diagnóstico. Estados y consumos visibles; resultados privados sujetos a autorización.
+SQLite worker: configuracion, flujos, ejecuciones y consumo. Nodo agente -> conexión propia, local o incluida. Créditos -> reserva transaccional por paso, ponderación del modelo y conciliación; no es tarifa del proveedor. Interrupciones no repiten llamadas.
+/operador -> panel técnico y oferta comercial. /admin/workflows -> flujos de la empresa. Sin acceso de vendedor/inventario. Historial de ejecuciones y snapshot de pasos conservados.
+/operador/acceso -> mismo servicio de autenticación, entrada exclusiva del operador; RutaProtegida.soloSistema exige esSistema. GET /workflows/operador valida administrador y esSistema en servidor, devuelve empresas conectadas y aprovisionamientoAutomatico=false. No crea tenants ni usuarios automáticamente.
+App.Entorno -> /operador no monta OperacionesProvider ni Asistente; la gestión explícita de usuarios reutiliza su proveedor existente. Login del cliente y manifest.start_url=/ conservan una sola web responsive/PWA para todos los dispositivos.
+
+Tres frontends y módulos comerciales (16/10/2026)
+Control/src/main.tsx -> entrada del panel técnico; Vite modo operador genera Frontend/dist-operador. Docker targets cliente/operador. Rutas públicas / y /comercial/ -> frontend; /operador/ -> operador; solo cliente registra PWA. No existe servicio marketing adicional.
+Compartido/src/modulos-iniciales.json -> catálogo y planes iniciales, IDs implementados; modulos.ts -> DTO y validación compartida. Un ID planificado no equivale a código desplegado.
+GET/PUT /control/modulos -> catalogo_modulos SQLite, solo system; version -> concurrencia optimista. GET/PUT /control/empresas/:id/asignacion -> accesos_empresa SQLite, plan/adicionales/excluidos por instalación registrada.
+GET /licencia -> política efectiva de esta instalación. ConfiguracionAccesoComercial -> tabla configuracionesAccesoComercial PostgreSQL, última política confirmada; trigger invalidar_sincronizacion. Frontend AccesoComercialProvider -> menú/rutas; AuthGuard -> licencia y permisos; AgentesService.revisar -> licencia de operación.
+ConfiguracionAgente.financiacion -> propia (compatibilidad por defecto) o creditos en Híbrido. WORKFLOW_INCLUDED_PROVIDER_FILE -> proveedor privado del operador; no se entrega al navegador. Local y Live mantienen propia.
+consumo SQLite worker -> reservas compartidas por workflows y asistente. ID api:{UUID}:{version}, periodo America/Bogota, reserva/cobrado/estado; reserva transaccional, conciliación idempotente, sin cupo no hay llamada. Errores inciertos conservan estimación; rechazos explícitos devuelven reserva. API propia no usa ese saldo.
+PUT /comercial/planes -> además de precio/creditosMensuales admite descripcion, beneficios y promocion (descuentoAnual, mesesPagados=12, mesesGratis, nota), solo system. La landing presenta valores remotos validados y mantiene fallback estático.
+Conocimiento y LangGraph (17/10/2026)
+ConocimientoEsquema -> perfil/nombreNegocio/descripcion/reglas/fuentes/modulos/publicado/version; fuentes MD o alias API/PostgreSQL, sin DSN en el navegador. GET/PUT /workflows/empresas/:id/conocimiento; POST /despublicar y /probar; GET /conexiones.
+WORKFLOW_SOURCES_FILE -> archivo privado de alias/tablas/columnas de lectura, montado solo en worker. WORKFLOW_CONOCIMIENTO_ACTIVO -> puente de voz/chat a LangGraph con intérprete existente. WORKFLOW_MODEL_URL y WORKFLOW_BRIDGE_TOKEN_FILE -> callbacks privados con usuario/rol/licencia revalidados.
+LangGraph memoria.sqlite -> checkpoints por hash de empresa/actor/rol/modulo/version/conversacion; historial máximo ocho intercambios, retirada por inactividad treinta días. conocimiento.sqlite -> documentos (borrador, publicado, retirado), concurrencia optimista y publicación explícita.
+flujos.modulo/estado SQLite -> módulo comercial y borrador/publicado/deshabilitado; habilitado en resumen -> licencia actual. ejecuciones.pasos.nodo._modulo/_maestro -> metadatos internos de autorización, no configurables desde el editor.
+comercial virtual -> saber separado en volumen del control; POST /comercial/asistente público sin herramientas ni datos privados; precios/cálculos de la oferta vigente, límites por IP y concurrencia. No publica el modelo automáticamente.
+AuditoriaEvento.esPrueba/empresaId/usuarioObjetivoId -> metadatos de system sin suplantar al cliente. Filtro auditoria.pruebas=todas|si|no. X-Abinova-Usuario-Prueba -> objetivo opcional validado de esta instalación, solo maestro; no concede permisos ni cambia al actor.
+
+Simplificación 17/10/2026: GRAFO_CONOCIMIENTO es la única definición LangGraph; Contexto aporta negocio, reglas y autorización en cada invocación. Sin grafos por módulo. QA: scripts y Compose de pruebas retirados; abinova-qa-contexto conserva únicamente el contexto histórico local, detenido y sin puertos.
+
+Oferta de ABI (17/10/2026): configuracionesAgente.id=oferta-incluida -> conexiones/modelos activos versionados y secretos cifrados; id=principal conserva preferencias del negocio. ConfiguracionAgente.incluido={proveedorId,modelo} identifica selección del catálogo. /agentes/oferta GET/PUT exclusivo system; /agentes/modelos-incluidos expone únicamente nombres/capacidades/saldo. Workflows no es módulo aprovisionable ni ruta del cliente.
+Audio nativo: ticket HMAC incluye usuarioId/sesionId/version/creditos; validación antes de reservar. /agentes/audio/live y /cerrar exigen VOICE_AGENT_TOKEN; ninguna clave llega al navegador. Reserva persistida api:live:<uuid> usa el ledger existente; cierre idempotente independiente del Map de admisión. Sesión60s/PCM16k entrada/PCM24k salida; proveedor Gemini/OpenAI oficial.

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { estaInstalada, solicitarInstalacion } from "../utils/pwa";
 export function InstalarAplicacion() {
   const [ayuda, setAyuda] = useState(false);
-  if (estaInstalada()) return <p className="text-xs text-ink-soft">Synchronic.JO está abierta como aplicación.</p>;
+  if (estaInstalada()) return <p className="text-xs text-ink-soft">ABINOVA está abierta como aplicación.</p>;
   return <div className="text-sm">
     <button type="button" className="rounded-xl border border-line bg-paper-raised px-4 py-2 font-semibold" onClick={() => { void solicitarInstalacion().then(disponible => setAyuda(!disponible)); }}>Instalar aplicación</button>
     {ayuda && <div role="status" className="mt-2 rounded-xl border border-line bg-paper-raised p-3 text-xs leading-relaxed text-ink-soft">

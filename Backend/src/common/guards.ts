@@ -13,6 +13,7 @@ import { PrismaService } from "./prisma.module";
 import { hashToken } from "./crypto";
 import { TokensService } from "./tokens";
 import { ErrorDominio } from "./errores";
+import { LicenciasService } from "../licencias/licencias.service";
 
 export const IS_PUBLIC_KEY = "isPublic";
 export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
@@ -31,6 +32,8 @@ export interface RequestAutenticado {
   user?: Usuario;
   sessionId?: string;
   expiraAccesoEn?: string;
+  body?: unknown;
+  usuarioObjetivoId?: string;
 }
 
 export const UsuarioActual = createParamDecorator((_data: unknown, ctx: ExecutionContext): Usuario => {
@@ -39,9 +42,9 @@ export const UsuarioActual = createParamDecorator((_data: unknown, ctx: Executio
 });
 
 /** Cookie de acceso que usa el navegador. */
-export const COOKIE_ACCESO = "ambie_access";
+export const COOKIE_ACCESO = "abinova_access";
 /** Cookie de refresco que usa el navegador para renovar la sesión. */
-export const COOKIE_REFRESH = "ambie_refresh";
+export const COOKIE_REFRESH = "abinova_refresh";
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -49,6 +52,7 @@ export class AuthGuard implements CanActivate {
     private readonly reflector: Reflector,
     private readonly prisma: PrismaService,
     private readonly tokens: TokensService,
+    private readonly licencias: LicenciasService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -90,17 +94,26 @@ export class AuthGuard implements CanActivate {
     request.user = sesion.usuario;
     request.sessionId = sesion.id;
     request.expiraAccesoEn = new Date(claims.exp * 1000).toISOString();
+    const objetivo = request.headers?.["x-abinova-usuario-prueba"];
+    if (objetivo !== undefined) {
+      if (!sesion.usuario.esSistema) throw new ForbiddenException("Solo la cuenta maestra puede indicar un usuario de prueba");
+      if (typeof objetivo !== "string" || !/^[0-9a-f-]{36}$/i.test(objetivo)) throw new ForbiddenException("Usuario de prueba inválido");
+      const usuarioObjetivo = await this.prisma.usuario.findUnique({ where: { id: objetivo }, select: { id: true, eliminadoEn: true } });
+      if (!usuarioObjetivo || usuarioObjetivo.eliminadoEn) throw new ForbiddenException("El usuario de prueba no existe en esta instalación");
+      request.usuarioObjetivoId = objetivo;
+    }
 
     const roles = this.reflector.getAllAndOverride<RolUsuario[]>(ROLES_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
-    if (sesion.usuario.rol === RolUsuario.INVENTARIO && !roles?.includes(RolUsuario.INVENTARIO)) throw new ForbiddenException("Este acceso permite únicamente realizar conteos de inventario");
-    if (roles && roles.length > 0 && !roles.includes(sesion.usuario.rol)) {
+    if (!sesion.usuario.esSistema && sesion.usuario.rol === RolUsuario.INVENTARIO && !roles?.includes(RolUsuario.INVENTARIO)) throw new ForbiddenException("Este acceso permite únicamente realizar conteos de inventario");
+    if (!sesion.usuario.esSistema && roles && roles.length > 0 && !roles.includes(sesion.usuario.rol)) {
       throw new ForbiddenException("No tienes permiso para esta acción");
     }
 
     if (!sesion.usuario.esSistema) {
+      await this.licencias.exigirRuta(sesion.usuario, request.url ?? "", request.method ?? "GET", request.body);
       const modulo = request.url?.split("?")[0].split("/")[3];
       const permiso = ({ notificaciones: "notificaciones", usuarios: "usuarios", clientes: "clientes", pedidos: "pedidos", pagos: "cobros", inventario: "inventario", compras: "inventario", "recepciones-compra": "inventario", proveedores: "inventario", gastos: "caja", abonos: "cobros", caja: "caja", cierres: "cierre-diario" } as Record<string, string>)[modulo ?? ""] ?? (modulo === "productos" && request.method !== "GET" ? "inventario" : undefined);
       const requerido = request.url?.split("?")[0] === "/api/v1/agentes/chat" ? "chat" : /\/(?:pagos|abonos)(?:\?|$)/.test(request.url ?? "") ? "cobros" : permiso;
@@ -113,7 +126,7 @@ export class AuthGuard implements CanActivate {
   /**
    * Acepta el token de dos formas para servir al navegador y a las integraciones
    * con el mismo backend:
-   * - cookie `ambie_access` (web, HttpOnly, no accesible desde JavaScript)
+   * - cookie `abinova_access` (web, HttpOnly, no accesible desde JavaScript)
    * - cabecera `Authorization: Bearer <token>` (integraciones)
    */
   private extraerToken(request: RequestAutenticado): string | null {

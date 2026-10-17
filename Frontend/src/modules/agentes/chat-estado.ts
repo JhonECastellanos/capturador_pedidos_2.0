@@ -1,4 +1,4 @@
-import type { RevisionAgente } from "@synchronic-jo/contrato";
+import type { RevisionAgente } from "@abinova/contrato";
 import { claveConsulta } from "../../data/query";
 export type MensajeChat = { id: string; texto: string; propio?: boolean; resultados?: Array<{ titulo: string; detalle: string; ruta: string }> };
 let estado = { usuario: "", sesion: -1, conversacionId: "", mensajes: [] as MensajeChat[], revision: undefined as RevisionAgente | undefined };
@@ -14,7 +14,7 @@ export function actualizarChat(sesion: ReturnType<typeof sesionChat>, cambios: P
 export function consultaDictada(usuario: string, texto: string, respuesta: { respuesta: string; resultados?: MensajeChat["resultados"] }) {
   const sesion = sesionChat(usuario);
   actualizarChat(sesion, { mensajes: [...sesion.mensajes, { id: crypto.randomUUID(), texto, propio: true }, { id: crypto.randomUUID(), texto: respuesta.respuesta, resultados: respuesta.resultados }].slice(-40) });
-  window.dispatchEvent(new Event("synchronic:chat-consulta"));
+  window.dispatchEvent(new Event("abinova:chat-consulta"));
 }
-window.addEventListener("synchronic:sesion-expirada", () => { estado = { usuario: "", sesion: -1, conversacionId: "", mensajes: [], revision: undefined }; });
-window.addEventListener("synchronic:agente-guardado", e => { if (estado.revision?.id === (e as CustomEvent<string>).detail) estado.revision = undefined; });
+window.addEventListener("abinova:sesion-expirada", () => { estado = { usuario: "", sesion: -1, conversacionId: "", mensajes: [], revision: undefined }; });
+window.addEventListener("abinova:agente-guardado", e => { if (estado.revision?.id === (e as CustomEvent<string>).detail) estado.revision = undefined; });

@@ -4,7 +4,7 @@ import { ProductosService, NuevoProductoSchema } from "./productos.service";
 import { Roles, UsuarioActual } from "../common/guards";
 import { ErrorDominio } from "../common/errores";
 import { paginacion } from "../common/paginacion";
-import { ImportarProductosEsquema, CodigoLecturaEsquema, VincularCodigoEsquema, CambiarPrecioEsquema, ProductoInicialEsquema } from "@synchronic-jo/contrato";
+import { ImportarProductosEsquema, CodigoLecturaEsquema, VincularCodigoEsquema, CambiarPrecioEsquema, ProductoInicialEsquema } from "@abinova/contrato";
 import { z } from "zod";
 
 @Controller("productos")

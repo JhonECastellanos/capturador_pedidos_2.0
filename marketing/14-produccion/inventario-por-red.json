@@ -1,0 +1,254 @@
+[
+  {
+    "Perfil": "01-tendero-independiente",
+    "Red": "facebook",
+    "PNG": 3,
+    "MD": 1,
+    "SVG": 3
+  },
+  {
+    "Perfil": "01-tendero-independiente",
+    "Red": "instagram",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 1
+  },
+  {
+    "Perfil": "01-tendero-independiente",
+    "Red": "tiktok",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 0
+  },
+  {
+    "Perfil": "02-tienda-crecimiento",
+    "Red": "facebook",
+    "PNG": 3,
+    "MD": 1,
+    "SVG": 3
+  },
+  {
+    "Perfil": "02-tienda-crecimiento",
+    "Red": "instagram",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 1
+  },
+  {
+    "Perfil": "02-tienda-crecimiento",
+    "Red": "tiktok",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 0
+  },
+  {
+    "Perfil": "03-cafeteria-comidas-rapidas",
+    "Red": "facebook",
+    "PNG": 3,
+    "MD": 1,
+    "SVG": 3
+  },
+  {
+    "Perfil": "03-cafeteria-comidas-rapidas",
+    "Red": "instagram",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 1
+  },
+  {
+    "Perfil": "03-cafeteria-comidas-rapidas",
+    "Red": "tiktok",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 0
+  },
+  {
+    "Perfil": "04-restaurante-pequeno",
+    "Red": "facebook",
+    "PNG": 3,
+    "MD": 1,
+    "SVG": 3
+  },
+  {
+    "Perfil": "04-restaurante-pequeno",
+    "Red": "instagram",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 1
+  },
+  {
+    "Perfil": "04-restaurante-pequeno",
+    "Red": "tiktok",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 0
+  },
+  {
+    "Perfil": "05-minimercado",
+    "Red": "facebook",
+    "PNG": 3,
+    "MD": 1,
+    "SVG": 3
+  },
+  {
+    "Perfil": "05-minimercado",
+    "Red": "instagram",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 1
+  },
+  {
+    "Perfil": "05-minimercado",
+    "Red": "tiktok",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 0
+  },
+  {
+    "Perfil": "06-ferreteria",
+    "Red": "facebook",
+    "PNG": 3,
+    "MD": 1,
+    "SVG": 3
+  },
+  {
+    "Perfil": "06-ferreteria",
+    "Red": "instagram",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 1
+  },
+  {
+    "Perfil": "06-ferreteria",
+    "Red": "tiktok",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 0
+  },
+  {
+    "Perfil": "07-moda",
+    "Red": "facebook",
+    "PNG": 3,
+    "MD": 1,
+    "SVG": 3
+  },
+  {
+    "Perfil": "07-moda",
+    "Red": "instagram",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 1
+  },
+  {
+    "Perfil": "07-moda",
+    "Red": "tiktok",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 0
+  },
+  {
+    "Perfil": "08-distribuidor-pequeno",
+    "Red": "facebook",
+    "PNG": 3,
+    "MD": 1,
+    "SVG": 3
+  },
+  {
+    "Perfil": "08-distribuidor-pequeno",
+    "Red": "instagram",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 1
+  },
+  {
+    "Perfil": "08-distribuidor-pequeno",
+    "Red": "tiktok",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 0
+  },
+  {
+    "Perfil": "09-admin-finanzas",
+    "Red": "facebook",
+    "PNG": 3,
+    "MD": 1,
+    "SVG": 3
+  },
+  {
+    "Perfil": "09-admin-finanzas",
+    "Red": "instagram",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 1
+  },
+  {
+    "Perfil": "09-admin-finanzas",
+    "Red": "tiktok",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 0
+  },
+  {
+    "Perfil": "10-coordinador-inventario",
+    "Red": "facebook",
+    "PNG": 3,
+    "MD": 1,
+    "SVG": 3
+  },
+  {
+    "Perfil": "10-coordinador-inventario",
+    "Red": "instagram",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 1
+  },
+  {
+    "Perfil": "10-coordinador-inventario",
+    "Red": "tiktok",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 0
+  },
+  {
+    "Perfil": "11-droguerias",
+    "Red": "facebook",
+    "PNG": 3,
+    "MD": 1,
+    "SVG": 3
+  },
+  {
+    "Perfil": "11-droguerias",
+    "Red": "instagram",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 1
+  },
+  {
+    "Perfil": "11-droguerias",
+    "Red": "tiktok",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 0
+  },
+  {
+    "Perfil": "12-empresarial-corporativo",
+    "Red": "facebook",
+    "PNG": 3,
+    "MD": 1,
+    "SVG": 3
+  },
+  {
+    "Perfil": "12-empresarial-corporativo",
+    "Red": "instagram",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 1
+  },
+  {
+    "Perfil": "12-empresarial-corporativo",
+    "Red": "tiktok",
+    "PNG": 1,
+    "MD": 1,
+    "SVG": 0
+  }
+]

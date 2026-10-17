@@ -1,10 +1,10 @@
 # 01 · Stack y reglas no negociables
 
-> Constitución de Synchronic.JO — archivo 1 de 4.
+> Constitución de ABINOVA — archivo 1 de 4.
 > Última revisión: 30/09/2026, basada en `README.md`, `AGENTS.md`, `docs/info/` y verificación directa del código.
 > Este archivo es normativo: si algo del código contradice una regla de aquí, se corrige el código (o se actualiza este documento con evidencia, nunca «porque sí»).
 
-## 1. Qué es Synchronic.JO
+## 1. Qué es ABINOVA
 
 Aplicación para el día a día de un negocio de ventas: clientes, productos, pedidos, cobros, inventario, compras, valores de venta y caja. Interfaz pensada como app móvil dentro del navegador: pasos claros, botones grandes, scroll interno y acciones siempre accesibles.
 
@@ -22,11 +22,11 @@ Aplicación para el día a día de un negocio de ventas: clientes, productos, pe
 | Base de datos | PostgreSQL 17 + Prisma 6 | `Backend/prisma/schema.prisma` es la fuente de verdad. |
 | Validación | Zod 3 | Esquemas compartidos en `Compartido/src/esquemas.ts`. |
 | Contraseñas | Argon2id | |
-| Contrato | `@synchronic-jo/contrato` | Workspace npm con DTO, enums y esquemas. |
+| Contrato | `@abinova/contrato` | Workspace npm con DTO, enums y esquemas. |
 | Caché | Redis 7 interno | TTL 5 min, expulsión LRU; sin puerto publicado. |
 | Archivos | MinIO privado | Imágenes y comprobantes con autenticación; máximo 5 MB. |
 | Servidor web | Nginx en el contenedor `frontend` | SPA + proxy de API. |
-| Orquestación | Docker Compose | Proyecto único `capturador_pedidos_20`. |
+| Orquestación | Docker Compose | Proyecto único `abinova`. |
 | Lint frontend | oxlint | `npm run front:lint`. |
 
 ## 3. Reglas no negociables
@@ -34,7 +34,7 @@ Aplicación para el día a día de un negocio de ventas: clientes, productos, pe
 ### 3.1 Negocio y datos
 
 1. **Una empresa por instalación.** NUNCA introducir tenants, administración multiempresa ni columnas de «empresa».
-2. **PostgreSQL es la fuente de verdad** en modo API. El modo local (`VITE_DATOS_ORIGEN=local`, claves `ambie:v2:`) es compatibilidad explícita; NUNCA borrar ni importar automáticamente esos datos a PostgreSQL. Las claves `ambie:v1:` se ignoran.
+2. **PostgreSQL es la fuente de verdad** en modo API. El modo local (`VITE_DATOS_ORIGEN=local`, claves `abinova:v2:`) es compatibilidad explícita; NUNCA borrar ni importar automáticamente esos datos a PostgreSQL. Las claves `abinova:v1:` se ignoran.
 3. **Los cancelados no cuentan**: quedan fuera de cartera, no admiten cobros y no aparecen en ventas. El tablero debe cuadrar con la caja, que sí revierte el cancelado.
 4. **Nada se borra**: documentos y auditoría usan `activo`, `estado`, `anuladoEn`, `revertidoEn`. La auditoría guarda **metadatos, nunca cuerpos, contraseñas ni tokens**.
 5. Dinero: `numeric(18,2)` en base, **cadena decimal** en JSON, nunca `float`; cantidades enteras; los saldos son **derivados** de las aplicaciones (no se guardan duplicados).
@@ -57,7 +57,7 @@ Aplicación para el día a día de un negocio de ventas: clientes, productos, pe
 
 ### 3.4 Pruebas y operación
 
-17. Pruebas que escriben: SOLO contra QA (`ambie-integracion`: frontend 8180, API 3100; `BASE_PRUEBAS_API` limitada a `localhost:3100` o `localhost:8180`). NUNCA contra la base del negocio.
+17. Pruebas que escriben: SOLO contra QA (`abinova-integracion`: frontend 8180, API 3100; `BASE_PRUEBAS_API` limitada a `localhost:3100` o `localhost:8180`). NUNCA contra la base del negocio.
 18. NUNCA `docker:limpiar`, `docker compose down -v`, podas de volúmenes ni restauraciones sobre el negocio sin autorización específica. No borrar respaldos ni datos QA.
 19. `npm run verificar` (contrato + API + frontend) es la puerta de salida de todo cambio de código. Revisión de interfaz a 390×844 y 1440 px; el login también a 320×320 / poca altura.
 20. NUNCA activar Cloudflare por iniciativa propia.

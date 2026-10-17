@@ -12,6 +12,8 @@ export const ProveedorAgenteEsquema = z.object({
   apiKey: z.string().trim().max(4096).refine(clave => !/[\r\n]/.test(clave), "La clave debe ir en una sola línea, sin encabezados ni comentarios").optional(), borrarClave: z.boolean().optional(),
 }).strict();
 export const ConfiguracionAgenteEsquema = z.object({
+  financiacion: z.enum(["propia", "creditos"]).default("propia"),
+  incluido: z.object({ proveedorId: z.string().uuid().nullable(), modelo: z.string().max(150) }).strict().default({ proveedorId: null, modelo: "" }),
   habilitado: z.boolean(), modo: z.enum(ModosAgente),
   proveedorId: z.string().uuid().nullable(), respaldoId: z.string().uuid().nullable().default(null),
   proveedores: z.array(ProveedorAgenteEsquema).max(20),
@@ -25,6 +27,8 @@ export type ConfiguracionAgentePublica = Omit<ConfiguracionAgente, "proveedores"
   proveedores: Array<Omit<ConfiguracionAgente["proveedores"][number], "apiKey" | "borrarClave"> & { tieneClave: boolean }>;
 };
 export const ConfiguracionAgenteInicial: ConfiguracionAgente = {
+  financiacion: "propia",
+  incluido: { proveedorId: null, modelo: "" },
   habilitado: false, modo: "hibrido", proveedorId: null, respaldoId: null, proveedores: [],
   audio: { stt: "whisper", modeloStt: "tiny", idioma: "es", tts: "navegador", voz: "", velocidad: 1, volumen: 1 },
   local: { modelo: "", dispositivo: "auto" },
@@ -71,3 +75,10 @@ export function problemaConexionAgente(p: Pick<ConfiguracionAgente["proveedores"
 }
 
 export interface UsoAgente { entrada?: number; salida?: number; total?: number }
+
+/** Oferta del operador: claves protegidas, capacidades explícitas por modelo. */
+export const ModeloIncluidoEsquema = z.object({ id: z.string().trim().min(1).max(150), nombre: z.string().trim().min(1).max(100), modo: z.enum(["hibrido", "live"]), voz: z.string().trim().max(80).default("") }).strict();
+export const OfertaAgentesEsquema = z.object({ conexiones: z.array(ProveedorAgenteEsquema.extend({ activo: z.boolean(), modelos: z.array(ModeloIncluidoEsquema).min(1).max(50) })).max(20) }).strict();
+export type OfertaAgentes = z.infer<typeof OfertaAgentesEsquema>;
+export type OfertaAgentesPublica = { version: number; conexiones: Array<Omit<OfertaAgentes["conexiones"][number], "apiKey" | "borrarClave"> & { tieneClave: boolean }> };
+export type ModelosIncluidos = { modelos: Array<z.infer<typeof ModeloIncluidoEsquema> & { proveedorId: string; proveedor: string }>; creditos: { cupo: number; disponibles: number; consumidosOReservados: number; periodo: string } | null };

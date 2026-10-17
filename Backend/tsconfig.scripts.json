@@ -8,5 +8,5 @@
     "types": ["node"],
     "lib": ["ES2023"]
   },
-  "include": ["scripts/**/*", "src/**/*"]
+  "include": ["src/**/*"]
 }

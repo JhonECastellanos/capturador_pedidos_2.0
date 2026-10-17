@@ -1,0 +1,25 @@
+{
+  "fecha": "2026-10-16T17:25:37.516Z",
+  "resultado": "APROBADO",
+  "navegador": "Chrome real automatizado",
+  "perfiles": 12,
+  "conceptos": 108,
+  "textosAB": 216,
+  "png": 48,
+  "svg": 48,
+  "facebook": 36,
+  "instagram": 12,
+  "videos": 0,
+  "linksVerificados": 543,
+  "galeriaResoluciones": [
+    320,
+    360,
+    390,
+    768,
+    1024,
+    1440
+  ],
+  "extraAngulos": "11 y 12 × 3 redes × 3 ángulos; A/B en visor",
+  "revisionGrafica": "48 SVG con foto completa, una imagen y texto sin recorte ni superposición",
+  "alcance": "Marketing local exclusivamente; no npm verificar, app, datos, infraestructura ni publicación"
+}

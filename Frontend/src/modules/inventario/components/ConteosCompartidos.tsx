@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { LineaCompartidaDTO, CabeceraConteoCompartidoDTO, ProductoDTO } from "@synchronic-jo/contrato";
+import type { LineaCompartidaDTO, CabeceraConteoCompartidoDTO, ProductoDTO } from "@abinova/contrato";
 import { useAuth } from "../../../context/auth";
 import { api } from "../../../data/api";
 import { usePaginaApi, useRegistroApi } from "../../../data/usePaginaApi";
@@ -42,7 +42,7 @@ export function ConteosCompartidos({ inicialId }: { inicialId?: string | null })
   const lineas = usePaginaApi<LineaCompartidaDTO>(`/inventario/compartidos/${seleccion}/lineas?page=${paginaLineas}&pageSize=${porPagina}&q=${encodeURIComponent(busqueda)}`, !!seleccion);
   const detalle = useRegistroApi<CabeceraConteoCompartidoDTO>(`/inventario/compartidos/${seleccion}`, !!seleccion);
   const conteo = detalle.data ?? historial.items.find(c => c.id === seleccion);
-  function refrescar() { window.dispatchEvent(new Event("synchronic:datos-actualizados")); }
+  function refrescar() { window.dispatchEvent(new Event("abinova:datos-actualizados")); }
   async function ejecutar(trabajo: () => Promise<void>) {
     if (ocupado) return false;
     setOcupado(true); setError(""); setMensaje("");

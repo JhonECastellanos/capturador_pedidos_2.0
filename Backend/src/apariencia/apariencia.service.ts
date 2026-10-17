@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { APARIENCIA_INICIAL, AparienciaEsquema, type Apariencia } from "@synchronic-jo/contrato";
+import { APARIENCIA_INICIAL, AparienciaEsquema, type Apariencia } from "@abinova/contrato";
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "../common/prisma.module";
 import { ErrorDominio } from "../common/errores";

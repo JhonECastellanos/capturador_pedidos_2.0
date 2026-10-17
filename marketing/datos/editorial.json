@@ -1,0 +1,2192 @@
+{
+  "fecha": "2026-10-15",
+  "naturaleza": "Investigación secundaria y propuesta editorial. Identidades y situaciones hipotéticas; sin entrevistas ni resultados comerciales observados.",
+  "perfiles": [
+    {
+      "slug": "tendero-independiente",
+      "nombre": "Tendero independiente",
+      "identidad": "María, personaje hipotético",
+      "cargo": "Propietaria operadora de tienda de barrio",
+      "sector": "Comercio minorista de un único negocio",
+      "fuentes": [
+        "DANE-TIENDAS",
+        "DANE-EMICRON",
+        "ALEGRA",
+        "SIIGO"
+      ],
+      "descripcion": "Atiende mostrador, recibe mercancía y recuerda cobros mientras vende. Hipótesis de trabajo: necesita resolver una operación sin reconstruir el día en varios cuadernos.",
+      "comportamiento": "Alterna atención y registro; usa apuntes breves y consulta el teléfono entre clientes. Prefiere comprobar una venta con sus productos antes de cambiar su rutina. Hipótesis pendiente de entrevista.",
+      "competidores": [
+        "Alegra POS",
+        "Siigo POS"
+      ],
+      "objecion": "¿Qué pasa si digo mal el producto?",
+      "valor": "Preparar y corregir pedidos por voz o chat, revisar referencias y pago y confirmar con control del dueño.",
+      "dolores": [
+        [
+          "Fiados sin cliente claro",
+          "Se anota un apodo sin documento del pedido",
+          "El cobro pierde trazabilidad",
+          "No sé a quién le apunté esto",
+          "Reconstruir cartera",
+          "Riesgo de cobro omitido",
+          "Cuaderno de fiados",
+          "Crédito con cliente registrado",
+          "Vincular el saldo al cliente"
+        ],
+        [
+          "Producto oído de forma ambigua",
+          "Referencias con nombres parecidos",
+          "Se prepara otra presentación",
+          "Eso no fue lo que pedí",
+          "Rehacer líneas",
+          "Riesgo de devolución por referencia",
+          "Preguntar y tachar",
+          "Alternativas y corrección del borrador en chat",
+          "Revisar la referencia antes de confirmar"
+        ],
+        [
+          "Prometer mercancía comprometida",
+          "Se mira el estante sin reservas",
+          "Otro pedido queda sin unidades",
+          "Parecía que sí había",
+          "Revisar pedidos abiertos",
+          "Riesgo de venta incumplida",
+          "Separar bolsas a mano",
+          "Stock disponible y reservas",
+          "Consultar unidades disponibles"
+        ],
+        [
+          "Abono mezclado con venta nueva",
+          "Se usa una sola lista de efectivo",
+          "El saldo no se entiende",
+          "Recibí el dinero pero sigue debiendo",
+          "Conciliar pagos y cartera",
+          "Riesgo de cobro duplicado",
+          "Guardar recibos sueltos",
+          "Abonos generales y aplicaciones FIFO",
+          "Conservar aplicación del abono"
+        ],
+        [
+          "Pago mal registrado",
+          "Se elige efectivo por costumbre",
+          "El cierre muestra otro medio",
+          "La billetera no coincide",
+          "Revisar medios de pago",
+          "Riesgo de descuadre de caja",
+          "Nota en el teléfono",
+          "Corrección de método antes de confirmar",
+          "Revisar el medio real"
+        ],
+        [
+          "Recepción pendiente de registrar",
+          "Se atiende al proveedor durante ventas",
+          "La existencia queda atrasada",
+          "Llegó pero no aparece",
+          "Conciliar compra y productos",
+          "Riesgo de compra repetida",
+          "Dejar factura en una caja",
+          "Recepciones de compras",
+          "Registrar entrada y proveedor"
+        ],
+        [
+          "Cancelación sin reversión manual completa",
+          "Se tacha solo el pedido",
+          "Pago y reserva siguen en apuntes",
+          "Ya canceló y todavía aparece",
+          "Revisar caja y stock",
+          "Riesgo de saldo incorrecto",
+          "Tachar varias hojas",
+          "Cancelar pedido abierto con reversión",
+          "Mantener coherencia del pedido abierto cancelado"
+        ],
+        [
+          "Conteo interrumpido",
+          "Se vende mientras se cuenta",
+          "Se olvida qué líneas se revisaron",
+          "Tengo que volver a empezar",
+          "Revisar líneas contadas",
+          "Riesgo de compra sobre dato erróneo",
+          "Marcas en papel",
+          "Conteos parciales",
+          "Conservar cantidades digitadas"
+        ],
+        [
+          "Venta anterior con valor distinto",
+          "Se recuerda solo el valor actual",
+          "Se discute el documento pasado",
+          "Antes no costaba eso",
+          "Buscar historial",
+          "Riesgo de conciliación equivocada",
+          "Guardar fotos de recibos",
+          "Valores históricos del pedido",
+          "Consultar documento de la venta"
+        ],
+        [
+          "Depender de memoria para el día",
+          "Ventas y gastos están dispersos",
+          "No se explica el movimiento diario",
+          "Vendí, pero no entiendo la caja",
+          "Reunir documentos",
+          "Riesgo de decisiones sin respaldo",
+          "Sumar al cierre",
+          "Resumen por período y caja",
+          "Revisar datos registrados del día"
+        ]
+      ],
+      "angulos": [
+        {
+          "titulo": "El fiado necesita nombre",
+          "dolor": 0,
+          "situacion": "Una compra a crédito queda apuntada solo como la vecina.",
+          "pregunta": "¿Podrías asociar ese fiado con un pedido concreto?",
+          "visual": "Cuaderno con apodo frente a revisión con cliente registrado, sin datos personales.",
+          "reto": "Señala qué falta antes de guardar este fiado.",
+          "instruccion": "Prepara un pedido para Ana Demo: dos arroces de una libra, a crédito y para preparar.",
+          "correccion": "Cambia a un arroz de una libra y conserva cliente y crédito.",
+          "prueba": "Cliente registrado, una unidad y crédito siguen en la revisión.",
+          "resultado": "El pedido a crédito queda asociado al cliente tras confirmación.",
+          "captura": "ventas",
+          "operacion": "pedido",
+          "rol": "ADMINISTRADOR",
+          "cta": "Solicita una demo de pedido y cartera."
+        },
+        {
+          "titulo": "La presentación que sí pidió",
+          "dolor": 1,
+          "situacion": "El cliente pide la bebida pequeña y el borrador contiene la grande.",
+          "pregunta": "¿Qué referencia revisas antes de aceptar la venta?",
+          "visual": "Primer plano de dos presentaciones y una sola línea corregida.",
+          "reto": "Encuentra la presentación equivocada antes de confirmar.",
+          "instruccion": "Prepara para cliente ocasional dos gaseosas pequeñas, efectivo y para preparar.",
+          "correccion": "Cambia solo la referencia a gaseosa mediana y conserva dos unidades.",
+          "prueba": "La referencia cambia y la cantidad y el pago permanecen.",
+          "resultado": "La revisión muestra la presentación elegida antes del guardado.",
+          "captura": "productos",
+          "operacion": "pedido",
+          "rol": "ADMINISTRADOR",
+          "cta": "Pide una demo corrigiendo un producto de tu catálogo."
+        },
+        {
+          "titulo": "El abono no es otra venta",
+          "dolor": 3,
+          "situacion": "Un cliente paga parte de lo que debía y el apunte queda entre ventas nuevas.",
+          "pregunta": "¿Ese ingreso corresponde a venta nueva o a una deuda?",
+          "visual": "Dos tarjetas: pedido nuevo y abono; resaltar la segunda.",
+          "reto": "Este dinero llegó, pero no corresponde a un producto nuevo.",
+          "instruccion": "Prepara un abono para Ana Demo por billetera.",
+          "correccion": "Conserva el cliente; cambia el medio a efectivo.",
+          "prueba": "La revisión solicita importe explícito, conserva el cliente y usa efectivo.",
+          "resultado": "Un abono confirmado se aplica a la cartera por antigüedad.",
+          "captura": "ventas",
+          "operacion": "cobro",
+          "rol": "ADMINISTRADOR",
+          "cta": "Solicita una demo de abonos y revisión del saldo."
+        }
+      ]
+    },
+    {
+      "slug": "tienda-crecimiento",
+      "nombre": "Tienda en crecimiento",
+      "identidad": "Andrés, personaje hipotético",
+      "cargo": "Dueño de tienda que comienza a delegar",
+      "sector": "Comercio minorista con más operaciones en el mismo establecimiento",
+      "fuentes": [
+        "DANE-EMICRON",
+        "DANE-TIENDAS",
+        "SIIGO",
+        "ALEGRA"
+      ],
+      "descripcion": "El dueño ya comparte la atención con un vendedor y necesita distinguir permisos, pedidos abiertos y cierres dentro de una sola empresa.",
+      "comportamiento": "Revisa pendientes desde el celular y solicita evidencias antes de delegar. La adopción gradual por tareas es una hipótesis, no un comportamiento medido.",
+      "competidores": [
+        "Siigo POS",
+        "Alegra POS"
+      ],
+      "objecion": "¿Mi vendedor puede cambiar todo?",
+      "valor": "Delegar pedidos y cobros con permisos, usando voz o chat para preparar y corregir las operaciones autorizadas.",
+      "dolores": [
+        [
+          "Todos usan el acceso del dueño",
+          "No se separan responsabilidades",
+          "Se pierde atribución de cambios",
+          "No sé quién hizo el movimiento",
+          "Revisar usuarios y operaciones",
+          "Riesgo de movimiento no autorizado",
+          "Compartir una contraseña",
+          "Usuarios y permisos por rol",
+          "Delimitar acciones autorizadas"
+        ],
+        [
+          "Pedidos repetidos al corregir",
+          "Se inicia otra venta para cambiar una línea",
+          "Hay dos encargos para la misma compra",
+          "Solo quería cambiar el producto",
+          "Revisar duplicados",
+          "Riesgo de reserva duplicada",
+          "Tachar el primer encargo",
+          "Borrador corregible y confirmación",
+          "Corregir antes del guardado"
+        ],
+        [
+          "Pendientes perdidos entre conversaciones",
+          "No existe estado común",
+          "El relevo no sabe qué entregar",
+          "Nadie sabía que faltaba preparar",
+          "Revisar pendientes",
+          "Riesgo de entrega incumplida",
+          "Grupo informal de mensajes",
+          "Pedidos y estados",
+          "Compartir estado registrado"
+        ],
+        [
+          "Existencia distinta entre pantallas",
+          "Se consulta un apunte antiguo",
+          "Se ofrece lo reservado",
+          "A mí me mostraba otra cantidad",
+          "Revisar actualización",
+          "Riesgo de sobreoferta",
+          "Llamar al compañero",
+          "Sincronización periódica y stock disponible",
+          "Consultar la información actualizada"
+        ],
+        [
+          "Cambio de pago no comunicado",
+          "Se avisa verbalmente",
+          "Caja se revisa con otro medio",
+          "El vendedor no me avisó",
+          "Conciliar medios",
+          "Riesgo de descuadre",
+          "Nota al cierre",
+          "Revisión del pago en pedido",
+          "Conservar el medio confirmado"
+        ],
+        [
+          "Recepción sin proveedor identificado",
+          "Se guarda solo una cantidad",
+          "No se ubica el origen de entrada",
+          "¿Quién trajo esto?",
+          "Buscar soporte de compra",
+          "Riesgo de reclamación sin evidencia",
+          "Foto de remisión",
+          "Compras por proveedor",
+          "Rastrear entrada"
+        ],
+        [
+          "Consulta depende del dueño",
+          "Solo él conoce cada referencia",
+          "La atención espera su respuesta",
+          "No puedo alejarme del mostrador",
+          "Resolver consultas repetidas",
+          "Riesgo de venta abandonada",
+          "Llamadas internas",
+          "Catálogo y búsqueda por referencia",
+          "Consultar el catálogo autorizado"
+        ],
+        [
+          "Gasto pagado sin concepto",
+          "Se retira efectivo sin registro",
+          "No se explica salida de caja",
+          "Otra vez falta el motivo",
+          "Conciliar egresos",
+          "Riesgo de gasto omitido",
+          "Papel dentro del cajón",
+          "Gastos y egresos con concepto",
+          "Identificar la salida"
+        ],
+        [
+          "Corrección de stock sin conteo",
+          "Se cambia para cuadrar visualmente",
+          "No queda contraste físico",
+          "Ahora parece cuadrado pero no sé por qué",
+          "Investigar diferencias",
+          "Riesgo de compra mal sustentada",
+          "Editar hoja de cálculo",
+          "Conteos y ajustes autorizados",
+          "Registrar diferencia verificable"
+        ],
+        [
+          "Comparar días de forma inconsistente",
+          "Cada persona usa cortes distintos",
+          "Se discuten resúmenes incompatibles",
+          "Estamos mirando períodos diferentes",
+          "Acordar calendario y corte",
+          "Riesgo de decisiones desalineadas",
+          "Capturas aisladas",
+          "Filtros de fecha y resumen",
+          "Revisar el mismo período"
+        ]
+      ],
+      "angulos": [
+        {
+          "titulo": "Delegar con límites claros",
+          "dolor": 0,
+          "situacion": "El nuevo vendedor pide la clave del administrador para registrar un pedido.",
+          "pregunta": "¿Qué necesita hacer el vendedor y qué debe reservar el administrador?",
+          "visual": "Dos tarjetas de rol con pedido habilitado y ajuste administrativo reservado.",
+          "reto": "Un pedido sí; cambiar permisos requiere administrador.",
+          "instruccion": "Prepara para cliente ocasional tres cuadernos, efectivo y para preparar.",
+          "correccion": "Conserva tres cuadernos; cambia a billetera.",
+          "prueba": "El vendedor revisa pedido y pago; no se le atribuyen compras ni cierres.",
+          "resultado": "El vendedor confirma una operación permitida con su propio acceso.",
+          "captura": "chat",
+          "operacion": "pedido",
+          "rol": "VENDEDOR",
+          "cta": "Solicita una demo con acceso de vendedor."
+        },
+        {
+          "titulo": "Corregir sin abrir otro encargo",
+          "dolor": 1,
+          "situacion": "El cliente cambia una referencia cuando el vendedor aún revisa el pedido.",
+          "pregunta": "¿Estás corrigiendo el borrador o creando otro pedido?",
+          "visual": "Una tarjeta permanece; cambia la referencia y se resaltan los campos conservados.",
+          "reto": "Cambia el producto sin duplicar el pedido.",
+          "instruccion": "Prepara para cliente ocasional dos cuadernos rayados, billetera y para preparar.",
+          "correccion": "Reemplaza por cuaderno cuadriculado y conserva dos unidades y billetera.",
+          "prueba": "Solo hay un borrador, con referencia nueva y pago conservado.",
+          "resultado": "Se confirma una única revisión del encargo corregido.",
+          "captura": "ventas",
+          "operacion": "pedido",
+          "rol": "VENDEDOR",
+          "cta": "Pide una demo de correcciones consecutivas."
+        },
+        {
+          "titulo": "El relevo ve qué falta",
+          "dolor": 2,
+          "situacion": "El siguiente vendedor encuentra una bolsa sin saber a qué pedido corresponde.",
+          "pregunta": "¿Tu relevo distingue lo pendiente de lo entregado?",
+          "visual": "Detalle del mismo pedido con referencia visible y estado revisado.",
+          "reto": "Esa bolsa no explica si ya fue entregada.",
+          "instruccion": "Prepara el cambio del pedido DEMO-001 al estado que corresponde a su entrega.",
+          "correccion": "Aclara la referencia exacta y selecciona el estado permitido en la revisión.",
+          "prueba": "Se revisa el pedido identificado y su transición permitida; no se cancela un entregado.",
+          "resultado": "El estado confirmado puede consultarse en el detalle del pedido.",
+          "captura": "ventas",
+          "operacion": "estado",
+          "rol": "VENDEDOR",
+          "cta": "Solicita el recorrido de un pedido pendiente hasta su entrega."
+        }
+      ]
+    },
+    {
+      "slug": "cafeteria-comidas-rapidas",
+      "nombre": "Cafetería y comidas rápidas",
+      "identidad": "Lucía, personaje hipotético",
+      "cargo": "Encargada de atención de cafetería",
+      "sector": "Venta sencilla de alimentos preparados y productos por unidad",
+      "fuentes": [
+        "DANE-EMICRON",
+        "DANE-TIENDAS",
+        "LOYVERSE",
+        "ALEGRA"
+      ],
+      "descripcion": "Registra ventas de productos definidos en catálogo y encargos sencillos; el encaje propuesto no requiere recetas, comandas de cocina ni mesas avanzadas.",
+      "comportamiento": "Alterna pedido verbal, cobro y entrega; valora revisar unidades y pago frente al cliente. Hipótesis operativa que debe validarse en el local.",
+      "competidores": [
+        "Loyverse POS",
+        "Alegra POS"
+      ],
+      "objecion": "¿La voz funciona en mi abinovante de atención?",
+      "valor": "Preparar un pedido de mostrador por voz o chat y corregir cantidades y pago antes de confirmar; audio sujeto a configuración y prueba física.",
+      "dolores": [
+        [
+          "Cantidad cambiada durante el pedido",
+          "El cliente añade una unidad al hablar",
+          "El apunte conserva la cantidad inicial",
+          "Me dijo dos al final",
+          "Revisar líneas",
+          "Riesgo de entrega incompleta",
+          "Repetir el pedido en voz alta",
+          "Corrección de cantidades en borrador",
+          "Confirmar la cantidad final"
+        ],
+        [
+          "Billetera anotada como efectivo",
+          "Se cobra mientras se atiende otro pedido",
+          "El medio queda equivocado",
+          "Sí pagó pero por el teléfono",
+          "Conciliar medios de caja",
+          "Riesgo de descuadre",
+          "Revisar notificaciones de pago",
+          "Revisión del método antes de guardar",
+          "Conservar el método elegido"
+        ],
+        [
+          "Pedido confundido con entrega",
+          "No se distingue preparación de entrega",
+          "Se pierde el pendiente",
+          "¿Ya salió o sigue aquí?",
+          "Revisar estados",
+          "Riesgo de entrega duplicada",
+          "Mover papeles de lado",
+          "Pedidos para preparar y estados",
+          "Distinguir pendiente y entregado"
+        ],
+        [
+          "Agotado ofrecido en mostrador",
+          "No se consulta disponible",
+          "La atención cambia el pedido después",
+          "Eso ya no queda",
+          "Rehacer selección",
+          "Riesgo de venta frustrada",
+          "Aviso verbal al equipo",
+          "Consulta de productos y existencias",
+          "Revisar disponibilidad registrada"
+        ],
+        [
+          "Productos similares al dictar",
+          "Nombres de catálogo poco distintivos",
+          "Se interpreta otra referencia",
+          "Dije de queso, no de pollo",
+          "Aclarar catálogo",
+          "Riesgo de preparación equivocada",
+          "Escribir abreviaturas",
+          "Opciones de producto y aclaración",
+          "Elegir la referencia correcta"
+        ],
+        [
+          "Gasto menor fuera del registro",
+          "Se paga un insumo desde caja",
+          "No se entiende la salida",
+          "Fue para el negocio pero no lo anoté",
+          "Buscar el concepto",
+          "Riesgo de gasto omitido",
+          "Guardar el recibo en el bolsillo",
+          "Registro de gastos",
+          "Identificar gasto y medio"
+        ],
+        [
+          "Entrada de bebidas sin soporte común",
+          "Se cuenta la caja recibida informalmente",
+          "El sistema queda sin entrada",
+          "El estante y la lista no coinciden",
+          "Revisar recepción",
+          "Riesgo de reposición errónea",
+          "Marcar empaque",
+          "Recepción de compras",
+          "Actualizar entrada de productos"
+        ],
+        [
+          "Cancelado aún parece pendiente",
+          "Solo se retira el papel",
+          "Reserva y pago se revisan aparte",
+          "Ese cliente ya no viene",
+          "Conciliar pedido abierto",
+          "Riesgo de reserva retenida",
+          "Tachar la comanda informal",
+          "Cancelación de pedido abierto",
+          "Revertir efectos del cancelado permitido"
+        ],
+        [
+          "Conteo de unidades sin continuidad",
+          "Atención interrumpe revisión de estante",
+          "Se repite trabajo",
+          "¿Hasta dónde había contado?",
+          "Revisar líneas registradas",
+          "Riesgo de inventario inexacto",
+          "Contar de nuevo",
+          "Conteos parciales",
+          "Guardar líneas contadas"
+        ],
+        [
+          "Resumen mezcla días de atención",
+          "Se suman apuntes sin corte común",
+          "La caja diaria queda confusa",
+          "Esto fue de ayer",
+          "Aplicar fecha local",
+          "Riesgo de lectura financiera incorrecta",
+          "Separar hojas por día",
+          "Filtros locales y caja",
+          "Consultar el período seleccionado"
+        ]
+      ],
+      "angulos": [
+        {
+          "titulo": "Dos cafés se vuelven tres",
+          "dolor": 0,
+          "situacion": "Mientras se revisa el pedido el cliente añade otro café.",
+          "pregunta": "¿La cantidad final quedó en el pedido o solo en la conversación?",
+          "visual": "Contador de unidades pasa de dos a tres sobre la misma revisión.",
+          "reto": "El cliente cambió la cantidad: corrige una sola línea.",
+          "instruccion": "Prepara para cliente ocasional dos cafés y una arepa de queso, efectivo y para preparar.",
+          "correccion": "Cambia a tres cafés; conserva la arepa y el pago.",
+          "prueba": "Tres cafés, una arepa y efectivo permanecen en un solo borrador.",
+          "resultado": "La revisión refleja el pedido final antes de confirmarlo.",
+          "captura": "ventas",
+          "operacion": "pedido",
+          "rol": "VENDEDOR",
+          "cta": "Solicita una demo de atención en mostrador."
+        },
+        {
+          "titulo": "El pago cambió, el pedido sigue",
+          "dolor": 1,
+          "situacion": "El cliente elige billetera después de pedir en efectivo.",
+          "pregunta": "¿Qué dato revisas antes de cerrar el pedido?",
+          "visual": "Resaltar solo el método; mantener inmóviles productos y unidades.",
+          "reto": "Cambia efectivo por billetera sin repetir el pedido.",
+          "instruccion": "Prepara para cliente ocasional un sándwich y dos jugos, efectivo y para preparar.",
+          "correccion": "Paga con billetera; conserva productos y cantidades.",
+          "prueba": "La revisión conserva tres unidades de dos referencias y cambia el medio.",
+          "resultado": "El medio confirmado acompaña la venta registrada.",
+          "captura": "chat",
+          "operacion": "pedido",
+          "rol": "VENDEDOR",
+          "cta": "Pide una demo corrigiendo el medio de pago."
+        },
+        {
+          "titulo": "Antes de ofrecer la última bebida",
+          "dolor": 3,
+          "situacion": "La vitrina parece tener bebidas pero algunas unidades ya están reservadas.",
+          "pregunta": "¿La unidad visible está disponible para otra venta?",
+          "visual": "Producto en estante y detalle de disponible, sin inventar cifras.",
+          "reto": "Ver una botella no demuestra que puedas prometerla.",
+          "instruccion": "Consulta los productos que coinciden con jugo de naranja.",
+          "correccion": "Busca la presentación individual del catálogo; aclara el nombre si aparecen varias.",
+          "prueba": "El administrador contrasta la referencia consultada con su existencia disponible.",
+          "resultado": "La consulta permite revisar disponibilidad sin crear un pedido.",
+          "captura": "inventario",
+          "operacion": "consulta",
+          "rol": "ADMINISTRADOR",
+          "cta": "Solicita una demo de consulta de existencias."
+        }
+      ]
+    },
+    {
+      "slug": "restaurante-pequeno",
+      "nombre": "Restaurante pequeño",
+      "identidad": "Camilo, personaje hipotético",
+      "cargo": "Propietario de restaurante de operación sencilla",
+      "sector": "Pedidos sencillos de alimentos por unidad en un único local",
+      "fuentes": [
+        "DANE-EMICRON",
+        "LOYVERSE",
+        "ALEGRA"
+      ],
+      "descripcion": "Necesita pedidos, cobros, gastos e inventario de referencias definidas. Se excluyen cocina avanzada, mesas, recetas, ingredientes automáticos y domicilios integrados.",
+      "comportamiento": "Consulta encargos antes de entregar y revisa compras al terminar la atención. Supuesto editorial, no entrevista de restaurante real.",
+      "competidores": [
+        "Loyverse POS",
+        "Alegra POS"
+      ],
+      "objecion": "¿Esto incluye una cocina o un mapa de mesas?",
+      "valor": "Ordenar la parte comercial del restaurante con pedidos y cobros revisables por voz o chat dentro de las funciones existentes.",
+      "dolores": [
+        [
+          "Encargo sin estado de entrega",
+          "Se guarda una nota sin seguimiento",
+          "No se sabe qué falta entregar",
+          "Yo pensé que ya salió",
+          "Revisar pedidos abiertos",
+          "Riesgo de entrega omitida",
+          "Preguntar en el mostrador",
+          "Estados de pedidos",
+          "Consultar el estado registrado"
+        ],
+        [
+          "Porciones mal anotadas",
+          "Corrección verbal no llega al registro",
+          "El encargo no coincide",
+          "Faltó una unidad",
+          "Revisar detalle",
+          "Riesgo de reposición por error",
+          "Tachar la nota",
+          "Corrección de líneas",
+          "Revisar unidades finales"
+        ],
+        [
+          "Gastos mezclados con compras",
+          "Se anota toda salida igual",
+          "No se explica qué salió de caja",
+          "No sé qué fue mercancía",
+          "Clasificar documentos",
+          "Riesgo de lectura de costos errada",
+          "Lista general de salidas",
+          "Compras, gastos y egresos separados",
+          "Consultar cada tipo de movimiento"
+        ],
+        [
+          "Cobro parcial olvidado",
+          "El dinero se recibe durante atención",
+          "No se actualiza la deuda",
+          "Ya dejó un abono",
+          "Conciliar saldo",
+          "Riesgo de cobro repetido",
+          "Nota al lado del nombre",
+          "Abonos y cartera",
+          "Aplicar pago al cliente"
+        ],
+        [
+          "Pedido cancelado conserva reserva",
+          "Se elimina la nota física",
+          "No se refleja la cancelación permitida",
+          "Eso ya no hay que entregarlo",
+          "Revisar efectos del pedido",
+          "Riesgo de disponibilidad mal leída",
+          "Aviso verbal",
+          "Cancelar pedidos abiertos",
+          "Revertir reserva y pago cuando corresponde"
+        ],
+        [
+          "Bebidas recibidas no registradas",
+          "Compra llega en hora de atención",
+          "Existencias quedan atrasadas",
+          "Entraron más pero no aparecen",
+          "Conciliar recepción",
+          "Riesgo de compra innecesaria",
+          "Dejar soporte en caja",
+          "Recepciones por producto",
+          "Registrar entradas"
+        ],
+        [
+          "Expectativa de recetas automáticas",
+          "Se confunde pedido con consumo por ingrediente",
+          "Se espera un inventario no implementado",
+          "El pedido no descuenta la receta",
+          "Delimitar catálogo",
+          "Riesgo de elección de software inadecuada",
+          "Hoja de ingredientes aparte",
+          "Catálogo y stock de referencias por unidad",
+          "Evaluar el encaje real sin prometer recetas"
+        ],
+        [
+          "Pago por otro medio sin corregir",
+          "Se conserva selección inicial",
+          "El cierre compara medios distintos",
+          "No era efectivo",
+          "Conciliar cobros",
+          "Riesgo de descuadre",
+          "Captura del pago",
+          "Revisión del método",
+          "Registrar el medio confirmado"
+        ],
+        [
+          "Conteo al cierre incompleto",
+          "Solo se cuenta lo más visible",
+          "Se ajustan líneas no revisadas en hoja manual",
+          "No conté todo eso",
+          "Delimitar conteo",
+          "Riesgo de ajuste indebido",
+          "Marcar líneas con lápiz",
+          "Conteos parciales aplican líneas digitadas",
+          "Respetar el alcance contado"
+        ],
+        [
+          "Confundir ventas con dinero disponible",
+          "Se mira solo total de pedidos",
+          "Se ignoran créditos y salidas",
+          "La venta no coincide con caja",
+          "Conciliar operación y caja",
+          "Riesgo de disposición de fondos sin respaldo",
+          "Sumar recibos",
+          "Resumen, cartera y caja",
+          "Comparar conceptos distintos"
+        ]
+      ],
+      "angulos": [
+        {
+          "titulo": "Un encargo todavía por entregar",
+          "dolor": 0,
+          "situacion": "Un pedido de almuerzos está registrado pero nadie identifica si sigue pendiente.",
+          "pregunta": "¿El estado refleja la entrega real del encargo?",
+          "visual": "Referencia del pedido y estado, sin tablero de cocina ni mesas.",
+          "reto": "Un pedido apuntado todavía puede estar pendiente.",
+          "instruccion": "Prepara para cliente ocasional dos almuerzos del catálogo, billetera y para preparar.",
+          "correccion": "Cambia a tres almuerzos y conserva el estado para preparar.",
+          "prueba": "Cantidad final y condición de preparación se revisan en el mismo pedido.",
+          "resultado": "El encargo confirmado queda disponible para su seguimiento comercial.",
+          "captura": "ventas",
+          "operacion": "pedido",
+          "rol": "VENDEDOR",
+          "cta": "Solicita una demo de pedidos sencillos para tu restaurante."
+        },
+        {
+          "titulo": "No toda salida es mercancía",
+          "dolor": 2,
+          "situacion": "Un transporte y una recepción de bebidas terminan en una misma lista de salidas.",
+          "pregunta": "¿Puedes separar una compra de un gasto al revisar el día?",
+          "visual": "Dos documentos rotulados compra y gasto; destacar el concepto transporte.",
+          "reto": "Esta salida no aumenta el inventario.",
+          "instruccion": "Prepara un gasto de transporte por efectivo.",
+          "correccion": "Cambia el concepto a transporte de mercancía y conserva efectivo.",
+          "prueba": "Se exige importe explícito y se revisa concepto y medio; no se crea entrada de stock.",
+          "resultado": "El gasto confirmado tiene concepto y medio propios.",
+          "captura": "chat",
+          "operacion": "gasto",
+          "rol": "ADMINISTRADOR",
+          "cta": "Pide una demo para distinguir compras y gastos."
+        },
+        {
+          "titulo": "La carta y el catálogo coinciden",
+          "dolor": 6,
+          "situacion": "El dueño necesita revisar un producto vendido por unidad antes de registrar el pedido.",
+          "pregunta": "¿Tu flujo necesita un producto del catálogo o una receta automática?",
+          "visual": "Carta de ejemplo y ficha de producto; texto: operación comercial sencilla.",
+          "reto": "Antes de elegir sistema, prueba con un producto de tu carta.",
+          "instruccion": "Consulta productos que coincidan con almuerzo del día.",
+          "correccion": "Acota la búsqueda a la referencia exacta registrada en el catálogo.",
+          "prueba": "La consulta muestra referencias existentes; no calcula ingredientes ni mesas.",
+          "resultado": "El administrador evalúa el encaje con un catálogo real de productos por unidad.",
+          "captura": "productos",
+          "operacion": "consulta",
+          "rol": "ADMINISTRADOR",
+          "cta": "Solicita una demo para evaluar el encaje de tu operación."
+        }
+      ]
+    },
+    {
+      "slug": "minimercado",
+      "nombre": "Minimercado",
+      "identidad": "Diana, personaje hipotético",
+      "cargo": "Administradora de minimercado",
+      "sector": "Comercio minorista de surtido en un único establecimiento",
+      "fuentes": [
+        "DANE-EMICRON",
+        "DANE-TIENDAS",
+        "SIIGO",
+        "ALEGRA"
+      ],
+      "descripcion": "Combina surtido, recepción, atención y revisión de diferencias; las referencias y unidades del catálogo deben ser inequívocas.",
+      "comportamiento": "Busca productos por nombre o código y revisa recepciones contra soportes. Hipótesis de uso, sin inferencias sobre edad o ingresos.",
+      "competidores": [
+        "Siigo POS",
+        "Alegra POS"
+      ],
+      "objecion": "¿Puedo distinguir las presentaciones de un mismo producto?",
+      "valor": "Consultar referencias y preparar operaciones con voz o chat, manteniendo revisión de códigos, cantidades y permisos.",
+      "dolores": [
+        [
+          "Presentaciones de empaque confundidas",
+          "Se usa el mismo nombre corto",
+          "La línea corresponde a otro producto",
+          "Era el paquete pequeño",
+          "Revisar códigos",
+          "Riesgo de entrega de referencia errada",
+          "Apodos del empaque",
+          "Ficha y códigos de producto",
+          "Identificar la presentación"
+        ],
+        [
+          "Compra recibida fuera del registro",
+          "Se descarga sin revisar documento",
+          "Stock queda atrasado",
+          "El proveedor sí lo dejó",
+          "Conciliar entrada y soporte",
+          "Riesgo de reposición innecesaria",
+          "Remisiones apiladas",
+          "Recepciones de compras",
+          "Rastrear entrada registrada"
+        ],
+        [
+          "Conteo que afecta líneas no revisadas",
+          "Se rellena una hoja total con supuestos",
+          "Se alteran productos sin contar",
+          "Ese pasillo no se contó",
+          "Delimitar ajuste",
+          "Riesgo de inventario incorrecto",
+          "Copiar el conteo anterior",
+          "Conteo parcial",
+          "Aplicar solo líneas digitadas"
+        ],
+        [
+          "Reservas ignoradas en reposición",
+          "Se mira stock físico como disponible",
+          "Se promete unidad comprometida",
+          "Pero está en la bodega",
+          "Revisar reservas",
+          "Riesgo de incumplir pedidos",
+          "Separación manual",
+          "Stock físico y disponible diferenciados",
+          "Interpretar existencia correctamente"
+        ],
+        [
+          "Valor actual aplicado al pasado",
+          "Se consulta la lista vigente",
+          "Se interpreta mal un pedido anterior",
+          "Ese recibo tenía otro valor",
+          "Buscar detalle histórico",
+          "Riesgo de conciliación errónea",
+          "Fotografías de tickets",
+          "Valores históricos por línea",
+          "Mantener documento original"
+        ],
+        [
+          "Pedido con cantidad repetida",
+          "La misma referencia se dicta dos veces",
+          "El borrador necesita aclaración",
+          "¿Son dos o cuatro?",
+          "Unificar la línea",
+          "Riesgo de entrega equivocada",
+          "Sumar en papel",
+          "Validación y corrección de cantidades",
+          "Confirmar una cantidad total"
+        ],
+        [
+          "Gasto de caja sin soporte de concepto",
+          "Se registra solo una salida",
+          "No se explica el destino",
+          "¿En qué se fue?",
+          "Conciliar caja",
+          "Riesgo de gasto omitido",
+          "Recibo sin clasificar",
+          "Gastos con concepto",
+          "Consultar motivo de salida"
+        ],
+        [
+          "Correcciones de stock sin responsabilidad",
+          "Varias personas modifican la hoja",
+          "No se conoce el origen",
+          "Todos tocaron ese archivo",
+          "Revisar permisos y conteos",
+          "Riesgo de ajuste indebido",
+          "Hoja compartida",
+          "Roles y ajustes administrativos",
+          "Reservar aplicación al responsable"
+        ],
+        [
+          "Búsqueda en listas demasiado largas",
+          "Se recorre todo el surtido",
+          "La atención se interrumpe",
+          "No encuentro el producto",
+          "Localizar referencia",
+          "Riesgo de venta abandonada",
+          "Listas impresas",
+          "Buscador y filtros paginados",
+          "Acotar selección"
+        ],
+        [
+          "Saldo confundido tras varios abonos",
+          "Se descuentan notas manuales",
+          "Cartera no se reconstruye",
+          "Ese cliente ya pagó parte",
+          "Conciliar aplicaciones",
+          "Riesgo de saldo incorrecto",
+          "Hoja de fiados",
+          "Aplicación de abonos FIFO",
+          "Consultar deuda respaldada"
+        ]
+      ],
+      "angulos": [
+        {
+          "titulo": "El empaque parecido no es la misma referencia",
+          "dolor": 0,
+          "situacion": "Dos paquetes parecidos se ofrecen como si fueran una sola referencia.",
+          "pregunta": "¿El nombre permite distinguir presentación y código?",
+          "visual": "Dos fichas de catálogo con sus presentaciones rotuladas.",
+          "reto": "Son parecidos; elige la referencia antes de confirmar.",
+          "instruccion": "Prepara para cliente ocasional dos paquetes de arroz de una libra, efectivo y para preparar.",
+          "correccion": "Usa la referencia arroz de dos libras y conserva dos paquetes.",
+          "prueba": "La revisión distingue la referencia y mantiene la cantidad total.",
+          "resultado": "La confirmación usa la presentación revisada.",
+          "captura": "productos",
+          "operacion": "pedido",
+          "rol": "ADMINISTRADOR",
+          "cta": "Solicita una demo con presentaciones de tu catálogo."
+        },
+        {
+          "titulo": "El pasillo que sí se contó",
+          "dolor": 2,
+          "situacion": "El equipo termina solo una parte del inventario del minimercado.",
+          "pregunta": "¿Tu ajuste respeta qué líneas se contaron de verdad?",
+          "visual": "Plano de pasillo y línea asignada; las demás quedan sin digitar.",
+          "reto": "No completes con suposiciones el pasillo que no contaste.",
+          "instruccion": "En el producto asignado del conteo abierto: conté cinco unidades.",
+          "correccion": "Corrige la cantidad contada a cuatro.",
+          "prueba": "Solo la línea asignada muestra cuatro; guardar no aplica por sí solo el stock.",
+          "resultado": "La cantidad confirmada queda para revisión administrativa del conteo.",
+          "captura": "inventario",
+          "operacion": "conteo",
+          "rol": "INVENTARIO",
+          "cta": "Pide una demo de conteo parcial y revisión del administrador."
+        },
+        {
+          "titulo": "Hay físico, pero ya tiene pedido",
+          "dolor": 3,
+          "situacion": "Una unidad sigue en el local aunque ya está comprometida con un pedido abierto.",
+          "pregunta": "¿Estás leyendo físico o disponible?",
+          "visual": "Etiquetas físico, reservado y disponible en el inventario real.",
+          "reto": "Esa unidad en el estante puede tener dueño.",
+          "instruccion": "Consulta el producto aceite de un litro.",
+          "correccion": "Aclara la referencia del catálogo y revisa su disponible frente al físico.",
+          "prueba": "La existencia consultada se contrasta con las reservas registradas.",
+          "resultado": "El administrador decide con la disponibilidad registrada, sin prometer stock por apariencia.",
+          "captura": "inventario",
+          "operacion": "consulta",
+          "rol": "ADMINISTRADOR",
+          "cta": "Solicita una demo de existencias y reservas."
+        }
+      ]
+    },
+    {
+      "slug": "ferreteria",
+      "nombre": "Ferretería",
+      "identidad": "Óscar, personaje hipotético",
+      "cargo": "Propietario de ferretería",
+      "sector": "Comercio de referencias ferreteras por unidades enteras",
+      "fuentes": [
+        "DANE-EMICRON",
+        "SIIGO",
+        "ALEGRA"
+      ],
+      "descripcion": "Maneja referencias similares, encargos y crédito de clientes registrados. El encaje se limita a unidades enteras configuradas; no se promete metraje fraccionario ni conversión automática.",
+      "comportamiento": "Aclara medida y presentación antes de despachar y compara el encargo con la referencia. Es una hipótesis editorial de tarea.",
+      "competidores": [
+        "Siigo POS",
+        "Alegra POS"
+      ],
+      "objecion": "¿Una descripción parecida puede cambiar la medida?",
+      "valor": "Aclarar referencias en voz o chat, corregir el borrador y conservar cantidades y cliente antes de confirmar.",
+      "dolores": [
+        [
+          "Medidas similares al dictar",
+          "Se omite medida en el nombre",
+          "Se prepara la referencia incorrecta",
+          "Ese diámetro no me sirve",
+          "Aclarar catálogo",
+          "Riesgo de devolución por referencia",
+          "Escribir la medida al margen",
+          "Selección y alternativas de producto",
+          "Revisar nombre y código exactos"
+        ],
+        [
+          "Unidad de venta poco clara",
+          "Caja y unidad se nombran igual",
+          "Se prepara cantidad equivocada",
+          "Pedí unidades, no cajas",
+          "Revisar ficha de unidad",
+          "Riesgo de entrega incorrecta",
+          "Aclarar verbalmente",
+          "Catálogo con unidad definida",
+          "Confirmar cantidad en la unidad configurada"
+        ],
+        [
+          "Encargo reservado vendido de nuevo",
+          "Se considera físico como disponible",
+          "Falta material al retirar",
+          "Eso estaba separado",
+          "Revisar reserva",
+          "Riesgo de incumplimiento",
+          "Etiqueta de apartado",
+          "Reservas de pedidos",
+          "Consultar disponible"
+        ],
+        [
+          "Crédito sin cliente inequívoco",
+          "Se escribe nombre de la obra",
+          "No se identifica al deudor",
+          "¿Quién autorizó ese fiado?",
+          "Resolver titular",
+          "Riesgo de cobro omitido",
+          "Cuaderno por obra",
+          "Crédito con cliente registrado",
+          "Vincular responsabilidad comercial"
+        ],
+        [
+          "Abono aplicado a otra deuda",
+          "Se resta sobre una suma manual",
+          "El cliente discute el saldo",
+          "Eso era para otro pedido",
+          "Conciliar aplicaciones",
+          "Riesgo de cobro repetido",
+          "Recibo manuscrito",
+          "Abono FIFO y cobro directo por pedido",
+          "Elegir el flujo de cobro adecuado"
+        ],
+        [
+          "Recepción sin detalle por referencia",
+          "Se guarda solo la remisión total",
+          "No se rastrea entrada por producto",
+          "¿Cuál tornillo llegó?",
+          "Revisar compra",
+          "Riesgo de inventario mal repuesto",
+          "Marcar cajas",
+          "Recepciones con líneas",
+          "Registrar referencias recibidas"
+        ],
+        [
+          "Conteo físico mezclado con disponible",
+          "Se corrige usando reservas descontadas",
+          "El físico queda mal ajustado",
+          "Conté más de lo que dice disponible",
+          "Separar conceptos",
+          "Riesgo de ajuste incorrecto",
+          "Recalcular en hoja",
+          "Conteo y corrección sobre stock físico",
+          "Contrastar la cantidad física"
+        ],
+        [
+          "Valor anterior no se conserva en consulta manual",
+          "Se reemplaza lista vigente",
+          "Pedido pasado pierde contexto",
+          "Antes me vendió distinto",
+          "Recuperar documento",
+          "Riesgo de disputa comercial",
+          "Archivar copias",
+          "Valores de venta históricos",
+          "Consultar línea original"
+        ],
+        [
+          "Cambio de cantidad pierde otra línea",
+          "Se reescribe el encargo completo",
+          "Se omite una referencia",
+          "Faltó lo otro que pedí",
+          "Revisar todo el pedido",
+          "Riesgo de venta incompleta",
+          "Repetir la lista",
+          "Correcciones conservan otros campos",
+          "Cambiar solo la línea solicitada"
+        ],
+        [
+          "Gasto logístico sin concepto",
+          "Se paga transporte desde caja",
+          "No se distingue salida",
+          "No quedó anotado el flete",
+          "Conciliar egresos",
+          "Riesgo de gasto omitido",
+          "Papel de transporte",
+          "Gastos y caja",
+          "Identificar el movimiento"
+        ]
+      ],
+      "angulos": [
+        {
+          "titulo": "La medida cambia la referencia",
+          "dolor": 0,
+          "situacion": "El pedido menciona tornillos pero no deja clara la medida del catálogo.",
+          "pregunta": "¿Qué dato distingue las referencias antes del despacho?",
+          "visual": "Acercamiento a etiquetas de dos medidas y selección de una ficha.",
+          "reto": "Dos tornillos parecidos no son intercambiables.",
+          "instruccion": "Prepara para cliente ocasional diez tornillos de la referencia indicada, efectivo y para preparar.",
+          "correccion": "Elige la referencia tornillo de un cuarto del catálogo; conserva diez unidades.",
+          "prueba": "Se aclara la referencia exacta antes de permitir confirmación.",
+          "resultado": "La revisión conserva diez unidades de la medida elegida.",
+          "captura": "productos",
+          "operacion": "pedido",
+          "rol": "ADMINISTRADOR",
+          "cta": "Pide una demo con referencias similares de tu ferretería."
+        },
+        {
+          "titulo": "El apartado cuenta aunque siga aquí",
+          "dolor": 2,
+          "situacion": "El material sigue en bodega mientras un pedido abierto ya lo reserva.",
+          "pregunta": "¿Qué pasa si ofreces de nuevo lo comprometido?",
+          "visual": "Etiqueta de apartado y campos de stock físico y disponible.",
+          "reto": "No vendas de nuevo el material que ya separaste.",
+          "instruccion": "Consulta el producto cinta aislante negra.",
+          "correccion": "Acota al código correcto y contrasta físico, reservado y disponible.",
+          "prueba": "Se revisa la disponibilidad real de esa referencia del catálogo.",
+          "resultado": "La consulta ayuda a decidir qué se puede comprometer.",
+          "captura": "inventario",
+          "operacion": "consulta",
+          "rol": "ADMINISTRADOR",
+          "cta": "Solicita una demo de reservas en pedidos abiertos."
+        },
+        {
+          "titulo": "Una línea cambia, el resto permanece",
+          "dolor": 8,
+          "situacion": "El cliente cambia tornillos por chazos mientras mantiene la cinta del encargo.",
+          "pregunta": "¿La corrección conserva los demás productos?",
+          "visual": "Una línea resaltada cambia; la cinta queda visible sin movimiento.",
+          "reto": "Corrige el tornillo sin borrar la cinta.",
+          "instruccion": "Prepara para cliente ocasional diez tornillos de un cuarto y dos cintas aislantes negras, billetera y para preparar.",
+          "correccion": "Sustituye los tornillos por diez chazos de la referencia elegida; conserva las cintas y billetera.",
+          "prueba": "Diez chazos y dos cintas permanecen juntos con el mismo pago.",
+          "resultado": "El pedido confirmado contiene la corrección y las líneas conservadas.",
+          "captura": "chat",
+          "operacion": "pedido",
+          "rol": "ADMINISTRADOR",
+          "cta": "Pide una demo de corrección con varias referencias."
+        }
+      ]
+    },
+    {
+      "slug": "moda",
+      "nombre": "Comercio de moda",
+      "identidad": "Valentina, personaje hipotético",
+      "cargo": "Encargada de tienda de ropa",
+      "sector": "Moda en un único establecimiento con cada combinación como referencia explícita",
+      "fuentes": [
+        "DANE-EMICRON",
+        "ALEGRA",
+        "LOYVERSE"
+      ],
+      "descripcion": "Necesita distinguir talla y color mediante referencias del catálogo. No se presupone un motor avanzado de variantes, cambios ni devoluciones.",
+      "comportamiento": "Muestra prendas, busca talla y revisa el pedido antes de apartar. Hipótesis de contexto, sin asignar género o edad al mercado real.",
+      "competidores": [
+        "Alegra POS",
+        "Loyverse POS"
+      ],
+      "objecion": "¿Queda clara la talla que estoy reservando?",
+      "valor": "Buscar la referencia explícita de talla y color y preparar o corregir el pedido por voz o chat antes de confirmarlo.",
+      "dolores": [
+        [
+          "Talla omitida en el encargo",
+          "Se usa nombre genérico de prenda",
+          "Se aparta otra referencia",
+          "La quería en talla M",
+          "Revisar referencia",
+          "Riesgo de entrega equivocada",
+          "Nota de talla en bolsa",
+          "Referencia explícita en catálogo",
+          "Confirmar talla registrada"
+        ],
+        [
+          "Color confundido al corregir",
+          "Se reescribe el pedido completo",
+          "Se pierde cantidad o pago",
+          "Solo cambié el color",
+          "Revisar campos conservados",
+          "Riesgo de pedido incompleto",
+          "Tachar y reescribir",
+          "Corrección del borrador",
+          "Cambiar la referencia sin rehacer todo"
+        ],
+        [
+          "Prenda apartada ofrecida otra vez",
+          "Sigue en exhibición",
+          "Dos encargos compiten por unidad",
+          "Esa ya estaba separada",
+          "Revisar reservas",
+          "Riesgo de venta incumplida",
+          "Bolsa con nombre",
+          "Stock reservado y disponible",
+          "Consultar disponibilidad de referencia"
+        ],
+        [
+          "Abono sin pedido claro",
+          "Se guarda foto del pago",
+          "Cartera queda sin aplicación",
+          "Ya dejé una parte",
+          "Conciliar cobros",
+          "Riesgo de cobro repetido",
+          "Galería de comprobantes",
+          "Abonos y cobro directo",
+          "Aplicar el cobro por el flujo elegido"
+        ],
+        [
+          "Recepción resumida por modelo",
+          "No se detallan referencias",
+          "No se conoce qué tallas entraron",
+          "Llegó ropa pero no esa talla",
+          "Revisar líneas de compra",
+          "Riesgo de reposición mal dirigida",
+          "Lista de bolsas",
+          "Compras por referencia",
+          "Identificar entrada de cada producto"
+        ],
+        [
+          "Conteo solo por modelo general",
+          "Se agrupan colores y tallas",
+          "Diferencias quedan escondidas",
+          "El total cuadra, la talla no",
+          "Revisar unidades por referencia",
+          "Riesgo de promesa equivocada",
+          "Contar por perchas",
+          "Conteos de productos explícitos",
+          "Contrastar referencias reales"
+        ],
+        [
+          "Valor nuevo confundido con histórico",
+          "Se cambia la lista del catálogo",
+          "Pedido anterior se interpreta distinto",
+          "Mi apartado tenía otro valor",
+          "Revisar documento",
+          "Riesgo de disputa sobre cobro",
+          "Foto del recibo",
+          "Valores históricos por línea",
+          "Consultar acuerdo registrado"
+        ],
+        [
+          "Pago de billetera anotado distinto",
+          "Se mantiene el medio inicial",
+          "El cierre no coincide",
+          "Ese pago llegó por otro lado",
+          "Conciliar medios",
+          "Riesgo de descuadre",
+          "Nota sobre comprobante",
+          "Revisión del método de pago",
+          "Conservar medio confirmado"
+        ],
+        [
+          "Búsqueda lenta de referencia",
+          "Nombres de catálogo inconsistentes",
+          "Se interrumpe atención",
+          "No encuentro la prenda",
+          "Normalizar búsqueda",
+          "Riesgo de venta abandonada",
+          "Fotos en chat personal",
+          "Buscador de productos y códigos",
+          "Localizar referencia"
+        ],
+        [
+          "Cancelación de apartado sin actualización",
+          "Se retira el papel de la bolsa",
+          "La reserva continúa",
+          "Ya la pueden vender pero sigue apartada",
+          "Revisar pedido abierto",
+          "Riesgo de disponibilidad errada",
+          "Aviso al equipo",
+          "Cancelar pedido abierto",
+          "Revertir sus efectos permitidos"
+        ]
+      ],
+      "angulos": [
+        {
+          "titulo": "La talla vive en la referencia",
+          "dolor": 0,
+          "situacion": "Una camiseta quedó anotada sin talla ni color.",
+          "pregunta": "¿Ese nombre identifica la prenda que vas a entregar?",
+          "visual": "Etiqueta física M azul frente al nombre completo en catálogo.",
+          "reto": "Camiseta no alcanza: busca talla y color.",
+          "instruccion": "Prepara para cliente ocasional una camiseta azul talla M del catálogo, efectivo y para preparar.",
+          "correccion": "Cambia a la referencia camiseta azul talla L y conserva una unidad.",
+          "prueba": "El catálogo tiene ambas referencias explícitas y la revisión muestra talla L.",
+          "resultado": "El pedido confirma la referencia completa revisada.",
+          "captura": "productos",
+          "operacion": "pedido",
+          "rol": "ADMINISTRADOR",
+          "cta": "Solicita una demo con tallas y colores como referencias."
+        },
+        {
+          "titulo": "La última prenda ya estaba apartada",
+          "dolor": 2,
+          "situacion": "Una prenda sigue colgada aunque pertenece a un pedido abierto.",
+          "pregunta": "¿La exhibición coincide con el disponible?",
+          "visual": "Percha con etiqueta de apartado y campo disponible en inventario.",
+          "reto": "Que esté colgada no significa que siga disponible.",
+          "instruccion": "Consulta la referencia chaqueta negra talla M.",
+          "correccion": "Aclara el código y revisa la disponibilidad de esa combinación exacta.",
+          "prueba": "La consulta distingue físico y disponible de la referencia existente.",
+          "resultado": "El administrador revisa disponibilidad antes de ofrecer otro apartado.",
+          "captura": "inventario",
+          "operacion": "consulta",
+          "rol": "ADMINISTRADOR",
+          "cta": "Pide una demo de apartados y disponibilidad."
+        },
+        {
+          "titulo": "Cambiar color sin perder el pedido",
+          "dolor": 1,
+          "situacion": "El cliente elige color negro al final y mantiene su pantalón.",
+          "pregunta": "¿Solo cambia la referencia que te pidió?",
+          "visual": "Camiseta azul cambia a negra; pantalón y medio de pago siguen visibles.",
+          "reto": "Cambia el color sin borrar la otra prenda.",
+          "instruccion": "Prepara para cliente ocasional una camiseta azul talla M y un pantalón negro talla M, billetera y para preparar.",
+          "correccion": "Usa camiseta negra talla M; conserva el pantalón, cantidades y billetera.",
+          "prueba": "Solo cambia la camiseta; el pantalón y el pago permanecen.",
+          "resultado": "La revisión conserva las dos prendas antes de confirmar.",
+          "captura": "chat",
+          "operacion": "pedido",
+          "rol": "ADMINISTRADOR",
+          "cta": "Solicita una demo cambiando una referencia de moda."
+        }
+      ]
+    },
+    {
+      "slug": "distribuidor-pequeno",
+      "nombre": "Distribuidor pequeño de único establecimiento",
+      "identidad": "Julián, personaje hipotético",
+      "cargo": "Responsable de distribución desde un solo local",
+      "sector": "Venta y despacho de mercancía por unidades enteras desde un único establecimiento",
+      "fuentes": [
+        "DANE-EMICRON",
+        "SIIGO",
+        "ALEGRA"
+      ],
+      "descripcion": "Organiza pedidos de clientes, disponibilidad y cobros de un solo negocio. Sustituye cualquier perfil multisede; no se ofrecen rutas automáticas, sucursales ni consolidación entre empresas.",
+      "comportamiento": "Revisa listas de pedido y saldos antes de despachar; combina atención telefónica y revisión en pantalla. Hipótesis por validar.",
+      "competidores": [
+        "Siigo POS",
+        "Alegra POS"
+      ],
+      "objecion": "¿Puedo revisar un pedido largo sin perder otra línea?",
+      "valor": "Preparar y corregir pedidos por voz o chat, contrastar reservas y cobrar con trazabilidad dentro de un solo negocio.",
+      "dolores": [
+        [
+          "Pedido largo con referencias incompletas",
+          "Se transcribe una lista informal",
+          "Falta una línea al despachar",
+          "No era solo ese producto",
+          "Revisar detalle completo",
+          "Riesgo de despacho incompleto",
+          "Copiar lista a mano",
+          "Pedido con líneas persistidas",
+          "Revisar todas las líneas"
+        ],
+        [
+          "Cantidad corregida borra otras líneas",
+          "Se rehace la lista",
+          "Se pierde parte del encargo",
+          "Solo cambié la cantidad",
+          "Comparar versiones",
+          "Riesgo de venta incompleta",
+          "Enviar lista otra vez",
+          "Borrador con correcciones sucesivas",
+          "Conservar campos no modificados"
+        ],
+        [
+          "Pedidos compiten por el mismo stock",
+          "Se confirma desde apuntes separados",
+          "Se compromete la misma existencia",
+          "Los dos clientes la esperan",
+          "Revisar reservas",
+          "Riesgo de incumplimiento",
+          "Bolsas separadas",
+          "Reserva y validación de disponible",
+          "Contrastar stock antes de confirmar"
+        ],
+        [
+          "Abonos sin aplicación entendible",
+          "Se resta de un saldo manual",
+          "No se identifica qué deuda queda",
+          "Pagó pero no sé qué quedó abierto",
+          "Conciliar cartera",
+          "Riesgo de cobro erróneo",
+          "Hoja de saldos",
+          "Abonos generales FIFO",
+          "Conservar aplicaciones por antigüedad"
+        ],
+        [
+          "Cobro destinado a pedido específico",
+          "Se usa siempre saldo general",
+          "La intención del cobro se confunde",
+          "Ese pago era para ese despacho",
+          "Elegir flujo de cobro",
+          "Riesgo de aplicación no deseada",
+          "Anotar referencia en recibo",
+          "Cobro directo del pedido en pantalla",
+          "Aplicar al documento elegido"
+        ],
+        [
+          "Entrada sin proveedor inequívoco",
+          "Nombres similares de proveedores",
+          "Compra requiere aclaración",
+          "¿A cuál le recibimos?",
+          "Validar proveedor",
+          "Riesgo de reclamo mal dirigido",
+          "Remisión por carpeta",
+          "Compras con proveedor existente",
+          "Confirmar origen de recepción"
+        ],
+        [
+          "Entrega sin actualizar estado",
+          "Despacho físico sin registro",
+          "El pendiente sigue abierto",
+          "Eso ya lo retiraron",
+          "Revisar estados",
+          "Riesgo de entrega duplicada",
+          "Llamar a bodega",
+          "Estados del pedido",
+          "Consultar estado confirmado"
+        ],
+        [
+          "Cancelar un pedido entregado por error",
+          "Se confunde devolución con cancelación",
+          "Se intenta una operación no permitida",
+          "Quería corregirlo y no me deja",
+          "Revisar límites del flujo",
+          "Riesgo de conciliación indebida",
+          "Tachar documento",
+          "Validación de transición y cancelación",
+          "Respetar el documento entregado"
+        ],
+        [
+          "Conteo interrumpido por despacho",
+          "No se conoce qué se contó",
+          "Se repite recorrido",
+          "Se movió producto mientras contábamos",
+          "Revisar líneas y momento",
+          "Riesgo de ajuste inexacto",
+          "Cerrar físicamente una zona",
+          "Conteos parciales y responsables",
+          "Delimitar revisión física"
+        ],
+        [
+          "Documento visto solo en resumen",
+          "Se usa captura de lista paginada",
+          "Faltan líneas del pedido completo",
+          "La lista no muestra todo el despacho",
+          "Abrir documento individual",
+          "Riesgo de despacho incompleto",
+          "Capturas múltiples",
+          "Documento individual con líneas persistidas",
+          "Consultar detalle completo"
+        ]
+      ],
+      "angulos": [
+        {
+          "titulo": "El pedido largo conserva sus líneas",
+          "dolor": 1,
+          "situacion": "El cliente modifica una cantidad de una lista que incluye otros productos.",
+          "pregunta": "¿La nueva revisión conserva lo que el cliente no cambió?",
+          "visual": "Tres referencias; una cantidad cambia y las otras quedan resaltadas.",
+          "reto": "Cambia una cantidad sin perder las otras dos referencias.",
+          "instruccion": "Prepara para Cliente Demo seis jabones, cuatro detergentes y dos escobas, a crédito y para preparar.",
+          "correccion": "Cambia a ocho jabones; conserva detergentes, escobas y crédito.",
+          "prueba": "Ocho jabones, cuatro detergentes y dos escobas permanecen con el cliente registrado.",
+          "resultado": "La revisión completa permite confirmar el pedido corregido.",
+          "captura": "ventas",
+          "operacion": "pedido",
+          "rol": "ADMINISTRADOR",
+          "cta": "Solicita una demo con un pedido de varias referencias."
+        },
+        {
+          "titulo": "La cartera cuenta la historia del abono",
+          "dolor": 3,
+          "situacion": "Un cliente hace un abono general y pregunta qué deuda permanece abierta.",
+          "pregunta": "¿El pago fue general o estaba destinado a un documento?",
+          "visual": "Línea temporal de pedidos antiguos y abono general, sin importes.",
+          "reto": "Un abono general sigue un orden; revísalo antes.",
+          "instruccion": "Prepara un abono general para Cliente Demo por efectivo.",
+          "correccion": "Cambia a billetera y conserva el cliente.",
+          "prueba": "Completar importe explícito; la revisión identifica un abono general y su medio.",
+          "resultado": "El abono confirmado se aplica por antigüedad; el cobro directo se hace desde el pedido elegido.",
+          "captura": "chat",
+          "operacion": "cobro",
+          "rol": "ADMINISTRADOR",
+          "cta": "Pide una demo de abono general y cobro directo."
+        },
+        {
+          "titulo": "Antes de comprometer el siguiente despacho",
+          "dolor": 2,
+          "situacion": "Dos clientes solicitan unidades de la misma referencia desde el mismo local.",
+          "pregunta": "¿Qué parte de la existencia ya está reservada?",
+          "visual": "Una sola bodega, dos pedidos y la disponibilidad de una referencia.",
+          "reto": "Dos pedidos, una existencia: consulta antes de prometer.",
+          "instruccion": "Consulta productos que coincidan con detergente líquido.",
+          "correccion": "Selecciona la presentación exacta y contrasta las reservas antes del nuevo pedido.",
+          "prueba": "La consulta usa la referencia correcta y el inventario del único negocio.",
+          "resultado": "El administrador revisa disponible antes de preparar otro despacho.",
+          "captura": "inventario",
+          "operacion": "consulta",
+          "rol": "ADMINISTRADOR",
+          "cta": "Solicita una demo de pedidos y reservas desde tu local."
+        }
+      ]
+    },
+    {
+      "slug": "admin-finanzas",
+      "nombre": "Administración y finanzas de único negocio",
+      "identidad": "Paola, personaje hipotético",
+      "cargo": "Administradora financiera de una sola empresa",
+      "sector": "Función transversal de control administrativo; no segmento estadístico independiente",
+      "fuentes": [
+        "DANE-EMICRON",
+        "SIIGO",
+        "ALEGRA"
+      ],
+      "descripcion": "Contrasta caja, cartera, compras y gastos del mismo negocio. No se ofrece contabilidad fiscal, nómina ni consolidación multiempresa.",
+      "comportamiento": "Pide documentos y revisa el período antes de conciliar; prefiere trazabilidad del registro a una cifra aislada. Hipótesis de rol, sin entrevistas.",
+      "competidores": [
+        "Siigo POS",
+        "Alegra POS"
+      ],
+      "objecion": "¿Ese resumen corresponde a ventas o a dinero recibido?",
+      "valor": "Consultar información y preparar cobros o gastos por voz o chat, revisar el documento y confirmar con autorización administrativa.",
+      "dolores": [
+        [
+          "Ventas confundidas con caja",
+          "Se compara total de pedidos con efectivo",
+          "El cierre parece inexplicable",
+          "Vendimos pero no está todo en caja",
+          "Conciliar créditos y medios",
+          "Riesgo de disposición sin respaldo",
+          "Hoja de conciliación",
+          "Resumen, cartera y caja",
+          "Distinguir operación y movimientos"
+        ],
+        [
+          "Gasto sin concepto entendible",
+          "Registro breve sin detalle",
+          "No se explica la salida",
+          "Esto no dice para qué fue",
+          "Clasificar egresos",
+          "Riesgo de gasto omitido o mal leído",
+          "Pedir explicación después",
+          "Gastos con concepto y medio",
+          "Conservar motivo del gasto"
+        ],
+        [
+          "Abono aplicado de forma opaca",
+          "Se usa saldo manual acumulado",
+          "No se rastrea deuda remanente",
+          "No puedo explicar ese saldo",
+          "Revisar aplicaciones",
+          "Riesgo de cobro equivocado",
+          "Rehacer cartera en hoja",
+          "Aplicaciones FIFO y documento individual",
+          "Rastrear saldo derivado"
+        ],
+        [
+          "Comparaciones con corte distinto",
+          "Se mezclan fechas de consulta",
+          "Se discuten cifras incompatibles",
+          "Tu informe no es del mismo día",
+          "Acordar fecha local",
+          "Riesgo de decisión financiera equivocada",
+          "Enviar otra captura",
+          "Filtros America/Bogota",
+          "Usar un período común"
+        ],
+        [
+          "Cambio de medio después de dictar",
+          "Se mantiene la selección anterior",
+          "Caja por medio no concilia",
+          "Ese pago era billetera",
+          "Revisar revisión previa",
+          "Riesgo de descuadre",
+          "Corregir nota manual",
+          "Corrección de borrador y pago",
+          "Confirmar el medio indicado"
+        ],
+        [
+          "Cancelados incluidos en reporte manual",
+          "No se actualiza hoja externa",
+          "Se sobrestima cartera",
+          "Ese documento ya se canceló",
+          "Depurar conciliación",
+          "Riesgo de cobro de cancelado",
+          "Tachar filas",
+          "Cancelados fuera de ventas y cartera",
+          "Revisar estados vigentes"
+        ],
+        [
+          "Compra tratada como gasto genérico",
+          "Todo se suma como salida",
+          "Se pierde efecto de mercancía",
+          "No sé qué compramos",
+          "Revisar recepciones",
+          "Riesgo de lectura de costos errónea",
+          "Carpetas separadas",
+          "Compras y gastos diferenciados",
+          "Consultar naturaleza del movimiento"
+        ],
+        [
+          "Valor actual usado para venta pasada",
+          "Se recalcula con catálogo vigente",
+          "Documento histórico no cuadra",
+          "El valor de ese día era otro",
+          "Abrir documento original",
+          "Riesgo de conciliación incorrecta",
+          "Archivo de recibos",
+          "Valores históricos persistidos",
+          "Consultar importes del documento"
+        ],
+        [
+          "Permisos administrativos demasiado amplios",
+          "Se comparte acceso para tareas puntuales",
+          "Se autorizan cambios innecesarios",
+          "No todos deben cerrar caja",
+          "Revisar responsabilidades",
+          "Riesgo de operación no autorizada",
+          "Clave compartida",
+          "Roles y permisos del servidor",
+          "Delimitar operación por usuario"
+        ],
+        [
+          "Reintento de guardado por duda",
+          "La lectura posterior tarda",
+          "Se intenta registrar de nuevo",
+          "No sé si quedó",
+          "Comprobar confirmación y documento",
+          "Riesgo de duplicación de movimiento",
+          "Repetir envío",
+          "Confirmación de escritura y detalle",
+          "Revisar estado antes de repetir"
+        ]
+      ],
+      "angulos": [
+        {
+          "titulo": "Ventas y caja responden preguntas distintas",
+          "dolor": 0,
+          "situacion": "El total de pedidos se compara con el efectivo sin considerar crédito ni otros medios.",
+          "pregunta": "¿Qué estás conciliando: ventas, cartera o movimientos de caja?",
+          "visual": "Tres columnas rotuladas ventas, cartera y caja, sin cifras inventadas.",
+          "reto": "Vender no significa recibir todo en efectivo.",
+          "instruccion": "Consulta el resumen de hoy.",
+          "correccion": "Consulta el resumen de ayer para revisar el período que corresponde al cierre.",
+          "prueba": "Se verifica el período; el administrador contrasta el resultado con caja y cartera en sus pantallas.",
+          "resultado": "La consulta contextualiza el resumen; no cambia ni confirma movimientos.",
+          "captura": "ventas",
+          "operacion": "consulta",
+          "rol": "ADMINISTRADOR",
+          "cta": "Solicita una demo de conciliación de un mismo período."
+        },
+        {
+          "titulo": "El gasto necesita un motivo",
+          "dolor": 1,
+          "situacion": "Una salida de dinero quedó descrita únicamente como varios.",
+          "pregunta": "¿Podrías explicar ese concepto durante la conciliación?",
+          "visual": "Concepto ambiguo frente a borrador con transporte de mercancía.",
+          "reto": "Varios no explica por qué salió dinero.",
+          "instruccion": "Prepara un gasto de transporte por efectivo.",
+          "correccion": "Precisa el concepto transporte de mercancía y cambia a billetera.",
+          "prueba": "Se completan importes explícitos y se revisa concepto y medio antes de guardar.",
+          "resultado": "El gasto confirmado conserva el concepto revisado y el medio.",
+          "captura": "chat",
+          "operacion": "gasto",
+          "rol": "ADMINISTRADOR",
+          "cta": "Pide una demo de registro y revisión de gastos."
+        },
+        {
+          "titulo": "El cancelado no es una deuda por cobrar",
+          "dolor": 5,
+          "situacion": "Un documento cancelado sigue en una hoja manual de cartera y alguien propone cobrarlo.",
+          "pregunta": "¿Comprobaste el estado del documento antes de solicitar el pago?",
+          "visual": "Referencia del pedido y su estado cancelado; no mostrar una pantalla de cartera que no está capturada.",
+          "reto": "Antes de cobrar, revisa si el pedido está cancelado.",
+          "instruccion": "Consulta el pedido DEMO-001.",
+          "correccion": "Aclara la referencia exacta, abre su documento y comprueba el estado registrado.",
+          "prueba": "Se contrasta el estado del pedido con cartera en las pantallas existentes; no se intenta cobrar un cancelado.",
+          "resultado": "La revisión del documento permite excluir el cancelado de la gestión de cobro.",
+          "captura": "ventas",
+          "operacion": "consulta",
+          "rol": "ADMINISTRADOR",
+          "cta": "Solicita una demo de estados, cancelados y cartera."
+        }
+      ]
+    },
+    {
+      "slug": "coordinador-inventario",
+      "nombre": "Coordinación de inventario",
+      "identidad": "Sergio, personaje hipotético",
+      "cargo": "Coordinador de conteos de un único negocio",
+      "sector": "Función operativa de inventario; sustituye perfil de recursos humanos",
+      "fuentes": [
+        "DANE-EMICRON",
+        "LOYVERSE",
+        "SIIGO"
+      ],
+      "descripcion": "Coordina conteos con colaboradores, productos asignados y revisión del administrador. No administra nómina ni recursos humanos. Las demos con rol INVENTARIO se limitan a cantidades de líneas asignadas.",
+      "comportamiento": "Revisa asignación antes de contar y comunica diferencias para revisión administrativa. Hipótesis de tarea que requiere observación en el negocio.",
+      "competidores": [
+        "Loyverse POS",
+        "Siigo POS"
+      ],
+      "objecion": "¿Un colaborador puede aplicar el ajuste o tocar caja?",
+      "valor": "Dictar o escribir cantidades de productos asignados, corregir y confirmar la línea; el administrador conserva cierre y aplicación del conteo.",
+      "dolores": [
+        [
+          "Dos personas cuentan la misma línea",
+          "No se asignan productos",
+          "Se duplican esfuerzos",
+          "Eso ya lo estaba contando yo",
+          "Coordinar responsables",
+          "Riesgo de dato duplicado en registro informal",
+          "Repartir papelitos",
+          "Asignaciones temporales de conteo",
+          "Identificar quién toma la línea"
+        ],
+        [
+          "Cantidad sin guardar tras interrupción",
+          "Se deja el dato solo en memoria",
+          "Se repite el conteo",
+          "¿Eran cinco o seis?",
+          "Revisar líneas guardadas",
+          "Riesgo de ajuste sobre recuerdo",
+          "Nota personal",
+          "Guardado confirmado de línea",
+          "Conservar cantidad indicada"
+        ],
+        [
+          "Cero confundido con no contado",
+          "Una celda vacía parece cero",
+          "Se ajusta producto no revisado",
+          "Vacío no quería decir agotado",
+          "Revisar digitación",
+          "Riesgo de ajuste indebido",
+          "Símbolo manual",
+          "Cero explícito y conteo parcial",
+          "Distinguir cero de ausencia de dato"
+        ],
+        [
+          "Asignación vencida al guardar",
+          "La tarea se retoma después de pausa",
+          "Se intenta guardar sobre otra asignación",
+          "Ya no me deja ese producto",
+          "Retomar asignación vigente",
+          "Riesgo de conflicto entre conteos informales",
+          "Avisar por mensaje",
+          "Validación de propietario y vencimiento",
+          "Guardar con asignación vigente"
+        ],
+        [
+          "Colaborador aplica stock sin revisión",
+          "Se comparte acceso administrador",
+          "No existe control de aprobación",
+          "Solo tenía que contar",
+          "Revisar permisos",
+          "Riesgo de ajuste no autorizado",
+          "Supervisión verbal",
+          "Rol INVENTARIO sin cerrar ni aplicar",
+          "Reservar aplicación al administrador"
+        ],
+        [
+          "Físico comparado contra disponible",
+          "Se ignoran reservas",
+          "La diferencia se interpreta mal",
+          "Conté más de lo que sale disponible",
+          "Separar cantidades",
+          "Riesgo de ajuste incorrecto",
+          "Restar reservas a mano",
+          "Stock físico separado del disponible",
+          "Comparar conteo con físico"
+        ],
+        [
+          "Corrección de cantidad crea otra nota",
+          "No se reemplaza el dato equivocado",
+          "Quedan dos versiones",
+          "¿Cuál es la última?",
+          "Identificar dato vigente",
+          "Riesgo de usar cantidad obsoleta",
+          "Tachar y firmar",
+          "Revisión y corrección de línea",
+          "Conservar cantidad final confirmada"
+        ],
+        [
+          "Conteo incompleto tratado como total",
+          "Se completan celdas por inferencia",
+          "Se afectan líneas no digitadas",
+          "Ese producto no lo revisamos",
+          "Delimitar alcance",
+          "Riesgo de ajuste sin evidencia",
+          "Copiar cantidades anteriores",
+          "Conteo parcial por líneas",
+          "Respetar las líneas contadas"
+        ],
+        [
+          "Diferencia interpretada como pérdida probada",
+          "No se revisa causa de movimiento",
+          "Se acusa sin evidencia",
+          "Puede ser una entrada pendiente",
+          "Investigar documentos",
+          "Riesgo de decisión económica injustificada",
+          "Recuento informal",
+          "Descuadres y revisión de movimientos",
+          "Investigar antes de atribuir causas"
+        ],
+        [
+          "Conteo guardado confundido con stock aplicado",
+          "Se asume que confirmar línea ajusta inventario",
+          "El equipo espera otra existencia",
+          "Ya conté, ¿por qué no cambió?",
+          "Distinguir etapas",
+          "Riesgo de decisión sobre stock sin aplicar",
+          "Avisar verbalmente al dueño",
+          "Guardar, cerrar y aplicar son etapas distintas",
+          "Entender el control administrativo"
+        ]
+      ],
+      "angulos": [
+        {
+          "titulo": "Cuenta tu línea, no la del compañero",
+          "dolor": 0,
+          "situacion": "Dos colaboradores se acercan al mismo producto sin revisar asignación.",
+          "pregunta": "¿Quién tiene asignada esa línea ahora?",
+          "visual": "Producto tomado por un colaborador y línea asignada visible.",
+          "reto": "Antes de contar, toma tu producto asignado.",
+          "instruccion": "Con conteo abierto y producto asignado: conté cinco unidades.",
+          "correccion": "Corrige la cantidad a seis unidades.",
+          "prueba": "La revisión mantiene el producto asignado y seis unidades; la API verifica asignación vigente.",
+          "resultado": "El colaborador confirma su línea y el administrador revisa el conteo.",
+          "captura": "inventario",
+          "operacion": "conteo",
+          "rol": "INVENTARIO",
+          "cta": "Solicita una demo con colaborador y administrador."
+        },
+        {
+          "titulo": "Cero sí es un dato",
+          "dolor": 2,
+          "situacion": "Un estante vacío se deja sin cantidad y se confunde con producto no contado.",
+          "pregunta": "¿Esa línea está sin contar o fue contada en cero?",
+          "visual": "Campo sin digitar frente a cero explícito en una línea asignada.",
+          "reto": "Vacío y cero no significan lo mismo.",
+          "instruccion": "Con conteo abierto y producto asignado: conté una unidad.",
+          "correccion": "Corrige a cero unidades; revisa que el cero permanezca explícito.",
+          "prueba": "La revisión admite cero indicado; las líneas no digitadas permanecen fuera del ajuste parcial.",
+          "resultado": "La línea confirmada distingue cero de ausencia de conteo.",
+          "captura": "inventario",
+          "operacion": "conteo",
+          "rol": "INVENTARIO",
+          "cta": "Pide una demo contando cero y corrigiendo una línea."
+        },
+        {
+          "titulo": "Guardar cantidad no es aplicar stock",
+          "dolor": 9,
+          "situacion": "Un colaborador termina una línea y espera que cambie por sí sola la existencia general.",
+          "pregunta": "¿En qué etapa está el conteo después de guardar tu cantidad?",
+          "visual": "Secuencia: colaborador cuenta; administrador revisa, cierra y aplica cuando corresponde.",
+          "reto": "Conté no significa ajuste aplicado.",
+          "instruccion": "En tu producto asignado del conteo abierto: conté cuatro unidades.",
+          "correccion": "Corrige a tres unidades y conserva el producto asignado.",
+          "prueba": "El colaborador confirma la línea; el cierre y la aplicación no son permisos del colaborador.",
+          "resultado": "La cantidad queda para control administrativo; el stock requiere la aplicación correspondiente.",
+          "captura": "inventario",
+          "operacion": "conteo",
+          "rol": "INVENTARIO",
+          "cta": "Solicita una demo de las etapas del conteo."
+        }
+      ]
+    },
+    {
+      "slug": "droguerias",
+      "nombre": "Droguerías",
+      "identidad": "Laura, personaje hipotético",
+      "cargo": "Responsable comercial de droguería",
+      "sector": "Operación comercial de una droguería independiente",
+      "fuentes": [
+        "APP-README",
+        "APP-AGENTES"
+      ],
+      "descripcion": "Gestiona referencias comerciales, compras, ventas y caja. Hipótesis editorial pendiente de entrevista.",
+      "comportamiento": "Consulta el catálogo y revisa el documento antes de confirmar.",
+      "competidores": [
+        "Alegra POS",
+        "Siigo POS"
+      ],
+      "objecion": "¿Qué trazabilidad comercial puedo consultar?",
+      "valor": "Organiza ventas, compras, existencias y caja con trazabilidad simple de documentos. No incluye control de lotes, vencimientos ni recetas.",
+      "dolores": [
+        [
+          "Referencias parecidas en mostrador",
+          "Se elige otra presentación",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Catálogo y corrección de referencias",
+          "Revisar la referencia elegida"
+        ],
+        [
+          "Recepciones sin revisar",
+          "Los documentos de compra quedan separados",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Compras y recepción",
+          "Consultar el documento comercial"
+        ],
+        [
+          "Caja difícil de explicar",
+          "Ventas y cobros están en apuntes distintos",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Resumen y caja",
+          "Contrastar los movimientos registrados"
+        ],
+        [
+          "Duda sobre existencias",
+          "Se consulta solo el estante",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Stock físico y disponible",
+          "Distinguir existencias y reservas"
+        ],
+        [
+          "Crédito sin cliente claro",
+          "Falta identificar al comprador",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Crédito con cliente registrado",
+          "Vincular saldo y cliente"
+        ],
+        [
+          "Conteo interrumpido",
+          "La atención corta el conteo",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Conteos parciales",
+          "Conservar líneas digitadas"
+        ],
+        [
+          "Valor histórico olvidado",
+          "Se recuerda el precio actual",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Documento individual de venta",
+          "Consultar valores históricos"
+        ],
+        [
+          "Abonos dispersos",
+          "Los recibos se guardan separados",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Cartera y abonos",
+          "Revisar aplicaciones de pago"
+        ],
+        [
+          "Pedido abierto sin seguimiento",
+          "Se pierde la referencia",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Consulta de pedidos",
+          "Localizar documento y estado"
+        ],
+        [
+          "Encaje sanitario sin evaluar",
+          "Se presupone una función especializada",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Delimitación comercial",
+          "No ofrecer lotes, vencimientos ni recetas"
+        ]
+      ],
+      "angulos": [
+        {
+          "titulo": "La referencia correcta en mostrador",
+          "dolor": 0,
+          "situacion": "Dos presentaciones parecidas pueden confundirse al preparar la venta.",
+          "pregunta": "¿La referencia coincide con lo que vas a entregar?",
+          "visual": "Dos cajas genéricas, sin nombres de medicamentos ni datos de pacientes.",
+          "reto": "Revisa la presentación antes de confirmar.",
+          "instruccion": "Prepara para cliente ocasional dos unidades de jabón del catálogo, efectivo y para preparar.",
+          "correccion": "Cambia a una unidad y conserva la referencia y efectivo.",
+          "prueba": "La revisión conserva referencia y pago y muestra una unidad.",
+          "resultado": "La venta comercial se confirma solo después de revisar.",
+          "captura": "productos",
+          "operacion": "pedido",
+          "rol": "ADMINISTRADOR",
+          "cta": "Conversemos sobre tu operación comercial."
+        },
+        {
+          "titulo": "De la recepción al documento",
+          "dolor": 1,
+          "situacion": "Llegó mercancía y el documento de compra todavía necesita revisión.",
+          "pregunta": "¿Puedes localizar la compra y sus referencias?",
+          "visual": "Cajas genéricas y documento comercial sin información personal.",
+          "reto": "Busca el respaldo de esa entrada.",
+          "instruccion": "Consulta las compras registradas del período en la pantalla existente.",
+          "correccion": "Aclara el período y la referencia que quieres consultar.",
+          "prueba": "Comparar proveedor, documento y referencias registradas.",
+          "resultado": "La consulta aporta trazabilidad comercial simple de la compra.",
+          "captura": "inventario",
+          "operacion": "consulta",
+          "rol": "ADMINISTRADOR",
+          "cta": "Solicita una demo de compras y existencias."
+        },
+        {
+          "titulo": "Revisa la caja con respaldo",
+          "dolor": 2,
+          "situacion": "El total de ventas no explica por sí solo el dinero recibido.",
+          "pregunta": "¿Qué movimientos necesitas contrastar al cerrar?",
+          "visual": "Responsable revisando documentos de venta y medios de pago.",
+          "reto": "Venta y dinero recibido son datos distintos.",
+          "instruccion": "Consulta ventas y caja del período autorizado.",
+          "correccion": "Aclara el período antes de comparar las cifras.",
+          "prueba": "Contrastar ventas, cobros y movimientos de caja sin cambiar registros.",
+          "resultado": "La consulta organiza la revisión del día.",
+          "captura": "ventas",
+          "operacion": "consulta",
+          "rol": "ADMINISTRADOR",
+          "cta": "Pide un recorrido de caja para tu droguería."
+        }
+      ]
+    },
+    {
+      "slug": "empresarial-corporativo",
+      "nombre": "Empresarial corporativo",
+      "identidad": "Andrea, personaje hipotético",
+      "cargo": "Responsable de operaciones corporativas",
+      "sector": "Procesos de una empresa con implementación a medida",
+      "fuentes": [
+        "APP-README",
+        "APP-AGENTES"
+      ],
+      "descripcion": "Busca coordinar procesos y responsables mediante un proyecto personalizado. Cada integración requiere alcance y validación.",
+      "comportamiento": "Reúne necesidades, identifica permisos y valida una primera etapa.",
+      "competidores": [
+        "Soluciones a medida",
+        "Procesos internos existentes"
+      ],
+      "objecion": "¿Qué está disponible y qué requiere implementación?",
+      "valor": "Diseñemos una implementación a medida con alcance, etapas, accesos y criterios de aceptación. Proyecto personalizado.",
+      "dolores": [
+        [
+          "Procesos dispersos entre áreas",
+          "Las tareas no tienen una fuente acordada",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Diagnóstico y diseño a medida",
+          "Definir el recorrido y responsables"
+        ],
+        [
+          "Accesos sin delimitar",
+          "No se documentan acciones por rol",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Permisos del núcleo y diseño de integraciones",
+          "Acordar accesos y revisión"
+        ],
+        [
+          "Proyecto sin aceptación definida",
+          "Se describen deseos sin pruebas",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Etapas y criterios de aceptación",
+          "Validar una primera etapa"
+        ],
+        [
+          "Integraciones presumidas",
+          "Se confunde oferta con función instalada",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Alcance contractual",
+          "Identificar dependencias"
+        ],
+        [
+          "Seguimientos manuales",
+          "Cada área usa su lista",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Flujos por implementar",
+          "Diseñar responsables y disparadores"
+        ],
+        [
+          "Documentos aislados",
+          "La operación vive en varias fuentes",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Diagnóstico de información",
+          "Acordar fuente de verdad"
+        ],
+        [
+          "Roles poco claros",
+          "Se comparte responsabilidad",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Diseño de accesos",
+          "Asignar responsables"
+        ],
+        [
+          "Adopción sin acompañamiento",
+          "Falta formación",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Plan de implementación",
+          "Preparar formación por rol"
+        ],
+        [
+          "Costos sin alcance",
+          "Se pide tarifa sin diagnóstico",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Propuesta personalizada",
+          "Cotizar después de definir el proyecto"
+        ],
+        [
+          "Ampliación sin validación",
+          "Se presuponen módulos disponibles",
+          "La información requiere revisión",
+          "Necesito comprobar el registro",
+          "Conciliar documentos",
+          "Riesgo cualitativo, sin pérdida medida",
+          "Apuntes separados",
+          "Prueba de aceptación por etapa",
+          "Delimitar lo entregado"
+        ]
+      ],
+      "angulos": [
+        {
+          "titulo": "Primero el proceso, luego la solución",
+          "dolor": 0,
+          "situacion": "Varias áreas describen el mismo proceso con recorridos diferentes.",
+          "pregunta": "¿Qué proceso quieres conectar primero?",
+          "visual": "Equipo en mesa de trabajo con mapa de proceso sin datos sensibles.",
+          "reto": "Elige una primera etapa que puedas validar.",
+          "instruccion": "Documentar el proceso, su fuente y el responsable con el equipo.",
+          "correccion": "Ajustar el alcance de la primera etapa antes de cotizar.",
+          "prueba": "Un documento de alcance acordado, no una integración instalada.",
+          "resultado": "Una propuesta personalizada con etapas verificables.",
+          "captura": "chat",
+          "operacion": "proyecto",
+          "rol": "ADMINISTRADOR",
+          "cta": "Armemos tu propuesta."
+        },
+        {
+          "titulo": "Cada acción con su responsable",
+          "dolor": 1,
+          "situacion": "Un flujo nuevo necesita distinguir consulta, preparación y aprobación.",
+          "pregunta": "¿Quién puede consultar y quién confirma?",
+          "visual": "Conversación de equipo y esquema de responsabilidades.",
+          "reto": "Define la revisión antes de automatizar.",
+          "instruccion": "Diseñar accesos, datos autorizados y puntos de revisión del proyecto.",
+          "correccion": "Separar las acciones de lectura y escritura en el diseño.",
+          "prueba": "Matriz de responsabilidades y aceptación, pendiente de implementación.",
+          "resultado": "Un flujo definido para implementar y probar.",
+          "captura": "chat",
+          "operacion": "proyecto",
+          "rol": "ADMINISTRADOR",
+          "cta": "Conversemos sobre tus procesos."
+        },
+        {
+          "titulo": "Una etapa que puedas aceptar",
+          "dolor": 2,
+          "situacion": "El equipo necesita saber cuándo dar por entregada cada etapa.",
+          "pregunta": "¿Con qué prueba aceptarías el primer resultado?",
+          "visual": "Responsables revisando un plan por etapas, sin interfaz ficticia.",
+          "reto": "Acordemos qué se va a comprobar.",
+          "instruccion": "Definir una prueba de aceptación y las dependencias del piloto.",
+          "correccion": "Ajustar la prueba a los datos y accesos autorizados.",
+          "prueba": "Criterios acordados antes de implementar; sin prometer módulos existentes.",
+          "resultado": "Proyecto personalizado con validación y acompañamiento.",
+          "captura": "chat",
+          "operacion": "proyecto",
+          "rol": "ADMINISTRADOR",
+          "cta": "Armemos tu propuesta."
+        }
+      ]
+    }
+  ]
+}

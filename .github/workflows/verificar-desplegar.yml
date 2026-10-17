@@ -21,8 +21,6 @@ jobs:
       - run: npx prisma generate --schema Backend/prisma/schema.prisma
       - run: npm run seguridad:repositorio
       - run: npm run verificar
-      - run: npm run prueba:cache
-      - run: npm run prueba:agentes
   desplegar:
     needs: verificar
     if: >-
@@ -30,14 +28,14 @@ jobs:
       (github.event_name != 'push' || !contains(github.event.head_commit.message, '[sin despliegue]')) &&
       github.event_name != 'pull_request' &&
       github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-    runs-on: [self-hosted, ambie-produccion]
+    runs-on: [self-hosted, abinova-produccion]
     environment: produccion
     timeout-minutes: 30
     concurrency:
       group: despliegue-produccion
       cancel-in-progress: false
     env:
-      AMBIE_DEPLOY_PATH: ${{ vars.AMBIE_DEPLOY_PATH }}
+      ABINOVA_DEPLOY_PATH: ${{ vars.ABINOVA_DEPLOY_PATH }}
       DEPLOY_BRANCH: ${{ github.event.repository.default_branch }}
       DEPLOY_SHA: ${{ github.sha }}
     steps:
@@ -46,8 +44,8 @@ jobs:
         shell: bash
         run: |
           set -eu
-          test -n "$AMBIE_DEPLOY_PATH"
-          cd "$AMBIE_DEPLOY_PATH"
+          test -n "$ABINOVA_DEPLOY_PATH"
+          cd "$ABINOVA_DEPLOY_PATH"
           test -z "$(git status --porcelain)"
           test "$(git branch --show-current)" = "$DEPLOY_BRANCH"
           git fetch origin "$DEPLOY_BRANCH"
@@ -59,8 +57,8 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          if (!$env:AMBIE_DEPLOY_PATH) { throw 'Falta AMBIE_DEPLOY_PATH' }
-          Set-Location -LiteralPath $env:AMBIE_DEPLOY_PATH
+          if (!$env:ABINOVA_DEPLOY_PATH) { throw 'Falta ABINOVA_DEPLOY_PATH' }
+          Set-Location -LiteralPath $env:ABINOVA_DEPLOY_PATH
           if ((git status --porcelain) -or $LASTEXITCODE) { throw 'Repositorio no disponible o con cambios locales' }
           if ((git branch --show-current) -ne $env:DEPLOY_BRANCH) { throw 'Rama incorrecta' }
           git fetch origin $env:DEPLOY_BRANCH

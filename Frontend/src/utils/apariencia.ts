@@ -1,4 +1,4 @@
-import { contraste, type Apariencia } from "@synchronic-jo/contrato";
+import { contraste, type Apariencia } from "@abinova/contrato";
 const fuentes = { inter: '"Inter", ui-sans-serif, sans-serif', sistema: 'system-ui, sans-serif', grotesk: '"Space Grotesk", ui-sans-serif, sans-serif', serif: 'Georgia, serif' };
 export function aplicarApariencia(v: Apariencia) {
   const estilo = document.documentElement.style;

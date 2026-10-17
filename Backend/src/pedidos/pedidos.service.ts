@@ -6,7 +6,7 @@ import { siguienteCodigo, numero, Tx } from "../common/consecutivos";
 import { rangoPeriodo } from "../common/periodo";
 import { hoyLocal } from "../common/crypto";
 import { pedidosConSaldoSql, aplicadoPorPedido } from "../dominio/cartera";
-import { NuevoPedidoEsquema, LineaPedidoEsquema } from "@synchronic-jo/contrato";
+import { NuevoPedidoEsquema, LineaPedidoEsquema } from "@abinova/contrato";
 import {
   EstadoPedido,
   MetodoPago,

@@ -1,9 +1,12 @@
 import { AparienciaProvider } from "./context/AparienciaProvider";
+import { AccesoComercialProvider } from "./context/AccesoComercialProvider";
+import { useAccesoComercial } from "./context/acceso-comercial-context";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { lazy, Suspense } from "react";
 import { AuthProvider } from "./context/AuthContext";
 import { OperacionesProvider } from "./context/OperacionesContext";
 import { RutaProtegida } from "./components/RutaProtegida";
+import { AccesoMaestro } from "./components/AccesoMaestro";
 
 import Acceso from "./screens/Acceso/Acceso";
 import NoEncontrado from "./screens/NoEncontrado/NoEncontrado";
@@ -42,11 +45,12 @@ const Configuracion = lazy(() => import("./modules/configuracion/Configuracion")
 /** Aplicación: decide si la vista usa el marco móvil o el marco amplio del admin. */
 function Contenido() {
   const location = useLocation();
-  const esAdmin = location.pathname.startsWith("/admin") || location.pathname === "/administracion";
+  const esAdmin = location.pathname.startsWith("/admin") || location.pathname.startsWith("/operador") || location.pathname === "/administracion";
   return (
     <div className="app-viewport-outer">
       <div className={`app-viewport ${esAdmin ? "app-viewport--amplio" : ""}`}>
-        <Suspense fallback={<p role="status" className="p-6 text-ink-soft">Cargando pantalla…</p>}><Routes>
+        <AccesoMaestro />
+        <div className="min-h-0 flex-1"><Suspense fallback={<p role="status" className="p-6 text-ink-soft">Cargando pantalla…</p>}><Routes>
           <Route path="/" element={<Acceso />} />
 
           {/* ─── Flujo del vendedor (app móvil) ─── */}
@@ -80,6 +84,7 @@ function Contenido() {
             <Route path="usuarios" element={<UsuariosAdmin />} />
             <Route path="auditoria" element={<Auditoria />} />
             <Route path="configuracion" element={<Configuracion />} />
+            <Route path="workflows" element={<Navigate to="/admin/configuracion" replace />} />
           </Route>
 
           {/* ─── Redirecciones de rutas antiguas ─── */}
@@ -90,19 +95,24 @@ function Contenido() {
           <Route path="/modulos/pedido-completado" element={<Navigate to="/vendedor/pedido/completado" replace />} />
 
           <Route path="*" element={<NoEncontrado />} />
-        </Routes></Suspense>
+        </Routes></Suspense></div>
       </div>
     </div>
   );
 }
 
+function Entorno() {
+  const { tieneModulo } = useAccesoComercial();
+  return <OperacionesProvider>
+        <Contenido />
+        {tieneModulo("agentes") && <Suspense fallback={null}><Asistente /></Suspense>}
+      </OperacionesProvider>;
+}
+
 export default function App() {
   return (
     <AparienciaProvider><AuthProvider>
-      <OperacionesProvider>
-        <Contenido />
-        <Suspense fallback={null}><Asistente /></Suspense>
-      </OperacionesProvider>
+      <AccesoComercialProvider><Entorno /></AccesoComercialProvider>
     </AuthProvider></AparienciaProvider>
   );
 }

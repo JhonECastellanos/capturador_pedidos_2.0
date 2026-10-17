@@ -11,8 +11,8 @@ export const categorias = ["Bebidas", "Lácteos", "Aseo", "Snacks", "Abarrotes",
 /** Los dos accesos oficiales del sistema: sin ellos no se puede entrar. */
 export function semillaUsuarios(): UsuarioSistema[] {
   return [
-    { id: "usuario-administrador", nombre: "Perfil administrador", email: "admin@ambie.local", password: "admin123", rol: "administrador", permisos: ["pedidos", "inventario", "caja", "usuarios", "cierre-diario"], activo: true },
-    { id: "usuario-vendedor", nombre: "Perfil vendedor", email: "vendedor@ambie.local", password: "vendedor123", rol: "vendedor", permisos: ["clientes", "pedidos", "cobros"], activo: true },
+    { id: "usuario-administrador", nombre: "Perfil administrador", email: "admin@abinova.local", password: "admin123", rol: "administrador", permisos: ["pedidos", "inventario", "caja", "usuarios", "cierre-diario"], activo: true },
+    { id: "usuario-vendedor", nombre: "Perfil vendedor", email: "vendedor@abinova.local", password: "vendedor123", rol: "vendedor", permisos: ["clientes", "pedidos", "cobros"], activo: true },
   ];
 }
 

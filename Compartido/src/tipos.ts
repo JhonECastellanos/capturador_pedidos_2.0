@@ -53,6 +53,9 @@ export interface AuditoriaEventoDTO {
   usuarioId: string | null;
   usuario: string;
   requestId: string | null;
+  esPrueba: boolean;
+  empresaId: string | null;
+  usuarioObjetivoId: string | null;
   creadoEn: string;
   datosAntes: unknown;
   datosDespues: unknown;

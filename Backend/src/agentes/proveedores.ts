@@ -4,7 +4,7 @@ import { isIP, type LookupFunction } from "node:net";
 import { request as requestHttps } from "node:https";
 import { request as requestHttp } from "node:http";
 import { ErrorDominio } from "../common/errores";
-import { InstruccionAgenteEsquema, problemaConexionAgente, type ConfiguracionAgente, type EstadoPruebaAgente, type UsoAgente } from "@synchronic-jo/contrato";
+import { InstruccionAgenteEsquema, problemaConexionAgente, type ConfiguracionAgente, type EstadoPruebaAgente, type UsoAgente } from "@abinova/contrato";
 
 type Proveedor = Omit<ConfiguracionAgente["proveedores"][number], "maxTokens"> & { maxTokens?: number; sesion?: string };
 type Mensaje = { role: "system" | "user"; content: string };
@@ -38,7 +38,7 @@ async function solicitud(p: Proveedor, ruta: string, cuerpo?: unknown) {
   const direcciones = await validarDestino(p.url, p.protocolo === "ollama");
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (new URL(p.url).hostname === "opencode.ai") {
-    headers["User-Agent"] = "AMBIE/1.0";
+    headers["User-Agent"] = "ABINOVA/1.0";
     headers["x-opencode-session"] = p.sesion ?? randomUUID();
   }
   if (p.apiKey) {
@@ -165,6 +165,27 @@ export async function interpretarProveedor(p: Proveedor, mensajes: Mensaje[], me
     if (llamada) { try { return typeof llamada.function.arguments === "string" ? JSON.parse(llamada.function.arguments) : llamada.function.arguments; } catch { /* Mensaje controlado abajo. */ } }
   }
   throw new ErrorDominio("MODELO_HERRAMIENTAS", "El modelo no devolvió la operación estructurada. Prueba otro modelo con llamadas a herramientas", 502);
+}
+/** Nodo de texto acotado: comparte transporte, validación de destino y errores del agente. */
+export async function textoProveedor(p: Proveedor, texto: string) {
+  const sistema = "Eres ABI. Responde brevemente a la tarea suministrada. No dispones de herramientas, bases de datos ni permisos para ejecutar operaciones. No inventes datos del negocio.";
+  let contenido = "", uso: UsoAgente = {};
+  if (p.protocolo === "gemini") {
+    const r = await solicitud(p, `/models/${encodeURIComponent(p.modelo.replace(/^models\//, ""))}:generateContent`, { systemInstruction: { parts: [{ text: sistema }] }, contents: [{ role: "user", parts: [{ text: texto }] }], generationConfig: { maxOutputTokens: p.maxTokens ?? 512 } });
+    contenido = r.candidates?.[0]?.content?.parts?.map((v: { text?: string }) => v.text ?? "").join("") ?? ""; uso = usoProveedor(r.usageMetadata, "gemini");
+  } else if (p.protocolo === "anthropic") {
+    const r = await solicitud(p, "/messages", { model: p.modelo, system: sistema, messages: [{ role: "user", content: texto }], max_tokens: p.maxTokens ?? 512 });
+    contenido = r.content?.filter((v: { type: string }) => v.type === "text").map((v: { text: string }) => v.text).join("") ?? ""; uso = usoProveedor(r.usage, "anthropic");
+  } else if (p.protocolo === "responses") {
+    const r = await solicitud(p, "/responses", { model: p.modelo, instructions: sistema, input: texto, max_output_tokens: p.maxTokens ?? 512, store: false });
+    contenido = r.output?.flatMap((v: { content?: Array<{ text?: string }> }) => v.content ?? []).map((v: { text?: string }) => v.text ?? "").join("") ?? ""; uso = usoProveedor(r.usage, "responses");
+  } else {
+    const local = p.protocolo === "ollama";
+    const r = await solicitud(p, local ? "/api/chat" : "/chat/completions", { model: p.modelo, messages: [{ role: "system", content: sistema }, { role: "user", content: texto }], ...(local ? { stream: false, options: { num_predict: p.maxTokens ?? 512 } } : { max_tokens: p.maxTokens ?? 512, ...opcionesExtraccion(p) }) });
+    contenido = local ? r.message?.content : r.choices?.[0]?.message?.content; uso = usoProveedor(local ? r : r.usage, local ? "ollama" : "openai");
+  }
+  if (!contenido || typeof contenido !== "string") throw new ErrorDominio("MODELO_RESPUESTA", "El modelo no devolvió texto", 502);
+  return { texto: contenido.slice(0, 12000), ...(uso.total !== undefined ? { tokens: uso.total } : uso.entrada !== undefined && uso.salida !== undefined ? { tokens: uso.entrada + uso.salida } : {}) };
 }
 function usoProveedor(datos: Record<string, unknown> | undefined, protocolo: string): UsoAgente {
   if (!datos) return {};

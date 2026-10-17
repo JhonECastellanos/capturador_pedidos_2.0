@@ -2,7 +2,7 @@ import { Controller, Get, Query } from "@nestjs/common";
 import { DashboardService } from "./dashboard.service";
 import { Roles } from "../common/guards";
 import { RolUsuario } from "@prisma/client";
-import { FiltrosTableroEsquema } from "@synchronic-jo/contrato";
+import { FiltrosTableroEsquema } from "@abinova/contrato";
 
 @Roles(RolUsuario.ADMINISTRADOR)
 @Controller("dashboard")

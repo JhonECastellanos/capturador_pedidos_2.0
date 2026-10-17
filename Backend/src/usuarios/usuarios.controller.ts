@@ -4,7 +4,7 @@ import { paginacion } from "../common/paginacion";
 import { RolUsuario, Usuario } from "@prisma/client";
 import { UsuariosService } from "./usuarios.service";
 import { Roles, UsuarioActual } from "../common/guards";
-import { CambiarRolUsuarioEsquema, CrearUsuarioEsquema, PERMISOS_EDITABLES } from "@synchronic-jo/contrato";
+import { CambiarRolUsuarioEsquema, CrearUsuarioEsquema, PERMISOS_EDITABLES } from "@abinova/contrato";
 import { ErrorDominio } from "../common/errores";
 
 @Roles(RolUsuario.ADMINISTRADOR)

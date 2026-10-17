@@ -10,7 +10,7 @@ export class ArchivosService {
   private cliente() {
     return new Client({ endPoint: process.env.MINIO_ENDPOINT || "minio", port: Number(process.env.MINIO_PORT || 9000), useSSL: process.env.MINIO_USE_SSL === "true", accessKey: process.env.MINIO_ACCESS_KEY || "", secretKey: process.env.MINIO_SECRET_KEY || "" });
   }
-  private bucket = process.env.MINIO_BUCKET || "ambie-archivos";
+  private bucket = process.env.MINIO_BUCKET || "abinova-archivos";
   async referencias() {
     const archivos = await this.prisma.archivoAdjunto.findMany({ where: { eliminadoEn: null }, orderBy: { creadoEn: "desc" }, select: { id: true, productoId: true, pedidoId: true, nombre: true } });
     const vistos = new Set<string>();

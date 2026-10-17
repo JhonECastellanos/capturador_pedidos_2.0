@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import type { Envelope } from "@synchronic-jo/contrato";
+import type { Envelope } from "@abinova/contrato";
 import { useAuth } from "../../context/auth";
+import { useAccesoComercial } from "../../context/acceso-comercial-context";
 import { respuestaRed } from "../../data/api";
 import { claveConsulta } from "../../data/query";
 import { mostrarAviso, silenciarAvisos, type AvisoNegocio } from "./notificaciones";
 export function AvisosNegocio() {
   const { usuario } = useAuth();
+  const { tieneModulo } = useAccesoComercial();
   const [aviso, setAviso] = useState<AvisoNegocio | null>(null);
   const vistos = useRef(new Set<string>()), primera = useRef(true);
-  const habilitado = !!usuario && !usuario.permisosDenegados?.includes("notificaciones");
+  const habilitado = !!usuario && tieneModulo("notificaciones") && !usuario.permisosDenegados?.includes("notificaciones");
   useEffect(() => () => silenciarAvisos(), []);
   useEffect(() => { if (!aviso) return; const timer = window.setTimeout(() => setAviso(null), 9000); return () => window.clearTimeout(timer); }, [aviso]);
   const consulta = useQuery({ queryKey: claveConsulta("/notificaciones?recientes=true"), enabled: habilitado, refetchInterval: 5000, refetchIntervalInBackground: true, queryFn: ({ signal }) => respuestaRed<Envelope<AvisoNegocio[]>>("/notificaciones?recientes=true", "GET", undefined, signal) });
@@ -21,7 +23,7 @@ export function AvisosNegocio() {
     if (primera.current) { primera.current = false; return; }
     if (nuevas.length) {
       const n = nuevas[0]; setAviso(n);
-      if (localStorage.getItem(`ambie:ui:avisos:${usuario!.id}`) === "true" && "Notification" in window) void mostrarAviso(n).catch(() => {});
+      if (localStorage.getItem(`abinova:ui:avisos:${usuario!.id}`) === "true" && "Notification" in window) void mostrarAviso(n).catch(() => {});
     }
   }, [consulta.data, usuario, habilitado]);
   if (!habilitado || !aviso) return null;

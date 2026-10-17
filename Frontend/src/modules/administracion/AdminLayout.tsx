@@ -1,4 +1,6 @@
 import { permisoPantalla } from "../../utils/apariencia";
+import { moduloPantalla } from "@abinova/contrato";
+import { useAccesoComercial } from "../../context/acceso-comercial-context";
 import { APP_NOMBRE, APP_VERSION } from "../../config";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -55,7 +57,8 @@ export function AdminLayout() {
   const navegar = useNavigate();
   const ubicacion = useLocation();
   const { usuario, cerrarSesion } = useAuth();
-  const itemsVisibles = todosLosItems.filter(item => !usuario?.permisosDenegados?.includes(permisoPantalla(item.to) ?? ""));
+  const { tieneModulo } = useAccesoComercial();
+  const itemsVisibles = todosLosItems.filter(item => tieneModulo(moduloPantalla(item.to) ?? "resumen") && !usuario?.permisosDenegados?.includes(permisoPantalla(item.to) ?? ""));
   const contenedorNav = useRef<HTMLElement | null>(null);
   const refsItems = useRef<Record<string, HTMLAnchorElement | null>>({});
   useEffect(() => {
@@ -83,7 +86,7 @@ export function AdminLayout() {
     <div className="flex h-full flex-col lg:flex-row"><AvisosNegocio key={usuario?.id} />
       {/* ─── Sidebar desktop ─── */}
       <aside className="hidden w-60 flex-shrink-0 flex-col header-negocio border-r border-line px-4 py-5 lg:flex">
-        <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-header-ink">{APP_NOMBRE} · {APP_VERSION}</p>
+        <p className="px-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-header-ink"><img src="/assets/branding/simbolo.svg" width="20" height="20" alt="" className="mr-2 inline-block align-middle" />{APP_NOMBRE} · {APP_VERSION}</p>
         <h1 className="px-2 font-display text-[18px] font-semibold leading-tight">Centro de control</h1>
         <p className="mt-1 px-2 truncate text-[11px] text-white/60">{usuario?.nombre}</p>
         <nav className="mt-5 min-h-0 flex-1 space-y-1 overflow-y-auto">
@@ -112,7 +115,7 @@ export function AdminLayout() {
         <header className="sticky top-0 z-30 flex-shrink-0 header-negocio border-b border-line px-4 pb-2 pt-[max(0.75rem,env(safe-area-inset-top))] lg:hidden">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] leading-none text-header-ink">{APP_NOMBRE} · {APP_VERSION}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] leading-none text-header-ink"><img src="/assets/branding/simbolo.svg" width="20" height="20" alt="" className="mr-2 inline-block align-middle" />{APP_NOMBRE} · {APP_VERSION}</p>
               <p className="mt-1 truncate text-[11px] leading-none text-white/60">{usuario?.nombre ?? "Perfil administrador"}</p>
             </div>
             <button type="button" onClick={salir} className="flex-shrink-0 rounded-lg border border-white/20 px-3 py-2 text-[11px] font-semibold text-white/80 active:bg-white/10">

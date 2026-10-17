@@ -5,8 +5,8 @@
 
 // ─── Enumeraciones ────────────────────────────────────────────────
 
-export type { MetodoPago, EstadoPedido, RolUsuario, EstadoCuenta } from "@synchronic-jo/contrato";
-import type { MetodoPago, EstadoPedido, RolUsuario, EstadoCuenta, PedidoDTO, UsuarioDTO, TipoConteo } from "@synchronic-jo/contrato";
+export type { MetodoPago, EstadoPedido, RolUsuario, EstadoCuenta } from "@abinova/contrato";
+import type { MetodoPago, EstadoPedido, RolUsuario, EstadoCuenta, PedidoDTO, UsuarioDTO, TipoConteo } from "@abinova/contrato";
 /** Periodicidad pactada de pago para el crédito del cliente. */
 export type TipoCredito = "diario" | "semanal" | "quincenal" | "mensual";
 

@@ -17,5 +17,5 @@ export async function mostrarAviso(aviso: AvisoNegocio) {
     onda.onended = () => { onda.disconnect(); volumen.disconnect(); };
   }
   const registro = await navigator.serviceWorker?.getRegistration();
-  await registro?.showNotification("Synchronic.JO", { body: aviso.titulo, tag: aviso.id, data: { ruta: aviso.ruta }, icon: "/favicon.svg" });
+  await registro?.showNotification("ABINOVA", { body: aviso.titulo, tag: aviso.id, data: { ruta: aviso.ruta }, icon: "/favicon.svg" });
 }

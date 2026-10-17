@@ -1,11 +1,11 @@
 {
-  "name": "synchronic-jo-frontend",
+  "name": "abinova-frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && vite build --mode operador",
     "lint": "oxlint",
     "preview": "vite preview"
   },

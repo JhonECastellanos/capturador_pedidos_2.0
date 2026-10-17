@@ -17,7 +17,7 @@ export function EscanerCodigo({ onCodigo, onCerrar }: { onCodigo: (codigo: strin
   const [intento, setIntento] = useState(0);
   const [manual, setManual] = useState("");
   const [camaras, setCamaras] = useState<MediaDeviceInfo[]>([]);
-  const [camaraId, setCamaraId] = useState(() => { try { return sessionStorage.getItem("synchronic:camara-preferida") ?? ""; } catch { return ""; } });
+  const [camaraId, setCamaraId] = useState(() => { try { return sessionStorage.getItem("abinova:camara-preferida") ?? ""; } catch { return ""; } });
   const [camaraActual, setCamaraActual] = useState("");
   const [capacidades, setCapacidades] = useState<CapacidadesCamara>({});
   const [linterna, setLinterna] = useState(false);
@@ -63,7 +63,7 @@ export function EscanerCodigo({ onCodigo, onCerrar }: { onCodigo: (codigo: strin
       const resolucion = { width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 15, max: 24 } };
       const permiso = navigator.mediaDevices.getUserMedia({ video: { ...(camaraId ? { deviceId: { exact: camaraId } } : { facingMode: { ideal: "environment" } }), ...resolucion }, audio: false }).catch(error => {
         if (!camaraId || !(error instanceof DOMException) || !["NotFoundError", "OverconstrainedError"].includes(error.name)) throw error;
-        try { sessionStorage.removeItem("synchronic:camara-preferida"); } catch { /* El lector no depende del almacenamiento del navegador. */ }
+        try { sessionStorage.removeItem("abinova:camara-preferida"); } catch { /* El lector no depende del almacenamiento del navegador. */ }
         return navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, ...resolucion }, audio: false });
       }).then(capturado => {
         flujo = capturado;
@@ -149,7 +149,7 @@ export function EscanerCodigo({ onCodigo, onCerrar }: { onCodigo: (codigo: strin
       <header className="mb-3 flex items-center justify-between"><h2 className="font-semibold">Código de barras o QR</h2><button autoFocus type="button" onClick={onCerrar} className="min-h-10 px-3 text-teal">Cerrar</button></header>
       <div className="relative overflow-hidden rounded-xl bg-black"><video ref={video} autoPlay muted playsInline className="aspect-[4/3] w-full object-contain" /><div aria-hidden="true" className="pointer-events-none absolute inset-x-[6%] top-[35%] h-[30%] rounded-lg border-2 border-white/80" /></div>
       <p className="mt-2 text-sm text-ink-soft">{leyendo ? "Coloca todas las barras dentro del marco, con margen a ambos lados. Aleja un poco la cámara para enfocar; evita reflejos. Al leer escucharás un bip." : "Abriendo la cámara y preparando el lector…"}</p>
-      {camaras.length > 1 && <label className="mt-2 flex items-center gap-2 text-xs">Cámara<select aria-label="Cambiar cámara" value={camaraActual} onChange={e => { setCamaraId(e.target.value); try { sessionStorage.setItem("synchronic:camara-preferida", e.target.value); } catch { /* Conserva la elección en memoria cuando el almacenamiento está deshabilitado. */ } }} className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-2 py-1">{camaras.map((c, i) => <option key={c.deviceId} value={c.deviceId}>{c.label || `Cámara ${i + 1}`}</option>)}</select></label>}
+      {camaras.length > 1 && <label className="mt-2 flex items-center gap-2 text-xs">Cámara<select aria-label="Cambiar cámara" value={camaraActual} onChange={e => { setCamaraId(e.target.value); try { sessionStorage.setItem("abinova:camara-preferida", e.target.value); } catch { /* Conserva la elección en memoria cuando el almacenamiento está deshabilitado. */ } }} className="min-w-0 flex-1 rounded-lg border border-line bg-paper px-2 py-1">{camaras.map((c, i) => <option key={c.deviceId} value={c.deviceId}>{c.label || `Cámara ${i + 1}`}</option>)}</select></label>}
       {(capacidades.torch || capacidades.zoom) && <div className="mt-2 flex items-center gap-3">
         {capacidades.torch && <button type="button" aria-pressed={linterna} onClick={() => { const activar = !linterna; void ajustarCamara({ torch: activar } as MediaTrackConstraintSet).then(ok => { if (ok) setLinterna(activar); }); }} className="min-h-10 rounded-lg border border-line px-3 text-xs">{linterna ? "Apagar luz" : "Encender luz"}</button>}
         {capacidades.zoom && <label className="flex min-w-0 flex-1 items-center gap-2 text-xs">Acercar<input aria-label="Zoom de cámara" type="range" min={capacidades.zoom.min} max={Math.min(capacidades.zoom.max, Math.max(3, capacidades.zoom.min))} step={capacidades.zoom.step || 0.1} value={zoom} onChange={e => { const valor = Number(e.target.value); setZoom(valor); void ajustarCamara({ zoom: valor } as MediaTrackConstraintSet); }} className="min-w-0 flex-1 accent-teal" /></label>}

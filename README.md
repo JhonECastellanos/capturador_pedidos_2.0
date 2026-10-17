@@ -1,8 +1,10 @@
-# Synchronic.JO
+# ABINOVA
 
 Aplicación para administrar un negocio desde computador o celular: pedidos, cobros, crédito, inventario, compras, gastos, productos y caja. Una empresa por instalación, con accesos de administrador, vendedor y colaboradores de inventario.
 
 Versión de producción: **V8P4**. Personaliza colores, fuente y portada desde Configuración. Puede instalarse como aplicación en un navegador compatible mediante HTTPS (localhost también permite probarla).
+
+Dos servicios Nginx del mismo proyecto Docker: `frontend` sirve el cliente en `/` (responsive y PWA) y la landing en `/comercial/`; `operador` sirve el panel de mando en `/operador/`. No se necesita un contenedor de marketing. El panel de mando usa `system` con su contraseña vigente y permite gestionar planes, condiciones comerciales, módulos por plan, excepciones por empresa, créditos y workflows. Cada empresa conserva su instalación y sus datos; el alta automática de nuevas empresas sigue pendiente.
 
 ## Tecnología
 
@@ -35,7 +37,7 @@ curl http://localhost:8080/api/v1/salud
 npm run verificar
 ~~~
 
-Las pruebas operativas se ejecutan en QA aislada, nunca sobre los datos reales. V8P4 incorpora un servicio optativo de voz y ajustes en Configuración > Agentes IA. Primero se valida Híbrido; Local queda preparado sin modelos y API Live conserva sus ajustes para la siguiente etapa. La voz revisa operaciones en los formularios existentes; Chat presenta y confirma dentro de la conversación, usando las mismas acciones del negocio. Consulta la guía para activar audio, ver sus logs y conocer las pruebas pendientes.
+Las comprobaciones de entrega se limitan a compilación, auditoría y salud de servicios; no se incluyen ejecutores ni scripts de pruebas. V8P4 incorpora un servicio optativo de voz y ajustes en Configuración > Agentes IA. Primero se valida Híbrido; Local queda preparado sin modelos y API Live conserva sus ajustes para la siguiente etapa. La voz revisa operaciones en los formularios existentes; Chat presenta y confirma dentro de la conversación, usando las mismas acciones del negocio. Consulta la guía para activar audio, ver sus logs y conocer las pruebas pendientes.
 
 ## Funcionamiento esperado
 
@@ -43,14 +45,17 @@ Cada formulario espera la confirmación de guardado en PostgreSQL. Pedidos, pago
 
 Notificaciones conserva avisos comerciales y abre su detalle. Chat usa la conexión configurada para consultar datos o preparar operaciones: se revisan y confirman dentro del chat, sin cambiar de pantalla. Los avisos del navegador requieren permiso y la aplicación abierta.
 
+El operador usa `/operador` para precios, créditos y workflows Python por empresa; el administrador del negocio elige Híbrido, Local, API Live o Créditos de IA desde Configuración; no accede a workflows. La landing está en `/comercial/`; la pasarela de pago sigue pendiente.
+
 - [Guía completa de instalación y desarrollo](docs/info/GUIA_INSTALACION_Y_DESARROLLO.md).
 - [Modelo, consultas y ejemplos de CSV](docs/info/GUARDADO_Y_CONCILIACION_V4P2.md).
 - [Diccionario de tablas y campos](docs/info/DICCIONARIO_DATOS_V4P2.md).
 - [Pruebas realizadas y alcance](docs/info/VALIDACION_FORMULARIOS_Y_BASE_DATOS.md).
 - [Publicación y despliegue continuo](docs/info/DESPLIEGUE_CONTINUO.md).
+- [Workflows Python y panel del operador](infra/workflows/README.md), con workers separados por empresa.
 
 ### Enlace temporal de validación con Cloudflare
 
-Con la aplicación ya instalada, ejecutar `iniciar_cloudflare_validacion.cmd`. Renueva el túnel dentro de `capturador_pedidos_20`, actualiza APP_ORIGIN/CORS y espera la salud de API/frontend, sin ejecutar migraciones ni modificar operaciones del negocio. La dirección vigente se guarda en `.local/cloudflare-url-actual.txt`. Usa tu cuenta normal para acceder.
+Con la aplicación ya instalada, ejecutar `iniciar_cloudflare_validacion.cmd`. Renueva el túnel dentro de `abinova`, actualiza APP_ORIGIN/CORS y espera la salud de API/frontend, sin ejecutar migraciones ni modificar operaciones del negocio. La dirección vigente se guarda en `.local/cloudflare-url-actual.txt`. Usa tu cuenta normal para acceder.
 
 El enlace cambia al crear otro túnel y es para pruebas; para un hostname estable se requiere un túnel administrado. [Documentación de Cloudflare](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/).

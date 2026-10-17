@@ -1,6 +1,6 @@
 # 03 · Estándares de código
 
-> Constitución de Synchronic.JO — archivo 3 de 4.
+> Constitución de ABINOVA — archivo 3 de 4.
 > Última revisión: 30/09/2026.
 > Objetivo: que el código nuevo se lea como el existente. Las convenciones descritas se tomaron del código real, no de preferencias externas.
 
@@ -74,7 +74,7 @@ Ojo con los enums: el cliente Prisma expone `EstadoPedido.CANCELADO`, pero la ba
 
 - `async/await` es la forma principal. `.then()` se reserva para casos concretos: mapeo de export en `React.lazy` y cadenas puntuales dentro de efectos.
 - Comentarios breves `/** … */` en español sobre clases y funciones del backend (servicios, guardas, utilidades). El proyecto no exige JSDoc general.
-- Imports del contrato siempre desde `@synchronic-jo/contrato`; nunca copiar tipos a mano.
+- Imports del contrato siempre desde `@abinova/contrato`; nunca copiar tipos a mano.
 - No duplicar funciones existentes (búsqueda, fechas, series, formato): extraer utilidad compartida y migrar los usos.
 
 ## 8. Git y revisión
@@ -88,7 +88,7 @@ Ojo con los enums: el cliente Prisma expone `EstadoPedido.CANCELADO`, pero la ba
 
 1. `npm run verificar` en verde (contrato + API + frontend).
 2. Si toca interfaz: revisar 390×844 y 1440 px (y 320×320 en login).
-3. Si toca datos: probar en QA (`ambie-integracion`), nunca contra el negocio.
+3. Si toca datos: probar en QA (`abinova-integracion`), nunca contra el negocio.
 4. Checklist completo por tipo de cambio en [`04_roadmap_y_tareas.md`](04_roadmap_y_tareas.md).
 
 ## 10. Referencias

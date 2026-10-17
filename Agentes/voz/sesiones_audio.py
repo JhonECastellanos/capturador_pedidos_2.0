@@ -55,7 +55,7 @@ def autorizar(ticket: str):
         raise ValueError("Autorización ya utilizada")
     if len(activas) >= 2:
         raise ValueError("El audio está ocupado. Puedes continuar con texto")
-    if contenido.get("stt") != "whisper" or contenido.get("modelo") not in {"tiny", "base", "small"} or contenido.get("idioma") not in {"es", "en"}:
+    if contenido.get("live") is not True and (contenido.get("stt") != "whisper" or contenido.get("modelo") not in {"tiny", "base", "small"} or contenido.get("idioma") not in {"es", "en"}):
         raise ValueError("Usa Faster-Whisper en español o inglés para las primeras pruebas")
     usados[identificador] = contenido["exp"]
     contenido["id"] = identificador
@@ -69,10 +69,16 @@ async def conversar(socket: WebSocket):
     tarea = None
     inicio_sesion = time.monotonic()
     causa = "desconexion"
+    es_live = False
     try:
         datos = autorizar(socket.query_params.get("ticket", ""))
         identificador = datos["id"]
         activas.add(identificador)
+        es_live = datos.get("live") is True
+        if es_live:
+            from live_audio import conversar_live
+            await conversar_live(socket, socket.query_params.get("ticket", ""))
+            return
         ruta = Path(os.environ.get("HF_HOME", "/data/modelos")) / f"whisper-{datos['modelo']}"
         if not (ruta / "model.bin").is_file():
             raise ValueError("Prepara primero el reconocimiento elegido desde Configuración")
@@ -146,7 +152,7 @@ async def conversar(socket: WebSocket):
     except Exception as error:
         causa = type(error).__name__
         try:
-            await socket.send_json({"tipo": "error", "mensaje": str(error) if isinstance(error, ValueError) else "No se pudo procesar el audio. Puedes continuar con texto"})
+            await socket.send_json({"tipo": "error", "mensaje": str(error) if not es_live and isinstance(error, ValueError) else "No se pudo procesar el audio. Revisa la conexión y configuración; puedes continuar con texto"})
         except Exception:
             pass
     finally:

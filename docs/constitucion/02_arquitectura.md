@@ -1,6 +1,6 @@
 # 02 · Arquitectura y estructura
 
-> Constitución de Synchronic.JO — archivo 2 de 4.
+> Constitución de ABINOVA — archivo 2 de 4.
 > Última revisión: 30/09/2026.
 > Responde a: «¿dónde va cada cosa y cómo se conecta?». Todo lo aquí descrito existe hoy en el código.
 
@@ -8,8 +8,8 @@
 
 ```text
 Capturador_pedidos_2.0/
-├── Frontend/    SPA React + Vite (workspace `synchronic-jo-frontend`)
-├── Compartido/  Contrato (workspace `@synchronic-jo/contrato`): enums, DTO y esquemas
+├── Frontend/    SPA React + Vite (workspace `abinova-frontend`)
+├── Compartido/  Contrato (workspace `@abinova/contrato`): enums, DTO y esquemas
 ├── scripts/     Verificadores: contrato, repositorio (seguridad), caché
 ├── docs/        constitucion/ (normas) + info/ (documentación técnica e histórica)
 └── .github/     Workflow de verificación y despliegue continuo
@@ -48,7 +48,7 @@ Módulos actuales: `archivos`, `auditoria`, `auth`, `caja`, `catalogos`, `cierre
 ### `Backend/src/common/` (transversal)
 
 - `PrismaService` (conexión; la API **no** aplica migraciones al arrancar).
-- Guardas: `AuthGuard` global (cookie `ambie_access` o Bearer, salvo `@Public()`), `@Roles(...)` para administración.
+- Guardas: `AuthGuard` global (cookie `abinova_access` o Bearer, salvo `@Public()`), `@Roles(...)` para administración.
 - Errores: `ErrorDominio` + `FiltroErrores` → `{ code, message }`.
 - `consecutivos.ts` — códigos visibles dentro de la transacción.
 - `crypto.ts` — fechas locales (`hoyLocal`, conversión a `YYYY-MM-DD`).
@@ -86,7 +86,7 @@ Flujo obligatorio de un enum nuevo o modificado: `schema.prisma` → `enums.ts` 
 
 - **TanStack Query**: claves por sesión/ruta/página/filtros; escrituras invalidan lecturas; login/logout/expiración cancelan y limpian; no persistir respuestas privadas en `localStorage`.
 - **Redis** interno (TTL 5 min): la clave incluye la revisión de `versionesCache`; los resultados antiguos caducan solos, sin `FLUSHALL`. Fallos de Redis → PostgreSQL.
-- **Sincronización**: `GET /api/v1/sincronizacion/revision` (autenticado, sin caché HTTP) cada 2 segundos con la pestaña visible; sin solicitudes superpuestas; reconexión y visibilidad reanudan. Un cambio confirmado dispara `synchronic:datos-actualizados`.
+- **Sincronización**: `GET /api/v1/sincronizacion/revision` (autenticado, sin caché HTTP) cada 2 segundos con la pestaña visible; sin solicitudes superpuestas; reconexión y visibilidad reanudan. Un cambio confirmado dispara `abinova:datos-actualizados`.
 - Una actualización **mantiene el snapshot de la misma sesión**, sin desmontar pantallas ni perder scroll/borradores. Los placeholders de consultas paginadas solo pertenecen a la misma sesión y recurso.
 
 ## 7. Paginación y límites visuales
@@ -108,7 +108,7 @@ Flujo obligatorio de un enum nuevo o modificado: `schema.prisma` → `enums.ts` 
 | `migrate` | Migraciones + semilla; **termina con código 0** | — |
 
 - Recursos por límites `*_MEMORY`/`*_CPUS` en `.env`; escalar es vertical, sin editar Compose. La API no migra al arrancar.
-- QA aislada: proyecto `ambie-integracion` con `docker-compose.pruebas.yml` (8180/3100, volúmenes separados). Al terminar, `down` **sin `-v`**.
+- QA aislada: proyecto `abinova-integracion` con `docker-compose.pruebas.yml` (8180/3100, volúmenes separados). Al terminar, `down` **sin `-v`**.
 - MinIO usa la última imagen archivada de Bitnami (la oficial dejó de publicarse); ver README antes de cambiar esa línea.
 - Cloudflare está preparado pero desactivado: token privado en `.local/cloudflare-token`, origen interno `http://frontend:8080`, cookies seguras. No activarlo por iniciativa propia.
 

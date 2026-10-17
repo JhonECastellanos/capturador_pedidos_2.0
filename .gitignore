@@ -14,8 +14,10 @@
 *.crt
 *.cer
 coverage/
+.abinova-config/
 .ambie-config/
 **/.ambie-config/
+**/.abinova-config/
 *.local
 .local/
 *.tsbuildinfo
@@ -29,4 +31,7 @@ coverage/
 .claude/
 skills-lock.json
 .aws/
-**/.ambie/
+**/.abinova/
+**/__pycache__/
+**/.pytest_cache/
+**/dist-operador/

@@ -18,9 +18,9 @@ export default function Notificaciones() {
   return <section className="space-y-3">
     <p className="text-sm text-ink-soft">Pedidos, cambios de estado y compras recibidas. Los avisos se conservan aunque recargues.</p>
     <button type="button" className="min-h-11 rounded-xl border border-line px-3 text-sm font-semibold" onClick={async () => {
-      if (activos) { localStorage.setItem(`ambie:ui:avisos:${usuario!.id}`, "false"); silenciarAvisos(); setActivos(false); setMensaje("Avisos del navegador silenciados. El historial sigue disponible."); return; }
+      if (activos) { localStorage.setItem(`abinova:ui:avisos:${usuario!.id}`, "false"); silenciarAvisos(); setActivos(false); setMensaje("Avisos del navegador silenciados. El historial sigue disponible."); return; }
       const permitido = await activarAvisos().catch(() => false);
-      localStorage.setItem(`ambie:ui:avisos:${usuario!.id}`, String(permitido)); setActivos(permitido);
+      localStorage.setItem(`abinova:ui:avisos:${usuario!.id}`, String(permitido)); setActivos(permitido);
       setMensaje(permitido ? "Avisos con sonido habilitados mientras la aplicación está abierta." : "Puedes consultar los avisos aquí. El navegador no autorizó las notificaciones.");
     }}>{activos ? "Silenciar avisos y sonido" : "Activar avisos y sonido"}</button>
     {mensaje && <p role="status" className="text-sm text-ink-soft">{mensaje}</p>}

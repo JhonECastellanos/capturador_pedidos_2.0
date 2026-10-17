@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "modulos": [
+    {"id":"resumen","nombre":"Resumen"}, {"id":"ventas","nombre":"Ventas"},
+    {"id":"pedidos","nombre":"Pedidos"}, {"id":"creditos","nombre":"Créditos"},
+    {"id":"inventario","nombre":"Inventario"}, {"id":"compras","nombre":"Compras"},
+    {"id":"productos","nombre":"Productos"}, {"id":"caja","nombre":"Caja"},
+    {"id":"cierre","nombre":"Cierre"}, {"id":"usuarios","nombre":"Usuarios"},
+    {"id":"auditoria","nombre":"Auditoría"}, {"id":"notificaciones","nombre":"Notificaciones"},
+    {"id":"chat","nombre":"Chat"}, {"id":"agentes","nombre":"Agentes ABI"},
+    {"id":"configuracion","nombre":"Configuración"},
+    {"id":"nomina","nombre":"Nómina"}, {"id":"talento-humano","nombre":"Talento humano"},
+    {"id":"asistencia","nombre":"Asistencia"}, {"id":"transporte","nombre":"Transporte"},
+    {"id":"logistica","nombre":"Logística"}, {"id":"importaciones","nombre":"Importaciones"}
+  ],
+  "implementados": ["resumen","ventas","pedidos","creditos","inventario","compras","productos","caja","cierre","usuarios","auditoria","notificaciones","chat","agentes","configuracion"],
+  "planes": {
+    "Esencial": ["resumen","ventas","pedidos","inventario","productos","caja","usuarios","chat","agentes","configuracion"],
+    "Negocios": ["resumen","ventas","pedidos","inventario","productos","caja","usuarios","chat","agentes","configuracion","compras","creditos","cierre","notificaciones"],
+    "Profesional": ["resumen","ventas","pedidos","inventario","productos","caja","usuarios","chat","agentes","configuracion","compras","creditos","cierre","notificaciones","auditoria"],
+    "Empresarial": ["resumen","ventas","pedidos","inventario","productos","caja","usuarios","chat","agentes","configuracion","compras","creditos","cierre","notificaciones","auditoria","nomina","talento-humano","asistencia","transporte","logistica","importaciones"]
+  }
+}

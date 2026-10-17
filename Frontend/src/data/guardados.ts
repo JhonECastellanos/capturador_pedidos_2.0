@@ -1,4 +1,4 @@
-const prefijo = "ambie:guardado-pendiente:";
+const prefijo = "abinova:guardado-pendiente:";
 const pendientes = new Map<string, string>();
 const recursos = new Set(["clientes", "productos", "pedidos", "abonos", "proveedores", "recepciones-compra", "gastos", "caja", "inventario", "cierres"]);
 

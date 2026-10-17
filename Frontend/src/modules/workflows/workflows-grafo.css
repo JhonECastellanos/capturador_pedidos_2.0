@@ -1,0 +1,63 @@
+.wf-editor, .wf-ejecucion { container-type: inline-size; min-width: 0; }
+.wf-editor { border: 1px solid var(--color-line); border-radius: 1rem; background: var(--color-paper-raised); padding: clamp(.75rem, 2vw, 1.25rem); }
+.wf-cabecera { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: start; gap: .75rem; margin-bottom: 1rem; }
+.wf-cabecera h2, .wf-inspector h3 { font-weight: 650; font-size: 1rem; }
+.wf-ayuda { color: var(--color-ink-soft); font-size: .8rem; line-height: 1.6; overflow-wrap: anywhere; }
+.wf-insignia { display: inline-block; border-radius: 2rem; padding: .35rem .65rem; background: var(--color-accent-soft); color: var(--color-ink); font-size: .75rem; }
+.wf-datos, .wf-distribucion { display: grid; gap: 1rem; min-width: 0; }
+.wf-datos { margin-bottom: 1rem; }
+.wf-editor label { display: grid; gap: .35rem; font-size: .875rem; min-width: 0; }
+.wf-editor input, .wf-editor select, .wf-editor textarea { border: 1px solid var(--color-line); border-radius: .65rem; background: var(--color-paper-raised); color: var(--color-ink); padding: .65rem; min-height: 44px; width: 100%; min-width: 0; font: inherit; }
+.wf-editor textarea { resize: vertical; }
+.wf-editor :is(input, select, textarea, button):focus-visible, .wf-nodo:focus-visible { outline: 3px solid var(--color-accent); outline-offset: 3px; }
+.wf-editor :disabled { opacity: .6; cursor: not-allowed; }
+.wf-grafo { min-width: 0; border: 1px solid var(--color-line); border-radius: .85rem; padding: 1rem; background-color: var(--color-paper); background-image: radial-gradient(var(--color-line) 1px, transparent 1px); background-size: 16px 16px; margin-bottom: .75rem; }
+.wf-grafo > .wf-ayuda { margin-bottom: 1rem; }
+.wf-recorrido { list-style: none; padding: 0; margin: 0; }
+.wf-paso { min-width: 0; }
+.wf-flecha { display: flex; align-items: center; justify-content: center; height: 36px; color: var(--color-ink-soft); }
+.wf-terminal { display: flex; gap: .5rem; justify-content: center; align-items: center; width: fit-content; max-width: 100%; margin: auto; border: 1px solid var(--color-line); border-radius: 2rem; padding: .55rem 1rem; background: var(--color-paper-raised); font-size: .8rem; font-weight: 600; }
+.wf-nodo { display: flex; align-items: center; gap: .75rem; width: 100%; min-height: 64px; padding: .8rem; border: 1px solid var(--color-line); border-radius: .8rem; background: var(--color-paper-raised); color: var(--color-ink); text-align: left; overflow-wrap: anywhere; }
+button.wf-nodo { cursor: pointer; }
+button.wf-nodo:hover { border-color: var(--color-accent); }
+.wf-nodo--seleccionado { border-color: var(--color-accent); box-shadow: 0 0 0 2px var(--color-accent); }
+.wf-nodo--actual { background: var(--color-accent-soft); }
+.wf-numero { display: flex; align-items: center; justify-content: center; flex: 0 0 32px; height: 32px; border-radius: .6rem; background: var(--color-paper-sunken); font-weight: 650; }
+.wf-nodo-texto { display: grid; gap: .2rem; min-width: 0; }
+.wf-nodo-texto small { font-size: .72rem; color: var(--color-ink-soft); }
+.wf-nodo-texto strong { font-size: .9rem; font-weight: 600; }
+.wf-estado { font-size: .75rem; font-weight: 650; }
+.wf-paso[data-estado="correcto"] .wf-estado { color: var(--color-success); }
+.wf-paso[data-estado="correcto"] .wf-numero { background: var(--color-success-soft); }
+.wf-paso[data-estado="error"] .wf-estado, .wf-paso[data-estado="interrumpido"] .wf-estado, .wf-error { color: var(--color-danger); }
+.wf-paso[data-estado="error"] .wf-numero, .wf-paso[data-estado="interrumpido"] .wf-numero { background: var(--color-danger-soft); }
+.wf-paso[data-estado="omitido"] .wf-nodo { border-style: dashed; }
+.wf-inspector { align-self: start; display: grid; gap: .85rem; padding: 1rem; border: 1px solid var(--color-line); border-radius: .85rem; min-width: 0; background: var(--color-paper-raised); }
+.wf-inspector legend { padding: 0 .4rem; font-size: .95rem; font-weight: 650; }
+.wf-orden, .wf-acciones { display: flex; flex-wrap: wrap; gap: .5rem; }
+.wf-orden > *, .wf-acciones > * { flex: 1 1 140px; }
+.wf-acciones { margin-top: .75rem; margin-bottom: .5rem; }
+.wf-ir-configuracion { margin-bottom: .5rem; }
+.wf-resultado { white-space: pre-wrap; overflow-wrap: anywhere; font-size: .875rem; line-height: 1.65; }
+.wf-grafo--compacto { padding: .75rem; margin-top: .75rem; }
+.wf-grafo--compacto .wf-nodo { padding: .6rem; }
+.wf-grafo--compacto .wf-flecha { height: 24px; }
+.wf-grafo--compacto .wf-flecha svg { height: 22px; }
+.wf-contexto { display: grid; gap: .75rem; margin: 1rem 0; padding: 0; list-style: none; }
+.wf-contexto-nodo { min-width: 0; border: 2px dashed var(--color-accent); border-radius: .85rem; background: var(--color-paper-raised); padding: .85rem; overflow-wrap: anywhere; }
+.wf-contexto-nodo p, .wf-contexto-nodo ul { font-size: .8rem; color: var(--color-ink-soft); margin-top: .4rem; }
+.wf-modulos { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
+.wf-editor label.wf-casilla { display: flex; align-items: center; gap: .65rem; min-height: 44px; }
+.wf-editor .wf-casilla input { width: 20px; height: 20px; min-height: 20px; flex: 0 0 20px; }
+.wf-editor input[type="file"] { overflow: hidden; }
+.wf-simulacion { display: grid; gap: .75rem; min-width: 0; padding: .85rem; border: 1px solid var(--color-line); border-radius: .85rem; }
+.wf-traza { display: grid; gap: .5rem; list-style: none; padding: 0; }
+.wf-traza li { display: grid; gap: .35rem; border-left: 3px solid var(--color-accent); padding: .5rem .75rem; background: var(--color-paper); font-size: .8rem; overflow-wrap: anywhere; }
+.wf-traza li[data-estado="error"] { border-color: var(--color-danger); }
+.wf-traza li[data-estado="correcto"] { border-color: var(--color-success); }
+@container (min-width: 620px) {
+  .wf-contexto { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .wf-ir-configuracion { display: none; }
+  .wf-distribucion { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .wf-datos { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+}

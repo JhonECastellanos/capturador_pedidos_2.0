@@ -3,11 +3,10 @@ import { InstalarAplicacion } from "../../components/InstalarAplicacion";
 import { useState, type FormEvent } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { APP_VERSION, APP_NOMBRE } from "../../config";
-import { IconPackage } from "../../components/Icons";
 import { useAuth } from "../../context/auth";
 import { usaApi } from "../../data/api";
 
-export default function Acceso() {
+export default function Acceso({ operador = false }: { operador?: boolean }) {
   const { apariencia } = useApariencia();
   const navegar = useNavigate();
   const { usuario, cargando, iniciarSesionConCredenciales } = useAuth();
@@ -17,7 +16,11 @@ export default function Acceso() {
   const [verPassword, setVerPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (usuario) return <Navigate to={usuario.rol === "administrador" ? "/admin" : usuario.rol === "inventario" ? "/inventario" : "/vendedor"} replace />;
+  const destino = (u: NonNullable<typeof usuario>) => operador && u.esSistema ? "/operador" : u.rol === "administrador" ? "/admin" : u.rol === "inventario" ? "/inventario" : "/vendedor";
+  if (usuario) {
+    if (operador && !usuario.esSistema) return <div className="p-5"><p role="alert">Tu sesión pertenece al negocio. El panel de mando requiere la cuenta técnica system.</p><button type="button" className="mt-3 underline" onClick={() => navegar("/")}>Abrir mi negocio</button></div>;
+    return <Navigate to={destino(usuario)} replace />;
+  }
 
   async function handleLogin(e: FormEvent) {
     e.preventDefault();
@@ -31,7 +34,7 @@ export default function Acceso() {
     }
     // Redirección según el rol del usuario autenticado:
     // administrador → /admin, vendedor → /vendedor
-    if (res.usuario) navegar(res.usuario.rol === "administrador" ? "/admin" : res.usuario.rol === "inventario" ? "/inventario" : "/vendedor", { replace: true });
+    if (res.usuario) navegar(operador ? "/operador" : destino(res.usuario), { replace: true });
   }
 
   return (
@@ -39,14 +42,15 @@ export default function Acceso() {
       {/* Los márgenes automáticos centran solo cuando sobra espacio: en ventanas
           bajas el contenido empieza arriba y permanece accesible por scroll. */}
       <div className="mx-auto my-auto flex w-full max-w-sm shrink-0 flex-col">
-        <div className="mb-5 overflow-hidden rounded-2xl border border-line bg-paper-raised">
+        {!operador && <div className="mb-5 overflow-hidden rounded-2xl border border-line bg-paper-raised">
           <img src={apariencia.imagen || `/portadas/${apariencia.portada}.svg`} alt="Bienvenido a tu negocio" className="h-36 w-full object-cover sm:h-44" />
-          <p className="px-4 py-3 text-sm font-semibold">Tu negocio, en sincronía.</p>
-        </div>
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-ink text-accent"><IconPackage width={28} height={28} /></div>
+          <p className="px-4 py-3 text-sm font-semibold">Tu negocio. Tus agentes. ABI contigo.</p>
+        </div>}
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-ink text-accent"><img src={`${operador ? "/operador" : ""}/assets/branding/simbolo.svg`} alt="" width="44" height="44" /></div>
         <p className="mt-6 text-[13px] font-semibold uppercase tracking-[0.16em] text-ink-soft">{APP_NOMBRE}</p>
         <p className="mt-1 font-mono text-[10px] text-ink-faint">{APP_VERSION}</p>
-        <h1 className="mt-2 font-display text-3xl font-semibold leading-tight text-ink">Iniciar sesión</h1>
+        <h1 className="mt-2 font-display text-3xl font-semibold leading-tight text-ink">{operador ? "Panel de mando" : "Iniciar sesión"}</h1>
+        {operador && <p className="mt-2 text-sm text-ink-soft">Acceso del operador con system y su contraseña actual. Administra empresas conectadas, workflows y oferta comercial.</p>}
 
         <form onSubmit={handleLogin} className="mt-6 rounded-2xl border border-line bg-paper-raised p-4">
           <div className="space-y-3">
@@ -57,7 +61,7 @@ export default function Acceso() {
                 required
                 value={identificador}
                 onChange={(e) => { setIdentificador(e.target.value); setError(null); }}
-                placeholder="Tu correo, código o system"
+                placeholder={operador ? "system" : "Tu correo o código de usuario"}
                 autoComplete="username"
                 className="mt-1.5 w-full rounded-xl border border-line bg-paper px-3.5 py-3 text-[14px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
               />
@@ -99,7 +103,7 @@ export default function Acceso() {
             <button
               type="button"
               onClick={() => {
-                setIdentificador("admin@ambie.local");
+                setIdentificador("admin@abinova.local");
                 setPassword("admin123");
                 setError(null);
               }}
@@ -107,7 +111,7 @@ export default function Acceso() {
             >
               <div>
                 <p className="text-[13px] font-semibold text-ink">Administrador</p>
-                <p className="font-mono text-[11.5px] text-ink-soft">admin@ambie.local · admin123</p>
+                <p className="font-mono text-[11.5px] text-ink-soft">admin@abinova.local · admin123</p>
               </div>
               <span className="rounded-full bg-accent-soft px-2.5 py-1 text-[11px] font-semibold text-accent-dark">
                 Usar
@@ -117,7 +121,7 @@ export default function Acceso() {
             <button
               type="button"
               onClick={() => {
-                setIdentificador("vendedor@ambie.local");
+                setIdentificador("vendedor@abinova.local");
                 setPassword("vendedor123");
                 setError(null);
               }}
@@ -125,7 +129,7 @@ export default function Acceso() {
             >
               <div>
                 <p className="text-[13px] font-semibold text-ink">Vendedor</p>
-                <p className="font-mono text-[11.5px] text-ink-soft">vendedor@ambie.local · vendedor123</p>
+                <p className="font-mono text-[11.5px] text-ink-soft">vendedor@abinova.local · vendedor123</p>
               </div>
               <span className="rounded-full bg-teal-soft px-2.5 py-1 text-[11px] font-semibold text-teal">
                 Usar
@@ -133,7 +137,7 @@ export default function Acceso() {
             </button>
           </div>
         </div>}
-        <div className="mt-4"><InstalarAplicacion /></div>
+        {!operador && <div className="mt-4"><InstalarAplicacion /></div>}
         {usaApi && <p className="mt-4 text-sm text-ink-soft">Usa el acceso asignado por tu administrador. Los datos se comparten entre los dispositivos del negocio.</p>}
       </div>
     </div>

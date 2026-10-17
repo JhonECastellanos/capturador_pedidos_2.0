@@ -1,8 +1,8 @@
 {
-  "name": "@synchronic-jo/contrato",
+  "name": "@abinova/contrato",
   "version": "1.0.0",
   "private": true,
-  "description": "Contrato compartido de Synchronic.JO: enums, tipos y esquemas usados por el frontend, la API y la base de datos",
+  "description": "Contrato compartido de ABINOVA: enums, tipos y esquemas usados por el frontend, la API y la base de datos",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {

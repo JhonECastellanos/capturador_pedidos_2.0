@@ -1,8 +1,8 @@
 /**
- * Punto de entrada del contrato compartido de Synchronic.JO.
+ * Punto de entrada del contrato compartido de ABINOVA.
  *
  * Se importa igual desde el frontend y desde la API:
- *   import { ESTADO_PEDIDO, type PedidoDTO } from "@synchronic-jo/contrato";
+ *   import { ESTADO_PEDIDO, type PedidoDTO } from "@abinova/contrato";
  */
 
 export * from "./enums";
@@ -18,3 +18,5 @@ export * from "./conteo-compartido";
 export * from "./agentes";
 
 export * from "./apariencia";
+export * from "./modulos";
+export * from "./conocimiento";

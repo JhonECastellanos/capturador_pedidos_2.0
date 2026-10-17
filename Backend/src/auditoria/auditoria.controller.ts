@@ -2,7 +2,7 @@ import { Controller, Get, Query } from "@nestjs/common";
 import { RolUsuario } from "@prisma/client";
 import { Roles } from "../common/guards";
 import { AuditoriaService } from "./auditoria.service";
-import { FiltroAuditoriaEsquema } from "@synchronic-jo/contrato";
+import { FiltroAuditoriaEsquema } from "@abinova/contrato";
 import { ErrorDominio } from "../common/errores";
 
 @Roles(RolUsuario.ADMINISTRADOR)

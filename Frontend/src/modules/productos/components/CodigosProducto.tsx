@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { CodigoProductoDTO } from "@synchronic-jo/contrato";
+import type { CodigoProductoDTO } from "@abinova/contrato";
 import { api } from "../../../data/api";
 import { useRegistroApi } from "../../../data/usePaginaApi";
 import { BotonEscaner } from "../../../components/BotonEscaner";
@@ -9,7 +9,7 @@ export function CodigosProducto({ productoId }: { productoId: string }) {
   const [codigo, setCodigo] = useState(""); const [camara, setCamara] = useState(false); const [ocupado, setOcupado] = useState(false); const [error, setError] = useState(""); const [retirar, setRetirar] = useState<CodigoProductoDTO | null>(null);
   async function guardar(id?: string) {
     if (ocupado) return; setOcupado(true); setError("");
-    try { await api(`/productos/${productoId}/codigos${id ? `/${id}/retirar` : ""}`, "POST", id ? {} : { codigo }); setCodigo(""); setRetirar(null); window.dispatchEvent(new Event("synchronic:datos-actualizados")); }
+    try { await api(`/productos/${productoId}/codigos${id ? `/${id}/retirar` : ""}`, "POST", id ? {} : { codigo }); setCodigo(""); setRetirar(null); window.dispatchEvent(new Event("abinova:datos-actualizados")); }
     catch (e) { setError(e instanceof Error ? e.message : "No se pudo guardar el código"); } finally { setOcupado(false); }
   }
   return <details className="mt-3 rounded-xl border border-line p-3 text-xs"><summary className="min-h-8 cursor-pointer font-semibold">Códigos de barras y QR</summary>

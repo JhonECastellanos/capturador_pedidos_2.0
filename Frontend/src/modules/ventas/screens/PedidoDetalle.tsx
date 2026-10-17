@@ -11,7 +11,7 @@ import type { EstadoPedido, Pedido, Cliente, AbonoCredito } from "../../../types
 import { CLASES_ESTADO, ETIQUETAS_ESTADO } from "../../../utils/estados";
 import { formatoFechaHora } from "../../../utils/fechas";
 import { formatoMoneda } from "../../../utils/formato";
-import { TRANSICIONES_PEDIDO } from "@synchronic-jo/contrato";
+import { TRANSICIONES_PEDIDO } from "@abinova/contrato";
 import { usaApi, baseApi } from "../../../data/api";
 
 import { DetalleProductosPedido } from "../components/DetalleProductosPedido";

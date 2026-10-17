@@ -1,15 +1,25 @@
-import { Body, Controller, Get, Param, Post, Put } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Put, Headers, Req } from "@nestjs/common";
 import { RolUsuario, Usuario } from "@prisma/client";
 import { z } from "zod";
-import { ContextoAgenteEsquema, InstruccionAgenteEsquema } from "@synchronic-jo/contrato";
-import { Roles, UsuarioActual } from "../common/guards";
+import { ContextoAgenteEsquema, InstruccionAgenteEsquema } from "@abinova/contrato";
+import { timingSafeEqual } from "node:crypto";
+import { ErrorDominio } from "../common/errores";
+import { OfertaAgentesService } from "./oferta-agentes.service";
+import { Public, Roles, UsuarioActual, type RequestAutenticado } from "../common/guards";
 import { AgentesService } from "./agentes.service";
 import { ChatService } from "./chat.service";
 
 const roles = [RolUsuario.ADMINISTRADOR, RolUsuario.VENDEDOR, RolUsuario.INVENTARIO];
 @Controller("agentes")
 export class AgentesController {
-  constructor(private readonly agentes: AgentesService, private readonly chat: ChatService) {}
+  constructor(private readonly agentes: AgentesService, private readonly chat: ChatService, private readonly oferta: OfertaAgentesService) {}
+  private operador(u: Usuario) { if (!u.esSistema) throw new ErrorDominio("OFERTA_PERMISO", "La oferta de modelos se administra en el panel de mando", 403); }
+  private audioPrivado(auth: string | undefined) { const token = process.env.VOICE_AGENT_TOKEN ?? ""; const a = Buffer.from(auth ?? ""), b = Buffer.from("Bearer " + token); if (token.length < 32 || a.length !== b.length || !timingSafeEqual(a, b)) throw new ErrorDominio("AUDIO_PERMISO", "Conexión privada no autorizada", 401); }
+  @Roles(RolUsuario.ADMINISTRADOR) @Get("oferta") ofertaOperador(@UsuarioActual() u: Usuario) { this.operador(u); return this.oferta.configuracion().then(data => ({ data })); }
+  @Roles(RolUsuario.ADMINISTRADOR) @Put("oferta") guardarOferta(@UsuarioActual() u: Usuario, @Body() b: unknown) { this.operador(u); const d = z.object({ oferta: z.unknown(), version: z.number().int().min(0) }).strict().parse(b); return this.oferta.guardar(d.oferta, d.version).then(data => ({ data })); }
+  @Roles(RolUsuario.ADMINISTRADOR) @Get("modelos-incluidos") modelosIncluidos() { return this.agentes.modelosIncluidos().then(data => ({ data })); }
+  @Public() @Post("audio/live") live(@Headers("authorization") a: string | undefined, @Body() b: unknown) { this.audioPrivado(a); const d = z.object({ ticket: z.string().max(2000) }).strict().parse(b); return this.agentes.abrirLive(d.ticket); }
+  @Public() @Post("audio/live/cerrar") cerrarLive(@Headers("authorization") a: string | undefined, @Body() b: unknown) { this.audioPrivado(a); const d = z.object({ ticket: z.string().max(2000), tokens: z.number().int().min(0).max(10000000).nullable(), rechazada: z.boolean() }).strict().parse(b); return this.agentes.cerrarLive(d.ticket, d.tokens, d.rechazada); }
   @Roles(RolUsuario.ADMINISTRADOR) @Post("chat") conversar(@Body() body: unknown, @UsuarioActual() usuario: Usuario) {
     const r = z.object({ texto: z.string().trim().min(1).max(6000), anterior: InstruccionAgenteEsquema.optional(), id: z.string().uuid().optional(), version: z.number().int().min(1).optional(), conversacionId: z.string().uuid().optional() }).strict().parse(body);
     return this.chat.responder(r.texto, usuario, r.anterior, r.id, r.version, r.conversacionId).then(data => ({ data }));
@@ -37,7 +47,7 @@ export class AgentesController {
     return this.agentes.audio("transcribir", r).then(data => ({ data }));
   }
   @Roles(RolUsuario.ADMINISTRADOR) @Post("audio/estado") audioEstado() { return this.agentes.audio("estado", {}).then(data => ({ data })); }
-  @Roles(...roles) @Post("audio/sesion") sesion() { return this.agentes.sesionAudio().then(data => ({ data })); }
+  @Roles(...roles) @Post("audio/sesion") sesion(@UsuarioActual() u: Usuario, @Req() req: RequestAutenticado) { return this.agentes.sesionAudio(u, req.sessionId).then(data => ({ data })); }
   @Roles(RolUsuario.ADMINISTRADOR) @Post("audio/preparar") prepararAudio(@Body() body: unknown) {
     const r = z.object({ stt: z.enum(["whisper", "moonshine"]), modelo: z.string().regex(/^[a-zA-Z0-9._/-]{1,120}$/), idioma: z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/) }).strict().parse(body);
     return this.agentes.audio("preparar", r).then(data => ({ data }));
