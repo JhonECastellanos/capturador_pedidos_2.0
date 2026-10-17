@@ -41,7 +41,6 @@ const ProductosAdmin = lazy(() => import("./modules/productos/screens/ProductosA
 const Auditoria = lazy(() => import("./modules/administracion/screens/Auditoria").then((m) => ({ default: m.Auditoria })));
 const Resumen = lazy(() => import("./modules/administracion/screens/Resumen").then((m) => ({ default: m.Resumen })));
 const Configuracion = lazy(() => import("./modules/configuracion/Configuracion").then((m) => ({ default: m.Configuracion })));
-const Workflows = lazy(() => import("./modules/workflows/Workflows"));
 
 /** Aplicación: decide si la vista usa el marco móvil o el marco amplio del admin. */
 function Contenido() {
@@ -85,7 +84,7 @@ function Contenido() {
             <Route path="usuarios" element={<UsuariosAdmin />} />
             <Route path="auditoria" element={<Auditoria />} />
             <Route path="configuracion" element={<Configuracion />} />
-            <Route path="workflows" element={<Workflows />} />
+            <Route path="workflows" element={<Navigate to="/admin/configuracion" replace />} />
           </Route>
 
           {/* ─── Redirecciones de rutas antiguas ─── */}

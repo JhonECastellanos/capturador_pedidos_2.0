@@ -13,7 +13,7 @@ BASE = {"resumen", "configuracion"}
 class Modulos:
     def __init__(self, archivo, inicial):
         self.archivo = str(archivo)
-        self.implementados = set(inicial["implementados"])
+        self.implementados = set(inicial["implementados"]) - {"workflows"}
         with closing(sqlite3.connect(self.archivo)) as c:
             c.execute("CREATE TABLE IF NOT EXISTS catalogo_modulos(id INTEGER PRIMARY KEY CHECK(id=1), version INTEGER NOT NULL, datos TEXT NOT NULL)")
             c.execute("CREATE TABLE IF NOT EXISTS accesos_empresa(id TEXT PRIMARY KEY, version INTEGER NOT NULL, datos TEXT NOT NULL)")
@@ -24,11 +24,14 @@ class Modulos:
     def catalogo(self):
         with closing(sqlite3.connect(self.archivo)) as c:
             version, texto = c.execute("SELECT version,datos FROM catalogo_modulos WHERE id=1").fetchone()
-        return {"version": version, **json.loads(texto)}
+        datos = json.loads(texto)
+        return {"version": version, "modulos": [m for m in datos["modulos"] if m["id"] != "workflows"], "planes": {p: [m for m in ids if m != "workflows"] for p, ids in datos["planes"].items()}}
 
     def guardar(self, datos):
         modulos = datos.get("modulos", [])
         ids = [m.get("id", "") for m in modulos]
+        if "workflows" in ids:
+            raise Problema("Workflows es exclusivo del operador y no es un módulo comercial.")
         if not 2 <= len(ids) <= 100 or len(set(ids)) != len(ids) or not BASE <= set(ids):
             raise Problema("Usa códigos únicos y conserva Resumen y Configuración.")
         for m in modulos:
@@ -50,7 +53,8 @@ class Modulos:
         with closing(sqlite3.connect(self.archivo)) as c:
             r = c.execute("SELECT version,datos FROM accesos_empresa WHERE id=?", (empresa,)).fetchone()
         # La actualización no recorta el negocio existente hasta asignarle un plan.
-        return {"version": r[0], **json.loads(r[1])} if r else {"version": 1, "plan": "Empresarial", "adicionales": [], "excluidos": []}
+        datos = {"version": r[0], **json.loads(r[1])} if r else {"version": 1, "plan": "Empresarial", "adicionales": [], "excluidos": []}
+        return {**datos, "adicionales": [m for m in datos["adicionales"] if m != "workflows"], "excluidos": [m for m in datos["excluidos"] if m != "workflows"]}
 
     def asignar(self, empresa, datos):
         catalogo = self.catalogo()
@@ -80,4 +84,4 @@ class Modulos:
         catalogo = json.loads(texto)
         asignacion = json.loads(fila[1]) if fila else {"plan": "Empresarial", "adicionales": [], "excluidos": []}
         elegidos = (set(catalogo["planes"][asignacion["plan"]]) | set(asignacion["adicionales"])) - set(asignacion["excluidos"])
-        return {"revision": f"{version}:{fila[0] if fila else 1}", "plan": asignacion["plan"], "modulos": [{**m, "implementado": m["id"] in self.implementados, "activo": m["id"] in elegidos and m["id"] in self.implementados} for m in catalogo["modulos"]]}
+        return {"revision": f"{version}:{fila[0] if fila else 1}", "plan": asignacion["plan"], "modulos": [{**m, "implementado": m["id"] in self.implementados, "activo": m["id"] in elegidos and m["id"] in self.implementados} for m in catalogo["modulos"] if m["id"] != "workflows"]}

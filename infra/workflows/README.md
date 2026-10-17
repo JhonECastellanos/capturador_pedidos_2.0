@@ -46,7 +46,7 @@ comprueba mediante compilación y salud de los servicios, sin escribir operacion
 en la base del negocio. Audio físico y conexiones externas requieren sus dispositivos
 y credenciales.
 
-`npm.cmd run workflows:arriba` prepara secretos y arranca ambos servicios. Requiere la API actualizada. Ambos workers forman parte del despliegue normal. Panel del operador: `/operador`, con la cuenta técnica system. El administrador del negocio usa `/admin/workflows`; vendedores y colaboradores no tienen acceso.
+`npm.cmd run workflows:arriba` prepara secretos y arranca ambos servicios. Requiere la API actualizada. Ambos workers forman parte del despliegue normal. Panel del operador: `/operador`, con la cuenta técnica system. Los workflows son exclusivos del operador. El negocio configura su agente desde Configuración; `/admin/workflows` redirige allí y la API rechaza su administración por cuentas de clientes.
 
 `/operador/acceso` presenta el login técnico con la contraseña vigente de system; la API también comprueba `esSistema`. El panel agrupa empresas registradas, módulos por plan, excepciones por empresa, workflows, precios, condiciones y créditos. Reutiliza Usuarios y Agentes para la instalación propia. El alta automática de empresas y la administración remota de sus usuarios siguen pendientes; el registro de workers no constituye un SaaS de autoservicio completo.
 
@@ -65,7 +65,7 @@ El control federado mantiene un registro de instalaciones: una API, PostgreSQL, 
 
 El catálogo y las asignaciones viven en las tablas SQLite `catalogo_modulos` y `accesos_empresa` del control. Cada escritura verifica versión y rechaza conflictos con 409. PostgreSQL conserva `configuracionesAccesoComercial`: la última política recibida por la instalación; no replica documentos de otras empresas. La API comparte la consulta de licencia, la actualiza periódicamente y mantiene la última política si la central se desconecta. El navegador consulta `/licencia` por sesión y aplica menú y rutas. Una modificación tarda normalmente unos segundos entre dispositivos. Los permisos por rol y usuario siguen aplicándose además del plan; system mantiene su acceso técnico.
 
-Los planes iniciales son configurables: Esencial mantiene ventas, pedidos, inventario, productos, caja, usuarios, chat y agentes; Negocios añade compras, créditos, cierres y notificaciones; Profesional incluye también auditoría y workflows. Empresarial permite un acuerdo personalizado. La actualización deja la instalación existente con acceso completo hasta asignar otro plan. El plan de módulos no altera por sí solo el cupo de tokens: el operador ajusta el cupo y la ponderación en Workflows > Configurar conexión y cupo.
+Los planes iniciales son configurables: Esencial mantiene ventas, pedidos, inventario, productos, caja, usuarios, chat y agentes; Negocios añade compras, créditos, cierres y notificaciones; Profesional incluye también auditoría. Workflows es infraestructura interna del operador, fuera del catálogo comercial. Empresarial permite un acuerdo personalizado. La actualización deja la instalación existente con acceso completo hasta asignar otro plan. El plan de módulos no altera por sí solo el cupo de tokens: el operador ajusta el cupo y la ponderación en Workflows > Configurar conexión y cupo.
 
 ## Aislamiento y acceso
 
@@ -89,9 +89,36 @@ Crédito base: 1.000 tokens totales, redondeados hacia arriba y ponderados por e
 
 API propia reutiliza la conexión protegida en Configuración > Agentes IA; su proveedor cobra al cliente y no se descuentan créditos incluidos. Local usa Ollama configurado, sin descargar modelos automáticamente. La capacidad depende del hardware. API Live continúa disponible en el agente de audio; un nodo de texto utiliza el proveedor de texto elegido.
 
-La conexión incluida debe ser suministrada por el operador en `.local/workflows/proveedor-incluido.json`, montado solo en la API de esa empresa: `id`, `nombre`, `protocolo` (`openai`, `responses`, `gemini` o `anthropic`), `url` HTTPS, `modelo`, `apiKey` y opcionalmente `maxTokens` (256–8192). El archivo inicial está vacío y no se usa una clave del cliente como si fuera un servicio incluido. El cliente no puede leerlo ni editarlo desde Configuración. Cada instalación conserva su archivo privado. Las credenciales nunca se envían al control ni al navegador.
+## Oferta de modelos y selección del negocio
 
-En el aplicativo del cliente, Configuración > Agentes IA > Híbrido permite elegir **Mi propia API** o **Créditos incluidos de ABINOVA**. Local y API Live conservan conexión propia. El asistente por voz y chat usa el mismo cupo del worker cuando se eligen créditos: reserva antes de consultar, concilia con tokens reportados y no llama al proveedor si no hay cupo. Una solicitud repetida con el mismo ID/versión no se vuelve a consumir. Un rechazo explícito de credenciales/campos/cuota devuelve su reserva; un fallo incierto conserva una estimación y no se reintenta silenciosamente. Si falta el proveedor incluido, se informa antes de reservar. La API propia y el modelo local no descuentan créditos incluidos. Los cambios inequívocos que no llaman al modelo tampoco consumen créditos.
+El operador configura **Panel de mando > Modelos incluidos**: nombre, protocolo,
+URL oficial, clave, modelo de texto para interpretar operaciones y modelos ofrecidos.
+Cada modelo indica Híbrido o audio nativo Live; solo las conexiones activas y con clave
+aparecen al cliente. Se reutiliza `configuracionesAgente`, fila `oferta-incluida`, con
+JSON versionado y secretos AES-GCM. No se añade una tabla por empresa ni se exponen
+claves al navegador. La conexión privada antigua en archivo se admite únicamente hasta
+guardar la oferta desde el panel. Cada instalación conserva su propia oferta.
+
+El administrador usa **Configuración > Agentes IA**: Híbrido, Local, API Live o Créditos
+de IA. Créditos muestra únicamente los modelos ofrecidos, su capacidad y saldo; elegir
+uno ajusta su conexión automáticamente. Local no descarga modelos al guardar. La API
+propia conserva las conexiones del negocio. El modelo Live tiene además un modelo de
+texto de soporte para resolver las órdenes con el intérprete y permisos existentes.
+
+Live transporta audio nativo con Gemini Live/OpenAI Realtime mediante el servicio de
+voz existente. El navegador recibe un ticket firmado de un solo uso, ligado a sesión,
+usuario y versión; las claves solo viajan entre servicios privados y el proveedor oficial.
+La herramienta del modelo pide tramitar la instrucción y recibe la respuesta del flujo
+normal; no escribe documentos ni confirma transacciones por su cuenta. Se conserva la
+confirmación del negocio y los controles de micrófono e interrupción de ABI.
+
+Las sesiones Live duran hasta sesenta segundos y se renuevan con ticket nuevo. Créditos
+reserva hasta 64.000 tokens por sesión y concilia el uso informado; un consumo incierto
+conserva una estimación, no se presenta como consumo exacto. El cierre es idempotente
+contra el registro persistido, incluso si la API reinició. La API propia paga su proveedor.
+Los rechazos explícitos antes del uso devuelven la reserva; fallos de red no se interpretan
+como ausencia de consumo. Configurar un modelo no acredita acceso real del proveedor:
+se necesita una clave habilitada para ese modelo y una comprobación física de audio.
 
 Precios, descripciones, beneficios y promoción se editan en **Precios y condiciones**. La landing consume la oferta guardada al abrirse. Descuento y meses adicionales son configurables; los nombres de planes y sus cupos de usuarios/agentes no se cambian por esa ruta. No se activa una pasarela ni se capturan tarjetas.
 

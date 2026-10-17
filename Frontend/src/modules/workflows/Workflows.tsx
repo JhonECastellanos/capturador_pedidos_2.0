@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api, respuestaRed } from "../../data/api";
 import { claveConsulta, consultas } from "../../data/query";
@@ -25,8 +25,9 @@ function useLectura<T>(ruta: string, activo = true, intervalo: number | false = 
 
 export default function Workflows({ operador = false, integrado = false, vistaInicial = "flujos", empresaInicial = "" }: { operador?: boolean; integrado?: boolean; vistaInicial?: "flujos" | "planes"; empresaInicial?: string }) {
   const { usuario, cerrarSesion } = useAuth();
-  const sistema = operador && !!usuario?.esSistema;
-  const administrador = usuario?.rol === "administrador";
+  const { pathname } = useLocation();
+  const sistema = operador && !!usuario?.esSistema && (pathname === "/operador" || pathname.startsWith("/operador/"));
+  const administrador = sistema && usuario?.rol === "administrador";
   const [empresaElegida, setEmpresa] = useState(empresaInicial);
   const [vista, setVista] = useState<"flujos" | "planes">(vistaInicial);
   const [ejecucion, setEjecucion] = useState("");
@@ -34,17 +35,20 @@ export default function Workflows({ operador = false, integrado = false, vistaIn
   const [ocupado, setOcupado] = useState(false), [aviso, setAviso] = useState("");
   const [edicion, setEdicion] = useState<Flujo | null>(null), [config, setConfig] = useState<Config | null>(null);
   const [precios, setPrecios] = useState<Oferta | null>(null);
-  const empresas = useLectura<Array<{ id: string; nombre: string; propia: boolean }>>("/workflows/empresas", administrador && vista === "flujos");
+  const empresas = useLectura<Array<{ id: string; nombre: string; propia: boolean }>>("/workflows/empresas", sistema && vista === "flujos");
   const empresa = empresaElegida || empresas.data?.[0]?.id || "";
   const empresaActual = empresas.data?.find(e => e.id === empresa);
-  const modulos = useModulosWorkflow(empresa, !!empresaActual?.propia, administrador && vista === "flujos" && !!empresaActual);
+  const lecturaModulos = useModulosWorkflow(empresa, !!empresaActual?.propia, sistema && vista === "flujos" && !!empresaActual);
+  // Workflows internos del operador no son una licencia comercial.
+  const modulos = { ...lecturaModulos, modulos: [...lecturaModulos.modulos.filter(m => m.id !== "workflows"), ...(sistema ? [{ id: "workflows", nombre: "Workflow interno", habilitado: true }] : [])] };
   const raiz = `/workflows/empresas/${empresa}`;
-  const resumen = useLectura<Resumen>(`${raiz}/resumen`, administrador && !!empresa && vista === "flujos", 3000);
-  const detalle = useLectura<Ejecucion>(`${raiz}/ejecuciones/${ejecucion}`, administrador && !!empresa && !!ejecucion && vista === "flujos", 2000);
+  const resumen = useLectura<Resumen>(`${raiz}/resumen`, sistema && !!empresa && vista === "flujos", 3000);
+  const detalle = useLectura<Ejecucion>(`${raiz}/ejecuciones/${ejecucion}`, sistema && !!empresa && !!ejecucion && vista === "flujos", 2000);
   const oferta = useLectura<Oferta>("/comercial/planes", sistema);
-  const conexiones = useLectura<{ proveedores: Array<{ id: string; nombre: string; modelo: string }> }>("/agentes/configuracion", administrador && vista === "flujos" && (empresa === "comercial" || !!empresas.data?.find(e => e.id === empresa)?.propia));
+  const conexiones = useLectura<{ proveedores: Array<{ id: string; nombre: string; modelo: string }> }>("/agentes/configuracion", sistema && vista === "flujos" && (empresa === "comercial" || !!empresas.data?.find(e => e.id === empresa)?.propia));
+  if (!sistema) return <Navigate to="/admin/configuracion" replace />;
   if (!administrador) return <p role="alert" className={caja}>Solo un administrador puede gestionar workflows.</p>;
-  if (operador && !sistema) return <Navigate to="/admin/workflows" replace />;
+
 
   async function hacer(accion: () => Promise<unknown>) {
     if (ocupado) return;
@@ -53,7 +57,10 @@ export default function Workflows({ operador = false, integrado = false, vistaIn
     catch (e) { setAviso(e instanceof Error ? e.message : "No se pudo completar la acción"); }
     finally { setOcupado(false); }
   }
-  function flujoHabilitado(f: Flujo) { return puedeEjecutarFlujo(f, modulos.modulos); }
+  function flujoHabilitado(f: Flujo) {
+    if (sistema && (f.modulo ?? "workflows") === "workflows") return (f.estado ?? "publicado") === "publicado";
+    return puedeEjecutarFlujo(f, modulos.modulos);
+  }
   async function nueva(flujo: string) { if (!resumen.data?.flujos.some(f => f.id === flujo && flujoHabilitado(f))) return; const r = await api<Ejecucion>(`${raiz}/ejecuciones`, "POST", { flujo, id: uuid() }); setEjecucion(r.id); }
   async function controlar(accion: string) { const r = await api<Ejecucion>(`${raiz}/ejecuciones/${ejecucion}/${accion}`, "POST", {}); setEjecucion(r.id); await consultas.invalidateQueries({ queryKey: claveConsulta(`${raiz}/ejecuciones/${r.id}`) }); }
   const puedeDiagnosticar = sistema || !!usuario?.esSistema || !!empresas.data?.find(e => e.id === empresa)?.propia || !!resumen.data?.configuracion.diagnosticoAutorizado;

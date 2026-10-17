@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { MODULOS_IMPLEMENTADOS, PLANES_COMERCIALES, type AccesoComercial, type AsignacionModulos, type CatalogoModulos } from "@abinova/contrato";
+import { MODULOS_IMPLEMENTADOS, PLANES_COMERCIALES, CatalogoModulosEsquema, AsignacionModulosEsquema, type AccesoComercial, type AsignacionModulos, type CatalogoModulos } from "@abinova/contrato";
 import { api, respuestaRed } from "../../data/api";
 import { claveConsulta, consultas } from "../../data/query";
 import { Boton } from "../../components/Boton";
@@ -24,8 +24,10 @@ export default function ModulosControl({ empresas }: { empresas: Empresa[] }) {
   const catalogo = useControl<CatalogoModulos>("/control/modulos");
   const rutaEmpresa = `/control/empresas/${empresa}/asignacion`;
   const detalle = useControl<Detalle>(rutaEmpresa, !!empresa && vista === "empresa");
-  const datos = borrador ?? catalogo.data;
-  const elegida = asignacion ?? detalle.data?.asignacion;
+  const origenCatalogo = borrador ?? catalogo.data;
+  const datos = origenCatalogo ? CatalogoModulosEsquema.parse(origenCatalogo) : undefined;
+  const origenAsignacion = asignacion ?? detalle.data?.asignacion;
+  const elegida = origenAsignacion ? AsignacionModulosEsquema.parse(origenAsignacion) : undefined;
   async function guardar(accion: () => Promise<void>) {
     if (ocupado) return;
     setOcupado(true); setAviso("");
@@ -35,6 +37,7 @@ export default function ModulosControl({ empresas }: { empresas: Empresa[] }) {
   }
   function agregar(e: FormEvent) {
     e.preventDefault(); if (!datos) return;
+    if (nuevo.id === "workflows") { setAviso("Workflows es exclusivo del operador y no se puede aprovisionar como módulo."); return; }
     if (!/^[a-z][a-z0-9-]{0,49}$/.test(nuevo.id) || nuevo.nombre.trim().length < 2 || datos.modulos.some(m => m.id === nuevo.id)) { setAviso("Usa un código único en minúsculas, con guiones, y un nombre de al menos dos caracteres."); return; }
     setBorrador({ ...datos, modulos: [...datos.modulos, { id: nuevo.id, nombre: nuevo.nombre.trim() }] }); setNuevo({ id: "", nombre: "" }); setAviso("");
   }
@@ -50,7 +53,7 @@ export default function ModulosControl({ empresas }: { empresas: Empresa[] }) {
       <form className={caja} onSubmit={agregar}><h3 className="font-semibold">Agregar módulo al catálogo</h3><div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]"><label>Código<input className={campo} aria-label="Código del nuevo módulo" required maxLength={50} placeholder="servicio-tecnico" value={nuevo.id} onChange={e => setNuevo({ ...nuevo, id: e.target.value })} /></label><label>Nombre<input className={campo} aria-label="Nombre del nuevo módulo" required maxLength={70} placeholder="Servicio técnico" value={nuevo.nombre} onChange={e => setNuevo({ ...nuevo, nombre: e.target.value })} /></label><Boton type="submit" ancho="auto" disabled={ocupado || datos.modulos.length >= 100}>Agregar</Boton></div><p className="text-xs text-ink-soft">Agregar prepara el cambio; confirma con Guardar catálogo y planes. La disponibilidad real depende de la versión instalada.</p></form>
       <section className={caja}><label>Plan que quieres configurar<select className={campo} aria-label="Plan del catálogo" value={plan} onChange={e => setPlan(e.target.value as typeof plan)}>{PLANES_COMERCIALES.map(p => <option key={p}>{p}</option>)}</select></label>
         <ul className="space-y-2">{datos.modulos.map(m => <li key={m.id} className="flex items-center gap-2 rounded-xl border border-line p-2"><label className="flex flex-1 items-center gap-3"><input type="checkbox" aria-label={`${m.nombre} en ${plan}`} disabled={ocupado || ["resumen", "configuracion"].includes(m.id)} checked={datos.planes[plan].includes(m.id)} onChange={e => setBorrador({ ...datos, planes: { ...datos.planes, [plan]: e.target.checked ? [...datos.planes[plan], m.id] : datos.planes[plan].filter(id => id !== m.id) } })} /><span className="text-sm font-semibold">{m.nombre}<small className="block font-normal text-ink-soft">{m.id} · {MODULOS_IMPLEMENTADOS.includes(m.id) ? "Disponible" : "En desarrollo"}</small></span></label>{!["resumen", "configuracion"].includes(m.id) && <button type="button" aria-label={`Retirar ${m.nombre}`} disabled={ocupado} className="min-h-11 min-w-11 text-danger" onClick={() => quitar(m.id)}>×</button>}</li>)}</ul>
-        <div className="flex flex-wrap gap-2"><Boton disabled={!borrador || ocupado} onClick={() => void guardar(async () => { await api("/control/modulos", "PUT", borrador); setBorrador(null); await catalogo.refetch(); await consultas.invalidateQueries({ queryKey: claveConsulta(rutaEmpresa) }); })}>Guardar catálogo y planes</Boton><Boton variante="fantasma" disabled={ocupado} onClick={() => { setBorrador(null); setAviso(""); void catalogo.refetch(); }}>Descartar y actualizar</Boton></div>
+        <div className="flex flex-wrap gap-2"><Boton disabled={!borrador || ocupado} onClick={() => void guardar(async () => { await api("/control/modulos", "PUT", CatalogoModulosEsquema.parse(borrador)); setBorrador(null); await catalogo.refetch(); await consultas.invalidateQueries({ queryKey: claveConsulta(rutaEmpresa) }); })}>Guardar catálogo y planes</Boton><Boton variante="fantasma" disabled={ocupado} onClick={() => { setBorrador(null); setAviso(""); void catalogo.refetch(); }}>Descartar y actualizar</Boton></div>
       </section>
     </> : <section className={caja}>
       <label>Empresa<select aria-label="Empresa de la asignación" className={campo} value={empresa} onChange={e => { setEmpresa(e.target.value); setAsignacion(null); setAviso(""); }}>{empresas.map(e => <option value={e.id} key={e.id}>{e.nombre}</option>)}</select></label>
@@ -62,7 +65,7 @@ export default function ModulosControl({ empresas }: { empresas: Empresa[] }) {
           const incluido = (datos.planes[elegida.plan].includes(m.id) || opcion === "incluir") && opcion !== "quitar";
           return <li key={m.id} className="grid grid-cols-1 gap-2 rounded-xl border border-line p-2 sm:grid-cols-[1fr_200px]"><div className="text-sm font-semibold">{m.nombre}<small className="block font-normal text-ink-soft">{!MODULOS_IMPLEMENTADOS.includes(m.id) ? incluido ? "Reservado · en desarrollo" : "En desarrollo" : incluido ? "Habilitado" : "Sin acceso"}</small></div><select className={campo} aria-label={`Excepción ${m.nombre}`} disabled={ocupado || ["resumen", "configuracion"].includes(m.id)} value={opcion} onChange={e => setAsignacion({ ...elegida, adicionales: [...elegida.adicionales.filter(id => id !== m.id), ...(e.target.value === "incluir" ? [m.id] : [])], excluidos: [...elegida.excluidos.filter(id => id !== m.id), ...(e.target.value === "quitar" ? [m.id] : [])] })}><option value="heredar">Heredar del plan</option><option value="incluir">Incluir para esta empresa</option><option value="quitar">Quitar para esta empresa</option></select></li>;
         })}</ul>
-        <div className="flex flex-wrap gap-2"><Boton disabled={ocupado || !asignacion} onClick={() => void guardar(async () => { await api(rutaEmpresa, "PUT", asignacion); setAsignacion(null); await detalle.refetch(); })}>Guardar asignación</Boton><Boton variante="fantasma" disabled={ocupado} onClick={() => setAsignacion({ ...elegida, adicionales: [], excluidos: [] })}>Restaurar herencia del plan</Boton><Boton variante="fantasma" disabled={ocupado} onClick={() => { setAsignacion(null); setAviso(""); void detalle.refetch(); }}>Descartar y actualizar</Boton></div>
+        <div className="flex flex-wrap gap-2"><Boton disabled={ocupado || !asignacion} onClick={() => void guardar(async () => { await api(rutaEmpresa, "PUT", AsignacionModulosEsquema.parse(asignacion)); setAsignacion(null); await detalle.refetch(); })}>Guardar asignación</Boton><Boton variante="fantasma" disabled={ocupado} onClick={() => setAsignacion({ ...elegida, adicionales: [], excluidos: [] })}>Restaurar herencia del plan</Boton><Boton variante="fantasma" disabled={ocupado} onClick={() => { setAsignacion(null); setAviso(""); void detalle.refetch(); }}>Descartar y actualizar</Boton></div>
       </>}
     </section>}
   </section>;

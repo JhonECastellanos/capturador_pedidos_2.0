@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/auth";
 import { OperacionesProvider } from "../../context/OperacionesContext";
 import { respuestaRed } from "../../data/api";
@@ -9,9 +9,10 @@ import Workflows from "./Workflows";
 
 const Usuarios = lazy(() => import("../usuarios/screens/UsuariosAdmin").then(m => ({ default: m.UsuariosAdmin })));
 const Agentes = lazy(() => import("../agentes/PanelAgentes").then(m => ({ default: m.PanelAgentes })));
+const OfertaAgentes = lazy(() => import("./OfertaAgentes"));
 const Modulos = lazy(() => import("./ModulosControl"));
 const Condiciones = lazy(() => import("./CondicionesComerciales"));
-const secciones = { empresas: "Empresas", modulos: "Módulos por plan", flujos: "Workflows", planes: "Precios y condiciones", usuarios: "Usuarios y permisos", agentes: "Agentes de esta instalación" };
+const secciones = { empresas: "Empresas", modulos: "Módulos por plan", flujos: "Workflows", modelos: "Modelos incluidos", planes: "Precios y condiciones", usuarios: "Usuarios y permisos", agentes: "Agentes de esta instalación" };
 type Seccion = keyof typeof secciones;
 type Registro = { empresas: Array<{ id: string; nombre: string; propia: boolean }>; aprovisionamientoAutomatico: boolean };
 
@@ -33,6 +34,8 @@ export default function Operador() {
   }
   async function salir() { if (await cerrarSesion()) navegar("/operador/acceso", { replace: true }); }
   function abrirFlujos(id: string) { setEmpresa(id); setSeccion("flujos"); }
+
+  if (!usuario?.esSistema) return <Navigate to="/admin/configuracion" replace />;
 
   return <main className="h-full min-h-0 overflow-y-auto bg-paper text-ink">
     <header className="border-b border-line bg-paper-raised p-3 sm:p-4">
@@ -60,6 +63,7 @@ export default function Operador() {
         </section>}
         {(seccion === "flujos" || seccion === "planes") && <Workflows key={`${seccion}:${empresa}`} operador integrado vistaInicial={seccion} empresaInicial={empresa} />}
         <Suspense fallback={<p role="status">Cargando controles…</p>}>
+          {seccion === "modelos" && <OfertaAgentes />}
           {seccion === "modulos" && <Modulos empresas={registro.data.empresas.filter(e => e.id !== "comercial")} />}
           {seccion === "planes" && <Condiciones />}
           {seccion === "usuarios" && propia && <><p className="mb-3 text-sm text-ink-soft">Usuarios de {propia.nombre}. Los permisos habilitan o restringen los módulos existentes para cada usuario; no instalan servicios nuevos.</p><div className="min-h-[600px]"><OperacionesProvider><Usuarios /></OperacionesProvider></div></>}

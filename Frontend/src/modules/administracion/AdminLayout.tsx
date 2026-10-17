@@ -40,7 +40,6 @@ const navegacionPrincipal: ItemNavegacion[] = [
   { to: "/admin/usuarios", etiqueta: "Usuarios", icono: IconUser },
   { to: "/admin/auditoria", etiqueta: "Auditoría", icono: IconClipboard },
   { to: "/admin/chat", etiqueta: "Chat", icono: IconUser },
-  { to: "/admin/workflows", etiqueta: "Workflows", icono: IconChartBar },
   { to: "/admin/configuracion", etiqueta: "Configuración", icono: IconTag },
 ];
 

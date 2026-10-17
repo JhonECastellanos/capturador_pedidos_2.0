@@ -45,7 +45,7 @@ Cada formulario espera la confirmación de guardado en PostgreSQL. Pedidos, pago
 
 Notificaciones conserva avisos comerciales y abre su detalle. Chat usa la conexión configurada para consultar datos o preparar operaciones: se revisan y confirman dentro del chat, sin cambiar de pantalla. Los avisos del navegador requieren permiso y la aplicación abierta.
 
-El operador usa `/operador` para precios, créditos y workflows Python por empresa; el administrador comercial accede a sus flujos desde `/admin/workflows`. La landing está en `/comercial/`; la pasarela de pago sigue pendiente.
+El operador usa `/operador` para precios, créditos y workflows Python por empresa; el administrador del negocio elige Híbrido, Local, API Live o Créditos de IA desde Configuración; no accede a workflows. La landing está en `/comercial/`; la pasarela de pago sigue pendiente.
 
 - [Guía completa de instalación y desarrollo](docs/info/GUIA_INSTALACION_Y_DESARROLLO.md).
 - [Modelo, consultas y ejemplos de CSV](docs/info/GUARDADO_Y_CONCILIACION_V4P2.md).

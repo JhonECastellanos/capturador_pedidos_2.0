@@ -25,11 +25,13 @@ export class WorkflowsService {
     return pedirControlWorkflow(ruta, metodo, datos, propietario, operador);
   }
   async empresas(usuario: Usuario) {
+    if (!usuario.esSistema) throw new ErrorDominio("WORKFLOWS_OPERADOR", "Los workflows pertenecen al panel de mando de ABINOVA", 403);
     const lista = await this.pedir("/empresas") as Array<{ id: string; nombre: string }>;
     const permitidas = usuario.esSistema ? lista : lista.filter(e => e.id === (process.env.WORKFLOW_TENANT_ID ?? "principal"));
     return permitidas.map(e => ({ ...e, propia: e.id === (process.env.WORKFLOW_TENANT_ID ?? "principal") }));
   }
   async empresa(usuario: Usuario, id: string, ruta: string, metodo = "GET", datos?: unknown) {
+    if (!usuario.esSistema) throw new ErrorDominio("WORKFLOWS_OPERADOR", "Los workflows pertenecen al panel de mando de ABINOVA", 403);
     if (!usuario.esSistema && id !== (process.env.WORKFLOW_TENANT_ID ?? "principal")) throw new ErrorDominio("WORKFLOWS_EMPRESA", "No tienes acceso a otra empresa", 403);
     if (!/^[a-zA-Z0-9_-]{1,70}$/.test(id)) throw new ErrorDominio("WORKFLOWS_EMPRESA", "Empresa inválida");
     // La cuenta técnica conserva su administración de esta instalación.

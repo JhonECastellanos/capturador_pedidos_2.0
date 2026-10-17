@@ -15,6 +15,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket
 from pydantic import BaseModel, ConfigDict, Field
 from loguru import logger
 from sesiones_audio import VOCABULARIO_AUDIO
+from cierres_live import recuperar_cierres
 
 logger.remove()  # Pipecat no debe registrar el texto de pedidos ni audio privado.
 logging.getLogger("uvicorn.error").addFilter(lambda registro: "ticket=" not in registro.getMessage())
@@ -22,6 +23,7 @@ logging.getLogger("uvicorn.error").addFilter(lambda registro: "ticket=" not in r
 
 @asynccontextmanager
 async def ciclo_vida(_app):
+    recuperacion_cierres = None
     # Instalar el motor no instala modelos; serve nunca ejecuta ollama pull.
     proceso = await asyncio.create_subprocess_exec("ollama", "serve", stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL) if shutil.which("ollama") else None
     try:
@@ -32,8 +34,12 @@ async def ciclo_vida(_app):
             if (ruta / "model.bin").is_file():
                 await asyncio.to_thread(precalentar, ruta)
                 break
+        recuperacion_cierres = asyncio.create_task(recuperar_cierres())
         yield
     finally:
+        if recuperacion_cierres:
+            recuperacion_cierres.cancel()
+            await asyncio.gather(recuperacion_cierres, return_exceptions=True)
         if proceso and proceso.returncode is None:
             proceso.terminate()
             try:

@@ -54,7 +54,7 @@ export class WorkflowsController {
     if (!usuario || !usuario.activo || usuario.eliminadoEn) throw new ErrorDominio("WORKFLOW_USUARIO", "El usuario ya no está activo", 403);
     if (d.recurso === "sql") {
       if (!usuario.esSistema && (usuario.rol !== RolUsuario.ADMINISTRADOR || usuario.permisosDenegados.length > 0)) throw new ErrorDominio("WORKFLOW_SQL", "Esta fuente requiere acceso completo del administrador o maestro", 403);
-      await this.licencias.exigirVigente(usuario, ["workflows"]);
+      await this.licencias.exigirVigente(usuario, ["agentes"]);
       return { data: { permitido: true } };
     }
     if (usuario.rol === RolUsuario.INVENTARIO) return { data: [] };
