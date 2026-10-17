@@ -14,6 +14,7 @@ import { TarjetaProducto } from "../../../components/TarjetaProducto";
 import { TiraToast } from "../../../components/TiraToast";
 import { useAviso } from "../../../components/useAviso";
 import { useAuth } from "../../../context/auth";
+import { useAccesoComercial } from "../../../context/acceso-comercial-context";
 import { useOperaciones } from "../../../context/operaciones";
 import { categorias } from "../../../data/semilla";
 import { construirPago } from "../../../dominio/servicios";
@@ -53,6 +54,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
   const navegar = useNavigate();
   const ubicacion = useLocation();
   const { usuario } = useAuth();
+  const { tieneModulo } = useAccesoComercial();
   const { clientes, inventario, clienteActivo, seleccionarClienteActivo, obtenerCliente, registrarPedido } = useOperaciones();
   const { aviso, mostrarAviso, cerrarAviso } = useAviso();
 
@@ -391,7 +393,7 @@ export function FlujoVenta({ rutaInicio, rutaNuevoCliente, rutaCompletado, titul
             </section>
             <section className="mt-4">
               <p className="mb-2.5 text-[12px] font-semibold uppercase tracking-wide text-ink-soft">Forma de pago</p>
-              <SelectorPago metodo={metodo} onChange={setMetodo} permitirCredito={!ocasional} />
+              <SelectorPago metodo={metodo} onChange={setMetodo} permitirCredito={!ocasional && tieneModulo("creditos")} />
               {metodo === "credito" && !ocasional && (
                 <div className="mt-3 rounded-xl border border-danger/20 bg-danger-soft p-3">
                   <p className="text-[13px] font-semibold text-danger">Saldo pendiente: {formatoMoneda(total)}</p>

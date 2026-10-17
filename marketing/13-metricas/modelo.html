@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Modelo de métricas · ABINOVA</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#17283a;background:#f2f5f8;color-scheme:light}*{box-sizing:border-box}body{margin:0}main{max-width:1120px;margin:0 auto;padding:36px 22px 60px}a{color:#124e94}h1{font-size:clamp(1.8rem,5vw,2.8rem);margin:14px 0}h2{font-size:1.2rem}p{line-height:1.6}.tag{display:inline-block;padding:7px 12px;background:#ffe3bc;border:1px solid #c17a16;border-radius:20px;font-weight:700}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.panel{background:white;border:1px solid #c9d3dc;border-radius:16px;padding:22px}.fields{display:grid;grid-template-columns:1fr 1fr;gap:16px}label{display:flex;flex-direction:column;gap:7px;font-weight:650}label small{font-weight:400;line-height:1.4;color:#425365}input,select,button{font:inherit;min-height:46px;border:1px solid #728497;border-radius:8px;padding:10px;max-width:100%;width:100%}input:focus,select:focus,button:focus{outline:3px solid #ffb85c;outline-offset:2px}button{cursor:pointer;font-weight:700;background:#173b5c;color:white;border-color:#173b5c;width:auto}button.secondary{background:white;color:#173b5c}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}.card{padding:18px;background:#f2f6fa;border:1px solid #d2dee8;border-radius:12px}.card strong{display:block;font-size:1.7rem;margin:9px 0;color:#113e66}.formula{font-size:.86rem;line-height:1.5;color:#425365}.notice{padding:15px;border-left:4px solid #bb740a;background:#fff5e5;margin:18px 0}#errores{color:#9c2020;font-weight:650;line-height:1.6}table{border-collapse:collapse;width:100%;margin-top:12px}th,td{text-align:left;vertical-align:top;padding:12px;border-bottom:1px solid #d0d9e2;font-size:.93rem}th{color:#244561}footer{font-size:.9rem;color:#425365;margin-top:28px}.full{grid-column:1/-1}.muted{color:#425365}#avisoEstado{font-weight:650} @media(max-width:760px){.grid{grid-template-columns:1fr}main{padding:24px 14px 40px}.fields{grid-template-columns:1fr}.panel{padding:18px}.card{padding:14px}.card strong{font-size:1.4rem}}
+</style>
+<main>
+<span class="tag">SIMULACIÓN EDITABLE · SIN CAMPAÑA ACTIVA</span>
+<h1>De los datos a la decisión</h1>
+<p>Explora CPM, frecuencia, CTR y CAC de una misma red y ventana. Los valores iniciales son un ejemplo inventado para comprobar fórmulas: <strong>no son resultados de ABINOVA, metas ni referencias del mercado.</strong></p>
+<div class="grid">
+<section class="panel" aria-labelledby="entradas"><h2 id="entradas">Entradas y supuestos</h2>
+<div class="fields">
+<label class="full">Tipo de datos<select id="tipo"><option value="simulados">Simulados · ejemplo didáctico</option><option value="manuales">Manuales · requieren fuente y conciliación</option></select></label>
+<label class="full">Red / pieza / ventana<input id="ventana" value="Ejemplo: una red, una pieza, 30 días" maxlength="180"><small>No mezclar alcance de redes o períodos diferentes.</small></label>
+<label class="full">Fuente o supuesto<input id="fuente" value="Supuesto didáctico; sin campaña ni clientes reales" maxlength="240"></label>
+<label>Gasto de medios (COP)<input id="gasto_medios" type="number" min="0" step="any"><small>Solo inversión de medios de la ventana.</small></label>
+<label>Otros costos de adquisición (COP)<input id="otros_costos" type="number" min="0" step="any"><small>Producción y gestión atribuibles; registrar criterio.</small></label>
+<label>Impresiones<input id="impresiones" type="number" min="0" step="1"><small>Exposiciones, incluidas repeticiones.</small></label>
+<label>Alcance<input id="alcance" type="number" min="0" step="1"><small>Personas o cuentas únicas de esa red/ventana.</small></label>
+<label>Clics de enlace<input id="clics_enlace" type="number" min="0" step="1"><small>Clics de enlace, no todas las interacciones.</small></label>
+<label>Clientes nuevos atribuibles<input id="clientes_nuevos" type="number" min="0" step="1"><small>Clientes deduplicados; no leads ni conversaciones.</small></label>
+</div>
+<div class="actions"><button type="button" id="ejemplo">Restablecer simulación</button><button type="button" class="secondary" id="exportar">Exportar CSV</button></div>
+<p id="errores" role="alert"></p>
+</section>
+<section class="panel" aria-labelledby="salidas"><h2 id="salidas">Cálculos del escenario</h2><p id="avisoEstado">Datos simulados</p>
+<div class="cards" aria-live="polite">
+<div class="card">CPM<strong id="cpm">—</strong><span class="formula">Gasto de medios / impresiones × 1.000</span></div>
+<div class="card">Frecuencia<strong id="frecuencia">—</strong><span class="formula">Impresiones / alcance</span></div>
+<div class="card">CTR de enlace<strong id="ctr">—</strong><span class="formula">Clics de enlace / impresiones × 100</span></div>
+<div class="card">CAC atribuible<strong id="cac">—</strong><span class="formula">(Medios + otros costos) / clientes nuevos atribuibles</span></div>
+</div>
+<p>Costos incluidos en CAC: <strong id="costo_total">—</strong></p>
+<div class="notice">Sin denominador válido se muestra «No calculable». Un cero de clientes no significa CAC cero. No interpretar un costo sin inversión registrada como adquisición gratis.</div>
+<p class="muted">Los clics pueden incluir repeticiones y los clientes pueden llegar por otras vías; este modelo no fuerza una relación uno a uno. Documenta la atribución y la ventana. No suma alcance entre redes ni calcula promedios simples de porcentajes.</p>
+</section>
+<section class="panel full"><h2>Qué revisar antes de decidir</h2>
+<table><thead><tr><th>Métrica</th><th>Pregunta útil</th></tr></thead><tbody>
+<tr><td>CPM</td><td>¿Estoy comparando el mismo objetivo y una audiencia comparable? Una diferencia de costo no prueba calidad del contenido.</td></tr>
+<tr><td>Frecuencia</td><td>¿Aumentan las repeticiones y cae la respuesta? Revisar contexto y fatiga; no existe un umbral universal fijado aquí.</td></tr>
+<tr><td>CTR</td><td>¿El hook y la promesa invitan a un clic pertinente? Revisar también calidad de conversaciones y encaje.</td></tr>
+<tr><td>CAC</td><td>¿Incluí costos y dedupliqué clientes con una regla de atribución? Sin clientes o sin atribución documentada, no afirmar adquisición rentable.</td></tr>
+</tbody></table>
+<p>Para A/B: comparar piezas del mismo concepto, público, objetivo, ventana y condiciones; dos publicaciones orgánicas no constituyen un ensayo aleatorio. Registrar diferencias de contexto y tamaño de muestra antes de sacar conclusiones.</p>
+</section>
+</div>
+<footer>Funciona localmente sin dependencias, servicios ni envío de información. Los datos quedan en memoria y se pierden al cerrar; exporta CSV si deseas conservarlos. <a href="README.md">Definiciones y límites</a> · <a href="calendario-30-dias.md">Calendario propuesto</a></footer>
+</main>
+<script src="calculos.js"></script>
+<script>
+'use strict';
+const api=MetricasMarketing,el=id=>document.getElementById(id);
+const num=new Intl.NumberFormat('es-CO',{maximumFractionDigits:2});
+const pesos=new Intl.NumberFormat('es-CO',{style:'currency',currency:'COP',maximumFractionDigits:0});
+function leer(){return Object.fromEntries(api.campos.map(k=>[k,el(k).value]));}
+function actualizar(){const r=api.calcular(leer());el('errores').textContent=r.errores.join(' ');el('exportar').disabled=r.errores.length>0;el('avisoEstado').textContent=el('tipo').value==='simulados'?'DATOS SIMULADOS · sin resultados observados':'DATOS MANUALES · fuente y atribución pendientes de verificación';for(const k of ['cpm','frecuencia','ctr','cac','costo_total']){const v=r.metricas?.[k];el(k).textContent=v===null||v===undefined?'No calculable':['cpm','cac','costo_total'].includes(k)?pesos.format(v):num.format(v)+(k==='ctr'?' %':k==='frecuencia'?' veces':'');}return r;}
+function restaurar(){for(const k of api.campos)el(k).value=api.ejemplo[k];el('tipo').value='simulados';el('fuente').value='Supuesto didáctico; sin campaña ni clientes reales';el('ventana').value='Ejemplo: una red, una pieza, 30 días';actualizar();}
+for(const k of [...api.campos,'tipo','ventana','fuente'])el(k).addEventListener('input',actualizar);
+el('ejemplo').addEventListener('click',restaurar);
+el('exportar').addEventListener('click',()=>{const r=actualizar();if(r.errores.length)return;const cell=v=>'"'+String(v??'No calculable').replaceAll('"','""')+'"';const rows=[['tipo',el('tipo').value],['ventana',el('ventana').value],['fuente',el('fuente').value],['naturaleza','Escenario manual no verificado; ejemplo inicial simulado'],...Object.entries(r.datos),...Object.entries(r.metricas)];const csv='\uFEFF'+[['campo','valor'],...rows].map(row=>row.map(cell).join(',')).join('\r\n');const u=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));const a=document.createElement('a');a.href=u;a.download='escenario-marketing.csv';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000);});
+restaurar();
+</script>
+</html>

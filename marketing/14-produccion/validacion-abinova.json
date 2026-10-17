@@ -1,0 +1,56 @@
+{
+  "fecha": "2026-10-16T18:37:20.157Z",
+  "base": "http://127.0.0.1:8791/",
+  "navegador": "Chrome real; reconocimiento de voz simulado",
+  "resultados": [
+    {
+      "ancho": 320,
+      "planes": 4,
+      "resumenes": 8,
+      "microfono": "simulado: toque, silencio y apagado",
+      "errores": 0
+    },
+    {
+      "ancho": 360,
+      "planes": 4,
+      "resumenes": 8,
+      "microfono": "simulado: toque, silencio y apagado",
+      "errores": 0
+    },
+    {
+      "ancho": 390,
+      "planes": 4,
+      "resumenes": 8,
+      "microfono": "simulado: toque, silencio y apagado",
+      "errores": 0
+    },
+    {
+      "ancho": 412,
+      "planes": 4,
+      "resumenes": 8,
+      "microfono": "simulado: toque, silencio y apagado",
+      "errores": 0
+    },
+    {
+      "ancho": 768,
+      "planes": 4,
+      "resumenes": 8,
+      "microfono": "simulado: toque, silencio y apagado",
+      "errores": 0
+    },
+    {
+      "ancho": 1024,
+      "planes": 4,
+      "resumenes": 8,
+      "microfono": "simulado: toque, silencio y apagado",
+      "errores": 0
+    },
+    {
+      "ancho": 1440,
+      "planes": 4,
+      "resumenes": 8,
+      "microfono": "simulado: toque, silencio y apagado",
+      "errores": 0
+    }
+  ]
+}

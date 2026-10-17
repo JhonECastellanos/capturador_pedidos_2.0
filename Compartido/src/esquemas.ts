@@ -92,6 +92,7 @@ export const FiltroAuditoriaEsquema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(200).default(50),
   entidad: texto.optional(),
+  pruebas: z.enum(["todas", "si", "no"]).default("todas"),
 });
 
 // ─── Clientes ─────────────────────────────────────────────────────

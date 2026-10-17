@@ -161,7 +161,7 @@ LEFT JOIN ledger m ON m."productoId" = l."productoId";
 -- Esperado: diferencia cero en todas las líneas.
 ```
 
-Los textos con placeholders son para sustituirlos localmente; no publicar tokens, cuentas reales ni resultados privados. En Windows los scripts de validación usan `docker.exe compose ... exec -T postgres psql` sobre **ambie_test**, nunca sobre el negocio por defecto.
+Los textos con placeholders son para sustituirlos localmente; no publicar tokens, cuentas reales ni resultados privados. En Windows los scripts de validación usan `docker.exe compose ... exec -T postgres psql` sobre **abinova_test**, nunca sobre el negocio por defecto.
 
 ## Confirmación inmediata y actualización visual
 
@@ -271,7 +271,7 @@ Get-Content -Raw -Encoding UTF8 docs/ejemplos/validar-inventario-compras-gastos.
   docker.exe compose exec -T postgres psql -U $usuarioBd -d $nombreBd -v desde=2026-10-01 -v hasta=2026-10-31
 ```
 
-En QA agrega -p ambie-integracion y los archivos Compose de pruebas a todos los comandos Docker; el nombre de su base es ambie_test. Nunca restaures ni borres una base para consultar. En un cliente SQL reemplaza :'desde' y :'hasta' por fechas entre comillas y omite las instrucciones que empiezan con barra invertida, propias de psql.
+En QA agrega -p abinova-integracion y los archivos Compose de pruebas a todos los comandos Docker; el nombre de su base es abinova_test. Nunca restaures ni borres una base para consultar. En un cliente SQL reemplaza :'desde' y :'hasta' por fechas entre comillas y omite las instrucciones que empiezan con barra invertida, propias de psql.
 
 Las tablas necesarias ya existen: productos/categorias como maestros; movimientosInventario como libro de cambios; conteosInventario/conteoLineas para conteos diarios y generales; ajustesInventario/ajusteLineas para su aplicación o correcciones manuales; proveedores/recepcionesCompra/recepcionLineas para compras; gastos y movimientosCaja para desembolsos. La migración de valoración agrega únicamente dos columnas de costo y los índices/triggers requeridos. No crea tablas de resumen ni otra copia del inventario.
 

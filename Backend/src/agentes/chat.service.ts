@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Usuario } from "@prisma/client";
-import { InstruccionAgente, type RevisionAgente } from "@synchronic-jo/contrato";
+import { InstruccionAgente, type RevisionAgente } from "@abinova/contrato";
 import { AgentesService } from "./agentes.service";
 import { ProductosService } from "../productos/productos.service";
 import { PedidosService } from "../pedidos/pedidos.service";

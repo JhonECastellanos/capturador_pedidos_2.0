@@ -15,7 +15,7 @@ function usuarioDesdeRol(rol: RolUsuario): UsuarioSistema {
   return {
     id: `usuario-${rol}`,
     nombre: rol === "administrador" ? "Perfil administrador" : "Perfil vendedor",
-    email: rol === "administrador" ? "admin@ambie.local" : "vendedor@ambie.local",
+    email: rol === "administrador" ? "admin@abinova.local" : "vendedor@abinova.local",
     password: rol === "administrador" ? "admin123" : "vendedor123",
     rol,
     permisos: PERMISOS_POR_ROL[rol],
@@ -36,7 +36,7 @@ function coincideUsuario(u: UsuarioSistema, idOrEmail: string): boolean {
   // 1. Email exacto
   if (u.email && u.email.toLowerCase() === q) return true;
 
-  // 2. Prefijo de email antes del @ (ej: "admin" para "admin@ambie.local")
+  // 2. Prefijo de email antes del @ (ej: "admin" para "admin@abinova.local")
   const prefijoEmail = u.email ? u.email.split("@")[0].toLowerCase() : "";
   if (prefijoEmail && prefijoEmail === q) return true;
 
@@ -64,10 +64,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!usaApi) return;
     let vigente = true;
     const expirar = () => { limpiarConsultas(); setUsuario(null); };
-    window.addEventListener("synchronic:sesion-expirada", expirar);
+    window.addEventListener("abinova:sesion-expirada", expirar);
     void api<UsuarioSistema | null>("/auth/me").then((u) => { if (vigente) setUsuario(u); })
       .catch(() => {}).finally(() => { if (vigente) setCargando(false); });
-    return () => { vigente = false; window.removeEventListener("synchronic:sesion-expirada", expirar); };
+    return () => { vigente = false; window.removeEventListener("abinova:sesion-expirada", expirar); };
   }, []);
 
   function iniciarSesion(rol: RolUsuario) {

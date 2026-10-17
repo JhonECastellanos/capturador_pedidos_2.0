@@ -1,0 +1,3019 @@
+{
+  "alcance": "Reorganización local; sin regenerar imágenes",
+  "textos": [
+    {
+      "origen": "01-tendero-independiente/facebook/01-tendero-independiente-a1.md",
+      "destino": "01-tendero-independiente/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "e1e492874347fc91964b12cce59e3460ad606b4f89c15d9cdd1d57eee9c7e55a",
+      "sha256TextoConsolidado": "4ddb4bfe5db09b9848787844e1dfa505e7e1304def93ad97e8f28f74c7bcfe95"
+    },
+    {
+      "origen": "01-tendero-independiente/facebook/01-tendero-independiente-a1-STORYBOARD.md",
+      "destino": "01-tendero-independiente/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "79e8c3305a9fcdf1b72b443e07b8c76a497be12e13d2335b55f37ed277d5bf11",
+      "sha256TextoConsolidado": "1cb173be4f2609dce2536c1236f971753d8447ba86322f5bf43e1b73f9b8d12e"
+    },
+    {
+      "origen": "01-tendero-independiente/facebook/01-tendero-independiente-a1-PROMPTANIMACION.md",
+      "destino": "01-tendero-independiente/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "910fb69ad154ac9bb195f2092d60372d2a5177b666aeab374bd2b12b6e27cc99",
+      "sha256TextoConsolidado": "94a7c486c8095121880467bc1b5d0b27daf52693f50d19442fc1d7f89f70878d"
+    },
+    {
+      "origen": "01-tendero-independiente/facebook/02-tendero-independiente-a2.md",
+      "destino": "01-tendero-independiente/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "bd10ad1e9f1e519bbb4e4c7818635aa712fc77b327fec5e57bc89af2faf70a2b",
+      "sha256TextoConsolidado": "98913dc02f1d94ee54af1414ec783f4555c335384f994241f0c585edf4161d6c"
+    },
+    {
+      "origen": "01-tendero-independiente/facebook/02-tendero-independiente-a2-STORYBOARD.md",
+      "destino": "01-tendero-independiente/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "a9a05a8ab4567ad19bde68bdc2dc2abaad900daa56b31a4a1cb8b2b608a69a97",
+      "sha256TextoConsolidado": "df93f6920fd06003cc0dc01b156e98d4800d0cab2ae0b0bfbc160704cb963442"
+    },
+    {
+      "origen": "01-tendero-independiente/facebook/02-tendero-independiente-a2-PROMPTANIMACION.md",
+      "destino": "01-tendero-independiente/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "400852f6190f1595a13d59286a46deda430ef77864a99f19015d050d5bd97b63",
+      "sha256TextoConsolidado": "85b3a8f6690e300e47cb988a959b739a81a9502b2792613c50b23a8065b75c25"
+    },
+    {
+      "origen": "01-tendero-independiente/facebook/03-tendero-independiente-a3.md",
+      "destino": "01-tendero-independiente/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "c7cfc6169052d105fd85bfee368b4d85e35b9935135670e8e4c64505612b9068",
+      "sha256TextoConsolidado": "a3087477b23dc47097f95b14d36abc465e0323fafe3dd98f4f8505b030d76410"
+    },
+    {
+      "origen": "01-tendero-independiente/facebook/03-tendero-independiente-a3-STORYBOARD.md",
+      "destino": "01-tendero-independiente/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "903aa51f34e65016fb455d4308e3473e31749f65ca55c17d1bf38ef4785847e2",
+      "sha256TextoConsolidado": "1fcad26adb0e300ef1689e1986d59a31d281d46922b589ac4ce04acbaa7994b8"
+    },
+    {
+      "origen": "01-tendero-independiente/facebook/03-tendero-independiente-a3-PROMPTANIMACION.md",
+      "destino": "01-tendero-independiente/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "2375dc5a549124f944d6b989dedee93f89d07033c19494fe573c8e46fbb712f2",
+      "sha256TextoConsolidado": "ee4b04cef568f4fa44d34759f0d8a08cdf06826622e5c620087c6d35e0a3795b"
+    },
+    {
+      "origen": "01-tendero-independiente/instagram/01-tendero-independiente-a1.md",
+      "destino": "01-tendero-independiente/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "59f9dd80b81e45d2de258910e981e573f5848614da7278eddced4f103008ec8a",
+      "sha256TextoConsolidado": "82ebf7fe75a02237433ee9bc9a04b48809056cb4a07cd8ad53fa75c3ba19db1f"
+    },
+    {
+      "origen": "01-tendero-independiente/instagram/01-tendero-independiente-a1-STORYBOARD.md",
+      "destino": "01-tendero-independiente/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "cd5a6c6a178c75a495ef1a45bd55471a093397e112f7514b06c1bf84688d4ce9",
+      "sha256TextoConsolidado": "e683be7e3e2e0264481220249ab05dd364df463310a3e754a440c71c32d06bf6"
+    },
+    {
+      "origen": "01-tendero-independiente/instagram/01-tendero-independiente-a1-PROMPTANIMACION.md",
+      "destino": "01-tendero-independiente/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "b9f5b41edba0be823c07d448af66a3b6c1c647d8145256ef4bda500bc016a614",
+      "sha256TextoConsolidado": "676c928c8e686b43fa31dd6652ef9a443a2510b98acede4c7d9b2a00813e8d56"
+    },
+    {
+      "origen": "01-tendero-independiente/instagram/02-tendero-independiente-a2.md",
+      "destino": "01-tendero-independiente/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "6095f742b9c345235167ae98fdfee9c1691e6a891117e08ebc15bf05a2d66097",
+      "sha256TextoConsolidado": "fd7098400b441c8cab66a54bdd75aecd70a9bfe33927c37b839e8dbaf81c2bb1"
+    },
+    {
+      "origen": "01-tendero-independiente/instagram/02-tendero-independiente-a2-STORYBOARD.md",
+      "destino": "01-tendero-independiente/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "02cbf34c19520b595d62e5a8c47535d040bf0151c3ccc19e6d9cd017d5947781",
+      "sha256TextoConsolidado": "f618f0f844d48c65a10359e14bcc859afafbb22aa1beb31f1bf66a7f40007412"
+    },
+    {
+      "origen": "01-tendero-independiente/instagram/02-tendero-independiente-a2-PROMPTANIMACION.md",
+      "destino": "01-tendero-independiente/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "976a0eb55c13b4ddd04ad038688c6e4997006fd937b9c4a5767c4dad8e70bca4",
+      "sha256TextoConsolidado": "34ab57fc411ae0463326ce382816e1576e57aeb4e01a636f0b92a2e7015473a0"
+    },
+    {
+      "origen": "01-tendero-independiente/instagram/03-tendero-independiente-a3.md",
+      "destino": "01-tendero-independiente/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "fbc0367fa0826121eccff6a7c3177e20d13507cd3f400a737bdc089f8305cebe",
+      "sha256TextoConsolidado": "a04121a0de88dac727a4e1b1b708bb0b8d320ec0706940054275e26b0c235697"
+    },
+    {
+      "origen": "01-tendero-independiente/instagram/03-tendero-independiente-a3-STORYBOARD.md",
+      "destino": "01-tendero-independiente/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "5552323f219af49397e26c5a0f9d798b3478607d833a999bba0972c5282bc6c2",
+      "sha256TextoConsolidado": "391737a6ae542835daeb1640ecee6359507082b28e51eee5c472b1212ff45909"
+    },
+    {
+      "origen": "01-tendero-independiente/instagram/03-tendero-independiente-a3-PROMPTANIMACION.md",
+      "destino": "01-tendero-independiente/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "caf6ff5ee7293b5ba63269387a65a942b57490ce3ed0b12813591c68893af3d9",
+      "sha256TextoConsolidado": "2edfac7c5748c8b606c45ec7c6733c6a132494d7a8c2c4c1afa891f2eef1d0dd"
+    },
+    {
+      "origen": "01-tendero-independiente/tiktok/01-tendero-independiente-a1.md",
+      "destino": "01-tendero-independiente/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "2e56bada403305796c94b4fe0eac34e882711a213c05eb4135ae489271322247",
+      "sha256TextoConsolidado": "1a75cfe249e3b5c07ed550d953f20cec30ca77993f7ebd77ce06252e36299b75"
+    },
+    {
+      "origen": "01-tendero-independiente/tiktok/01-tendero-independiente-a1-STORYBOARD.md",
+      "destino": "01-tendero-independiente/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "27782b5e52806c0f7d47d6e093a728948765447b3cd9c4f87477db7104d96ff2",
+      "sha256TextoConsolidado": "5a28fe6f24bd4a879ed5b2f83305e9cabf8e434390e093eb6694611a90644c2e"
+    },
+    {
+      "origen": "01-tendero-independiente/tiktok/01-tendero-independiente-a1-PROMPTANIMACION.md",
+      "destino": "01-tendero-independiente/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "f0207d841577c86570c8ef769b3819c5f5edfdf5893b7aaed4d9eaffd20d8dd5",
+      "sha256TextoConsolidado": "c38cd5cf7e112d6f77a70248494c8e02708839b88371177aef09b2d78dd82fbf"
+    },
+    {
+      "origen": "01-tendero-independiente/tiktok/02-tendero-independiente-a2.md",
+      "destino": "01-tendero-independiente/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "942870cdc6dfbb350bd925f871429530ed095665ba16ce4420eeac2e0544ab85",
+      "sha256TextoConsolidado": "092ea5a74ebe4f5fdf2497b1ceb5ebd5e19f1fae3bde769d5b2e6c6bc90950fb"
+    },
+    {
+      "origen": "01-tendero-independiente/tiktok/02-tendero-independiente-a2-STORYBOARD.md",
+      "destino": "01-tendero-independiente/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "ca84a88fc6d6dc90177bb41fc6c1821ca36011430eff4ad4a918b49685d2ab0e",
+      "sha256TextoConsolidado": "d9740d7e6da820fd69525ece4666e1492f965ecc2d45ce81a1c9516ec6185206"
+    },
+    {
+      "origen": "01-tendero-independiente/tiktok/02-tendero-independiente-a2-PROMPTANIMACION.md",
+      "destino": "01-tendero-independiente/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "90abd663c5be6cafb34738a629273a2a1613b538dab9be375bd82a2eedc08e5b",
+      "sha256TextoConsolidado": "30c268a01bf5d552eea83ea9a38cc22fce3e4ec9b70ff0d60726b59bb8189495"
+    },
+    {
+      "origen": "01-tendero-independiente/tiktok/03-tendero-independiente-a3.md",
+      "destino": "01-tendero-independiente/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "d7fa59336e228f506110d6098bf2e822629819a222c49d59bdbcc417bb5158b1",
+      "sha256TextoConsolidado": "daedf99ee456709cc1a1694439192586f74a89ffbf78d9621771aeb333bf8150"
+    },
+    {
+      "origen": "01-tendero-independiente/tiktok/03-tendero-independiente-a3-STORYBOARD.md",
+      "destino": "01-tendero-independiente/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "39b8cdc4ac39a8009e9abc38d9fcd74f9d890ed86e9933fc3a906a44c9d131cd",
+      "sha256TextoConsolidado": "9220510f4c8c17d1f2d0650eb08faac9651b76cdb02d2fb13dd64cf88f540812"
+    },
+    {
+      "origen": "01-tendero-independiente/tiktok/03-tendero-independiente-a3-PROMPTANIMACION.md",
+      "destino": "01-tendero-independiente/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "54dbad28537dcf2d892ae6032aa28a5f9b0ead3fb73913c6a61ca77ce7fea82d",
+      "sha256TextoConsolidado": "7e41ea581f330c06d4032b84575c307c5a11cefb6e322989c431ac2553368803"
+    },
+    {
+      "origen": "02-tienda-crecimiento/facebook/01-tienda-crecimiento-a1.md",
+      "destino": "02-tienda-crecimiento/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "449dffe27701389cd39cb03c2b40fa69f77f4bcb5ac6d638cf9b13bad3bd0513",
+      "sha256TextoConsolidado": "c5fd093037f963ad1b5d84fbbb5f4a73edfc504faeac11b7e24eb94af9ef36ef"
+    },
+    {
+      "origen": "02-tienda-crecimiento/facebook/01-tienda-crecimiento-a1-STORYBOARD.md",
+      "destino": "02-tienda-crecimiento/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "d978e15e733cf13ec0c31307d446fe7de9762f6dcb7eee7caf700179955ce19c",
+      "sha256TextoConsolidado": "04c604c62a6a19d60ff775f7ee9856703d1eda510330927bb17906a3db4ab484"
+    },
+    {
+      "origen": "02-tienda-crecimiento/facebook/01-tienda-crecimiento-a1-PROMPTANIMACION.md",
+      "destino": "02-tienda-crecimiento/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "975297a29eb1e640026dcff0df5fc84b865debe7e77896e966d7375aabf76a88",
+      "sha256TextoConsolidado": "166507921bb9ebbf2bff7348febc1e145ebc9c3c9f1445249ffb64a870c982e6"
+    },
+    {
+      "origen": "02-tienda-crecimiento/facebook/02-tienda-crecimiento-a2.md",
+      "destino": "02-tienda-crecimiento/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "ebe80d2b54483035e9f4b6969716b586105cfdc052d027b374b34141e7cce9c6",
+      "sha256TextoConsolidado": "f807a8aa0ea5e27767e4489ba7d4a6e1c6db2d1dc5a7b484e902d4af049e02d4"
+    },
+    {
+      "origen": "02-tienda-crecimiento/facebook/02-tienda-crecimiento-a2-STORYBOARD.md",
+      "destino": "02-tienda-crecimiento/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "ee9a70880799237c8f7e2e76e218a624c1282f51d2390e240be82b24724e9da5",
+      "sha256TextoConsolidado": "bad1e7d8ee0baef903f1a0e82a7858e48b85a8480c8cff5351b64f4bd7d4b65d"
+    },
+    {
+      "origen": "02-tienda-crecimiento/facebook/02-tienda-crecimiento-a2-PROMPTANIMACION.md",
+      "destino": "02-tienda-crecimiento/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "51e304d91be898777740831802904b2511762c35cbc796c4f99fb9596d53aa07",
+      "sha256TextoConsolidado": "e2f4ad414a375721acb11d62f6eb3e475c1543784d5994a5ed3f4911fabb7e55"
+    },
+    {
+      "origen": "02-tienda-crecimiento/facebook/03-tienda-crecimiento-a3.md",
+      "destino": "02-tienda-crecimiento/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "14041537820ed65360f8a6f4ae54656c32f9faa6b76f747e8c0b620bd37ffb55",
+      "sha256TextoConsolidado": "3b283c5d0a85009d42277a591de1e6c96c90743118119e2024a08821a2079b4f"
+    },
+    {
+      "origen": "02-tienda-crecimiento/facebook/03-tienda-crecimiento-a3-STORYBOARD.md",
+      "destino": "02-tienda-crecimiento/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "d184f1531113a0079bbd80d5494ef1aefdd7b5988aaada3e82d3c0ba48de9fea",
+      "sha256TextoConsolidado": "c4de2a9a3235455b2a0709e0808fd0515e2201e5df51e96c5322cdd2103ea886"
+    },
+    {
+      "origen": "02-tienda-crecimiento/facebook/03-tienda-crecimiento-a3-PROMPTANIMACION.md",
+      "destino": "02-tienda-crecimiento/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "9d3ecddd42945de854e87bbf8695d7f7bff35fbf4fcaf81bcecc93d3491f8c1e",
+      "sha256TextoConsolidado": "2c155352b2648adcf106ea905a511c109133d3239d15d8d8163c1887da57bf46"
+    },
+    {
+      "origen": "02-tienda-crecimiento/instagram/01-tienda-crecimiento-a1.md",
+      "destino": "02-tienda-crecimiento/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "16540b11756d1b1c30d8b84694f07003d6f7c3c4ef088b8669493d514a332008",
+      "sha256TextoConsolidado": "e715a2034cb78a35e6b7ff3c6dc7c7b387fd6a7f2c271b3637f516f9077824b9"
+    },
+    {
+      "origen": "02-tienda-crecimiento/instagram/01-tienda-crecimiento-a1-STORYBOARD.md",
+      "destino": "02-tienda-crecimiento/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "6acbdd7fb6b6abfb6679e57ac64985f3ee1f3fef843d3389ec37efe9afd0da53",
+      "sha256TextoConsolidado": "8b2409a4c78e4498584bb0f06348e05ed6eb70b2647574db57d8bd773b56a93b"
+    },
+    {
+      "origen": "02-tienda-crecimiento/instagram/01-tienda-crecimiento-a1-PROMPTANIMACION.md",
+      "destino": "02-tienda-crecimiento/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "d7504cb2e4f6f457e94f332bce37566244ccb19ceccf26a24737488e89a633a3",
+      "sha256TextoConsolidado": "0cad742f49852ed04d2546cb4ac20bd2218bb88db688d9f18ce6cac685fe8b84"
+    },
+    {
+      "origen": "02-tienda-crecimiento/instagram/02-tienda-crecimiento-a2.md",
+      "destino": "02-tienda-crecimiento/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "58994044374e5fae19dc4ab36e29cf42cd4ae7a0769b657eb377ce65dbb3ea76",
+      "sha256TextoConsolidado": "f21bc344f356aaf4db3507fd38e2a9761570910a94f93fa609bc60827ca1ae8f"
+    },
+    {
+      "origen": "02-tienda-crecimiento/instagram/02-tienda-crecimiento-a2-STORYBOARD.md",
+      "destino": "02-tienda-crecimiento/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "4e306fa13b6c5ee4d0d651574249e70d1bfa2b1f627193208c5d744b09348a27",
+      "sha256TextoConsolidado": "93190c6e5b158737f6afe8256c4236fec4c8ff7020c3cb32c6ecda0957898ec2"
+    },
+    {
+      "origen": "02-tienda-crecimiento/instagram/02-tienda-crecimiento-a2-PROMPTANIMACION.md",
+      "destino": "02-tienda-crecimiento/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "058259d01eee53fa0871ab70812e129285cc188e327bd73d7d3a74c1c9a13136",
+      "sha256TextoConsolidado": "7c67aecb93bb36dd9272762778e8912bde46562761d88bc22ddc7371810b82d0"
+    },
+    {
+      "origen": "02-tienda-crecimiento/instagram/03-tienda-crecimiento-a3.md",
+      "destino": "02-tienda-crecimiento/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "ec66d5e33914db78b4e9aefce5772d0cfaff32a0781c99143efce1674d8bbd70",
+      "sha256TextoConsolidado": "c2fb0c59ed4b5ec0cbd1ff0cb8cce3af6be604a646cb11fb2849126efed8dea9"
+    },
+    {
+      "origen": "02-tienda-crecimiento/instagram/03-tienda-crecimiento-a3-STORYBOARD.md",
+      "destino": "02-tienda-crecimiento/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "116b66143f1c277f3a2fa6ce3a6a541665f0e3c594ffd68752fce0679d53cdfd",
+      "sha256TextoConsolidado": "fa8b4c3de0b793e05c8b48fabe53be17c4f2de6421858a536129d0ff0c5683f7"
+    },
+    {
+      "origen": "02-tienda-crecimiento/instagram/03-tienda-crecimiento-a3-PROMPTANIMACION.md",
+      "destino": "02-tienda-crecimiento/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "da8549445f516901efa3709cd5a5819d36d2e6c7d0e54e261aa05de5eeb12642",
+      "sha256TextoConsolidado": "b7ae7206b11dd25acf5907c364f3729e811d8a8da78df572ab9ec1c4d90f0de9"
+    },
+    {
+      "origen": "02-tienda-crecimiento/tiktok/01-tienda-crecimiento-a1.md",
+      "destino": "02-tienda-crecimiento/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "cb2ebd6d5d6c4ec64b5e452da356c92df441e529a24d18fafd30ff48e9d87477",
+      "sha256TextoConsolidado": "5b2f5870bcac68e8f56736092d55fd9b5c3b7f813d530bf4cd51971c454a4280"
+    },
+    {
+      "origen": "02-tienda-crecimiento/tiktok/01-tienda-crecimiento-a1-STORYBOARD.md",
+      "destino": "02-tienda-crecimiento/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "1c0b5952adab0cb2cdaaf54df9e5e4e770ab9f6ea0e383d652e12d6a2e240466",
+      "sha256TextoConsolidado": "4953da7e5cfa8a251ec057befbb377a5d7d89980bb2dc5fcdf9baa8569f51a14"
+    },
+    {
+      "origen": "02-tienda-crecimiento/tiktok/01-tienda-crecimiento-a1-PROMPTANIMACION.md",
+      "destino": "02-tienda-crecimiento/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "f2b53e1eb9e7d48e57d67d5afda1104e7f9b4f2b5cb32bc99c8f276372ebd44c",
+      "sha256TextoConsolidado": "1ee8848d29e4d16b6fa2574dd2a3e8f6fcc08ec968942ecb348841c50b3d94c5"
+    },
+    {
+      "origen": "02-tienda-crecimiento/tiktok/02-tienda-crecimiento-a2.md",
+      "destino": "02-tienda-crecimiento/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "b32af91838a9e0f14850d7aebe27f15b477ce95e2f698a0159f391fd9b63be1b",
+      "sha256TextoConsolidado": "9ffc0f7870765e7559af5ecef4f1b2fc20f2b40ca9f507af22cc83bdb829b152"
+    },
+    {
+      "origen": "02-tienda-crecimiento/tiktok/02-tienda-crecimiento-a2-STORYBOARD.md",
+      "destino": "02-tienda-crecimiento/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "3385207cbc953b7996c75d09f35bd03cd511a281641495b3460e6f5189b33731",
+      "sha256TextoConsolidado": "f2f8b852870e2f90787429639781aba8fe5bbb4937da37a95c678c019d810a68"
+    },
+    {
+      "origen": "02-tienda-crecimiento/tiktok/02-tienda-crecimiento-a2-PROMPTANIMACION.md",
+      "destino": "02-tienda-crecimiento/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "9adb5568aca34bfddaae7070ff0d37102ba88d6e3095450d47b626fb58e43de8",
+      "sha256TextoConsolidado": "6f3e199acbad5cf0064ec7c9df41b28eb304ee32d7b7d6db534c7633e89354ec"
+    },
+    {
+      "origen": "02-tienda-crecimiento/tiktok/03-tienda-crecimiento-a3.md",
+      "destino": "02-tienda-crecimiento/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "8bf3b584f21b7006e083f70111c6f780d03af96d0829accb34e838c15317d79a",
+      "sha256TextoConsolidado": "5ef9226311aedc24558776f476477565755b42f92b20e48f636da622fd49340d"
+    },
+    {
+      "origen": "02-tienda-crecimiento/tiktok/03-tienda-crecimiento-a3-STORYBOARD.md",
+      "destino": "02-tienda-crecimiento/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "aeaef09dd0d0d95e0e48a38a3784cd8360fc766334e5c290fdb8c591658b5092",
+      "sha256TextoConsolidado": "a4323a20ce36452c5b0e42f10ac1189a8b55750b94256de22f4956058c862c6d"
+    },
+    {
+      "origen": "02-tienda-crecimiento/tiktok/03-tienda-crecimiento-a3-PROMPTANIMACION.md",
+      "destino": "02-tienda-crecimiento/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "ed590ba6a54900c165a5a2ccc96c2e401354ab92c0827d764b3abb919dc79b1f",
+      "sha256TextoConsolidado": "4ce7d89a7300d1c09220b21abefa12dbd513576fc14d9a56b7d63f1954387698"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/facebook/01-cafeteria-comidas-rapidas-a1.md",
+      "destino": "03-cafeteria-comidas-rapidas/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "7357e0ab4afd8b51232371dbe77707b337b09026befce5c1ea2d46bceda16dd0",
+      "sha256TextoConsolidado": "d1de271f37140953f8d73eaa95353213b711fcab1a75a3df73f2a63f9c5d808e"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/facebook/01-cafeteria-comidas-rapidas-a1-STORYBOARD.md",
+      "destino": "03-cafeteria-comidas-rapidas/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "f63f82b2f6f60585407925ebab0e39cb00457ceee70c8904604fe6b5ed37e842",
+      "sha256TextoConsolidado": "08c4a03afe8562072099a191386f3f6eac636dff32d8abc0e14886ead7b89947"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/facebook/01-cafeteria-comidas-rapidas-a1-PROMPTANIMACION.md",
+      "destino": "03-cafeteria-comidas-rapidas/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "b43c31d71680139880b452d90afc28eac4cb7a5ead0c64d9bc1bc031bda95fdf",
+      "sha256TextoConsolidado": "92ef0eca53463c043a33b52e0045ec06ba6df5a9a8d8774dbae1799262f9f730"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/facebook/02-cafeteria-comidas-rapidas-a2.md",
+      "destino": "03-cafeteria-comidas-rapidas/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "cb5be62dc1d906d5f5687bcb06efe220560f1815555dafaa5a708bef125dc54c",
+      "sha256TextoConsolidado": "e5bae7277e886c374cd9f6d2788cf267601581ee2692a4c5a4aa05e785a55e35"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/facebook/02-cafeteria-comidas-rapidas-a2-STORYBOARD.md",
+      "destino": "03-cafeteria-comidas-rapidas/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "ad153105f6eb7d5b2a65d82de33cebc4e913bac3761d907ba8f3c6ac70a5fb0c",
+      "sha256TextoConsolidado": "d6e0d5b67dfe8f921586d2f0d55f7e688f3038e98bccd5a1009b21638f99a3ef"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/facebook/02-cafeteria-comidas-rapidas-a2-PROMPTANIMACION.md",
+      "destino": "03-cafeteria-comidas-rapidas/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "33441e08ed34cd8748577481c96cc56364f114e8a25a325f35e02f457ae42ebc",
+      "sha256TextoConsolidado": "75a331b13d54f3a37b39675487dbe3493c7a70c0e99c5395d1ef49b6433f985d"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/facebook/03-cafeteria-comidas-rapidas-a3.md",
+      "destino": "03-cafeteria-comidas-rapidas/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "5ae131b420361baff090d39685aaf57bde56e1f21931eb4dda7119c2da0b2396",
+      "sha256TextoConsolidado": "d3a2925b66286162da1f9908e2c78ceee0b810049a9ce698beba58274427fb47"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/facebook/03-cafeteria-comidas-rapidas-a3-STORYBOARD.md",
+      "destino": "03-cafeteria-comidas-rapidas/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "84d232c0736fbac6e7663c96f0918b771ca92037a85f396008f1d2a809aed2f1",
+      "sha256TextoConsolidado": "16a18c7e7772ad9b6bd2f9ccfab88fb4266479ecd0fcfb23212c19e0b87ea731"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/facebook/03-cafeteria-comidas-rapidas-a3-PROMPTANIMACION.md",
+      "destino": "03-cafeteria-comidas-rapidas/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "478429f7b448ada324f78451abc69ad30bfc51ad79864228fc1ac31ba391ded5",
+      "sha256TextoConsolidado": "1f67d01078f0a4b9b7dd5563c60a34722e4890481dbb6f2582866435883214f0"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/instagram/01-cafeteria-comidas-rapidas-a1.md",
+      "destino": "03-cafeteria-comidas-rapidas/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "18ee7d318afaee68597a0a52b6e97a5259c9d5ca2bb6fafcfe6bf080f928e14e",
+      "sha256TextoConsolidado": "620e7146064807bd82709c5b83b0995c23473a9be711ab7d985701239a770553"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/instagram/01-cafeteria-comidas-rapidas-a1-STORYBOARD.md",
+      "destino": "03-cafeteria-comidas-rapidas/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "378f284c46e7770c5df09fb126b20981484003e55cd42f59dcc2c719e35f5b5a",
+      "sha256TextoConsolidado": "268abf7c4a324cadd7e9f2662f1d977d1c84312d4538f2672c533dbec9024ade"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/instagram/01-cafeteria-comidas-rapidas-a1-PROMPTANIMACION.md",
+      "destino": "03-cafeteria-comidas-rapidas/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "e6f70870a88d91f152750d7264577fceddfcc538c66deb2264eaeea1cdd8dfa6",
+      "sha256TextoConsolidado": "abb270126487011fadd65b5b2e7cd42614aefdf5564b771d14b10f23e5346d81"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/instagram/02-cafeteria-comidas-rapidas-a2.md",
+      "destino": "03-cafeteria-comidas-rapidas/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "bb7f04b8eaf1c6b0d44871688af7462e1bfb4572c31cd4a1f54f67217edd3b7e",
+      "sha256TextoConsolidado": "d452470431a09182e8e648f6084e2a38568ef2a492c81406898c4c7382c3e2c5"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/instagram/02-cafeteria-comidas-rapidas-a2-STORYBOARD.md",
+      "destino": "03-cafeteria-comidas-rapidas/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "164d2674a4ec52d98b2904b36bb1fad1add38a7ea314c2eed8d75251c539418d",
+      "sha256TextoConsolidado": "010fad748fe4b10f1387fd8fb33e359e2675eb5bedaf6174cc8a33cf880ba463"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/instagram/02-cafeteria-comidas-rapidas-a2-PROMPTANIMACION.md",
+      "destino": "03-cafeteria-comidas-rapidas/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "c6fa076e039e272888220b7b86f10de573c86e2eeb7001d2612fe7a6fc09030a",
+      "sha256TextoConsolidado": "315877b2f62fe73e20a5b9d44938bf831267f6f104cf5c0498646c0f69b22d31"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/instagram/03-cafeteria-comidas-rapidas-a3.md",
+      "destino": "03-cafeteria-comidas-rapidas/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "17f1b48adb5048f214f8534a695d19e21ad9eed5e8dbe731023bb950636c205a",
+      "sha256TextoConsolidado": "99f5c65205a9eae6423cd999e9143f855f0628677d4e653eb4dac51fc191d023"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/instagram/03-cafeteria-comidas-rapidas-a3-STORYBOARD.md",
+      "destino": "03-cafeteria-comidas-rapidas/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "da1c535243cd12cb28b76cabc388549a7f1ba0d7322f72fb42a4cd55fb07f757",
+      "sha256TextoConsolidado": "7638ebb6f8a34fcdd5b3883288bef692bae5f27e8e276fe46d4d75052d74fad8"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/instagram/03-cafeteria-comidas-rapidas-a3-PROMPTANIMACION.md",
+      "destino": "03-cafeteria-comidas-rapidas/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "c357e266490a3eccdcd6baf4d5d2274b4a6cf1565927634de0e3140662bcb96f",
+      "sha256TextoConsolidado": "8e3553ee62c4f70b3d6f6e6fae90961a2fb148c9f70641fc18a158708b139458"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/tiktok/01-cafeteria-comidas-rapidas-a1.md",
+      "destino": "03-cafeteria-comidas-rapidas/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "8c9b6df0fd88e64eb12f5899c83c21a9e0b3ce214ae228fe198359b6e327ff2f",
+      "sha256TextoConsolidado": "199e1437196e0b8190bfdcbfd52f5c33733c2742f116a5c81c44194b2199b0a5"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/tiktok/01-cafeteria-comidas-rapidas-a1-STORYBOARD.md",
+      "destino": "03-cafeteria-comidas-rapidas/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "2f9256bff756a778e011c5558a98cd2786e18e330ca21a9a663af73c847669f3",
+      "sha256TextoConsolidado": "f1f091210c3dadb9a6585566339ef69839cec8c480051861d290359540a4cbb6"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/tiktok/01-cafeteria-comidas-rapidas-a1-PROMPTANIMACION.md",
+      "destino": "03-cafeteria-comidas-rapidas/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "8792de5a89c86b22e8550f978703aa7e586f76b8b85a659ae3bc70c0ffe7578e",
+      "sha256TextoConsolidado": "2293af8b2845f0bca2fffc9ba2311a940b9a543fd1f8e78e25248eca65e74251"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/tiktok/02-cafeteria-comidas-rapidas-a2.md",
+      "destino": "03-cafeteria-comidas-rapidas/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "b54ab4e9b46360a2feaabeb02b9532c56f31b942fe195f0fe9886a0992ee242e",
+      "sha256TextoConsolidado": "8b0f7539bf865c15260aba72dcd7a58d795c8fff2d4f0add6a6f589bb2491495"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/tiktok/02-cafeteria-comidas-rapidas-a2-STORYBOARD.md",
+      "destino": "03-cafeteria-comidas-rapidas/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "c4db9c1c07fdb1209116190b0253735665acdc2583d3a29f1514d14a5b545c21",
+      "sha256TextoConsolidado": "dcf4b72884003aff9d47bf7533dfbb10927912d60664b865b166721f5a941f3d"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/tiktok/02-cafeteria-comidas-rapidas-a2-PROMPTANIMACION.md",
+      "destino": "03-cafeteria-comidas-rapidas/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "d5eccf191bbe168e08c2cd4132ad3f4cb9d5a7cb4844c54c6bb2d2745af6092f",
+      "sha256TextoConsolidado": "651ebb52459e39f79b0324336ac7afb46a142af064e752fef143b30dfc06da8a"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/tiktok/03-cafeteria-comidas-rapidas-a3.md",
+      "destino": "03-cafeteria-comidas-rapidas/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "c77a732c59848dba45fcd7de4362f089be4db9ce09ee1a4cafd25e35878df669",
+      "sha256TextoConsolidado": "dbf0c26125b8fe15eb7e69ec48af7240d06958e59a5a73c6dc9a94612c31c5fd"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/tiktok/03-cafeteria-comidas-rapidas-a3-STORYBOARD.md",
+      "destino": "03-cafeteria-comidas-rapidas/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "200a99f628206f1ecca19b95df51195b8308a0d3526ec2081d0f8edadc1c3d21",
+      "sha256TextoConsolidado": "71bf2949d561c63570d53a027c5c974736d38e1e17cb6647635790f64ffca1ee"
+    },
+    {
+      "origen": "03-cafeteria-comidas-rapidas/tiktok/03-cafeteria-comidas-rapidas-a3-PROMPTANIMACION.md",
+      "destino": "03-cafeteria-comidas-rapidas/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "1c56f10a597bae6da0ee07cf89a44ede6b3a38d77d3d2933ab35e12e53fee0da",
+      "sha256TextoConsolidado": "039d35fc72beb409bb43f0c8d1737be472f7da4f44d1a9a2a1c93d86b996ed6e"
+    },
+    {
+      "origen": "04-restaurante-pequeno/facebook/01-restaurante-pequeno-a1.md",
+      "destino": "04-restaurante-pequeno/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "7d08fec1a2276daafcdab40fce6af6b0891d53fb3f03c267ebbaa42f88fc7d65",
+      "sha256TextoConsolidado": "c3d79f110c15f8713abd8d88515a63ee85f503ee5614b77a2258cdda22b120ed"
+    },
+    {
+      "origen": "04-restaurante-pequeno/facebook/01-restaurante-pequeno-a1-STORYBOARD.md",
+      "destino": "04-restaurante-pequeno/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "6cd0776fb4d45df32250e30135673bc1889a9d085dfe359a0ede08c7d622345f",
+      "sha256TextoConsolidado": "675da5ef16e17cc6519356b2af6f2b2ea37697d964967d52fcabf83669e42837"
+    },
+    {
+      "origen": "04-restaurante-pequeno/facebook/01-restaurante-pequeno-a1-PROMPTANIMACION.md",
+      "destino": "04-restaurante-pequeno/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "c120a4ec6bcb6f5d11d8dd6b0d7977521fc8bf9e915e762df8e169c42252c88d",
+      "sha256TextoConsolidado": "667448313f8e81245be34288c544ff1161fe44b94fe4a49e28d9d65ff8c0f6b9"
+    },
+    {
+      "origen": "04-restaurante-pequeno/facebook/02-restaurante-pequeno-a2.md",
+      "destino": "04-restaurante-pequeno/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "1793a24893587a8bec4f80a4c5a4bd9b3fa6e7a9fa87c8b53c88f18ac1bdec85",
+      "sha256TextoConsolidado": "e523274b6ee2a739f7deb37c6f8626090ac1ddf94ff22a0a4375ff6aba220c1c"
+    },
+    {
+      "origen": "04-restaurante-pequeno/facebook/02-restaurante-pequeno-a2-STORYBOARD.md",
+      "destino": "04-restaurante-pequeno/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "83b6699e034d347579e6a127cde0813c101cb0440c80d05530e89012cd9475a8",
+      "sha256TextoConsolidado": "c635d88ffb420f2843587bf1978d20c0c6edcd838bbcc8827168478aa8a11e74"
+    },
+    {
+      "origen": "04-restaurante-pequeno/facebook/02-restaurante-pequeno-a2-PROMPTANIMACION.md",
+      "destino": "04-restaurante-pequeno/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "3003c74cd9b22617cac6292d2b79082b331ae76afefb13df667a9b2662d59de4",
+      "sha256TextoConsolidado": "8bedb388ecdf3104bbe382adaf88a5f42a0f496a696edf90e7a2a3f5826ac64d"
+    },
+    {
+      "origen": "04-restaurante-pequeno/facebook/03-restaurante-pequeno-a3.md",
+      "destino": "04-restaurante-pequeno/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "dd1fabe6f61246f8782ae928257b38a472470721d1c05651eb6c6a46ea23ca0f",
+      "sha256TextoConsolidado": "6277370edf89e2c6bfa3325cb32231f9f7afeaa85d92781580cf4b1f5bf43fa1"
+    },
+    {
+      "origen": "04-restaurante-pequeno/facebook/03-restaurante-pequeno-a3-STORYBOARD.md",
+      "destino": "04-restaurante-pequeno/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "9567e6c920555f1880a43ff7f56413bda2fb75c4f00db80201453a73699c6d74",
+      "sha256TextoConsolidado": "5271932e199b40e285233a25ea5d06ea6a11b82eb8ea3dc096969f51a16a5d15"
+    },
+    {
+      "origen": "04-restaurante-pequeno/facebook/03-restaurante-pequeno-a3-PROMPTANIMACION.md",
+      "destino": "04-restaurante-pequeno/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "22431461a5e832b1f45f1501b60a1e6216633708523075d8180be6238b189199",
+      "sha256TextoConsolidado": "f3a2e12bce830eacc15d59d1c42739f4c9adc035dfac84a632c7e80c4bb00ba1"
+    },
+    {
+      "origen": "04-restaurante-pequeno/instagram/01-restaurante-pequeno-a1.md",
+      "destino": "04-restaurante-pequeno/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "eddb424fc7e83839f069dac4c0f61e4d5dca0d741dc5f8504cb8479d623f6ce4",
+      "sha256TextoConsolidado": "9897c5748e5da66b4682b2915887f41c5ee0f20b2388de5f07d50fb7e125614b"
+    },
+    {
+      "origen": "04-restaurante-pequeno/instagram/01-restaurante-pequeno-a1-STORYBOARD.md",
+      "destino": "04-restaurante-pequeno/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "92bca66d552649ec5abb334389e8d1c2dc198127d98f53dcf642ffa50a2b6ff4",
+      "sha256TextoConsolidado": "039258e43b88f69c4fbd443ca42d37c36bcf0010d2b1e3c3a84833a249312065"
+    },
+    {
+      "origen": "04-restaurante-pequeno/instagram/01-restaurante-pequeno-a1-PROMPTANIMACION.md",
+      "destino": "04-restaurante-pequeno/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "5eade5cc88c793148c4e6ac210bf6f31164f4a0594eaa97120a8d87c25b899eb",
+      "sha256TextoConsolidado": "a2fde533d66bb55b2f13fbaabb2f560ddf94e6bf493b65fad6f3b374f88c62ff"
+    },
+    {
+      "origen": "04-restaurante-pequeno/instagram/02-restaurante-pequeno-a2.md",
+      "destino": "04-restaurante-pequeno/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "1855330689ea1b09c3597df9ff5443b75245f2eccc41bba8bc7bb643ceb53b30",
+      "sha256TextoConsolidado": "eb796fec5918e09f7a13aea16562d44f3d663d3241bc9d3db0c53c2cd24ef3a3"
+    },
+    {
+      "origen": "04-restaurante-pequeno/instagram/02-restaurante-pequeno-a2-STORYBOARD.md",
+      "destino": "04-restaurante-pequeno/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "6a48c62cbdc3390710ba7d4f24dd8d50c3eed4d3aa2009bfafd79ddbaaa48806",
+      "sha256TextoConsolidado": "4d03b8679d1a271798f449c644b9c03a8849e007459c5ad76506e90b2822529c"
+    },
+    {
+      "origen": "04-restaurante-pequeno/instagram/02-restaurante-pequeno-a2-PROMPTANIMACION.md",
+      "destino": "04-restaurante-pequeno/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "58e4b26e8678c1f2771bc5f68dde845e3b70d9176179a0bb25bfb8d6a6e0617a",
+      "sha256TextoConsolidado": "4199ca06eedc9c872011aebac6eba2200ef9f51cbeed76a51d6af4c7acf67062"
+    },
+    {
+      "origen": "04-restaurante-pequeno/instagram/03-restaurante-pequeno-a3.md",
+      "destino": "04-restaurante-pequeno/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "d3896cd7564e5e0a3b44d9561946bbe600762c9b22b76130e013cdc7baa2b1ee",
+      "sha256TextoConsolidado": "d1be44548aedd06524afdcf63ad93fd2db72d5465596c00ee7c7a60bdb4f0408"
+    },
+    {
+      "origen": "04-restaurante-pequeno/instagram/03-restaurante-pequeno-a3-STORYBOARD.md",
+      "destino": "04-restaurante-pequeno/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "810d9ac4699f71c59ab4113a3bd3e6f193d8a1e1a2c698c2372f198dbcb39841",
+      "sha256TextoConsolidado": "a460c776174206c2dbc0774d0a59b1387d0575bfc1f9436ea3abbfd16d781881"
+    },
+    {
+      "origen": "04-restaurante-pequeno/instagram/03-restaurante-pequeno-a3-PROMPTANIMACION.md",
+      "destino": "04-restaurante-pequeno/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "9239bab0b99ca0be2751153f45db8e402ecb03cc91a0313aabbc7ae9c1440a76",
+      "sha256TextoConsolidado": "668ea82e48fd50803839759dc7e65b5c2d289158144623e19fa1ec8baf2e6c73"
+    },
+    {
+      "origen": "04-restaurante-pequeno/tiktok/01-restaurante-pequeno-a1.md",
+      "destino": "04-restaurante-pequeno/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "6a648b715b1c6b9e2d4451818c30941032b6603110f4969d9d49c541f6398646",
+      "sha256TextoConsolidado": "8853095e12a45b2745217a855c39cff27ee44628facedf955c79378d76873ef0"
+    },
+    {
+      "origen": "04-restaurante-pequeno/tiktok/01-restaurante-pequeno-a1-STORYBOARD.md",
+      "destino": "04-restaurante-pequeno/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "0bdf233cf3b88bc1c45fa866cc1bc1c4cbd9dca4adf24cdcbbfae796f8f5e6c0",
+      "sha256TextoConsolidado": "21108829be4afd2d64cb5bc45291b32c9a5d9f1de99db550b1a207695470a76a"
+    },
+    {
+      "origen": "04-restaurante-pequeno/tiktok/01-restaurante-pequeno-a1-PROMPTANIMACION.md",
+      "destino": "04-restaurante-pequeno/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "add0c5ed382502edc47bf11977e5ee12241622d5a62509dd88d4a7541dff2770",
+      "sha256TextoConsolidado": "e934860ebcba064bdf3b910676b0e9dbf04c9cf4fd55c358999e15524b97074f"
+    },
+    {
+      "origen": "04-restaurante-pequeno/tiktok/02-restaurante-pequeno-a2.md",
+      "destino": "04-restaurante-pequeno/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "377416b24d3664d4787b32d817c7a58f7cbb18b2e931d67096dffdd530706bf6",
+      "sha256TextoConsolidado": "81d57ee4df9f21a4bca5e51886e79c5a3b15728ed17494423f605db1e4410552"
+    },
+    {
+      "origen": "04-restaurante-pequeno/tiktok/02-restaurante-pequeno-a2-STORYBOARD.md",
+      "destino": "04-restaurante-pequeno/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "c0e57d9dffd5f10072d2542080b091e74d40e2a94dc2ee530cbad9b434ec9191",
+      "sha256TextoConsolidado": "177372b409df86186bd8384502b642db637f2a80aaaeb67186d1c86dfa518527"
+    },
+    {
+      "origen": "04-restaurante-pequeno/tiktok/02-restaurante-pequeno-a2-PROMPTANIMACION.md",
+      "destino": "04-restaurante-pequeno/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "66acef22ceaecb7cd2182d7e79dd9f87216187f3a1efce7c8df431431c465048",
+      "sha256TextoConsolidado": "43ae257ac9432eb70b0acf459f5c65e976c12bc785b5f1370c78b731d12bf35a"
+    },
+    {
+      "origen": "04-restaurante-pequeno/tiktok/03-restaurante-pequeno-a3.md",
+      "destino": "04-restaurante-pequeno/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "4207cf191fc4f438c2e88b11918c6768049d1abd120bbf2c58617ff6c59d7eef",
+      "sha256TextoConsolidado": "b05cdb5d5acc8553c564560d06f538235b2e129f656f4603e0d815531dfd057f"
+    },
+    {
+      "origen": "04-restaurante-pequeno/tiktok/03-restaurante-pequeno-a3-STORYBOARD.md",
+      "destino": "04-restaurante-pequeno/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "55f8f20b3ddb6fa322aab1bb807118eaf61fb0b435ad4146a3c920bf59d68156",
+      "sha256TextoConsolidado": "6008256b16fd7a46960e545a91b704363849514704259000b824da9e1c2bd40a"
+    },
+    {
+      "origen": "04-restaurante-pequeno/tiktok/03-restaurante-pequeno-a3-PROMPTANIMACION.md",
+      "destino": "04-restaurante-pequeno/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "368f9949de5ae05ad450fa07c068166616cae20ac1d37334201901f400469b4c",
+      "sha256TextoConsolidado": "84af1a4bf6dc2401820ef4bdea8be0872c3f7be05cc6c9b8b83849e0e0599768"
+    },
+    {
+      "origen": "05-minimercado/facebook/01-minimercado-a1.md",
+      "destino": "05-minimercado/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "99c1ce2461590edefcf49a8deadb309f56d4b5153acac5fc6684ccb8ccbd9871",
+      "sha256TextoConsolidado": "2d5dbc1ea5b5fc353dcf1d731dd2cf4464430163efa207d4b9e4571a74aee256"
+    },
+    {
+      "origen": "05-minimercado/facebook/01-minimercado-a1-STORYBOARD.md",
+      "destino": "05-minimercado/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "48b12dfd40da16440d73ef0acf5822e0d048b95be99c0d107bac2380a5ecfaa9",
+      "sha256TextoConsolidado": "42b18ef7bc330bd7be19cd36e8eedbd8a11846917874d5f3122376d361f7282e"
+    },
+    {
+      "origen": "05-minimercado/facebook/01-minimercado-a1-PROMPTANIMACION.md",
+      "destino": "05-minimercado/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "c76721c273884483a036007ce9056ec93de2c97818d621a3fd2f91338b966cb4",
+      "sha256TextoConsolidado": "fe202e823c206116a448021f81ddf7586c9cad14b7790825346e011502377906"
+    },
+    {
+      "origen": "05-minimercado/facebook/02-minimercado-a2.md",
+      "destino": "05-minimercado/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "0c72232dc9352e500c4ddcc197fe1cb611345876bf11a643ce34c364edd17f73",
+      "sha256TextoConsolidado": "499743faa4c83893a089d6e70b8589fef490d54e4c6a6405bfac427ecef4dbec"
+    },
+    {
+      "origen": "05-minimercado/facebook/02-minimercado-a2-STORYBOARD.md",
+      "destino": "05-minimercado/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "cc5b0ac4e8f2ed89cfc1d59a7222a0f4343432578e42a9cfbf7b6a9db55688cf",
+      "sha256TextoConsolidado": "73e9e7e46636d2a6dd5825ad6323661b8ad1fcb59d514066a7209be80f206f76"
+    },
+    {
+      "origen": "05-minimercado/facebook/02-minimercado-a2-PROMPTANIMACION.md",
+      "destino": "05-minimercado/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "7b48344c84ac5ac2e1db21ce881c6da877c9d5c3e95ac15bdbe488ea27ab0f57",
+      "sha256TextoConsolidado": "1e43677ebb3e971f61d4c3d5082acae259e10013160df8002563e35f256e06b2"
+    },
+    {
+      "origen": "05-minimercado/facebook/03-minimercado-a3.md",
+      "destino": "05-minimercado/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "f736f634198af03bd011e342c8f19616a9f05be2c07eb84ada6c412b17273d0b",
+      "sha256TextoConsolidado": "49a07592d39bc61c41f42e9cad59a536fed866e71168fc68e53efdd7a90d0b0a"
+    },
+    {
+      "origen": "05-minimercado/facebook/03-minimercado-a3-STORYBOARD.md",
+      "destino": "05-minimercado/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "7b3844a8348917567dbba19d5f87c6a6ba00e2e806783d66158be6f54533adf1",
+      "sha256TextoConsolidado": "97b628340be586184c45ffe1656a2b99feefc78ab3dd0de628252058fb491154"
+    },
+    {
+      "origen": "05-minimercado/facebook/03-minimercado-a3-PROMPTANIMACION.md",
+      "destino": "05-minimercado/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "f59215ea47752441ccf3b074908209cf6f433d424ea7b422bbc4495a02cac2f9",
+      "sha256TextoConsolidado": "234d46c36fd09c133b6f489f4567c293dc95afeeec189e27096330e238e98bf0"
+    },
+    {
+      "origen": "05-minimercado/instagram/01-minimercado-a1.md",
+      "destino": "05-minimercado/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "49151ad96223175d75c85802e4ad2e38c3d207f43ec37df4dcf2b8d452464153",
+      "sha256TextoConsolidado": "ef74731a180b11a3b8277b05b859bd21c888fc134fc85c9eb4d3116c9e5f82c8"
+    },
+    {
+      "origen": "05-minimercado/instagram/01-minimercado-a1-STORYBOARD.md",
+      "destino": "05-minimercado/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "05f0c4e7fd93727f1f3db8f68e3c8321a21cf235a7a263c688c5c7557b934609",
+      "sha256TextoConsolidado": "08489a7a9ada8b2f042e6a37306ccd5ded2b557cb54c67274fc4c008d750c998"
+    },
+    {
+      "origen": "05-minimercado/instagram/01-minimercado-a1-PROMPTANIMACION.md",
+      "destino": "05-minimercado/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "ed9771f438dcda4a08216d3e72c45e74b50bbd11fb7e4ab4193d98f6b6dc491a",
+      "sha256TextoConsolidado": "ccc98e05796e1dc5d1a09008694af170970d768e72d846e523f4085b8a080661"
+    },
+    {
+      "origen": "05-minimercado/instagram/02-minimercado-a2.md",
+      "destino": "05-minimercado/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "ff1d0e93ab93bc52c26159f237068a28f2de04aa9cecfa5d4093c3401f77d268",
+      "sha256TextoConsolidado": "2ceb8ada63404b4a0e2a0d9d9de579733bab4feef06622240200b87687a3f3a1"
+    },
+    {
+      "origen": "05-minimercado/instagram/02-minimercado-a2-STORYBOARD.md",
+      "destino": "05-minimercado/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "709452a207e15fbcaa0bda6ca473814c0a34cb80e84720fb0b867915a4ac3b1e",
+      "sha256TextoConsolidado": "cb181ce1047a02026c426bab99bb106063b392b286d5f6e87aaf7c16be95caa8"
+    },
+    {
+      "origen": "05-minimercado/instagram/02-minimercado-a2-PROMPTANIMACION.md",
+      "destino": "05-minimercado/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "185de091cd3a2b7abc6764042c285f1bc25b53c479f3743b6963ed64cfa5a080",
+      "sha256TextoConsolidado": "159b0712ebabae4ccbf4aac9aa04a665516584cd9a93416dc95fbad04fe36d8e"
+    },
+    {
+      "origen": "05-minimercado/instagram/03-minimercado-a3.md",
+      "destino": "05-minimercado/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "5251c7289159b38b2150e920bb27540be5a1e44ed3a862484165bce690664c8f",
+      "sha256TextoConsolidado": "49c5fc199d699f1e9589d3b0f57dbe423da0a49b7a23e9dd80c781801a34a0ef"
+    },
+    {
+      "origen": "05-minimercado/instagram/03-minimercado-a3-STORYBOARD.md",
+      "destino": "05-minimercado/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "66ea23596c191865afa357829086995e5f464eb151ff221c0328ccf2b6a65b26",
+      "sha256TextoConsolidado": "2654bb1167b247aa90a19facb6371c7a3f7d6ffb3777ed334df4c73c269ef6ca"
+    },
+    {
+      "origen": "05-minimercado/instagram/03-minimercado-a3-PROMPTANIMACION.md",
+      "destino": "05-minimercado/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "9a83225997dc0e19546f42b250f4466724e80ef94460b3410625e82eb294be28",
+      "sha256TextoConsolidado": "2832cbe493b46fe802e129bd7e563ae32bd6391a2ced689e4da6d03777d919ae"
+    },
+    {
+      "origen": "05-minimercado/tiktok/01-minimercado-a1.md",
+      "destino": "05-minimercado/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "649fb676ea71f0c84c604fe69c395406ae48318afcf8bdc49d00117eeef2619e",
+      "sha256TextoConsolidado": "565d52097876f57ac95177658d3f04eede90ccb7512c8c3b71f573906ebc4e19"
+    },
+    {
+      "origen": "05-minimercado/tiktok/01-minimercado-a1-STORYBOARD.md",
+      "destino": "05-minimercado/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "cceec907d28c35ee83a765a6add700b9b2ad50db751e896f1f43219eb99183d4",
+      "sha256TextoConsolidado": "7b0b136279350cd169d3b7e865d15e9b8ccea8a4cfee828d5795c394e28edc46"
+    },
+    {
+      "origen": "05-minimercado/tiktok/01-minimercado-a1-PROMPTANIMACION.md",
+      "destino": "05-minimercado/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "ec43946834dc6a4c954cb473af4d211313308a5d2a6b311fd309abe5556d46b4",
+      "sha256TextoConsolidado": "bfefe072b5a02eb8d02f7fd3f308108d1f1a3125b96a5afe2e12c4bd386a381b"
+    },
+    {
+      "origen": "05-minimercado/tiktok/02-minimercado-a2.md",
+      "destino": "05-minimercado/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "b31b7afe5cc4affc141914a7ee33522d891f0b713af147ca1d1fd2541a2ad3cf",
+      "sha256TextoConsolidado": "03b25df5347d9f6bbfbd6507c0e6a0ad89dfc0b353149f52cdf9afc803733a80"
+    },
+    {
+      "origen": "05-minimercado/tiktok/02-minimercado-a2-STORYBOARD.md",
+      "destino": "05-minimercado/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "bcc97e152a6f68e4c8ab550eff108ce9f1bbc28e44c7f5d4473bc4985353b308",
+      "sha256TextoConsolidado": "ab751cd77101a92107322d2f8ca4a375dba80a5b88ca85779148c4557df54bb2"
+    },
+    {
+      "origen": "05-minimercado/tiktok/02-minimercado-a2-PROMPTANIMACION.md",
+      "destino": "05-minimercado/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "87837ce179c5a5a1d36a12b1f00242053e0eb8dab183f53fde3ec3e85d3f614c",
+      "sha256TextoConsolidado": "a97f8da17033cba60df7d237aabd7ae3c13a31a4b839b95e6a41476fd7b4dd14"
+    },
+    {
+      "origen": "05-minimercado/tiktok/03-minimercado-a3.md",
+      "destino": "05-minimercado/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "fa77e966e47e081b9de624c431276897e4a075f7417f8bf0ece59bb69ed2ac02",
+      "sha256TextoConsolidado": "10ea715eb1d48d8ffefe9e1c5c0a018a27a28fd042ec218c08fd4f05c5c46e2f"
+    },
+    {
+      "origen": "05-minimercado/tiktok/03-minimercado-a3-STORYBOARD.md",
+      "destino": "05-minimercado/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "8c1a15db5241a205107d24352b433d331c7085e448b448b49722787e1e43081e",
+      "sha256TextoConsolidado": "c79c867b4dff4db22dc263a01f80ab0cb8793853dc4b14a7ef9a443934282deb"
+    },
+    {
+      "origen": "05-minimercado/tiktok/03-minimercado-a3-PROMPTANIMACION.md",
+      "destino": "05-minimercado/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "d6301ff595d7b282e6c784697c9518e5b03cb3f1e3d9743fa2376824f20a1bd1",
+      "sha256TextoConsolidado": "ac089cf459ae16e9f4c17c59ee683275555634ceb85070dd4df5232a23e5378c"
+    },
+    {
+      "origen": "06-ferreteria/facebook/01-ferreteria-a1.md",
+      "destino": "06-ferreteria/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "b9cad8fbdddd0186066546c390f875f596aa7eb17ef9cf6c0a4b9fb1b8453ab5",
+      "sha256TextoConsolidado": "52c57b6f5e4cfa832360e40bd0872d91c0786c5a93595d1f2ccbf95d379df614"
+    },
+    {
+      "origen": "06-ferreteria/facebook/01-ferreteria-a1-STORYBOARD.md",
+      "destino": "06-ferreteria/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "d7f72ebd78ac976083f9461243496486353d06103564c8fd1f5b2b1903d39fe2",
+      "sha256TextoConsolidado": "5c572ed157d6c8293a45246e86d9a0891444c514f8ec80769d3a37a2041df800"
+    },
+    {
+      "origen": "06-ferreteria/facebook/01-ferreteria-a1-PROMPTANIMACION.md",
+      "destino": "06-ferreteria/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "7fc2a2040285783052818b6f636a953c3cb7871c1f828c30aaafbe37fa20b293",
+      "sha256TextoConsolidado": "82a81dcfe768a7a4a7d8ff61bb8ece268a0d8cb269924f4750a59d58bf39fd18"
+    },
+    {
+      "origen": "06-ferreteria/facebook/02-ferreteria-a2.md",
+      "destino": "06-ferreteria/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "569d6250e6e5480de21eb2a97396e4f20085e5923ffb343ef375045730c56e7b",
+      "sha256TextoConsolidado": "d708bf5e5437b6f8c99d2d606331586e301e9658c1946175968ff1d28bd1fe21"
+    },
+    {
+      "origen": "06-ferreteria/facebook/02-ferreteria-a2-STORYBOARD.md",
+      "destino": "06-ferreteria/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "38fc4bc591e52aaaf8b95f6d2ed5ef42ee4a1255e4aed08f3994de20b6394569",
+      "sha256TextoConsolidado": "b1684f3e1725abb6c16524cca8a42fdfeff30a71a5dad72adbb12c7ad7bd5d87"
+    },
+    {
+      "origen": "06-ferreteria/facebook/02-ferreteria-a2-PROMPTANIMACION.md",
+      "destino": "06-ferreteria/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "3c540ba150cd5491b352554edefe3b3ddf5132261d7735414a70f1e64ed83088",
+      "sha256TextoConsolidado": "b5f0d1df0073410e38c6c46703d4ca8e9d7d92fd23f7be0f32044d6149450616"
+    },
+    {
+      "origen": "06-ferreteria/facebook/03-ferreteria-a3.md",
+      "destino": "06-ferreteria/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "73addcfdd00aab9d14e8c9aaed6e10e81165fbb202e39a63598b16682d37a132",
+      "sha256TextoConsolidado": "019720328f3e41455c47701db0cae51cad0de4b418a05988ad64a40d754355fd"
+    },
+    {
+      "origen": "06-ferreteria/facebook/03-ferreteria-a3-STORYBOARD.md",
+      "destino": "06-ferreteria/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "9dd299153ecbcf183a61170f7bcbc543bd2bab9581f02f4ef2e2029e63661f1e",
+      "sha256TextoConsolidado": "5f3c89605beebee61f8a7ff5869a18b8dbd8a8224c38bf0449feaea60617fcef"
+    },
+    {
+      "origen": "06-ferreteria/facebook/03-ferreteria-a3-PROMPTANIMACION.md",
+      "destino": "06-ferreteria/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "68c6bc4a13578009a3bf01dffce0b74ae0af2282443f7ac45b0e4c1f445d179a",
+      "sha256TextoConsolidado": "a886f88b2eeefdcece58ca9cf612701bd44a8c8caabb9f57711c1295e5af82e8"
+    },
+    {
+      "origen": "06-ferreteria/instagram/01-ferreteria-a1.md",
+      "destino": "06-ferreteria/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "1201bb38e036a99cc8fe19b1b994b623903bfad8267af386493c3f08c0875f9a",
+      "sha256TextoConsolidado": "cdc255a302c56e0bfb5a5ca42b146a612f4ac76d70cbe84f9b2d0d0f4a0826dd"
+    },
+    {
+      "origen": "06-ferreteria/instagram/01-ferreteria-a1-STORYBOARD.md",
+      "destino": "06-ferreteria/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "d04af21f72650a8732ff52da977c6f6c4b503e38926870c669011563dfe3d117",
+      "sha256TextoConsolidado": "4feb670d62c45724a9a7e94796176b2b95e9cac3b879d7670fbae67e905f99c9"
+    },
+    {
+      "origen": "06-ferreteria/instagram/01-ferreteria-a1-PROMPTANIMACION.md",
+      "destino": "06-ferreteria/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "1f23cbc237d44408a94774a3d1268e5a07146118f615103e9b5bc527182c28a6",
+      "sha256TextoConsolidado": "fd50110681ed0e32e1a08add38ddaf33d94b8e3af6522ce279eb73699596c6d8"
+    },
+    {
+      "origen": "06-ferreteria/instagram/02-ferreteria-a2.md",
+      "destino": "06-ferreteria/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "c15e7f88b2676a15d83cf3c6e6f359b2d9376a29d6daf90e633084012b350a28",
+      "sha256TextoConsolidado": "934d996ef5e2fc062db7533150bf1bfd8c9d0697be4378b4ae46f18400debcd0"
+    },
+    {
+      "origen": "06-ferreteria/instagram/02-ferreteria-a2-STORYBOARD.md",
+      "destino": "06-ferreteria/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "bd310a6817b9695e2e7a09d104ce36ecf0f7b2c3090d413f1f500620664b80b7",
+      "sha256TextoConsolidado": "15e86ef9348e0b43b0b232adf44b19004cf2fdce582d13d9c1b86f50b02ffc47"
+    },
+    {
+      "origen": "06-ferreteria/instagram/02-ferreteria-a2-PROMPTANIMACION.md",
+      "destino": "06-ferreteria/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "0dbe771e9fd1931d5c8dd07b7909571053d78c1275cda9bcf3b63b27a760718f",
+      "sha256TextoConsolidado": "026f745e99594c996a8d6a01e7fd0873997b390c44ffe070c85f60c1916708f5"
+    },
+    {
+      "origen": "06-ferreteria/instagram/03-ferreteria-a3.md",
+      "destino": "06-ferreteria/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "4497f6b6330b4368995393528055adfc0761a7ad39c0c523f2ba31c91100d81f",
+      "sha256TextoConsolidado": "3df4a57df0cd1391165b7d0030d41fc51db4d2ee55690ac9ea61980475db1cec"
+    },
+    {
+      "origen": "06-ferreteria/instagram/03-ferreteria-a3-STORYBOARD.md",
+      "destino": "06-ferreteria/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "6615ca03b0a3826ec4bde5126aa35609a7247b5e7e98f192b8a62c9e72329645",
+      "sha256TextoConsolidado": "974aa37711f0c920a5e5d4b28931311ebfdac396aa5084bc981d78384ce5af26"
+    },
+    {
+      "origen": "06-ferreteria/instagram/03-ferreteria-a3-PROMPTANIMACION.md",
+      "destino": "06-ferreteria/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "185382dcff57ec221dcf8f94429e077c5cdcea76da2330f7a0095d1b220ea7fa",
+      "sha256TextoConsolidado": "7d3692b7031347f15a8bed4160cf21306694dc4ad88181c86785127566cb22a0"
+    },
+    {
+      "origen": "06-ferreteria/tiktok/01-ferreteria-a1.md",
+      "destino": "06-ferreteria/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "48dc1027afbce819a4982fc57d3095f45b94d42e89ca04c92bd9dbf58d39fe60",
+      "sha256TextoConsolidado": "4f1f0077f3ec8b2541ed4ae0f3d5958a8174ac21451d3a24f0e39debab3bc011"
+    },
+    {
+      "origen": "06-ferreteria/tiktok/01-ferreteria-a1-STORYBOARD.md",
+      "destino": "06-ferreteria/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "de7e4482e97f4dd2d66d65165ec4129c8dda8359778ebc9ae38b64daedc5be5a",
+      "sha256TextoConsolidado": "7e58ac2a97668cbe638f66da41b05fc5064b1e863f3e13638fd19e8aac999a9c"
+    },
+    {
+      "origen": "06-ferreteria/tiktok/01-ferreteria-a1-PROMPTANIMACION.md",
+      "destino": "06-ferreteria/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "177cc273a016fd4516c7cc38c1496cf6fb29e48314bcc56259ff43c6c4b12113",
+      "sha256TextoConsolidado": "75d0b5643e068938dfcc9b7b34a5b77d66693bbe97de81d506785b694320ed0b"
+    },
+    {
+      "origen": "06-ferreteria/tiktok/02-ferreteria-a2.md",
+      "destino": "06-ferreteria/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "84c06c52e77e47acb6cee96b1145611600b3300840db3cb8415fe24cf84b47e5",
+      "sha256TextoConsolidado": "826ee31b7d35a0f3eec91be25ff878bb465f8f08446eca4358f87069e1ff6743"
+    },
+    {
+      "origen": "06-ferreteria/tiktok/02-ferreteria-a2-STORYBOARD.md",
+      "destino": "06-ferreteria/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "d2442285311628788ba8b5b1d1780ddc65cb7ca3efebed315c77664c7d3e629e",
+      "sha256TextoConsolidado": "41c76ba69766ee416e1315735492cd223404c578d8fad6b7d8f1afa96559ac27"
+    },
+    {
+      "origen": "06-ferreteria/tiktok/02-ferreteria-a2-PROMPTANIMACION.md",
+      "destino": "06-ferreteria/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "09ac1c5a3b6bf8b9841a47fd66812511e982af1c902be849b7ba26267e5859f8",
+      "sha256TextoConsolidado": "ffcd045ccf1997d355ab05e5ebacd38e64363f49ee317cc3e3d4f7a29ec0951c"
+    },
+    {
+      "origen": "06-ferreteria/tiktok/03-ferreteria-a3.md",
+      "destino": "06-ferreteria/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "374d4c693fdb0f25e534f7b69f6d7229dafcc7fa13476cb58a776b9b6736b2e8",
+      "sha256TextoConsolidado": "e668d3db90411e3421bcbd879b76e0e0b2abbfbda41b15e513add3e99d4c91ae"
+    },
+    {
+      "origen": "06-ferreteria/tiktok/03-ferreteria-a3-STORYBOARD.md",
+      "destino": "06-ferreteria/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "a2edbfe4a0fb8c8abd864ab7eb80cd9e4091a969b46a0c77b2484045ca9f4648",
+      "sha256TextoConsolidado": "99eb4592555db3940f87384401bb1830362455be97100739e1090727a373c8a3"
+    },
+    {
+      "origen": "06-ferreteria/tiktok/03-ferreteria-a3-PROMPTANIMACION.md",
+      "destino": "06-ferreteria/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "d63d39557de2554449f1f046ff41cd870ea3c7492fc376bdd872c33a4342fa0a",
+      "sha256TextoConsolidado": "e3212dcb2915de0c118c790464b75db9af6820d61399289100c4726f97ebe236"
+    },
+    {
+      "origen": "07-moda/facebook/01-moda-a1.md",
+      "destino": "07-moda/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "6da2c52be1efe343086ad646b2cec55969baf11bce3f2c36a96ddf476280ac38",
+      "sha256TextoConsolidado": "76d1a5f5028a215f597c01d37c1414cf01972878517e1fc1eda5de0381a88643"
+    },
+    {
+      "origen": "07-moda/facebook/01-moda-a1-STORYBOARD.md",
+      "destino": "07-moda/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "116b2b8e179221bdb78d9cacc6f509091ee59f2d1d0775f636434188a6a870d6",
+      "sha256TextoConsolidado": "e7040792052b98e2d0d38a7eced469864517dd24a044c5392c85308efb95cabe"
+    },
+    {
+      "origen": "07-moda/facebook/01-moda-a1-PROMPTANIMACION.md",
+      "destino": "07-moda/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "b6c5404860c3af7aff6e5baf78c8839248b83036701151203bc473536ffa68aa",
+      "sha256TextoConsolidado": "b08bfb4c1a4c65ca895c343a585cca3310406f4674b8e4f33f32adc13d150d74"
+    },
+    {
+      "origen": "07-moda/facebook/02-moda-a2.md",
+      "destino": "07-moda/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "85236e96d774c69b6b0a6401c38586035edc403708db883655ffb22d6722df25",
+      "sha256TextoConsolidado": "d5f4c428659f5397344c1db729164b2b1f71892322f17c33c0987814851bd0ee"
+    },
+    {
+      "origen": "07-moda/facebook/02-moda-a2-STORYBOARD.md",
+      "destino": "07-moda/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "c14198d77f30c8fde0b52081f57c2130956cfdececd8d706e2b574a75f725437",
+      "sha256TextoConsolidado": "48ad5520f35e68cce1bf93b86e3baf16bce947d754570d3476cd1dfaa10d9cad"
+    },
+    {
+      "origen": "07-moda/facebook/02-moda-a2-PROMPTANIMACION.md",
+      "destino": "07-moda/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "7649f900830db15960f9de07607ab4f00cce351492c084dbcee298154890ea30",
+      "sha256TextoConsolidado": "f3c6170344c4070179629aceb58162df5763df7801d38203e477421a967d9324"
+    },
+    {
+      "origen": "07-moda/facebook/03-moda-a3.md",
+      "destino": "07-moda/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "1650e95fa5fc1779f08dab571558ba46e93a57fe72f92b772e63ec564c839ba7",
+      "sha256TextoConsolidado": "b0129128493078c5098731d4e98d7119b7c6634064c182edd4c90c82ff4ce609"
+    },
+    {
+      "origen": "07-moda/facebook/03-moda-a3-STORYBOARD.md",
+      "destino": "07-moda/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "c7a0abcc3a556f4f33f97dd9f1f1bb2e6cf102bacb9e2104ad71c43807b6e375",
+      "sha256TextoConsolidado": "8557b63348f2cab951413c46cc4d734ddf7f46eff69ca0101a70f7f328c7fcb7"
+    },
+    {
+      "origen": "07-moda/facebook/03-moda-a3-PROMPTANIMACION.md",
+      "destino": "07-moda/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "7f990847210ebda9e906aff6d5e88e71c43338cc75c2f9cffc0e4a1400da3be4",
+      "sha256TextoConsolidado": "890f0e02849fcc9394e813e78bbff5bffd12b57daa30fb68e942d6cacf85badf"
+    },
+    {
+      "origen": "07-moda/instagram/01-moda-a1.md",
+      "destino": "07-moda/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "248bcdb3645ce69220aec11f5d8cb5ea27fc07e467bbad7f91e9281edac59a3f",
+      "sha256TextoConsolidado": "8d5b33477701f511b4c5b556bce5e0b1250c3f8b32ec5a558cc2cfab83f35111"
+    },
+    {
+      "origen": "07-moda/instagram/01-moda-a1-STORYBOARD.md",
+      "destino": "07-moda/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "83176d44961920ee49815f9d9cc86b6879c6a0853c4d527eed8ac1277638cad1",
+      "sha256TextoConsolidado": "cffbd14408f704dea569cf2f5b9036bde65c4449592bd8791b446617afc78e6e"
+    },
+    {
+      "origen": "07-moda/instagram/01-moda-a1-PROMPTANIMACION.md",
+      "destino": "07-moda/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "dbc8f2c791ec4da2eec47e0e91991bf9c3e4d3bef97efe536207692650ade34b",
+      "sha256TextoConsolidado": "bf9ea1a7bbf126add7eb67cda18ed453e5d4fac2ca1242086ff98623b7a8b95f"
+    },
+    {
+      "origen": "07-moda/instagram/02-moda-a2.md",
+      "destino": "07-moda/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "65ede5ef5a948c13f5a0ad9da0b87d54edc0876273a7c63f62064832a3152b52",
+      "sha256TextoConsolidado": "c74990b6d3b93fcbdff5bb884343bd64d7b0d466e3167d5eaf0a8211ec36b69a"
+    },
+    {
+      "origen": "07-moda/instagram/02-moda-a2-STORYBOARD.md",
+      "destino": "07-moda/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "54eeafbb44a7a885c886ea9ad13732cce79908ddde1b80deebf1903915213923",
+      "sha256TextoConsolidado": "5e8f6399a11d4f3a5b803adf74930282ad31b11d6cdf6fbf56b8597e25db7181"
+    },
+    {
+      "origen": "07-moda/instagram/02-moda-a2-PROMPTANIMACION.md",
+      "destino": "07-moda/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "7918313d74a4ef1cfb2d077b5f628119eb571be1b273d8e61f09eaab0a1d31cb",
+      "sha256TextoConsolidado": "dcdbc96119031f9649bbafe380f18f5c14148cd7a13e42e91f6ef893d1ff1518"
+    },
+    {
+      "origen": "07-moda/instagram/03-moda-a3.md",
+      "destino": "07-moda/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "6ff668d9a5fd665561fbc8e5115febe2c7c42d7a8776213b84a3310ff5ac91ee",
+      "sha256TextoConsolidado": "6ab898436761477a76da894804a0fb4bf530d03e7c58dabdfb7230e1cf6bbcd1"
+    },
+    {
+      "origen": "07-moda/instagram/03-moda-a3-STORYBOARD.md",
+      "destino": "07-moda/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "4571c4c5820c7a4f7f4ba20f44e2fde837073b30f17d501fe6adf879f2c4c727",
+      "sha256TextoConsolidado": "44a52799133ef0058554dada855080a76dd04f0f08fb100ab929a7d1ebe007fc"
+    },
+    {
+      "origen": "07-moda/instagram/03-moda-a3-PROMPTANIMACION.md",
+      "destino": "07-moda/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "d8636fb2fc1329b89ac53d800019312cce103d9543ccb2118ccc80aa1b2187f2",
+      "sha256TextoConsolidado": "c823e358b8af4ffc133735c05960c8c8c1c2a8d5098327e1efe95bd19801519a"
+    },
+    {
+      "origen": "07-moda/tiktok/01-moda-a1.md",
+      "destino": "07-moda/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "a7698510eb76a84e15926410c966c073497f0ed8dd106b3ab497cee696578105",
+      "sha256TextoConsolidado": "44037069a7e3e0fbceb6c4e92c439a2c5e4fbf25f6c65458b6ae25de16e98aa9"
+    },
+    {
+      "origen": "07-moda/tiktok/01-moda-a1-STORYBOARD.md",
+      "destino": "07-moda/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "ed72bcb769d0498fc82e4db9282107d6b3dad503ee7871423ee15698c9ed0abe",
+      "sha256TextoConsolidado": "2c49c3222673c655a6bef7ce1b0759d7b363433417ba2c85769d1cfce83757a4"
+    },
+    {
+      "origen": "07-moda/tiktok/01-moda-a1-PROMPTANIMACION.md",
+      "destino": "07-moda/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "3c5f58041a75996de6130778b24f6f2b97c56a32faf303ad4041878f534d1617",
+      "sha256TextoConsolidado": "f46ecd097f1b7b3b42688c78b90c3f14d5d1af607dd9423fcddde3b5bc7c2a38"
+    },
+    {
+      "origen": "07-moda/tiktok/02-moda-a2.md",
+      "destino": "07-moda/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "3ddffa3f84811d54c193a1c0f82e13dec8524f21a61c5183d03db17f6c8e541a",
+      "sha256TextoConsolidado": "8e773254ebd5631c1eed20c0e8ec357dcfdf9c79d8e673246d12b695ba3f28d2"
+    },
+    {
+      "origen": "07-moda/tiktok/02-moda-a2-STORYBOARD.md",
+      "destino": "07-moda/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "93e3ee64582e14f970e2168d4dc8f673fddd02f58592596c07183c77cf0584f3",
+      "sha256TextoConsolidado": "d71086256f2081307fd15eb5cf770323ba34a819f46e7123ae173b5b7f63a405"
+    },
+    {
+      "origen": "07-moda/tiktok/02-moda-a2-PROMPTANIMACION.md",
+      "destino": "07-moda/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "dfee901922fe09068592eb378838c8045dcc1b8caca76c3edffa7934e3f0a2a6",
+      "sha256TextoConsolidado": "462d27d9e940f0316bca7b125cd1c254c6fb42cd30d2d4de68f1a33e8c910968"
+    },
+    {
+      "origen": "07-moda/tiktok/03-moda-a3.md",
+      "destino": "07-moda/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "6da829c614d51bab45804ec8c6eb254ea828fe6625ad74a08bea1ff86494342d",
+      "sha256TextoConsolidado": "12a72d89633f624dab3dc32d3727f4f081313faa453e9eb46795a0c25d220d41"
+    },
+    {
+      "origen": "07-moda/tiktok/03-moda-a3-STORYBOARD.md",
+      "destino": "07-moda/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "3776e61100c07eada7426499248302dbb0db55d47280ffbbf1277846541b3193",
+      "sha256TextoConsolidado": "98a2a38a81fb25f270b0d877b5a1003692086e20d6894fd698652dc905efa1f1"
+    },
+    {
+      "origen": "07-moda/tiktok/03-moda-a3-PROMPTANIMACION.md",
+      "destino": "07-moda/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "e1b671859a31870979b3ae8e154f5de8ead86b376a4aa02e9a533334f17b8c14",
+      "sha256TextoConsolidado": "798e3c0c82158692e67c6f78895b7a245f5047da8a2e19252fdfd2a24d39c243"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/facebook/01-distribuidor-pequeno-a1.md",
+      "destino": "08-distribuidor-pequeno/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "9fd5441ab175935ca682b9250ec85506cdb8a46d277d747b2b62ea57f744469d",
+      "sha256TextoConsolidado": "382bb09438d5ff9332665204e2d557770a5cd8c21b08af3a359ef529626d102a"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/facebook/01-distribuidor-pequeno-a1-STORYBOARD.md",
+      "destino": "08-distribuidor-pequeno/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "cee934888a20c133f2fabbb358632fa24c97d9a69bfa0e2ec9c0ab7bb071d10b",
+      "sha256TextoConsolidado": "e7a4a3587c55cdbd2f9f70657eb4c462b808c6f0c92f0896b31d55a1a6c532e3"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/facebook/01-distribuidor-pequeno-a1-PROMPTANIMACION.md",
+      "destino": "08-distribuidor-pequeno/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "cdfb920a8ab0abe49372af25d5f7277f60947970575d8ff04e5f6114c4ee0bf1",
+      "sha256TextoConsolidado": "ded9a17d6f62e53486aa3c99f4a9b88e5f593b5b59e3bd1c4bb69734da8b6fe1"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/facebook/02-distribuidor-pequeno-a2.md",
+      "destino": "08-distribuidor-pequeno/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "591e3a236eb65dd34022c1126d601eccc8dd0bb884a479c0af2bed437eb2215e",
+      "sha256TextoConsolidado": "a0879720dfa3107127703a796ca714fd5ad4ddc4b0586a7e5101f52643df52da"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/facebook/02-distribuidor-pequeno-a2-STORYBOARD.md",
+      "destino": "08-distribuidor-pequeno/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "11ddf0e29cd4d6847288862e6a7e638ac6ceb25ddc7975eb540acf4bd5a4bcc1",
+      "sha256TextoConsolidado": "b6c358dbb7290fa00353f7985cd1c0aa1c97d5597d3fec3c1b4ab62117b8a759"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/facebook/02-distribuidor-pequeno-a2-PROMPTANIMACION.md",
+      "destino": "08-distribuidor-pequeno/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "c2cd7cde204296ae8242f312d5ab1542406ed574639b42eb09566bbeb534275b",
+      "sha256TextoConsolidado": "591052828a4f4c18e7f750f9c88d2ff29084c1968326d783ea363b970aaf9132"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/facebook/03-distribuidor-pequeno-a3.md",
+      "destino": "08-distribuidor-pequeno/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "6c57f8a3fa47e28b914e873d9ba9902ec92cbbf5766d1bedbeb274d52c5f34f5",
+      "sha256TextoConsolidado": "ee7da25ede0f03427c97ab7739f140c127bb4d82d28264fa60a9d2c7bbf51b5c"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/facebook/03-distribuidor-pequeno-a3-STORYBOARD.md",
+      "destino": "08-distribuidor-pequeno/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "8a05ff52f3b73ad46589913915e40e879b6ad502e74fda49145ec4fb41b00bf9",
+      "sha256TextoConsolidado": "95e32b722bd5f0e0ca5059b8d40182a61f2a866b966179a7ab5703bc9ed50efa"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/facebook/03-distribuidor-pequeno-a3-PROMPTANIMACION.md",
+      "destino": "08-distribuidor-pequeno/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "76304b7604758ddc8fd9a2c1c05881c09f66946c32627a7d1f0bdc1c28d617b5",
+      "sha256TextoConsolidado": "c3f3fe4752839ecfcfdbc9d3883a2ebf8ed1c74c953c257963513e1e18c6679f"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/instagram/01-distribuidor-pequeno-a1.md",
+      "destino": "08-distribuidor-pequeno/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "39dad8e79f094c7126b91d667e1eccd773786dd5d84da243eb6bd208dbf38f45",
+      "sha256TextoConsolidado": "0529892fb2a89ac9dc23811053120df2ef81d8acb0214ad5a2b70a300c321c52"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/instagram/01-distribuidor-pequeno-a1-STORYBOARD.md",
+      "destino": "08-distribuidor-pequeno/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "5dff1fed92ef790becf1ec567a761f00ed8c4a29ac461eb49d0634225d52b415",
+      "sha256TextoConsolidado": "796ae7ce06445551d4b6b2da0197e2fddaf333b17955f9c433a2f50ba0a42d4d"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/instagram/01-distribuidor-pequeno-a1-PROMPTANIMACION.md",
+      "destino": "08-distribuidor-pequeno/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "ff4300cadcfa4e17742f65f00f3668b690994d27696a91f7a76afbc7d345443c",
+      "sha256TextoConsolidado": "b3a242842a6313f29d8316826bcd74d93d6d594f8a11e5a9da3374abc05a3080"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/instagram/02-distribuidor-pequeno-a2.md",
+      "destino": "08-distribuidor-pequeno/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "c9cbe15b3dee7740660cb5538900f3171624948844b2394ba53f638cfacaad61",
+      "sha256TextoConsolidado": "9104e6114c630a9b2cc765ff99c1396dd98847089a9233e6b62d4204018b758a"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/instagram/02-distribuidor-pequeno-a2-STORYBOARD.md",
+      "destino": "08-distribuidor-pequeno/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "00427541c28afe94278c1e369b4c6b804c8715aa36b6979abd87b1e1e876f6ec",
+      "sha256TextoConsolidado": "56d4e795b03a99ae8727398167b173e0fbd92d09c7f5b2be93a0604ce0e57df0"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/instagram/02-distribuidor-pequeno-a2-PROMPTANIMACION.md",
+      "destino": "08-distribuidor-pequeno/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "ab0dff3540c7482a3e8abb13e130b42d3ef8dcbdc0e8fb575b353b525b27720f",
+      "sha256TextoConsolidado": "6aef784f16fb6b25b63f45bb46d5100e10440c1312a64a6e1b87a6e6cc76aadd"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/instagram/03-distribuidor-pequeno-a3.md",
+      "destino": "08-distribuidor-pequeno/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "02aad52ddd38a7c3cf69a1977188d54f9321cb74b1dd4944d6acf563abdc64df",
+      "sha256TextoConsolidado": "0ea8c2a61743daaa12b73a5c002628b667fa27d18270e6d9190191632f55ea50"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/instagram/03-distribuidor-pequeno-a3-STORYBOARD.md",
+      "destino": "08-distribuidor-pequeno/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "dff5f6fce9a7bc92e2f5cae0ea9e58730d55cfe8339caf77770f011d4118f54c",
+      "sha256TextoConsolidado": "99ecd6712bb7f9bd3523f0960b17de87ea34b25e00954c12fc3d6daa2f19a9c5"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/instagram/03-distribuidor-pequeno-a3-PROMPTANIMACION.md",
+      "destino": "08-distribuidor-pequeno/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "dfa19012396a243906599df518951673ff7b0ee3c64672a3e797518d2815333a",
+      "sha256TextoConsolidado": "3320118a9172dc95e72949e7b10bbda7f9e4b1248aac1b06160efbd4496b4170"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/tiktok/01-distribuidor-pequeno-a1.md",
+      "destino": "08-distribuidor-pequeno/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "7a545e5b5eae5a717cff28f819c14e69d2e6b0883234cac72aefdb950539a8e5",
+      "sha256TextoConsolidado": "642914236516a0102ec40712a10d2d902ebfdc0ea8f7ae3e4a4534a1cc15316d"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/tiktok/01-distribuidor-pequeno-a1-STORYBOARD.md",
+      "destino": "08-distribuidor-pequeno/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "a28ec8aa109ba3ab248e4f8890ca843bf40a7e16c33e38f642ce9b5e97680ed4",
+      "sha256TextoConsolidado": "6b834f5f33fb07086b25c54dde9e814445c3a3bf0be90861eaf2f9995117a329"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/tiktok/01-distribuidor-pequeno-a1-PROMPTANIMACION.md",
+      "destino": "08-distribuidor-pequeno/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "adb537deb81498c111296cf284d3c9e7527dd0443119a0efd0a01432070bc487",
+      "sha256TextoConsolidado": "e18445a5374939c6b4d4605e9f76e3bb6ed8c69abdebe2bf555fec465c076941"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/tiktok/02-distribuidor-pequeno-a2.md",
+      "destino": "08-distribuidor-pequeno/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "994da70dbf4543022f9230ba45b971c9ba498bb6f58df1d2c70185c908ed4eed",
+      "sha256TextoConsolidado": "ecf480cbe7c5581676b08e9fe9421b11aca6959f07b6366bf895de8d5a5fd33b"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/tiktok/02-distribuidor-pequeno-a2-STORYBOARD.md",
+      "destino": "08-distribuidor-pequeno/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "ad146660855dd491600177af2720f0f7048c01b7ef7d3cd6768f84a3db759987",
+      "sha256TextoConsolidado": "12859c7d680762ce33b84b9a0864a396e10a775a4ec10363c376a1938baf2215"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/tiktok/02-distribuidor-pequeno-a2-PROMPTANIMACION.md",
+      "destino": "08-distribuidor-pequeno/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "89046ec0636507a5c0026aca9e84bfdf322cfd778986b0e40dcd52e60b9b831b",
+      "sha256TextoConsolidado": "c63be166abbb7628aab09ec4ae292e04897bdd543ea859d1bc80ce6a0a6f034b"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/tiktok/03-distribuidor-pequeno-a3.md",
+      "destino": "08-distribuidor-pequeno/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "687a3f69dc405482037f0ec3c23d09974ebbd6c3678d7f0cf83de085e613a11b",
+      "sha256TextoConsolidado": "a7cdb7f92cceed6d5ba78879ae495ead0b290f5aaa8cf3da240bdd32fdf88b61"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/tiktok/03-distribuidor-pequeno-a3-STORYBOARD.md",
+      "destino": "08-distribuidor-pequeno/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "453dc3eec9df9a55d18433a8866c3c63494d72537ce3516a0f4f2583a45d4a1f",
+      "sha256TextoConsolidado": "58d66f47b9a3eb510790713a2df80d3e5005ebeb7e1967a439624a02c28040fd"
+    },
+    {
+      "origen": "08-distribuidor-pequeno/tiktok/03-distribuidor-pequeno-a3-PROMPTANIMACION.md",
+      "destino": "08-distribuidor-pequeno/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "3a26c086aa3cc521cf3e766a28d5a13b2a5174ba860f4abc37acb7b3e305fc10",
+      "sha256TextoConsolidado": "f9197e2402ff53da4f9b9a98cb03d677d4222a2c34b308117689cfc55f276f51"
+    },
+    {
+      "origen": "09-admin-finanzas/facebook/01-admin-finanzas-a1.md",
+      "destino": "09-admin-finanzas/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "ac8eb450de473177336302a8d93438735cbf8bcf1f9779dc96048d96f816a71a",
+      "sha256TextoConsolidado": "2160720ceea8f09cfdb18f1dd2a2a4b954bc5c36e828da790681f696c845a009"
+    },
+    {
+      "origen": "09-admin-finanzas/facebook/01-admin-finanzas-a1-STORYBOARD.md",
+      "destino": "09-admin-finanzas/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "ff0df2758c7189df6867ad40bd4ca4f2c531498e8525a9b07a7621b2d6cd8316",
+      "sha256TextoConsolidado": "74774bf6ba2712185e620b149ff6f115f6af71ec92d1c568fc62c9ac90243888"
+    },
+    {
+      "origen": "09-admin-finanzas/facebook/01-admin-finanzas-a1-PROMPTANIMACION.md",
+      "destino": "09-admin-finanzas/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "b84f90599dd74bab9dcf0417b307ff7d49d330b80532b05ad62b6ecebd3e6ea9",
+      "sha256TextoConsolidado": "f34c4ac961cee2d3826182938fa256e260b0af0355f2207a8cc385236a0e9774"
+    },
+    {
+      "origen": "09-admin-finanzas/facebook/02-admin-finanzas-a2.md",
+      "destino": "09-admin-finanzas/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "0436b70143251a20dc03009d8301b8eea0f0c55c6d1799d84eac11ca82841886",
+      "sha256TextoConsolidado": "d1265be92c502070de306911d9aab9467e295dac4d88ff08105d2883635250b6"
+    },
+    {
+      "origen": "09-admin-finanzas/facebook/02-admin-finanzas-a2-STORYBOARD.md",
+      "destino": "09-admin-finanzas/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "5ba1da42c679a9aa36be9957992984e30ee47c1e614bb5211a0f9f8bd63a430a",
+      "sha256TextoConsolidado": "ca265f09d27f1491581f860f56f49d056478afc66068114e455ff5eb763bf76d"
+    },
+    {
+      "origen": "09-admin-finanzas/facebook/02-admin-finanzas-a2-PROMPTANIMACION.md",
+      "destino": "09-admin-finanzas/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "7e5dfc991723fa62d234a99ae1bfd72c181898b4b0c00debebb138fcd927d9bc",
+      "sha256TextoConsolidado": "a1aabaf17aec3b6caba5d3d4c3cbef57a4f63b7f1881ddf625c7859d98f23229"
+    },
+    {
+      "origen": "09-admin-finanzas/facebook/03-admin-finanzas-a3.md",
+      "destino": "09-admin-finanzas/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "c9abfccdb5c4701bd11ba13e58ebc9be6024309721d3b886bf923426c399b783",
+      "sha256TextoConsolidado": "8f07cc230d8411df9a80f1bea4bfab7db07fa3267c553d632f8aa9740a36bf88"
+    },
+    {
+      "origen": "09-admin-finanzas/facebook/03-admin-finanzas-a3-STORYBOARD.md",
+      "destino": "09-admin-finanzas/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "9f5d86d5aa81fdfb2e0f7c19d621bb8ed8e9e3f89dfc2e195efc33421b2c0825",
+      "sha256TextoConsolidado": "141520cdab44d37dd5e4a12b51bfa37b68bb523588fb65e90c8c8504fa7da282"
+    },
+    {
+      "origen": "09-admin-finanzas/facebook/03-admin-finanzas-a3-PROMPTANIMACION.md",
+      "destino": "09-admin-finanzas/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "3f1452e0d67e1e84a839c20c76a7d7d9cf1f688c17996c11fd11066f1491c9bd",
+      "sha256TextoConsolidado": "34ba23632762667d6bb9a948ebf176acf0d3857c1c268f0baa7262b42d8e117f"
+    },
+    {
+      "origen": "09-admin-finanzas/instagram/01-admin-finanzas-a1.md",
+      "destino": "09-admin-finanzas/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "29691ff8ecdab2220a900ca81cdcf42e22fd725331b043fda1f9a2fda724b8fb",
+      "sha256TextoConsolidado": "9e13ebde0512cceb5e1fb6ab31e2d4cb5e05c6f33305fa6e213a5057c4359f81"
+    },
+    {
+      "origen": "09-admin-finanzas/instagram/01-admin-finanzas-a1-STORYBOARD.md",
+      "destino": "09-admin-finanzas/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "3fb63124f0b364379219b8a2de8463126bcf6f50aa0a0b85933918ef5cb79a60",
+      "sha256TextoConsolidado": "c17ce88966c8d81d19bb3be8725485a97ea6b18de494328fd62e2114a32e8572"
+    },
+    {
+      "origen": "09-admin-finanzas/instagram/01-admin-finanzas-a1-PROMPTANIMACION.md",
+      "destino": "09-admin-finanzas/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "9da34e038bd16dfa69b56a0d6cba0b598d262f179cd075302dd6b77d0b3042b3",
+      "sha256TextoConsolidado": "e594c14b05626f8065c722664becbfe1aebcb4cbc02eee05b075dccd81c86202"
+    },
+    {
+      "origen": "09-admin-finanzas/instagram/02-admin-finanzas-a2.md",
+      "destino": "09-admin-finanzas/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "30b514018539da82b34e61df06a66021a678a839313a55ee3c20df69a21c27fc",
+      "sha256TextoConsolidado": "88bdf7a22ec62f7552c3368d2fecdc030ed371ef806a02c6f9d785b234687336"
+    },
+    {
+      "origen": "09-admin-finanzas/instagram/02-admin-finanzas-a2-STORYBOARD.md",
+      "destino": "09-admin-finanzas/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "d3fdaa0c0ca48efa67478dc942b40364f9350e0ceb22bd3dedd1747c232f77fa",
+      "sha256TextoConsolidado": "26b4859fbe8754fca986da769d11b68ef02bfde434eaf3578fa2220125d944fd"
+    },
+    {
+      "origen": "09-admin-finanzas/instagram/02-admin-finanzas-a2-PROMPTANIMACION.md",
+      "destino": "09-admin-finanzas/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "1bd884200cb0d5fea0d980e746eacfdc032fd5654131742f70d9404c5b00b203",
+      "sha256TextoConsolidado": "c0f2475688e7eb9c198391377c9815d4407c7dc0877309b24eef5e23b7ff1b99"
+    },
+    {
+      "origen": "09-admin-finanzas/instagram/03-admin-finanzas-a3.md",
+      "destino": "09-admin-finanzas/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "bc5ac838cf07d04d9baed1ab607b3aeac06d34136be37f58a9f5bb7231669ce6",
+      "sha256TextoConsolidado": "610e38243f67f18c0306d58ca635d871b2a641a53f4aa9a03767dbae19769c88"
+    },
+    {
+      "origen": "09-admin-finanzas/instagram/03-admin-finanzas-a3-STORYBOARD.md",
+      "destino": "09-admin-finanzas/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "b22e3c4161f45a0e66d3c3c564e457341c526c490a7cd926416233a054d2ea93",
+      "sha256TextoConsolidado": "927925af39ccd7acfaa9606d62750d47e16224a27d05834d437c279610564686"
+    },
+    {
+      "origen": "09-admin-finanzas/instagram/03-admin-finanzas-a3-PROMPTANIMACION.md",
+      "destino": "09-admin-finanzas/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "724b9b06a91143fb6829da89b894e3a934f4a63e59310f0fac40d59a75a15c95",
+      "sha256TextoConsolidado": "3ae1fbe41695958bea58a4b191227cafe374452f421827870a2eff80ce17f80d"
+    },
+    {
+      "origen": "09-admin-finanzas/tiktok/01-admin-finanzas-a1.md",
+      "destino": "09-admin-finanzas/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "ef3c631cf7f2209c4e786465a35bd9cf6bbe7c30b4e93a021e5ee033f66a67ea",
+      "sha256TextoConsolidado": "b1af2fd8c4dccac29654bff6464fd305ed54fd80d3193cb294b4563c3626a15d"
+    },
+    {
+      "origen": "09-admin-finanzas/tiktok/01-admin-finanzas-a1-STORYBOARD.md",
+      "destino": "09-admin-finanzas/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "26d3ebd54c24edf68a6cf3d3b6e2e79218d463ece9ce46ba0f59da4049764550",
+      "sha256TextoConsolidado": "59b6e8c9f370f2ed5935ec9f6545a177b909a0909ffc8f74a0ae5f9fdcc41184"
+    },
+    {
+      "origen": "09-admin-finanzas/tiktok/01-admin-finanzas-a1-PROMPTANIMACION.md",
+      "destino": "09-admin-finanzas/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "5b0603f9ba349fa1d1e8ee85587bed7b2c2434ae4f214840fc8cbe078a39e80e",
+      "sha256TextoConsolidado": "0879bc9b329c3dbbf88a2deaf20a822c032ba186b6042d1c4a9eb3c970a8e239"
+    },
+    {
+      "origen": "09-admin-finanzas/tiktok/02-admin-finanzas-a2.md",
+      "destino": "09-admin-finanzas/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "9318047d4e2763cdd7cb58a8134cd8930ac537da93dfb40d2c690ca9c602154e",
+      "sha256TextoConsolidado": "e35836ae93d4355557987cc878e997fb3cc0406f232b2b186c6dd42644a5eb53"
+    },
+    {
+      "origen": "09-admin-finanzas/tiktok/02-admin-finanzas-a2-STORYBOARD.md",
+      "destino": "09-admin-finanzas/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "37440a18bd8a9921ac4caef59df8b7ceb7fdb2125983f3c8971610876b90aa96",
+      "sha256TextoConsolidado": "5de88d5c9d0ea5e76db8d09f66250a9ace2db0fa5211b50e97464125c3a4ad8f"
+    },
+    {
+      "origen": "09-admin-finanzas/tiktok/02-admin-finanzas-a2-PROMPTANIMACION.md",
+      "destino": "09-admin-finanzas/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "f68ab26037edcad38b17ce8dbab75e9e0d556135ab6e03c7014647af0df45894",
+      "sha256TextoConsolidado": "b5d9074f0b0a9ce9e63b504031099eb1034f8a1aeda5fe06a3cd5b69cce23f43"
+    },
+    {
+      "origen": "09-admin-finanzas/tiktok/03-admin-finanzas-a3.md",
+      "destino": "09-admin-finanzas/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "31c915835e73ec672a9ac55d496fb41a974e5ccf9639b50ab15ff5f0088e2cd6",
+      "sha256TextoConsolidado": "4913614f09f08c0cc624768c85c1594c1e02b57d4a84ed4e619d69f4c2b2921b"
+    },
+    {
+      "origen": "09-admin-finanzas/tiktok/03-admin-finanzas-a3-STORYBOARD.md",
+      "destino": "09-admin-finanzas/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "a7e9da36e30d0e5faf905c22a20356be2839c6a068fb99dc1d25bf6b29d9f654",
+      "sha256TextoConsolidado": "7fcfbb1d813f9fc50d07a9d43bbf762e4d9961623f19fc3fb8e3f1d0ab9ae7f9"
+    },
+    {
+      "origen": "09-admin-finanzas/tiktok/03-admin-finanzas-a3-PROMPTANIMACION.md",
+      "destino": "09-admin-finanzas/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "7b3ff67c7e4d77f10fdbf7b27c55a13f68940393f55a45a88f28f2c7847068a6",
+      "sha256TextoConsolidado": "c558b79e4da426551de4d051d3d9ef5f4b454968e42115163754fbba2b7b9b7b"
+    },
+    {
+      "origen": "10-coordinador-inventario/facebook/01-coordinador-inventario-a1.md",
+      "destino": "10-coordinador-inventario/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "5ba801bebc70abab322994de8f77c7d1825422ca8c65eb11762a9d116dee61a7",
+      "sha256TextoConsolidado": "36556d742ed4edb2eac783e9ba725c92fa21bb2c09755f25dfe29e04e95082e6"
+    },
+    {
+      "origen": "10-coordinador-inventario/facebook/01-coordinador-inventario-a1-STORYBOARD.md",
+      "destino": "10-coordinador-inventario/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "2db67b84520301f76af621a7252f36b7d0a80b7ce3480a4e63bf2649df094fd2",
+      "sha256TextoConsolidado": "0289d20d908851b32a8e341cf43cb3591296dcc198085f74df2dbe9c36fc08d7"
+    },
+    {
+      "origen": "10-coordinador-inventario/facebook/01-coordinador-inventario-a1-PROMPTANIMACION.md",
+      "destino": "10-coordinador-inventario/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "e60c9384dfbde036cd8ecbf61e3f7abbd62814f8786d4f5ab22b9928656ff07c",
+      "sha256TextoConsolidado": "b369f67518b6ae5fae2cffd822150ca3a6e0a7d27ad076c4e6533c355d68e8a3"
+    },
+    {
+      "origen": "10-coordinador-inventario/facebook/02-coordinador-inventario-a2.md",
+      "destino": "10-coordinador-inventario/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "245b732974f6d15189cdbd4d282edfc2120499b19099ee2d451cdb0fe8a4cd04",
+      "sha256TextoConsolidado": "10d7bc49134cd13419e149854b7a8dfff182935ea90db463593423ba2375217b"
+    },
+    {
+      "origen": "10-coordinador-inventario/facebook/02-coordinador-inventario-a2-STORYBOARD.md",
+      "destino": "10-coordinador-inventario/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "6b4ae2539f5845aa765af4c8717e5ec4cf60e7f50a39b3fe3825669c1cc92cbb",
+      "sha256TextoConsolidado": "3b1ff250081ae296b5b8716aeb13e93ae6880f2657c2e742ea5ed5008fa993b9"
+    },
+    {
+      "origen": "10-coordinador-inventario/facebook/02-coordinador-inventario-a2-PROMPTANIMACION.md",
+      "destino": "10-coordinador-inventario/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "9a81aad7a73ad787dd8280ebb08b741ad04803910c5500b0092117adf315723d",
+      "sha256TextoConsolidado": "89c2fb460de033532c6238d454342df61210aeabc6b09f48ec8f18db90d0d3b2"
+    },
+    {
+      "origen": "10-coordinador-inventario/facebook/03-coordinador-inventario-a3.md",
+      "destino": "10-coordinador-inventario/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "f1f61501cc0b282b0fb8e02316c9b885772456cb97f0c45e7db6de3e4e91593e",
+      "sha256TextoConsolidado": "d4caeb4a912a76f6f29d1fa2fb4053b9621b9f0d4b61370a03e589ac77bae3bf"
+    },
+    {
+      "origen": "10-coordinador-inventario/facebook/03-coordinador-inventario-a3-STORYBOARD.md",
+      "destino": "10-coordinador-inventario/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "112b264e1179b69fd561ec72af6771de05c789ef2532e150d078d1ad8275d3ca",
+      "sha256TextoConsolidado": "759f2b0ddcba061f1bb29bee21f0cf6319eb3046fd6d6ad604505022ba47586e"
+    },
+    {
+      "origen": "10-coordinador-inventario/facebook/03-coordinador-inventario-a3-PROMPTANIMACION.md",
+      "destino": "10-coordinador-inventario/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "9a6f22f79fa1310ae8b271b9f0a3387a91d3c0477776eb07451c1735fbf5af30",
+      "sha256TextoConsolidado": "5309d666c1ac673f3cc8bb42e42654d49f3e296f74427d0ee64f65983cad1f88"
+    },
+    {
+      "origen": "10-coordinador-inventario/instagram/01-coordinador-inventario-a1.md",
+      "destino": "10-coordinador-inventario/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "22587b554e1b08facd9bef8db94eca5058f3b4f4e8a7436c77c77863ec9ad985",
+      "sha256TextoConsolidado": "e02317c5d1fd2193ca3f2b548fdcdfe80e68e6fa5762a23cf667eeb7f42afce3"
+    },
+    {
+      "origen": "10-coordinador-inventario/instagram/01-coordinador-inventario-a1-STORYBOARD.md",
+      "destino": "10-coordinador-inventario/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "4f9ec84fe2de21a9d8dcf7ffbdf207d6b211ea6457fb3c26a0841de05842ed56",
+      "sha256TextoConsolidado": "dd69b4522fed84d6527e6b0fca150adac788f9b53be4a090273670eab3918c57"
+    },
+    {
+      "origen": "10-coordinador-inventario/instagram/01-coordinador-inventario-a1-PROMPTANIMACION.md",
+      "destino": "10-coordinador-inventario/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "59a333091ae337f5e219d50e6ff1755e6b5c99987f535b87c53e8576f3e77dd2",
+      "sha256TextoConsolidado": "1150476c6b1735b5494f2b84b477687586dfc0930c7ae00dafc879d2d4d6959b"
+    },
+    {
+      "origen": "10-coordinador-inventario/instagram/02-coordinador-inventario-a2.md",
+      "destino": "10-coordinador-inventario/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "275663a06f9decd3453efd6e4bc57816948d07331826227dc23c29da66057f70",
+      "sha256TextoConsolidado": "a11a93ff6175ff92ad8009bf3fe624f01c29f1c305c324c08acedcb9824d5074"
+    },
+    {
+      "origen": "10-coordinador-inventario/instagram/02-coordinador-inventario-a2-STORYBOARD.md",
+      "destino": "10-coordinador-inventario/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "ad08177d444d97af50ec6c600bf84dbcb2e758ffd7a8c3ba1bea85b5df209392",
+      "sha256TextoConsolidado": "3f810a845423ab474fb238abda937dc9fec2939dc3c92142d1ea4f3623303bce"
+    },
+    {
+      "origen": "10-coordinador-inventario/instagram/02-coordinador-inventario-a2-PROMPTANIMACION.md",
+      "destino": "10-coordinador-inventario/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "9b653f2910644cae5482c223edfaa4bbbf490acc9974bb61047f34760828d98a",
+      "sha256TextoConsolidado": "8b2cb23f426428820e73e8c8c4967bb5f36130e36084e55e73894b5c2e510b3a"
+    },
+    {
+      "origen": "10-coordinador-inventario/instagram/03-coordinador-inventario-a3.md",
+      "destino": "10-coordinador-inventario/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "062e08281438b3f82743c675d4d49309ec3260604ce48783cfa5392f7be343c1",
+      "sha256TextoConsolidado": "b7da564ccfd866bc78148649b2af29f5f809ab87e66784c2c0243f67052b4644"
+    },
+    {
+      "origen": "10-coordinador-inventario/instagram/03-coordinador-inventario-a3-STORYBOARD.md",
+      "destino": "10-coordinador-inventario/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "f981c4a0923ccee45c00a06f913abeb4af1b97baf7a34a031065d98132a70574",
+      "sha256TextoConsolidado": "e7bf73d8069489a0d4afce39e1bedc147fb8f6c740ac0bf3cc7c9d48933e63d3"
+    },
+    {
+      "origen": "10-coordinador-inventario/instagram/03-coordinador-inventario-a3-PROMPTANIMACION.md",
+      "destino": "10-coordinador-inventario/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "a140b0e4446cd047d01b226439a72dfe739fbf11dcc4dbcca9a95066e19c6ee6",
+      "sha256TextoConsolidado": "1231a3e6fbc4d04f8d1b3836ab43c842859ef73aa42573d10aeb468bc7575c6f"
+    },
+    {
+      "origen": "10-coordinador-inventario/tiktok/01-coordinador-inventario-a1.md",
+      "destino": "10-coordinador-inventario/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "ec2cc19c51328a066d3e6757d887c39dd89a38bdd8270daade4ec154c3b2e043",
+      "sha256TextoConsolidado": "2a4f68f13b8e1e54e9844c7843eef2e738d8e1979001db32b669173062fbd9e9"
+    },
+    {
+      "origen": "10-coordinador-inventario/tiktok/01-coordinador-inventario-a1-STORYBOARD.md",
+      "destino": "10-coordinador-inventario/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "9fb8607d771b0cbf012cb2bd55468b1607363b145ac6f5f6cf9e60c84d34ba51",
+      "sha256TextoConsolidado": "48bc80b025169c4cbfd601439c4a19723a0d82f940f609fa0367ddadac34a6b9"
+    },
+    {
+      "origen": "10-coordinador-inventario/tiktok/01-coordinador-inventario-a1-PROMPTANIMACION.md",
+      "destino": "10-coordinador-inventario/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "2d45071e5f858379a99bafd1b9bacef97ac48e7ad4404cf2bac0d07d6b41c596",
+      "sha256TextoConsolidado": "9ce46b733d252aa8710099732339544f2fafc223479027715f7aa7b496108347"
+    },
+    {
+      "origen": "10-coordinador-inventario/tiktok/02-coordinador-inventario-a2.md",
+      "destino": "10-coordinador-inventario/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "48d07f26d62a2e8ebbf10209e028d8d7b9d911cd367be8201ce64aa35b288103",
+      "sha256TextoConsolidado": "d4d7209fbb2ca4c77314e9d0a53f92bc9bcade2f38c31edab9544d5f0b5795cd"
+    },
+    {
+      "origen": "10-coordinador-inventario/tiktok/02-coordinador-inventario-a2-STORYBOARD.md",
+      "destino": "10-coordinador-inventario/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "fa3586dab7647c314e575fe0518a0ae62687e284ce9b842fdf16fa658dba0ef7",
+      "sha256TextoConsolidado": "dfb3460b2e016669ff7a7d4899cde1ea92bc07774d0e59e5e579f0171b595867"
+    },
+    {
+      "origen": "10-coordinador-inventario/tiktok/02-coordinador-inventario-a2-PROMPTANIMACION.md",
+      "destino": "10-coordinador-inventario/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "c6362014ed9380f70ed8bcbeee5f3ad848b7f11a901e60a9b5b5be413d13c660",
+      "sha256TextoConsolidado": "5329a97efc35ccf8908fd4e55ebd303d979ff1f413694fc53e9c414a14a47733"
+    },
+    {
+      "origen": "10-coordinador-inventario/tiktok/03-coordinador-inventario-a3.md",
+      "destino": "10-coordinador-inventario/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "e7535e3c20c02ad0aaf5820ab1d24d2f3afcf6a15954e156586a18499d9cf5d5",
+      "sha256TextoConsolidado": "90be9938b07d7fd4c004c7db27127a735d60479ee95296f62f64d4a4de29a33b"
+    },
+    {
+      "origen": "10-coordinador-inventario/tiktok/03-coordinador-inventario-a3-STORYBOARD.md",
+      "destino": "10-coordinador-inventario/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "105c884d2583969c9d695bf0a4d9308f1f5d0adfac1b236770ec97cfdbc81d60",
+      "sha256TextoConsolidado": "7ef183ec91e9bf1c68aedce3907196cc6e8d3d12505fba82b2241176411aa8e2"
+    },
+    {
+      "origen": "10-coordinador-inventario/tiktok/03-coordinador-inventario-a3-PROMPTANIMACION.md",
+      "destino": "10-coordinador-inventario/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "f5d0681ca9a2cbb479bdaa4057928fd7fa1c7ce2ab209490d10f15b6bada44bd",
+      "sha256TextoConsolidado": "6b12071cad5bc1b7acad66bca7a6bd079d1581d4db819e02e6940bcd9893c440"
+    },
+    {
+      "origen": "11-droguerias/facebook/01-droguerias-a1.md",
+      "destino": "11-droguerias/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "78dd826c3ac1f912424e13e9301766daf9d0a09036c08f00734d5de5f30745b8",
+      "sha256TextoConsolidado": "f732200af17e14b9632e2e22b5f8807ed377c0b7abe5e4de28d7b1dd59d1c108"
+    },
+    {
+      "origen": "11-droguerias/facebook/01-droguerias-a1-STORYBOARD.md",
+      "destino": "11-droguerias/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "730a368a29e6df1957b70af91b331bc7e13a06c8d035335cd58b1f569562c52d",
+      "sha256TextoConsolidado": "9aef4f72eb34f92bb2668059b7a2e030c725555a3d66f07db705387667ecd89b"
+    },
+    {
+      "origen": "11-droguerias/facebook/01-droguerias-a1-PROMPTANIMACION.md",
+      "destino": "11-droguerias/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "b8abf05fd9277ff3e3b7ad50156d624235437e47dd93038229701ebb87875c55",
+      "sha256TextoConsolidado": "c4c354a23d1fe513db755ec02daca6ef3a81b5d30c3085467001c5950fb39e73"
+    },
+    {
+      "origen": "11-droguerias/facebook/02-droguerias-a2.md",
+      "destino": "11-droguerias/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "ff1f0aa67c6c06ea382f76a45290fde67515ecfd29ed29b47572ff0e40299793",
+      "sha256TextoConsolidado": "71d26cdf5fa36f6fe110e866950f2ee1dc74a1933a4818030f43c5a638c2efdf"
+    },
+    {
+      "origen": "11-droguerias/facebook/02-droguerias-a2-STORYBOARD.md",
+      "destino": "11-droguerias/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "70538dbda23e7e22c32d102bb63727d6bcfd8116ef161a6d60ecf545290b4994",
+      "sha256TextoConsolidado": "4518fa1840e94fa64973594aab8e53383ab87fcd54bd3add3e7e28e9943dd7a1"
+    },
+    {
+      "origen": "11-droguerias/facebook/02-droguerias-a2-PROMPTANIMACION.md",
+      "destino": "11-droguerias/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "94fecebf4ff0923a1d04ddf1928e32d7496e593598633cc812254ba5ce8e04f5",
+      "sha256TextoConsolidado": "a42b8f300cfc387b85d26833a755e9513ceb1009f7f0fcc4e73eeb194e2a6273"
+    },
+    {
+      "origen": "11-droguerias/facebook/03-droguerias-a3.md",
+      "destino": "11-droguerias/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "60e652eb4574995ce17c09e13944992753416918a204a857eecd02b8e1f72739",
+      "sha256TextoConsolidado": "8dea0a39d65f2bd30406d798949992f84eead4791b19117c840b2c8dbc9a0528"
+    },
+    {
+      "origen": "11-droguerias/facebook/03-droguerias-a3-STORYBOARD.md",
+      "destino": "11-droguerias/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "d7e5a9a9faa251579dfb0258ab9479024c9f7ef34de78d3083f0ced9d44d53e0",
+      "sha256TextoConsolidado": "8de8f09f605662182d7c37d1a7e5d4d9427cfe5afc824507185bc3b23778b47c"
+    },
+    {
+      "origen": "11-droguerias/facebook/03-droguerias-a3-PROMPTANIMACION.md",
+      "destino": "11-droguerias/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "756f1627e72556a4c0cd646f186d5061ec01af9cd6da922746390a520e844e97",
+      "sha256TextoConsolidado": "af003abe7564d438ff87644922a6c3145cbcd19e44b6b19a3771e21edea1aace"
+    },
+    {
+      "origen": "11-droguerias/instagram/01-droguerias-a1.md",
+      "destino": "11-droguerias/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "cba9500b05611fa809b3db8cec66124bc0fd73dafd90a137dd253eb6089d17e1",
+      "sha256TextoConsolidado": "0848d18a77b4f4d00e7fcbc30a6d699c024cd323096eb32b4ac00834abd8de84"
+    },
+    {
+      "origen": "11-droguerias/instagram/01-droguerias-a1-STORYBOARD.md",
+      "destino": "11-droguerias/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "ce59b878350d424b84291c357d788216880d66109bcd39e196a6183085f72fdd",
+      "sha256TextoConsolidado": "16b210e7e2d233e34ca3b8e02c275dbba7c025820fa0f39c74769948b2dbeddc"
+    },
+    {
+      "origen": "11-droguerias/instagram/01-droguerias-a1-PROMPTANIMACION.md",
+      "destino": "11-droguerias/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "264cb85c44741df4fbcb012c761e6e68251d65e2ff2dec631d5b06370cf9c217",
+      "sha256TextoConsolidado": "cdc44bee29b5db40006c816511ee25faa23978553b634efa0f167873d2573172"
+    },
+    {
+      "origen": "11-droguerias/instagram/02-droguerias-a2.md",
+      "destino": "11-droguerias/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "148a45c8155942500f2fda8d02a9d8a6e44d722752c1c0e2f7dd242ab193d8a9",
+      "sha256TextoConsolidado": "1bf0705609b2886ab3de8fafe86b96bf4f44ddf69276f59b07205520aad6a8aa"
+    },
+    {
+      "origen": "11-droguerias/instagram/02-droguerias-a2-STORYBOARD.md",
+      "destino": "11-droguerias/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "cf113d35667de18bd9dd2f5a9eb09148928916c8b9e5051cf8d1dad9593bf216",
+      "sha256TextoConsolidado": "4a1675d37c8a9963d90c9395850ee897b88313542cf50dbc5c3b5f896ad43850"
+    },
+    {
+      "origen": "11-droguerias/instagram/02-droguerias-a2-PROMPTANIMACION.md",
+      "destino": "11-droguerias/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "2b1f5664b9b8f34655db5748bbd3cf0e0aca74625d111a6494acc2a00c428b82",
+      "sha256TextoConsolidado": "3741d02956cb862ace2eb27d7f85a9447bd53b4fb975d1a44c423f391633745d"
+    },
+    {
+      "origen": "11-droguerias/instagram/03-droguerias-a3.md",
+      "destino": "11-droguerias/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "d29bdc1e3eb17c5f0133383191ef6feb406ff8337f9e269f492f085855233e91",
+      "sha256TextoConsolidado": "a0ee44a1f5da0373fef24ce3717326c95b550779dfef314167f49a4588a1f01c"
+    },
+    {
+      "origen": "11-droguerias/instagram/03-droguerias-a3-STORYBOARD.md",
+      "destino": "11-droguerias/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "778345b737f31874df06b52e5a670ef68bd8b3aa9f3e54f4da271755e228c965",
+      "sha256TextoConsolidado": "9af587ac9bdea49d3d26a43031f948d564e83dace1f773b67124dc1b3c9575c5"
+    },
+    {
+      "origen": "11-droguerias/instagram/03-droguerias-a3-PROMPTANIMACION.md",
+      "destino": "11-droguerias/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "2e276c0117187e148407337e2b66356a6bc9a35c6b7d9a62bb972a52cfca2b4c",
+      "sha256TextoConsolidado": "b7eb9156608cdfc7dc7e98e7ea0c53626713af9c237eb5144aa181486f704365"
+    },
+    {
+      "origen": "11-droguerias/tiktok/01-droguerias-a1.md",
+      "destino": "11-droguerias/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "fc549484292e87f561c6affc7d392d36ecf0d215b83d796e4e47134f73636350",
+      "sha256TextoConsolidado": "ef09e012413efbd7246439753120c0f96b6ef78858c65a9d56207bbae2c14e16"
+    },
+    {
+      "origen": "11-droguerias/tiktok/01-droguerias-a1-STORYBOARD.md",
+      "destino": "11-droguerias/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "249ddc2fd813df622fd06aa07a183c1d878a997fd22d0c27d4e262520cf645ff",
+      "sha256TextoConsolidado": "c7a6647c3a4f0b2496f0c030581b39f8fc7dc86ddfbf672778a4136f8677532d"
+    },
+    {
+      "origen": "11-droguerias/tiktok/01-droguerias-a1-PROMPTANIMACION.md",
+      "destino": "11-droguerias/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "f88085d6114626a8d3e604a297768a6e4990ddf68eae8641fc9981996e900cfe",
+      "sha256TextoConsolidado": "6a66a2c074ede8e9474437c155ed21e25a731990527f884f649a2d3527fe5e21"
+    },
+    {
+      "origen": "11-droguerias/tiktok/02-droguerias-a2.md",
+      "destino": "11-droguerias/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "c0d89e32a07dca0d6c679446e8dea85500f770fc8e9fc876a2f3190ed1ce3c4f",
+      "sha256TextoConsolidado": "5dabf87dc85be664332ced2ea58ff62f8aa63636fef3bf27c55918019b95b3e9"
+    },
+    {
+      "origen": "11-droguerias/tiktok/02-droguerias-a2-STORYBOARD.md",
+      "destino": "11-droguerias/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "6a07335b7aa6d537fba216047064a8607af29ace86c00637e9895ca8fcbfe929",
+      "sha256TextoConsolidado": "dad478a5039d73832e70e44fd70f9ac23ad0b32ebcbafb12f239659e6f1a3b96"
+    },
+    {
+      "origen": "11-droguerias/tiktok/02-droguerias-a2-PROMPTANIMACION.md",
+      "destino": "11-droguerias/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "b8e75ca5b1d752877176f42d7f87e761bed9e71f928efcbef4152f6726f90fcd",
+      "sha256TextoConsolidado": "be3641fae029c730501196103c1d1c40ebda3d1d4d0e8f5bf0cf7dae742d5699"
+    },
+    {
+      "origen": "11-droguerias/tiktok/03-droguerias-a3.md",
+      "destino": "11-droguerias/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "2ab713b1d1face8a749f20663e1ad40306ebad423f6a31c72433498362533db5",
+      "sha256TextoConsolidado": "e7350033b7f2f91ebd0e9d0688125040799b7f78bd8555363b16e12e5c5d896d"
+    },
+    {
+      "origen": "11-droguerias/tiktok/03-droguerias-a3-STORYBOARD.md",
+      "destino": "11-droguerias/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "f5f702d3514f98768dad26c0373234ec426465cc5aa74cd1a596be96f4481ab3",
+      "sha256TextoConsolidado": "9ed0f11607c45336f1ac80d1193560e4860909ee5b55897f2dce83f6709b2ff6"
+    },
+    {
+      "origen": "11-droguerias/tiktok/03-droguerias-a3-PROMPTANIMACION.md",
+      "destino": "11-droguerias/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "6f9b2cde79caa6c9cf52c5a997e82f2fc44ef70dab9222fc6b8bd9ee59e76aca",
+      "sha256TextoConsolidado": "17820bcb391c1cb4dd7d4e1c61163ae14a4e43120b7acd5f806cced302a5a3e4"
+    },
+    {
+      "origen": "12-empresarial-corporativo/facebook/01-empresarial-corporativo-a1.md",
+      "destino": "12-empresarial-corporativo/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "1f5f23523d0c0751b75049dc06c9a89c640b6f2cd2fdabd078ba4b36f2c5c518",
+      "sha256TextoConsolidado": "d98dcd15a46a4954b05fe6f7aec0471db13297c104a873500025738aa81a501b"
+    },
+    {
+      "origen": "12-empresarial-corporativo/facebook/01-empresarial-corporativo-a1-STORYBOARD.md",
+      "destino": "12-empresarial-corporativo/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "c3b74906793cafcc427b06efced51b8605ec95e76943ca9da4a960bbb9a9708c",
+      "sha256TextoConsolidado": "f3588c56e2431ab5893df9c7b2267ccd6f32a040db604ad1787d507bfe3ddde9"
+    },
+    {
+      "origen": "12-empresarial-corporativo/facebook/01-empresarial-corporativo-a1-PROMPTANIMACION.md",
+      "destino": "12-empresarial-corporativo/facebook/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "e63a98df34542ddfd246715b177958fbeede637b7f113e8aff2d6b763ff8843d",
+      "sha256TextoConsolidado": "6a0c5933d0ba4c17451311ef697336577e0196d8602bb4c2d3d56ab6e69fa93c"
+    },
+    {
+      "origen": "12-empresarial-corporativo/facebook/02-empresarial-corporativo-a2.md",
+      "destino": "12-empresarial-corporativo/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "e0284e301daacb9cc2c25e0e04b20a129022d7d58a5b5ef97ecb44650153717e",
+      "sha256TextoConsolidado": "768520bcd1ce6698945033b9b81732a92bd31f17d901e790d67847da271309d4"
+    },
+    {
+      "origen": "12-empresarial-corporativo/facebook/02-empresarial-corporativo-a2-STORYBOARD.md",
+      "destino": "12-empresarial-corporativo/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "61e73d497850676cbb7c5dca2b74e381888819cd0c5a37230b5d60105436deeb",
+      "sha256TextoConsolidado": "b30208a9059653feef03b9e06234125dd44acdc15526ca02b4f51a86f21ac239"
+    },
+    {
+      "origen": "12-empresarial-corporativo/facebook/02-empresarial-corporativo-a2-PROMPTANIMACION.md",
+      "destino": "12-empresarial-corporativo/facebook/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "23b272edeaa3ea4e836a1602c01d59735961f7d69d3347cd3e9ffbf52aa578a3",
+      "sha256TextoConsolidado": "f65da8c9530e83da2ae582eb12de5b9c29479ca8db140b9f24675c7d0c182170"
+    },
+    {
+      "origen": "12-empresarial-corporativo/facebook/03-empresarial-corporativo-a3.md",
+      "destino": "12-empresarial-corporativo/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "b93018bdd951d8b40a0c4fec1c43211b007cb27b052c51c31330cec9105cb69e",
+      "sha256TextoConsolidado": "e3aff6c9baca797ec672b935fed35be2eb3e0ba96960bd7f5d22f604e75dd2e4"
+    },
+    {
+      "origen": "12-empresarial-corporativo/facebook/03-empresarial-corporativo-a3-STORYBOARD.md",
+      "destino": "12-empresarial-corporativo/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "ae32bfa4ba6f5af5620afe5fe9475b445f46773399dceebe2c3a8ababea15202",
+      "sha256TextoConsolidado": "e7852a019fb4f1e882669b7fe0771b3e7a1c5186a0ea9fc73629b3643a7ecbe6"
+    },
+    {
+      "origen": "12-empresarial-corporativo/facebook/03-empresarial-corporativo-a3-PROMPTANIMACION.md",
+      "destino": "12-empresarial-corporativo/facebook/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "0a5ca39d14737df0d87f2217d6dec9087766cdc34ab4b61efef782aa51436187",
+      "sha256TextoConsolidado": "9c3fcb81897bf5d828ffdb19bcae55ba8cfb1c7c28c3c666461a76a2b3db7735"
+    },
+    {
+      "origen": "12-empresarial-corporativo/instagram/01-empresarial-corporativo-a1.md",
+      "destino": "12-empresarial-corporativo/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "d9929695c0b91ee0beed85e28047c991fccb9009d101519b5ac7cce72e5fc46f",
+      "sha256TextoConsolidado": "0b27dc7ec4fd0a5ac22d8ddbc7322a4505fba354a524c62553fabfdc285ce3fa"
+    },
+    {
+      "origen": "12-empresarial-corporativo/instagram/01-empresarial-corporativo-a1-STORYBOARD.md",
+      "destino": "12-empresarial-corporativo/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "02bffec93feadfc49fe65dde2ad10a46fd4286bd9f85703da880df2e9a01b918",
+      "sha256TextoConsolidado": "9a4ec1c640b403caca984007507b132785300c75292e6a9d0ea96ea9a1666b4b"
+    },
+    {
+      "origen": "12-empresarial-corporativo/instagram/01-empresarial-corporativo-a1-PROMPTANIMACION.md",
+      "destino": "12-empresarial-corporativo/instagram/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "7273ec47db14ddd4f9919d95d408df14fd945ddee4bba90592186884e505b9bd",
+      "sha256TextoConsolidado": "bb74bc9bce0951c4f9bd61de0681ca9796a5db9314802abda8c38671b1af33f3"
+    },
+    {
+      "origen": "12-empresarial-corporativo/instagram/02-empresarial-corporativo-a2.md",
+      "destino": "12-empresarial-corporativo/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "9b8c9f154c294e52db6c02e110b6af9c2439cd30af28ec56b9f3175a3abbedb9",
+      "sha256TextoConsolidado": "2fc7a89da77ce49fa53f29ad04429709f6add54aa92f26a2c4856c5480bdef9c"
+    },
+    {
+      "origen": "12-empresarial-corporativo/instagram/02-empresarial-corporativo-a2-STORYBOARD.md",
+      "destino": "12-empresarial-corporativo/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "ca158ca30b9227a2773c60dc54b18e76ea1bd0017ac3e1c8f3642e27ca4b0bbd",
+      "sha256TextoConsolidado": "178749c631a8b8cd0b16067bd7585e2d42ddf0d095c7538c597e24a7185cf9be"
+    },
+    {
+      "origen": "12-empresarial-corporativo/instagram/02-empresarial-corporativo-a2-PROMPTANIMACION.md",
+      "destino": "12-empresarial-corporativo/instagram/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "3aecbf0ea7396c0e0a94cddc84eeffe1f9070d1c7f5b5ced6f93decc6746beda",
+      "sha256TextoConsolidado": "964e0f32341280fc2fa73263b5ec80a512efdfd2517321a67b8379426d81b80c"
+    },
+    {
+      "origen": "12-empresarial-corporativo/instagram/03-empresarial-corporativo-a3.md",
+      "destino": "12-empresarial-corporativo/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "ba953aac8e3f2e9d32697ec4b07011664abfc3c876c59c8ac247cc4bb29d7e10",
+      "sha256TextoConsolidado": "22cadba68bee06186d4a5882ebaf1a22106ee3abd045fcb1e6e8b689d95ec464"
+    },
+    {
+      "origen": "12-empresarial-corporativo/instagram/03-empresarial-corporativo-a3-STORYBOARD.md",
+      "destino": "12-empresarial-corporativo/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "69c9c5a90c0b8bd8e482e31e0102d1316ae469fab3ae8fa70bbde6acad67b3d3",
+      "sha256TextoConsolidado": "406398121450a34852e36a86cf2da433bb5471556449853b96d3d66842b56b93"
+    },
+    {
+      "origen": "12-empresarial-corporativo/instagram/03-empresarial-corporativo-a3-PROMPTANIMACION.md",
+      "destino": "12-empresarial-corporativo/instagram/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "f499dbfb02602a8d4c53bbe3deee418abb8602841fe7f04f1bb6597e22b442f4",
+      "sha256TextoConsolidado": "493c74af53c0b8fdc94d1a43b385e701f64b3f149979f6f79ccd2e61c3b4d3db"
+    },
+    {
+      "origen": "12-empresarial-corporativo/tiktok/01-empresarial-corporativo-a1.md",
+      "destino": "12-empresarial-corporativo/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-copy",
+      "sha256Original": "4346fdf0e30e51fd02c1ff2006ad0c9586bc543093175478a389a808dface625",
+      "sha256TextoConsolidado": "37b3422ef43c52427c53c1125734950e5ef9bb46c274c98dde84d40610ee6a8d"
+    },
+    {
+      "origen": "12-empresarial-corporativo/tiktok/01-empresarial-corporativo-a1-STORYBOARD.md",
+      "destino": "12-empresarial-corporativo/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-storyboard",
+      "sha256Original": "64d96758dbc08478557adfbb873c6ae091d178870c5c026360a07868563438c1",
+      "sha256TextoConsolidado": "e13bb8d5713ce7caf0ee7905946b7126b736a89b4931ead5f8c19a105af37c7e"
+    },
+    {
+      "origen": "12-empresarial-corporativo/tiktok/01-empresarial-corporativo-a1-PROMPTANIMACION.md",
+      "destino": "12-empresarial-corporativo/tiktok/CONTENIDO.md",
+      "ancla": "angulo-1-prompt",
+      "sha256Original": "2c0654d4b8385d7691a5c556b3249cae5934276d96f6b73a0ccd1aed1ff6dc2f",
+      "sha256TextoConsolidado": "767920cebddd3955f71b960e9144a8c3ce01c87f31b3403feb65e5026cc6d39b"
+    },
+    {
+      "origen": "12-empresarial-corporativo/tiktok/02-empresarial-corporativo-a2.md",
+      "destino": "12-empresarial-corporativo/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-copy",
+      "sha256Original": "00f17768eb484dc3c51cad5f6387c4505d6bd3b666d9809a8954934b119c2e14",
+      "sha256TextoConsolidado": "6eaca95b9ae730ff848ad3c5f3164fe9aa85f6c4a115a341cbc067cfa8a1e0ba"
+    },
+    {
+      "origen": "12-empresarial-corporativo/tiktok/02-empresarial-corporativo-a2-STORYBOARD.md",
+      "destino": "12-empresarial-corporativo/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-storyboard",
+      "sha256Original": "e3bb575aac065acd80ffdb2d1942a6574b53e6d1a536024ea0fbad66f727d7dd",
+      "sha256TextoConsolidado": "2a22bd01a98284e0d7b39ff3945b1b8a5507af7c3b774567d02adfa4ef2d088d"
+    },
+    {
+      "origen": "12-empresarial-corporativo/tiktok/02-empresarial-corporativo-a2-PROMPTANIMACION.md",
+      "destino": "12-empresarial-corporativo/tiktok/CONTENIDO.md",
+      "ancla": "angulo-2-prompt",
+      "sha256Original": "96dfc7293443656099e632590602c8a2be0ffda66142580d65f68ab84187b8f0",
+      "sha256TextoConsolidado": "912587af5ed53108387a83ee16d01db34fe0ce1ef27587322eb1e3498643728b"
+    },
+    {
+      "origen": "12-empresarial-corporativo/tiktok/03-empresarial-corporativo-a3.md",
+      "destino": "12-empresarial-corporativo/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-copy",
+      "sha256Original": "12ebbb445cb2cd96214ce213be9cfeea901264e1c3091270cb63c14b05edcc2f",
+      "sha256TextoConsolidado": "b8139c23279a67acdc558bb5d964d813bfcf33fcd949bf21a7e915dbc608262a"
+    },
+    {
+      "origen": "12-empresarial-corporativo/tiktok/03-empresarial-corporativo-a3-STORYBOARD.md",
+      "destino": "12-empresarial-corporativo/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-storyboard",
+      "sha256Original": "8cd80baf2995cae9178fecaa6171c81150a23ddee026ed9f03642709932309bd",
+      "sha256TextoConsolidado": "96357a211f679703e36fa3195f7bcab1558eb44c0b80b6191a10982a1077bedf"
+    },
+    {
+      "origen": "12-empresarial-corporativo/tiktok/03-empresarial-corporativo-a3-PROMPTANIMACION.md",
+      "destino": "12-empresarial-corporativo/tiktok/CONTENIDO.md",
+      "ancla": "angulo-3-prompt",
+      "sha256Original": "9ef7ce058f74709f0424f67c09e942286d225b1bddf827f978101b2520bb5f6f",
+      "sha256TextoConsolidado": "a1a1a1c89ee5623d833bc7bc0d904267c67b26f7c431f7caecb2858450b68c72"
+    }
+  ],
+  "imagenes": [
+    {
+      "origen": "recursos/exportaciones/01-facebook-1.png",
+      "destino": "01-tendero-independiente/facebook/01-facebook-1.png",
+      "sha256Original": "9f082e3530064623e394278c0e601b5d2113afb4439fb02b98b67f68cf4a523f",
+      "tipo": "movido",
+      "sha256MarcaActual": "f3754c3f5b2774cfc262dcdc6b02784118389e44b282e2fbc581b35182b12de1",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/01-facebook-1.svg",
+      "destino": "01-tendero-independiente/facebook/01-facebook-1.svg",
+      "sha256Original": "4551862b9e32f6a7978b36940e921fd843619d2792ec20391867e5242a253bc9",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/01-facebook-2.png",
+      "destino": "01-tendero-independiente/facebook/01-facebook-2.png",
+      "sha256Original": "2db7638eeab237bb62f24fed02d3490f446e1f5af23da01b4f5196e8f91c0e17",
+      "tipo": "movido",
+      "sha256MarcaActual": "5cdd70115efe93be6759df032e0a63a8e59188a8cceca4d6a22e283d5d436ffa",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/01-facebook-2.svg",
+      "destino": "01-tendero-independiente/facebook/01-facebook-2.svg",
+      "sha256Original": "f98067bb4adedf11cc75fd660a7cea87cd2880d27a136401d771bec895d92ed0",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/01-facebook-3.png",
+      "destino": "01-tendero-independiente/facebook/01-facebook-3.png",
+      "sha256Original": "651040604e9fa5a8d56fae0cf4a93e5109a539ed0726e45c7552fc4e6be20827",
+      "tipo": "movido",
+      "sha256MarcaActual": "8c1a0a5772c206a55adcea7df3242370760f21cc65489944b54ce74ec7bc7e42",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/01-facebook-3.svg",
+      "destino": "01-tendero-independiente/facebook/01-facebook-3.svg",
+      "sha256Original": "38adac523bca110fa9a76116cdbc046f2dce0423f7882caf57d7238aeb0ccaff",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/01-instagram-portada.png",
+      "destino": "01-tendero-independiente/instagram/01-instagram-portada.png",
+      "sha256Original": "485c569e3eb15979bc944d15b16642f7bd07005b1537117a2f785028001a41fe",
+      "tipo": "movido",
+      "sha256MarcaActual": "28529b9df404a451e35ae40f1964bc4816d120ec61acb6d56c4552a8a3b47fc5",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/01-instagram-portada.svg",
+      "destino": "01-tendero-independiente/instagram/01-instagram-portada.svg",
+      "sha256Original": "3896ed4104021503a0a600614f8362b87d64c42d84939ed1180f1c0707cc2635",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/02-facebook-1.png",
+      "destino": "02-tienda-crecimiento/facebook/02-facebook-1.png",
+      "sha256Original": "93f9f20a3eac68f2ac6b666bd03c274e393709f05e7ff1adfbcbdf1213909653",
+      "tipo": "movido",
+      "sha256MarcaActual": "a01a05a15df42c8b51c0e5a55bed624d2fbe9400de325f6a5897789fa1b97210",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/02-facebook-1.svg",
+      "destino": "02-tienda-crecimiento/facebook/02-facebook-1.svg",
+      "sha256Original": "1253870f970e27066e96e384482e790f3e6188af4b4183d0e98d8c2c74f606c2",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/02-facebook-2.png",
+      "destino": "02-tienda-crecimiento/facebook/02-facebook-2.png",
+      "sha256Original": "8b609ee2a7606aa180c79e06e7e15563bcfcddd82141cdd5d6c0b585b1d1744e",
+      "tipo": "movido",
+      "sha256MarcaActual": "edf037a8a9140b53cf3cd43ce96399931de490951c87d80cc1a9ee9bdd3b304c",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/02-facebook-2.svg",
+      "destino": "02-tienda-crecimiento/facebook/02-facebook-2.svg",
+      "sha256Original": "b7e313efc72d0d77bc83339736ff7b086aac0ce5eaa33efc1d78f50850c1374d",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/02-facebook-3.png",
+      "destino": "02-tienda-crecimiento/facebook/02-facebook-3.png",
+      "sha256Original": "925798d8e7a4e5125982f371bea57a118ccf117f2b4e4b66cd0db9c23d54e996",
+      "tipo": "movido",
+      "sha256MarcaActual": "659bcca9cc7ee6392ad55aec8530b1aa8aae4cf734944ad35d8a4bc121432347",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/02-facebook-3.svg",
+      "destino": "02-tienda-crecimiento/facebook/02-facebook-3.svg",
+      "sha256Original": "afc7192da323ca92689ecc3dd1693e73f7a902dfab9663dd39a5ffb810418cbe",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/02-instagram-portada.png",
+      "destino": "02-tienda-crecimiento/instagram/02-instagram-portada.png",
+      "sha256Original": "6f7aa3b23c30fe6c40800ffab66cf5f627e71c0b5d9a03a6fbcc6528d7a68c0d",
+      "tipo": "movido",
+      "sha256MarcaActual": "5c265b7286d454473aac4061c2eeb1f8ae3197ce6498722e6b7047d298f19a63",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/02-instagram-portada.svg",
+      "destino": "02-tienda-crecimiento/instagram/02-instagram-portada.svg",
+      "sha256Original": "2c54c08d9ee7c72d8f2815f39e3c3b5c18b09451ba1e116b2148cda18a37a15f",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/03-facebook-1.png",
+      "destino": "03-cafeteria-comidas-rapidas/facebook/03-facebook-1.png",
+      "sha256Original": "7b76aa1c3548fd1c7ae0de008c052f029a138f0c7e645d9cd9d519df687121a5",
+      "tipo": "movido",
+      "sha256MarcaActual": "f38a850e25000c39dbd8c749256a1aca2223b0ef8187bcfaa3a5798a5d6c4cbb",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/03-facebook-1.svg",
+      "destino": "03-cafeteria-comidas-rapidas/facebook/03-facebook-1.svg",
+      "sha256Original": "3b5f0c951ef6d70a5c0c23019375ab098d29b9901583841dde6f70e51eefcf7a",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/03-facebook-2.png",
+      "destino": "03-cafeteria-comidas-rapidas/facebook/03-facebook-2.png",
+      "sha256Original": "fccfc2a5736e69ce2c163c9c15f0837953a87c2177580b6b22c4da2f01fbc792",
+      "tipo": "movido",
+      "sha256MarcaActual": "41800721d0450d914861da678b0d89659c196ff86be0935b8b9637657d33ac5a",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/03-facebook-2.svg",
+      "destino": "03-cafeteria-comidas-rapidas/facebook/03-facebook-2.svg",
+      "sha256Original": "df4b4756f00232391e614c71691b41a60556ea77ded87eb01f508b8b907f2be7",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/03-facebook-3.png",
+      "destino": "03-cafeteria-comidas-rapidas/facebook/03-facebook-3.png",
+      "sha256Original": "610b72db8f4e1269fd6304e70d392a9a0dee39bd5d097830eeba38bad80d67cb",
+      "tipo": "movido",
+      "sha256MarcaActual": "32905fb3cc6df7a26944bde2d704449fae750ec5f79ccca2ab21e54e4aea2852",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/03-facebook-3.svg",
+      "destino": "03-cafeteria-comidas-rapidas/facebook/03-facebook-3.svg",
+      "sha256Original": "8c52b5b78dfaa406cad0071e0323566eb593d02342a47d8aa086642be08dc236",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/03-instagram-portada.png",
+      "destino": "03-cafeteria-comidas-rapidas/instagram/03-instagram-portada.png",
+      "sha256Original": "3f08c915076f042a12543de3d28feffc169b7db8c33994ed5088a33707f96bbf",
+      "tipo": "movido",
+      "sha256MarcaActual": "220324476c46dac007683e3ad7381146e612a28e0fb4ef5be704243ac15bd1fb",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/03-instagram-portada.svg",
+      "destino": "03-cafeteria-comidas-rapidas/instagram/03-instagram-portada.svg",
+      "sha256Original": "7dd266c7d9158341403e3a7bafa0cd78ce01034232f4cca2a8fb068542768c6a",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/04-facebook-1.png",
+      "destino": "04-restaurante-pequeno/facebook/04-facebook-1.png",
+      "sha256Original": "2d646c547e55df2c6b61bab70b9b910bf421d901b09ce11f8cbb8cd335f53454",
+      "tipo": "movido",
+      "sha256MarcaActual": "8c4fa2d5c0303d7486a9c4fbf4bcf5ebed6c46de891f91625be5d4f7d0ec4ca5",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/04-facebook-1.svg",
+      "destino": "04-restaurante-pequeno/facebook/04-facebook-1.svg",
+      "sha256Original": "5bcfccb87e435cf6866baed4aaf053d34ab022a2027b813a69199f4317bbc83e",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/04-facebook-2.png",
+      "destino": "04-restaurante-pequeno/facebook/04-facebook-2.png",
+      "sha256Original": "0a55308c0195898760ed31aeb510168136053228b827e41d2c76ee2da59829e5",
+      "tipo": "movido",
+      "sha256MarcaActual": "80617d66d3fb1acbb06019e309257391a802e61cfa16aec31bdd707cb524a3c1",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/04-facebook-2.svg",
+      "destino": "04-restaurante-pequeno/facebook/04-facebook-2.svg",
+      "sha256Original": "05872e3c3a2065ed0f3ac8e593787bd680d2962c4f99214de3e69c0f0d5ca653",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/04-facebook-3.png",
+      "destino": "04-restaurante-pequeno/facebook/04-facebook-3.png",
+      "sha256Original": "51aca5634c187eae6fc96bde9f5bf966a021a9266e93c8128be699a93881a414",
+      "tipo": "movido",
+      "sha256MarcaActual": "45777402c27d11659fd00b288c2d919188e687b68ce5cf77086ee6c44e8749b7",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/04-facebook-3.svg",
+      "destino": "04-restaurante-pequeno/facebook/04-facebook-3.svg",
+      "sha256Original": "268b03a9e8aa1e82abc2ce39147c0c415e072661b34a52b9eb63c37bb8034638",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/04-instagram-portada.png",
+      "destino": "04-restaurante-pequeno/instagram/04-instagram-portada.png",
+      "sha256Original": "f8b817c7faf537bfa97354be939de77c0c63ce252644ddf5219cbb69dd3e1a7d",
+      "tipo": "movido",
+      "sha256MarcaActual": "a1781a3eb657b63b351673c0c50f39e3afd608a6ba6f5c07215f30a8fa4fc515",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/04-instagram-portada.svg",
+      "destino": "04-restaurante-pequeno/instagram/04-instagram-portada.svg",
+      "sha256Original": "9544ebfb8933af1c7f645a9b874f3b912d3293e7d329bd1aa1c8a6bab1b239ce",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/05-facebook-1.png",
+      "destino": "05-minimercado/facebook/05-facebook-1.png",
+      "sha256Original": "8dd6f5d94ce786df5ee6be0bb2ea3cb2156d6dddec978554710e5a3ac8bb049d",
+      "tipo": "movido",
+      "sha256MarcaActual": "ba9c947fa477ef11f74fb19bd97e9071dfd4f39470a8efd96c28d03be9a97e1f",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/05-facebook-1.svg",
+      "destino": "05-minimercado/facebook/05-facebook-1.svg",
+      "sha256Original": "e607693dbd3ca0671bc25f6bfcb730723f00a2a20d43179eaf00d59dc7ae2e94",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/05-facebook-2.png",
+      "destino": "05-minimercado/facebook/05-facebook-2.png",
+      "sha256Original": "77003ed6f93afd7bfe113ebd80f70bf4b9736cf7dcdfe58aacc14ae7fccf6949",
+      "tipo": "movido",
+      "sha256MarcaActual": "9eeb0982167594ebe990f122d66630823615f30306e21cf5977f60c6b66a4e27",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/05-facebook-2.svg",
+      "destino": "05-minimercado/facebook/05-facebook-2.svg",
+      "sha256Original": "77da38dfeaf2aa4c9b0ca15c2d05f6a30245918d06da922c82a236aaf4baf2c3",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/05-facebook-3.png",
+      "destino": "05-minimercado/facebook/05-facebook-3.png",
+      "sha256Original": "4acf6f4f76d9b65780ba3f05c45e0df134a535616492ead96b5427766d3d3b07",
+      "tipo": "movido",
+      "sha256MarcaActual": "9b29e7da53039fd1187e0de440eedf824c432e077215ad3361e57fd6513f582d",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/05-facebook-3.svg",
+      "destino": "05-minimercado/facebook/05-facebook-3.svg",
+      "sha256Original": "7d36b98e42c3c5d10343c10447fa886d69009296167bc07b6693327a648309f1",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/05-instagram-portada.png",
+      "destino": "05-minimercado/instagram/05-instagram-portada.png",
+      "sha256Original": "70de9fe9883f3d1bbf0fe46e831836b2f8eb771960add800e07e953b4e146bac",
+      "tipo": "movido",
+      "sha256MarcaActual": "2b355bddb743072af9ff6eeb8a52d1f4ee70cc112e7eccb14fc90408e5c79340",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/05-instagram-portada.svg",
+      "destino": "05-minimercado/instagram/05-instagram-portada.svg",
+      "sha256Original": "2bc66a08ba899a968ee44f528207ee9f8da1ae1705b028c77a176e134591872a",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/06-facebook-1.png",
+      "destino": "06-ferreteria/facebook/06-facebook-1.png",
+      "sha256Original": "fd622e39968807154cea4f396785eeec7aaefd69f5ff5325e73ce840cc965510",
+      "tipo": "movido",
+      "sha256MarcaActual": "4593d486eadb9fda64239a8cba3a612dbd121e8d18ac9990ab280205c3969ef1",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/06-facebook-1.svg",
+      "destino": "06-ferreteria/facebook/06-facebook-1.svg",
+      "sha256Original": "e0d8872ed617e62919cad808344edd861fb2d0d6692bfe6ab882a6b021120e44",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/06-facebook-2.png",
+      "destino": "06-ferreteria/facebook/06-facebook-2.png",
+      "sha256Original": "b04a935c190c83c5e2372953f8b406608f4ca278dfe3cc9b11e4c9cd409f1dc4",
+      "tipo": "movido",
+      "sha256MarcaActual": "8ac642176cc0d2428825c8d25fa888b3036f73222cdcfd157744721ef0d80f97",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/06-facebook-2.svg",
+      "destino": "06-ferreteria/facebook/06-facebook-2.svg",
+      "sha256Original": "3c8711d2607a1a92807267955b82196b27a2920c34034be7992a6f51bbd2a55e",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/06-facebook-3.png",
+      "destino": "06-ferreteria/facebook/06-facebook-3.png",
+      "sha256Original": "ed52159db4f1677c295a132258ca663765088724e790628d4f1ac41307e04ecc",
+      "tipo": "movido",
+      "sha256MarcaActual": "e4ea013d24bcbcac292a905e2bdb6aaf3ebd9e403c89245f265d9ae7b9908949",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/06-facebook-3.svg",
+      "destino": "06-ferreteria/facebook/06-facebook-3.svg",
+      "sha256Original": "48bddfbbd68cbe2d24ae7d0ec3fd3216a9933af0f9fed895d846205808bcc7d8",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/06-instagram-portada.png",
+      "destino": "06-ferreteria/instagram/06-instagram-portada.png",
+      "sha256Original": "514013f71389904503ecf1a145829222cb0bdd1aaff2cadc14c7eb48ecf5bb2e",
+      "tipo": "movido",
+      "sha256MarcaActual": "88140876919fbff87a0d7904270464acfd62aeee9b632202475a578df1b3d5ba",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/06-instagram-portada.svg",
+      "destino": "06-ferreteria/instagram/06-instagram-portada.svg",
+      "sha256Original": "671d0db6c60b4d3ba2a1d915e6307c5dbe50b7e68fb24b16465724cdf675fa9f",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/07-facebook-1.png",
+      "destino": "07-moda/facebook/07-facebook-1.png",
+      "sha256Original": "2d508bb09dee5e3fbe1eb751df98c9236c2f3160ff69ff741cadea1c0259a335",
+      "tipo": "movido",
+      "sha256MarcaActual": "d7d10026dcd5642bf48cd40336f848c16e1ed1fe1766dcfaa986b199cbc41c24",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/07-facebook-1.svg",
+      "destino": "07-moda/facebook/07-facebook-1.svg",
+      "sha256Original": "1e576c538ee292c4874fa368e005439b5d35159de66c46d6bc4ceb1656c633f2",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/07-facebook-2.png",
+      "destino": "07-moda/facebook/07-facebook-2.png",
+      "sha256Original": "87539abbc091d7e9489968b06f8873e53f3d9d0677f5f664c6abb3f4875193ab",
+      "tipo": "movido",
+      "sha256MarcaActual": "6ef788fd69750c38adcdf372b05dd23858c4c97d678b4374bd584cf5fa5c6d12",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/07-facebook-2.svg",
+      "destino": "07-moda/facebook/07-facebook-2.svg",
+      "sha256Original": "59d06653104ed7f080b0cb6ce7b571c52b106e4babc35bdcaa57a7e4b767abf4",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/07-facebook-3.png",
+      "destino": "07-moda/facebook/07-facebook-3.png",
+      "sha256Original": "f3e8b80c10c69719df282e8eb1ebfc13a566023fd85246037059e525c8393346",
+      "tipo": "movido",
+      "sha256MarcaActual": "6b8f8863c4e1180664c46b824d684fb9a81feb4bb5c540b8df3c61f0b57f6896",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/07-facebook-3.svg",
+      "destino": "07-moda/facebook/07-facebook-3.svg",
+      "sha256Original": "1edda21f664c28823bdde47b623ea545c6bfaa0512682e22ef16e58d07a3941d",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/07-instagram-portada.png",
+      "destino": "07-moda/instagram/07-instagram-portada.png",
+      "sha256Original": "a175c0ff9c4a10515e41b1ebfb070947fd116d17b63a77c71091878e74343412",
+      "tipo": "movido",
+      "sha256MarcaActual": "05f4b3a6fe21146fbe8fe660cdc3ad34939eb1d05fbd83f406405b6ab1358d26",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/07-instagram-portada.svg",
+      "destino": "07-moda/instagram/07-instagram-portada.svg",
+      "sha256Original": "48c75647b9ab54817ee9837c762e8ca81ea594c735bd8f8ae30fd7e31c886044",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/08-facebook-1.png",
+      "destino": "08-distribuidor-pequeno/facebook/08-facebook-1.png",
+      "sha256Original": "df6f829ceab4e7f027e9be663c5ec6ac52e89c995c9967467a5f1f5ca757672e",
+      "tipo": "movido",
+      "sha256MarcaActual": "c135da02347559f8bf68aa22b771625502905462b196d030689a99529678ddc5",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/08-facebook-1.svg",
+      "destino": "08-distribuidor-pequeno/facebook/08-facebook-1.svg",
+      "sha256Original": "7efeeb485468800a2ca125139c9e029146c36b74147bc7966db54634951339a2",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/08-facebook-2.png",
+      "destino": "08-distribuidor-pequeno/facebook/08-facebook-2.png",
+      "sha256Original": "a0f70037ff59a0067f0f3f8a8db5c4f8ada6ad73652919fc6d0a9ca4a89d0721",
+      "tipo": "movido",
+      "sha256MarcaActual": "4676fa3eccc95e3fcf190b489371aee6d329f3439b19b2362c397e8da18ec2a5",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/08-facebook-2.svg",
+      "destino": "08-distribuidor-pequeno/facebook/08-facebook-2.svg",
+      "sha256Original": "a4166fdc10dbf19ed54a3394a376670b6a965609f0d22da1e8da205005a5b708",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/08-facebook-3.png",
+      "destino": "08-distribuidor-pequeno/facebook/08-facebook-3.png",
+      "sha256Original": "58d283bf308df489aae08da32b13ce5887cfd2823cc3a95bea9fba64262c7824",
+      "tipo": "movido",
+      "sha256MarcaActual": "74bad0adbeac2e97c603d1ae0cb50ca66237bf6fe098cf77537dc3738766ef3f",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/08-facebook-3.svg",
+      "destino": "08-distribuidor-pequeno/facebook/08-facebook-3.svg",
+      "sha256Original": "d03a29d88734bc4383671e19ddfd260d8c0b337490ea9f1c2ec0d03e990db79f",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/08-instagram-portada.png",
+      "destino": "08-distribuidor-pequeno/instagram/08-instagram-portada.png",
+      "sha256Original": "683dd4a8d8b936bd3b10ee496bd5cc742b40e05951fbc275c7537ecd13ca0117",
+      "tipo": "movido",
+      "sha256MarcaActual": "f25014046627190d9bc2ae3f4d536659903d64847bf22258d067535cd7329b12",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/08-instagram-portada.svg",
+      "destino": "08-distribuidor-pequeno/instagram/08-instagram-portada.svg",
+      "sha256Original": "ae0c97eac15d7f0f413b0a2f5b462f387a07b84aeea5df84cdd53399d77a3971",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/09-facebook-1.png",
+      "destino": "09-admin-finanzas/facebook/09-facebook-1.png",
+      "sha256Original": "63091183fe8a3d07f88990d318a3387d096a2e5b09f1e90cfa605fc6ee8c4923",
+      "tipo": "movido",
+      "sha256MarcaActual": "cd92e2171a02c2a667146bfe2cf5ee745790037f8801737493ece5b1399e2691",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/09-facebook-1.svg",
+      "destino": "09-admin-finanzas/facebook/09-facebook-1.svg",
+      "sha256Original": "b0f48c4299f1545ae974c6bf6b031b67784d35f1d838511006fc06205e664eda",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/09-facebook-2.png",
+      "destino": "09-admin-finanzas/facebook/09-facebook-2.png",
+      "sha256Original": "c38f10567761db943a25623455946440c2e137e2d79e200e385631678356849f",
+      "tipo": "movido",
+      "sha256MarcaActual": "19f498d89548b3063be68947c4059eb5ff366493ee452ca42b39317512aa1534",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/09-facebook-2.svg",
+      "destino": "09-admin-finanzas/facebook/09-facebook-2.svg",
+      "sha256Original": "288aaaba6deb8540bb5a56b7810d992c42e11f29c426563ca516571739db926b",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/09-facebook-3.png",
+      "destino": "09-admin-finanzas/facebook/09-facebook-3.png",
+      "sha256Original": "83170ae534eb16077c9b1cf34d8cc3d61b67965406847bb473f7a28037fdd8e5",
+      "tipo": "movido",
+      "sha256MarcaActual": "d261894e0b2e44dc584bf092cd464de366da2f2385317c5b3665bcba6e877d1a",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/09-facebook-3.svg",
+      "destino": "09-admin-finanzas/facebook/09-facebook-3.svg",
+      "sha256Original": "f248ec31b58affe0666d98194f403c9dd49d725a5de4cae97ce1fad90c96d57c",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/09-instagram-portada.png",
+      "destino": "09-admin-finanzas/instagram/09-instagram-portada.png",
+      "sha256Original": "3f8a03bd9701697323882f88a2a297872cab3ae86a3d2bb473e22bddd40125ec",
+      "tipo": "movido",
+      "sha256MarcaActual": "359185b27407b70dc2737e2922b912851f3374c344330bd8cec9da92f66f347e",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/09-instagram-portada.svg",
+      "destino": "09-admin-finanzas/instagram/09-instagram-portada.svg",
+      "sha256Original": "7c3c4b6b17e75f58c2b79252bea0b06a00e6183f7eb61499a738081a4f1df2ad",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/10-facebook-1.png",
+      "destino": "10-coordinador-inventario/facebook/10-facebook-1.png",
+      "sha256Original": "86ddb1889f56226b7b464c36fe541aedb6908588cb2efc2b07c91c9fc193f8c0",
+      "tipo": "movido",
+      "sha256MarcaActual": "7dec2f7a2d17798e4d165f9bb95aff334f31f0e9a826d3554ca40ddcf7867466",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/10-facebook-1.svg",
+      "destino": "10-coordinador-inventario/facebook/10-facebook-1.svg",
+      "sha256Original": "acc3271568f3fac0d725ddba887af44ce05e6cc3158962b0fd44b6dbd7cc3a51",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/10-facebook-2.png",
+      "destino": "10-coordinador-inventario/facebook/10-facebook-2.png",
+      "sha256Original": "f389c9f9355d41698baf69616bfa9cb05f98dd6d6b1214b8d3ef093228464223",
+      "tipo": "movido",
+      "sha256MarcaActual": "d51e125630303450e90c980a4df5bf7052679ffcaacd6d748f770c1953b35ba9",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/10-facebook-2.svg",
+      "destino": "10-coordinador-inventario/facebook/10-facebook-2.svg",
+      "sha256Original": "b3423ac6e8d0aa7c8709a4e87d43db9980180ddd1422e14dbfbf4f6fbb3eea48",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/10-facebook-3.png",
+      "destino": "10-coordinador-inventario/facebook/10-facebook-3.png",
+      "sha256Original": "239e9e5b88c0c4cf7897885c43c7254cbfe5ab2100026b5fef5e39a1465f20cc",
+      "tipo": "movido",
+      "sha256MarcaActual": "85c2745107b51ab05eaf7d751811e281ff36c8b01092c79de600c18065cb5401",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/10-facebook-3.svg",
+      "destino": "10-coordinador-inventario/facebook/10-facebook-3.svg",
+      "sha256Original": "d30ba9752f47031fda3c10058d79cae0a7dfd92af57be14d47e9fa687aef9177",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/10-instagram-portada.png",
+      "destino": "10-coordinador-inventario/instagram/10-instagram-portada.png",
+      "sha256Original": "f15a36b888a2fbe82f0482496d6b79c3e5a602fb5ff181c1c1a9326d3b70a4c0",
+      "tipo": "movido",
+      "sha256MarcaActual": "245044d6b928afe1bad0ce7011bd67a362ab2958f290eeb059ef93a1ef2060ff",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/10-instagram-portada.svg",
+      "destino": "10-coordinador-inventario/instagram/10-instagram-portada.svg",
+      "sha256Original": "24b010f65a550ea3ba6d0fdc68205f0a7b652876e58477c264c8af398d39ebe1",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/11-facebook-1.png",
+      "destino": "11-droguerias/facebook/11-facebook-1.png",
+      "sha256Original": "e400156e2c36c22f0a09c2dddbcb54f7f3bf63a5595257af0bd6f1f6158e4395",
+      "tipo": "movido",
+      "sha256MarcaActual": "29cfc2484e57287f6088f2caad9264dba7e823875d30de17e06932b783ad8039",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/11-facebook-1.svg",
+      "destino": "11-droguerias/facebook/11-facebook-1.svg",
+      "sha256Original": "75d6bd1a1eb50a5667f8bff2cf5b530235c4be0367e7269067b24f4fdad60b95",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/11-facebook-2.png",
+      "destino": "11-droguerias/facebook/11-facebook-2.png",
+      "sha256Original": "475c04ae0f5a6dae9bcd7ac2d0d4d445e206eb1397bd376ca596ed2ca4978d2f",
+      "tipo": "movido",
+      "sha256MarcaActual": "cc89940fce0d95bc153b371ffb857654304f47d791989cf1a9c0565a5d852f6f",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/11-facebook-2.svg",
+      "destino": "11-droguerias/facebook/11-facebook-2.svg",
+      "sha256Original": "2dfa1391872329d356a0e844c6eb54c7b0369e568528f1d791757a19d2692662",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/11-facebook-3.png",
+      "destino": "11-droguerias/facebook/11-facebook-3.png",
+      "sha256Original": "413511369f206a3ae86e6433c8aabe0ef66790e667aee07f7465d9e87054e93c",
+      "tipo": "movido",
+      "sha256MarcaActual": "6844804d001be3b0daa6760d7fce8b0d3565eaeca2085525194703f417eff5a9",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/11-facebook-3.svg",
+      "destino": "11-droguerias/facebook/11-facebook-3.svg",
+      "sha256Original": "ff9dab916f40fabc1981415a1ee66ce3fd4d1a0fb3ae4479903eeb9691f2081e",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/11-instagram-portada.png",
+      "destino": "11-droguerias/instagram/11-instagram-portada.png",
+      "sha256Original": "8e94480c7177fd82e5c4013713fadc8ff3dca9fe6318d47d732f60522e1eccee",
+      "tipo": "movido",
+      "sha256MarcaActual": "672da1450949b8b837e160f1cabca19320efb8d282de38c670f05e93f7afde17",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/11-instagram-portada.svg",
+      "destino": "11-droguerias/instagram/11-instagram-portada.svg",
+      "sha256Original": "bbad1aa8a650090fedb654d088ec1fcdcb60fa889728c44c27447be3c190ff13",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/12-facebook-1.png",
+      "destino": "12-empresarial-corporativo/facebook/12-facebook-1.png",
+      "sha256Original": "3f4dc83128a0940b5204a1eca8c4761739a9cc250e9c7cef9db61add7d682c70",
+      "tipo": "movido",
+      "sha256MarcaActual": "98122a6ca369a6df87541fda15141312bbde7855e0daac393b3b25b5905959be",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/12-facebook-1.svg",
+      "destino": "12-empresarial-corporativo/facebook/12-facebook-1.svg",
+      "sha256Original": "02343b3ed9610cbc93fd328edda309974a23d3c79cadbfd35c3be510353022f6",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/12-facebook-2.png",
+      "destino": "12-empresarial-corporativo/facebook/12-facebook-2.png",
+      "sha256Original": "daa852f55bfe2c337593dae3bd3f4f53571015e2704a70ef31385bb92ce80617",
+      "tipo": "movido",
+      "sha256MarcaActual": "c09de883193b97488ec66891d6b0170e0b3aaaf5f27a50ce56f7068121c9db43",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/12-facebook-2.svg",
+      "destino": "12-empresarial-corporativo/facebook/12-facebook-2.svg",
+      "sha256Original": "acd3a129d7a7e60e906092aec0f488f73f679ae7a584d62f3c5b26b327bb68f1",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/12-facebook-3.png",
+      "destino": "12-empresarial-corporativo/facebook/12-facebook-3.png",
+      "sha256Original": "4a3364c0741016869839c616d9cc2004d1b7483d8b0d729429a61b0d816ce746",
+      "tipo": "movido",
+      "sha256MarcaActual": "213d5d2b66d05bf765e7d8530f93c36747e957d57d7a5eee6ea717219d672808",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/12-facebook-3.svg",
+      "destino": "12-empresarial-corporativo/facebook/12-facebook-3.svg",
+      "sha256Original": "9dd3dcae84ef475cf0f496e92e639bcb8dea2655e32d2e3044826245ad6ab865",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/exportaciones/12-instagram-portada.png",
+      "destino": "12-empresarial-corporativo/instagram/12-instagram-portada.png",
+      "sha256Original": "a69615dfa78ee2a9bdba1f93015f3147deda2999075f650d49cde2800df09e15",
+      "tipo": "movido",
+      "sha256MarcaActual": "d039f3f02a619657ec6406bb6fab0c47290030b3e4177adab0dba48550ef74df",
+      "cambioMarca": "Sello A + nova; foto y píxeles fuera del sello idénticos al original. Ver validacion-sello.json."
+    },
+    {
+      "origen": "recursos/exportaciones/12-instagram-portada.svg",
+      "destino": "12-empresarial-corporativo/instagram/12-instagram-portada.svg",
+      "sha256Original": "d8eb07ee2a3f3c38a49c1abc130d13743e91cf9b3b8e7bde6c473565222d2352",
+      "tipo": "movido"
+    },
+    {
+      "origen": "recursos/originales/01.png",
+      "destino": "01-tendero-independiente/tiktok/01-referencia.png",
+      "sha256Original": "a7e709dd5eb42f5ea3da013365c85ddc17a97f95c380421c3029e9acdb5a6b30",
+      "tipo": "copia exacta"
+    },
+    {
+      "origen": "recursos/originales/02.png",
+      "destino": "02-tienda-crecimiento/tiktok/02-referencia.png",
+      "sha256Original": "274f3173c104ef2141b17db32b2c24ce8706bdea390c98276ea70b2901482fbb",
+      "tipo": "copia exacta"
+    },
+    {
+      "origen": "recursos/originales/03.png",
+      "destino": "03-cafeteria-comidas-rapidas/tiktok/03-referencia.png",
+      "sha256Original": "9c24d25048f76789a6b0e37b3e7677a6ec3af02cb679d0eb7390c1d3b1e5cc11",
+      "tipo": "copia exacta"
+    },
+    {
+      "origen": "recursos/originales/04.png",
+      "destino": "04-restaurante-pequeno/tiktok/04-referencia.png",
+      "sha256Original": "f820633f11603571fd9a73d685cde962f0f6ea2190fed3739eeec36daaa8a32d",
+      "tipo": "copia exacta"
+    },
+    {
+      "origen": "recursos/originales/05.png",
+      "destino": "05-minimercado/tiktok/05-referencia.png",
+      "sha256Original": "8aea90d69b7f1bd0d075226238c72332e2ec641ad2d2debe6a669f241bc084b8",
+      "tipo": "copia exacta"
+    },
+    {
+      "origen": "recursos/originales/06.png",
+      "destino": "06-ferreteria/tiktok/06-referencia.png",
+      "sha256Original": "988d0fb62ea38cba743806db9f964f2d16eb902f69ecadf0fe3f6d09bfe2e604",
+      "tipo": "copia exacta"
+    },
+    {
+      "origen": "recursos/originales/07.png",
+      "destino": "07-moda/tiktok/07-referencia.png",
+      "sha256Original": "b08f8cab16f4b325222fa1c3a54f56621ee6f6ae6bb64d322af92222bd086303",
+      "tipo": "copia exacta"
+    },
+    {
+      "origen": "recursos/originales/08.png",
+      "destino": "08-distribuidor-pequeno/tiktok/08-referencia.png",
+      "sha256Original": "b89819d8752f72aa96725fb3c2d0804efe493d64147c74a38c37b9d454207caf",
+      "tipo": "copia exacta"
+    },
+    {
+      "origen": "recursos/originales/09.png",
+      "destino": "09-admin-finanzas/tiktok/09-referencia.png",
+      "sha256Original": "58c042f9cb50454054c03f049a3e1329cea7319041ef5b253288b5649e2ad026",
+      "tipo": "copia exacta"
+    },
+    {
+      "origen": "recursos/originales/10.png",
+      "destino": "10-coordinador-inventario/tiktok/10-referencia.png",
+      "sha256Original": "e3a5e60a38aad7cff25fc809dc1c566a8cd32999f1f33f3a4f6959e575eeb14f",
+      "tipo": "copia exacta"
+    },
+    {
+      "origen": "recursos/originales/11.png",
+      "destino": "11-droguerias/tiktok/11-referencia.png",
+      "sha256Original": "06c3b4556ded47032af022eb1592b9dfc490b4a5d4d38aacfe495dd0d893a314",
+      "tipo": "copia exacta"
+    },
+    {
+      "origen": "recursos/originales/12.png",
+      "destino": "12-empresarial-corporativo/tiktok/12-referencia.png",
+      "sha256Original": "40bdb96f2b2afe4a06320793ec7d99aa06db70cf0823dc584bc02dfee8d88c0f",
+      "tipo": "copia exacta"
+    }
+  ]
+}

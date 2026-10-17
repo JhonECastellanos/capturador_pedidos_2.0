@@ -1,4 +1,4 @@
-import { PERMISOS_EDITABLES } from "@synchronic-jo/contrato";
+import { PERMISOS_EDITABLES } from "@abinova/contrato";
 import { useMemo, useState, type FormEvent } from "react";
 import { Boton } from "../../../components/Boton";
 import { ConfirmarAccion } from "../../../components/ConfirmarAccion";

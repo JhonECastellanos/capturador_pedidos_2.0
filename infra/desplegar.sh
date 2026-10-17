@@ -10,8 +10,9 @@ if [ "${1:-}" = '--actualizar' ]; then
 elif [ -n "${1:-}" ]; then
   echo 'Uso: sh infra/desplegar.sh [--actualizar]' >&2; exit 1
 fi
+docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/workspace" -w /workspace node:24-alpine node infra/workflows/preparar.mjs
 docker compose config --quiet
-docker compose build api frontend
+docker compose build api frontend operador workflow-control
 # Respaldar antes de aplicar cualquier migración. Fallar si falla el respaldo.
 if [ -n "$(docker compose ps --status running -q postgres)" ]; then
   mkdir -p .local/backups

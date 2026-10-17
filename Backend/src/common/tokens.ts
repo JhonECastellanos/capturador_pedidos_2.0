@@ -38,11 +38,11 @@ export class TokensService {
   }
 
   static get emisor(): string {
-    return process.env.JWT_ISSUER ?? "ambie-api";
+    return process.env.JWT_ISSUER ?? "abinova-api";
   }
 
   static get audiencia(): string {
-    return process.env.JWT_AUDIENCE ?? "ambie";
+    return process.env.JWT_AUDIENCE ?? "abinova";
   }
 
   /**

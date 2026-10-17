@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post, Put } from "@nestjs/common";
 import { RolUsuario, Usuario } from "@prisma/client";
 import { z } from "zod";
-import { ContextoAgenteEsquema, InstruccionAgenteEsquema } from "@synchronic-jo/contrato";
+import { ContextoAgenteEsquema, InstruccionAgenteEsquema } from "@abinova/contrato";
 import { Roles, UsuarioActual } from "../common/guards";
 import { AgentesService } from "./agentes.service";
 import { ChatService } from "./chat.service";

@@ -1,5 +1,5 @@
 import type { Pedido } from "../types";
-import type { ProductoDTO } from "@synchronic-jo/contrato";
+import type { ProductoDTO } from "@abinova/contrato";
 
 function escaparCSV(valor: string): string {
   const necesitaComillas = valor.includes(",") || valor.includes('"') || valor.includes("\n");

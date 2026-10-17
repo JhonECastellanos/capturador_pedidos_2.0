@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { APARIENCIA_INICIAL, AparienciaEsquema, type Apariencia } from "@synchronic-jo/contrato";
+import { APARIENCIA_INICIAL, AparienciaEsquema, type Apariencia } from "@abinova/contrato";
 import { useApariencia } from "../../context/apariencia-context";
 import { aplicarApariencia } from "../../utils/apariencia";
 import { archivoAImagenDataUrl } from "../../utils/imagen";

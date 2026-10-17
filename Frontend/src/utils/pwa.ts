@@ -6,9 +6,9 @@ let solicitud: SolicitudInstalacion | null = null;
 export function prepararInstalacion() {
   window.addEventListener("beforeinstallprompt", evento => {
     evento.preventDefault(); solicitud = evento as SolicitudInstalacion;
-    window.dispatchEvent(new Event("synchronic:instalacion-disponible"));
+    window.dispatchEvent(new Event("abinova:instalacion-disponible"));
   });
-  window.addEventListener("appinstalled", () => { solicitud = null; window.dispatchEvent(new Event("synchronic:instalacion-disponible")); });
+  window.addEventListener("appinstalled", () => { solicitud = null; window.dispatchEvent(new Event("abinova:instalacion-disponible")); });
   if (import.meta.env.PROD && window.isSecureContext && "serviceWorker" in navigator) {
     void navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch(() => {});
   }

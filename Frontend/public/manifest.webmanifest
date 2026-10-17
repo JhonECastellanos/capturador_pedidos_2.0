@@ -1,8 +1,8 @@
 {
-  "id": "/", "name": "Synchronic.JO", "short_name": "Synchronic.JO",
+  "id": "/", "name": "ABINOVA", "short_name": "ABINOVA",
   "description": "Pedidos, inventario y caja de tu negocio en sincronía.",
   "start_url": "/", "scope": "/", "display": "standalone", "lang": "es-CO",
-  "background_color": "#f5f7fa", "theme_color": "#ffffff",
+  "background_color": "#f7f8ff", "theme_color": "#ffffff",
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }

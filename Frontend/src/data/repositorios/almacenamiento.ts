@@ -6,12 +6,14 @@
  * limpia sin mostrar datos antiguos en el panel.
  */
 
-const PREFIJO = "ambie:v2:";
-const PREFIJOS_LEGADOS = ["ambie:v1:"];
+const PREFIJO = "abinova:v2:";
+// Lectura compatible: el cambio de marca no debe ocultar datos locales v2.
+const PREFIJO_ANTERIOR = "ambie:v2:";
+const PREFIJOS_LEGADOS = ["abinova:v1:", "ambie:v1:", PREFIJO_ANTERIOR];
 
 export function leer<T>(clave: string, porDefecto: T): T {
   try {
-    const crudo = localStorage.getItem(PREFIJO + clave);
+    const crudo = localStorage.getItem(PREFIJO + clave) ?? localStorage.getItem(PREFIJO_ANTERIOR + clave);
     if (crudo === null) return porDefecto;
     return JSON.parse(crudo) as T;
   } catch {

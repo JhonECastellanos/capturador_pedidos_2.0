@@ -4,7 +4,7 @@ import { PedidosService, NuevoPedidoSchema } from "./pedidos.service";
 import { Roles, UsuarioActual } from "../common/guards";
 import { ErrorDominio } from "../common/errores";
 import { paginacion } from "../common/paginacion";
-import { fechaISO } from "@synchronic-jo/contrato";
+import { fechaISO } from "@abinova/contrato";
 
 const ESTADOS_VALIDOS: Record<string, EstadoPedido> = {
   pendiente: EstadoPedido.PENDIENTE,

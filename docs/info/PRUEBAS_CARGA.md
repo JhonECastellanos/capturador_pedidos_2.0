@@ -1,6 +1,6 @@
 # Carga y sincronización — 30 de septiembre de 2026
 
-Prueba contra Nginx QA `http://localhost:8180/api/v1`, PostgreSQL y volúmenes de `ambie-integracion`. No se insertaron pedidos de prueba en el negocio. API y PostgreSQL limitados a 512 MB/1 CPU cada uno; Docker Desktop/WSL comparte recursos con el equipo y la instalación principal. Las cifras son una muestra local, no la capacidad máxima ni una certificación para 100.000 pedidos.
+Prueba contra Nginx QA `http://localhost:8180/api/v1`, PostgreSQL y volúmenes de `abinova-integracion`. No se insertaron pedidos de prueba en el negocio. API y PostgreSQL limitados a 512 MB/1 CPU cada uno; Docker Desktop/WSL comparte recursos con el equipo y la instalación principal. Las cifras son una muestra local, no la capacidad máxima ni una certificación para 100.000 pedidos.
 
 Comando reproducible, después de `npm run prueba:integracion` para crear usuarios QA:
 

@@ -1,10 +1,12 @@
 import { PanelApariencia } from "./PanelApariencia";
+import { useAccesoComercial } from "../../context/acceso-comercial-context";
 import { InstalarAplicacion } from "../../components/InstalarAplicacion";
 import { Link } from "react-router-dom";
 import { PanelAgentes } from "../agentes/PanelAgentes";
 import { GuiaAyuda } from "../../components/GuiaAyuda";
 
 export function Configuracion() {
+  const { tieneModulo } = useAccesoComercial();
   return (
     <div className="flex h-full min-h-0 flex-col">
       <header className="cabecera-modulo flex-shrink-0">
@@ -16,13 +18,13 @@ export function Configuracion() {
           <h2 className="text-base font-semibold text-ink">Configuración general</h2>
           <p className="mt-2 text-sm text-ink-soft">Administra los accesos y consulta los cambios registrados en el negocio.</p>
           <div className="mt-4 flex flex-wrap gap-3">
-            <Link to="/admin/usuarios" className="rounded-xl border border-line px-4 py-3 text-sm font-semibold text-ink">Administrar usuarios</Link>
-            <Link to="/admin/auditoria" className="rounded-xl border border-line px-4 py-3 text-sm font-semibold text-ink">Consultar auditoría</Link>
+            {tieneModulo("usuarios") && <Link to="/admin/usuarios" className="rounded-xl border border-line px-4 py-3 text-sm font-semibold text-ink">Administrar usuarios</Link>}
+            {tieneModulo("auditoria") && <Link to="/admin/auditoria" className="rounded-xl border border-line px-4 py-3 text-sm font-semibold text-ink">Consultar auditoría</Link>}
           </div>
         </section>
         <PanelApariencia />
         <div className="mt-4"><InstalarAplicacion /></div>
-        <PanelAgentes />
+        {tieneModulo("agentes") && <PanelAgentes />}
       </main>
     </div>
   );

@@ -1,4 +1,4 @@
-import type { RevisionAgente } from "@synchronic-jo/contrato";
+import type { RevisionAgente } from "@abinova/contrato";
 import type { OperacionesContextValue } from "../../context/operaciones-context";
 import type { Cliente, EstadoPedido, LineaPedido, LineaRecepcion } from "../../types";
 import { api } from "../../data/api";

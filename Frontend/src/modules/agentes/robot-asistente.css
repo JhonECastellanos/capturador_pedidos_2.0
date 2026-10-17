@@ -1,6 +1,18 @@
-.robot-asistente { --nivel: 0; color: var(--color-robot-reposo, #f97316); width: 56px; height: 56px; border: 0; padding: 0; background: transparent; cursor: grab; touch-action: none; filter: drop-shadow(0 2px 3px #0002); }
+.robot-asistente { --nivel: 0; color: var(--color-robot-reposo, #9e8bff); width: 60px; height: 68px; border: 0; padding: 0; background: transparent; cursor: grab; touch-action: none; filter: drop-shadow(0 2px 3px #211d5520); }
 .robot-asistente:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 50%; }
 .robot-asistente:active { cursor: grabbing; }
+.abi-art svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.abi-cuerpo { transform-origin: 50px 58px; animation: abi-flotar 5s ease-in-out infinite; }
+.abi-estrellas { animation: abi-luz 4s ease-in-out infinite alternate; }
+.abi-corazon { transform-origin: 50px 74px; animation: abi-luz 3s ease-in-out infinite; }
+.abi-brazo { transform-origin: 50px 45px; animation: abi-brazos 6s ease-in-out infinite; }
+.robot-asistente[data-estado="escuchando"] .abi-estrellas { opacity: calc(.5 + var(--nivel) * .5); filter: drop-shadow(0 0 calc(2px + var(--nivel) * 4px) currentColor); }
+.robot-asistente[data-estado="hablando"] .abi-estrellas, .robot-asistente[data-estado="hablando"] .abi-corazon { animation: abi-luz .65s ease-in-out infinite alternate; }
+.robot-asistente[data-estado="pensando"] .abi-estrellas { animation: abi-pensar 1.2s linear infinite; }
+@keyframes abi-flotar { 50% { transform: translateY(-3px) rotate(1deg); } }
+@keyframes abi-luz { 50% { opacity: .5; filter: drop-shadow(0 0 3px currentColor); } }
+@keyframes abi-brazos { 50% { transform: rotate(-3deg); } }
+@keyframes abi-pensar { 50% { opacity: .3; transform: translateY(-1px); } }
 .robot-dibujo { width: 100%; height: 100%; overflow: visible; }
 .robot-halo { opacity: .18; transform-origin: 32px 34px; }
 .robot-asistente[data-estado="escuchando"] { color: var(--color-robot-escuchando, #2385aa); }
@@ -12,4 +24,25 @@
 .robot-asistente[data-estado="pensando"] .robot-halo { animation: robot-onda 1.4s ease-in-out infinite alternate; }
 @keyframes robot-onda { from { opacity: .25; transform: scale(.94); } to { opacity: .8; transform: scale(1.1); } }
 @keyframes robot-boca { from { transform: scaleY(.5); } to { transform: scaleY(1.3); } }
-@media (prefers-reduced-motion: reduce) { .robot-asistente .robot-halo, .robot-asistente .robot-boca { animation: none !important; transform: none !important; } .robot-asistente .robot-dibujo { transform: none !important; } }
+@media (prefers-reduced-motion: reduce) { .robot-asistente * { animation: none !important; transform: none !important; } }
+
+/* Constelación ABI: acentos de estado y movimiento sin superficie de captura extra. */
+.abi-art { display: block; width: 100%; height: 100%; pointer-events: none; }
+.abi-chispas { transform-origin: 50px 56px; animation: abi-constelacion 5s ease-in-out infinite; }
+[data-estado="pensando"] .abi-chispas { animation-duration: 2.4s; }
+[data-estado="escuchando"] .abi-chispas { opacity: calc(.65 + var(--nivel, 0) * .35); }
+[data-estado="hablando"] .abi-chispas { animation-duration: 1.8s; }
+@keyframes abi-constelacion { 50% { opacity: .45; transform: translateY(-2px); } }
+@media (prefers-reduced-motion: reduce) {
+  .abi-art, .abi-art *, .robot-asistente, .abi-boton { animation: none !important; transition: none !important; transform: none !important; }
+}
+
+.abi-contenedor { pointer-events: none; }
+.abi-contenedor > * { pointer-events: auto; }
+.robot-asistente { display: block; }
+.robot-asistente[data-estado="pensando"] { color: var(--color-robot-pensando, #7c3aed); }
+.abi-nota-operador { background: var(--color-superficie, #fff); color: var(--color-texto, #211d55); border: 1px solid #dcdcf0; border-radius: 16px; padding: 16px; box-shadow: 0 8px 28px #211d5520; font-size: 14px; max-height: min(300px, 55dvh); overflow-y: auto; }
+.abi-nota-operador p { margin-block: 8px; }
+.abi-nota-operador button { min-height: 44px; padding: 8px 16px; border-radius: 8px; background: #4e4cdb; color: #fff; }
+.robot-asistente { position: relative; } .abi-constelacion-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; } @media (prefers-reduced-motion: reduce) { .abi-constelacion-svg * { animation: none !important; transition: none !important; } }
+/* El aside flotante no es la barra lateral desplazable del panel. */ .app-viewport--amplio .abi-contenedor { overflow: visible; }

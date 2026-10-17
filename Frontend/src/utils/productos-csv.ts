@@ -1,4 +1,4 @@
-import { ImportarProductosEsquema, type ImportarProductosDTO } from "@synchronic-jo/contrato";
+import { ImportarProductosEsquema, type ImportarProductosDTO } from "@abinova/contrato";
 import { COLUMNAS_PRODUCTOS_CSV } from "./exportar";
 
 /** Comas/punto y coma, comillas dobles escapadas y saltos dentro de una celda. */

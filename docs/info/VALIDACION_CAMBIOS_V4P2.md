@@ -1,6 +1,6 @@
 # Validación de guardado, resumen e inventario inicial — V4P2
 
-Pruebas realizadas el 6 de octubre de 2026 sobre la instalación aislada `ambie-integracion`: Nginx 8180, API 3100 y PostgreSQL `ambie_test`. Las cifras de QA son ficticias. El informe anterior de [guardado](VALIDACION_GUARDADO_V4P2.md) corresponde a una versión previa a estas correcciones.
+Pruebas realizadas el 6 de octubre de 2026 sobre la instalación aislada `abinova-integracion`: Nginx 8180, API 3100 y PostgreSQL `abinova_test`. Las cifras de QA son ficticias. El informe anterior de [guardado](VALIDACION_GUARDADO_V4P2.md) corresponde a una versión previa a estas correcciones.
 
 ## Cambios comprobados
 
@@ -56,7 +56,7 @@ Se verificaron 170 UUID y consecutivos distintos, lectura de todos los pedidos, 
 
 ## Migración y despliegue
 
-La prueba inicial en QA detectó eventos de triggers diferidos pendientes al añadir el CHECK de reservas. La transacción se revirtió, conservando los datos. La migración corregida ejecuta esos eventos antes del ALTER TABLE dentro de la misma transacción y se aplicó correctamente. La comprobación de salud de PostgreSQL QA ahora consulta su propia base `ambie_test`.
+La prueba inicial en QA detectó eventos de triggers diferidos pendientes al añadir el CHECK de reservas. La transacción se revirtió, conservando los datos. La migración corregida ejecuta esos eventos antes del ALTER TABLE dentro de la misma transacción y se aplicó correctamente. La comprobación de salud de PostgreSQL QA ahora consulta su propia base `abinova_test`.
 
 Las migraciones agregan el tipo de conteo inicial, la confirmación técnica de escritura, tres campos del snapshot inicial, índices de unicidad y la coherencia de reservas. La semilla no crea inventario inicial ni datos comerciales nuevos.
 
@@ -67,7 +67,7 @@ Chrome verificó las cinco tarjetas mensuales y **Contar inventario inicial** en
 ## Repetir las comprobaciones
 
 ```powershell
-docker.exe compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml up -d --wait
+docker.exe compose -p abinova-integracion -f docker-compose.yml -f docker-compose.pruebas.yml up -d --wait
 npm.cmd run verificar
 npm.cmd run prueba:guardados
 npm.cmd run prueba:inventario:inicial

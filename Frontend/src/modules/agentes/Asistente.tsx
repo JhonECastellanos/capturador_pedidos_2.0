@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import type { ConfiguracionAgente, RevisionAgente } from "@synchronic-jo/contrato";
+import type { ConfiguracionAgente, RevisionAgente } from "@abinova/contrato";
 import { useAuth } from "../../context/auth";
 import { api, usaApi } from "../../data/api";
 import { agenteGuardando, avisoAgente, contextoAgente, cambiarRevisionAgente, confirmarDesdeAgente, revisionAgente, elegirOpcionDictada } from "./operacion-agente";
@@ -17,7 +17,7 @@ export default function Asistente() {
   const { usuario } = useAuth();
   const navegar = useNavigate();
   const [abierto, setAbierto] = useState(false);
-  const [ancho, setAncho] = useState(() => Math.max(200, Math.min(440, Number(localStorage.getItem("ambie:ui:ancho-asistente")) || 300)));
+  const [ancho, setAncho] = useState(() => Math.max(200, Math.min(440, Number(localStorage.getItem("abinova:ui:ancho-asistente")) || 300)));
   const iniciando = useRef(false);
   const [estado, setEstado] = useState<Estado | null>(null);
   const [texto, setTexto] = useState("");
@@ -39,13 +39,13 @@ export default function Asistente() {
   useEffect(() => {
     const limpiar = () => { ordenesPendientes.current = []; conversacionId.current = crypto.randomUUID(); generacion.current++; generacionAudio.current++; vozActiva.current = false; detenerMicrofono.current?.(); detenerMicrofono.current = null; silenciarMicrofono.current = null; setEscuchando(false); bloqueo.current = false; cambiarRevisionAgente(null); setAbierto(false); setHablando(false); setEstado(null); setTexto(""); setMensaje(""); setOcupado(false); window.speechSynthesis?.cancel(); };
     limpiar();
-    window.addEventListener("synchronic:sesion-expirada", limpiar);
-    return () => { generacion.current++; generacionAudio.current++; vozActiva.current = false; detenerMicrofono.current?.(); detenerMicrofono.current = null; silenciarMicrofono.current = null; cambiarRevisionAgente(null); window.speechSynthesis?.cancel(); window.removeEventListener("synchronic:sesion-expirada", limpiar); };
+    window.addEventListener("abinova:sesion-expirada", limpiar);
+    return () => { generacion.current++; generacionAudio.current++; vozActiva.current = false; detenerMicrofono.current?.(); detenerMicrofono.current = null; silenciarMicrofono.current = null; cambiarRevisionAgente(null); window.speechSynthesis?.cancel(); window.removeEventListener("abinova:sesion-expirada", limpiar); };
   }, [usuario?.id, usuario?.rol]);
   useEffect(() => {
     const aviso = (e: Event) => { const valor = String((e as CustomEvent<unknown>).detail); setMensaje(valor); if (estado && vozActiva.current) hablar(valor, estado.audio); };
-    window.addEventListener("ambie:agente-aviso", aviso);
-    return () => window.removeEventListener("ambie:agente-aviso", aviso);
+    window.addEventListener("abinova:agente-aviso", aviso);
+    return () => window.removeEventListener("abinova:agente-aviso", aviso);
   }, [estado]);
   useEffect(() => {
     if (!usuario || !usaApi) return;
@@ -87,8 +87,8 @@ export default function Asistente() {
   useEffect(() => { interpretarActual.current = interpretar; });
   useEffect(() => {
     const actualizar = (e: Event) => { hablandoActual.current = Boolean((e as CustomEvent<boolean>).detail); setHablando(hablandoActual.current); };
-    window.addEventListener("synchronic:agente-hablando", actualizar);
-    return () => window.removeEventListener("synchronic:agente-hablando", actualizar);
+    window.addEventListener("abinova:agente-hablando", actualizar);
+    return () => window.removeEventListener("abinova:agente-hablando", actualizar);
   }, []);
   async function alternarMicrofono() {
     setAbierto(true);
@@ -102,7 +102,7 @@ export default function Asistente() {
     }
     // Reactivar durante una respuesta permite interrumpirla sin perder el borrador.
     window.speechSynthesis?.cancel();
-    window.dispatchEvent(new CustomEvent("synchronic:agente-hablando", { detail: false }));
+    window.dispatchEvent(new CustomEvent("abinova:agente-hablando", { detail: false }));
     if (silenciarMicrofono.current?.(false)) { setEscuchando(true); setMensaje("Te escucho. Puedes completar o corregir la operación."); return; }
     const turno = ++generacionAudio.current;
     const reanudando = vozActiva.current;
@@ -132,7 +132,7 @@ export default function Asistente() {
       nivel => { robot.current?.style.setProperty("--nivel", String(nivel)); }, contextoAudio);
       if (turno !== generacionAudio.current) { detener(); return; }
       detenerMicrofono.current = detener; setEscuchando(true);
-      const saludo = "Hola. Te escucho.";
+      const saludo = "Hola, soy ABI. Te escucho.";
       if (!reanudando) { setMensaje(saludo); hablar(saludo, configuracion.audio); }
       else setMensaje("Te escucho. Puedes completar o corregir la operación.");
     } catch (error) {
@@ -156,7 +156,7 @@ export default function Asistente() {
       <span className="text-[10px] text-ink-soft">{ocupado ? "Preparando detalle…" : hablando ? "Respondiendo" : escuchando ? "Te escucho · toca el robot para detener" : "Toca el robot para hablar"}</span>
       <p aria-label="Texto reconocido" className="mt-1 line-clamp-2 min-h-8 text-xs" aria-live="polite">{texto || mensaje || "Aquí aparece lo que dictas"}</p>
       {mensaje && texto && <p role="status" className="mt-1 line-clamp-2 text-[11px] text-ink-soft">{mensaje}</p>}
-      <label className="mt-1 flex items-center gap-2 text-[10px] text-ink-soft">Ancho<input aria-label="Ancho del texto del asistente" title="Ajustar ancho" type="range" min="200" max="440" step="10" value={ancho} onChange={e => { const valor = Number(e.target.value); setAncho(valor); localStorage.setItem("ambie:ui:ancho-asistente", String(valor)); }} className="min-w-0 flex-1 h-2 accent-teal" /></label>
+      <label className="mt-1 flex items-center gap-2 text-[10px] text-ink-soft">Ancho<input aria-label="Ancho del texto del asistente" title="Ajustar ancho" type="range" min="200" max="440" step="10" value={ancho} onChange={e => { const valor = Number(e.target.value); setAncho(valor); localStorage.setItem("abinova:ui:ancho-asistente", String(valor)); }} className="min-w-0 flex-1 h-2 accent-teal" /></label>
     </section>
   </RobotAsistente>;
 }

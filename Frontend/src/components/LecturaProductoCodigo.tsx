@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { ProductoDTO } from "@synchronic-jo/contrato";
+import type { ProductoDTO } from "@abinova/contrato";
 import { api } from "../data/api";
 import { usePaginaApi } from "../data/usePaginaApi";
 import { BuscadorInput } from "./BuscadorInput";

@@ -1,0 +1,849 @@
+{
+  "perfiles": 12,
+  "facebook": 36,
+  "instagram": 12,
+  "imagenes": 48,
+  "tiktok": "Solo storyboards/prompts con referencia original",
+  "recursos": [
+    {
+      "id": "01-facebook-1",
+      "perfil": 1,
+      "red": "facebook",
+      "angulo": 1,
+      "angulos": [
+        1
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/01.png",
+      "exportaciones": [
+        "01-tendero-independiente/facebook/01-facebook-1.png"
+      ],
+      "editable": "01-tendero-independiente/facebook/01-facebook-1.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "01-facebook-2",
+      "perfil": 1,
+      "red": "facebook",
+      "angulo": 2,
+      "angulos": [
+        2
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/01.png",
+      "exportaciones": [
+        "01-tendero-independiente/facebook/01-facebook-2.png"
+      ],
+      "editable": "01-tendero-independiente/facebook/01-facebook-2.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "01-facebook-3",
+      "perfil": 1,
+      "red": "facebook",
+      "angulo": 3,
+      "angulos": [
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/01.png",
+      "exportaciones": [
+        "01-tendero-independiente/facebook/01-facebook-3.png"
+      ],
+      "editable": "01-tendero-independiente/facebook/01-facebook-3.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "01-instagram-portada",
+      "perfil": 1,
+      "red": "instagram",
+      "angulo": null,
+      "angulos": [
+        1,
+        2,
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1350,
+      "original": "recursos/originales/01.png",
+      "exportaciones": [
+        "01-tendero-independiente/instagram/01-instagram-portada.png"
+      ],
+      "editable": "01-tendero-independiente/instagram/01-instagram-portada.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "02-facebook-1",
+      "perfil": 2,
+      "red": "facebook",
+      "angulo": 1,
+      "angulos": [
+        1
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/02.png",
+      "exportaciones": [
+        "02-tienda-crecimiento/facebook/02-facebook-1.png"
+      ],
+      "editable": "02-tienda-crecimiento/facebook/02-facebook-1.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "02-facebook-2",
+      "perfil": 2,
+      "red": "facebook",
+      "angulo": 2,
+      "angulos": [
+        2
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/02.png",
+      "exportaciones": [
+        "02-tienda-crecimiento/facebook/02-facebook-2.png"
+      ],
+      "editable": "02-tienda-crecimiento/facebook/02-facebook-2.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "02-facebook-3",
+      "perfil": 2,
+      "red": "facebook",
+      "angulo": 3,
+      "angulos": [
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/02.png",
+      "exportaciones": [
+        "02-tienda-crecimiento/facebook/02-facebook-3.png"
+      ],
+      "editable": "02-tienda-crecimiento/facebook/02-facebook-3.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "02-instagram-portada",
+      "perfil": 2,
+      "red": "instagram",
+      "angulo": null,
+      "angulos": [
+        1,
+        2,
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1350,
+      "original": "recursos/originales/02.png",
+      "exportaciones": [
+        "02-tienda-crecimiento/instagram/02-instagram-portada.png"
+      ],
+      "editable": "02-tienda-crecimiento/instagram/02-instagram-portada.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "03-facebook-1",
+      "perfil": 3,
+      "red": "facebook",
+      "angulo": 1,
+      "angulos": [
+        1
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/03.png",
+      "exportaciones": [
+        "03-cafeteria-comidas-rapidas/facebook/03-facebook-1.png"
+      ],
+      "editable": "03-cafeteria-comidas-rapidas/facebook/03-facebook-1.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "03-facebook-2",
+      "perfil": 3,
+      "red": "facebook",
+      "angulo": 2,
+      "angulos": [
+        2
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/03.png",
+      "exportaciones": [
+        "03-cafeteria-comidas-rapidas/facebook/03-facebook-2.png"
+      ],
+      "editable": "03-cafeteria-comidas-rapidas/facebook/03-facebook-2.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "03-facebook-3",
+      "perfil": 3,
+      "red": "facebook",
+      "angulo": 3,
+      "angulos": [
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/03.png",
+      "exportaciones": [
+        "03-cafeteria-comidas-rapidas/facebook/03-facebook-3.png"
+      ],
+      "editable": "03-cafeteria-comidas-rapidas/facebook/03-facebook-3.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "03-instagram-portada",
+      "perfil": 3,
+      "red": "instagram",
+      "angulo": null,
+      "angulos": [
+        1,
+        2,
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1350,
+      "original": "recursos/originales/03.png",
+      "exportaciones": [
+        "03-cafeteria-comidas-rapidas/instagram/03-instagram-portada.png"
+      ],
+      "editable": "03-cafeteria-comidas-rapidas/instagram/03-instagram-portada.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "04-facebook-1",
+      "perfil": 4,
+      "red": "facebook",
+      "angulo": 1,
+      "angulos": [
+        1
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/04.png",
+      "exportaciones": [
+        "04-restaurante-pequeno/facebook/04-facebook-1.png"
+      ],
+      "editable": "04-restaurante-pequeno/facebook/04-facebook-1.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "04-facebook-2",
+      "perfil": 4,
+      "red": "facebook",
+      "angulo": 2,
+      "angulos": [
+        2
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/04.png",
+      "exportaciones": [
+        "04-restaurante-pequeno/facebook/04-facebook-2.png"
+      ],
+      "editable": "04-restaurante-pequeno/facebook/04-facebook-2.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "04-facebook-3",
+      "perfil": 4,
+      "red": "facebook",
+      "angulo": 3,
+      "angulos": [
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/04.png",
+      "exportaciones": [
+        "04-restaurante-pequeno/facebook/04-facebook-3.png"
+      ],
+      "editable": "04-restaurante-pequeno/facebook/04-facebook-3.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "04-instagram-portada",
+      "perfil": 4,
+      "red": "instagram",
+      "angulo": null,
+      "angulos": [
+        1,
+        2,
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1350,
+      "original": "recursos/originales/04.png",
+      "exportaciones": [
+        "04-restaurante-pequeno/instagram/04-instagram-portada.png"
+      ],
+      "editable": "04-restaurante-pequeno/instagram/04-instagram-portada.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "05-facebook-1",
+      "perfil": 5,
+      "red": "facebook",
+      "angulo": 1,
+      "angulos": [
+        1
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/05.png",
+      "exportaciones": [
+        "05-minimercado/facebook/05-facebook-1.png"
+      ],
+      "editable": "05-minimercado/facebook/05-facebook-1.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "05-facebook-2",
+      "perfil": 5,
+      "red": "facebook",
+      "angulo": 2,
+      "angulos": [
+        2
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/05.png",
+      "exportaciones": [
+        "05-minimercado/facebook/05-facebook-2.png"
+      ],
+      "editable": "05-minimercado/facebook/05-facebook-2.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "05-facebook-3",
+      "perfil": 5,
+      "red": "facebook",
+      "angulo": 3,
+      "angulos": [
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/05.png",
+      "exportaciones": [
+        "05-minimercado/facebook/05-facebook-3.png"
+      ],
+      "editable": "05-minimercado/facebook/05-facebook-3.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "05-instagram-portada",
+      "perfil": 5,
+      "red": "instagram",
+      "angulo": null,
+      "angulos": [
+        1,
+        2,
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1350,
+      "original": "recursos/originales/05.png",
+      "exportaciones": [
+        "05-minimercado/instagram/05-instagram-portada.png"
+      ],
+      "editable": "05-minimercado/instagram/05-instagram-portada.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "06-facebook-1",
+      "perfil": 6,
+      "red": "facebook",
+      "angulo": 1,
+      "angulos": [
+        1
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/06.png",
+      "exportaciones": [
+        "06-ferreteria/facebook/06-facebook-1.png"
+      ],
+      "editable": "06-ferreteria/facebook/06-facebook-1.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "06-facebook-2",
+      "perfil": 6,
+      "red": "facebook",
+      "angulo": 2,
+      "angulos": [
+        2
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/06.png",
+      "exportaciones": [
+        "06-ferreteria/facebook/06-facebook-2.png"
+      ],
+      "editable": "06-ferreteria/facebook/06-facebook-2.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "06-facebook-3",
+      "perfil": 6,
+      "red": "facebook",
+      "angulo": 3,
+      "angulos": [
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/06.png",
+      "exportaciones": [
+        "06-ferreteria/facebook/06-facebook-3.png"
+      ],
+      "editable": "06-ferreteria/facebook/06-facebook-3.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "06-instagram-portada",
+      "perfil": 6,
+      "red": "instagram",
+      "angulo": null,
+      "angulos": [
+        1,
+        2,
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1350,
+      "original": "recursos/originales/06.png",
+      "exportaciones": [
+        "06-ferreteria/instagram/06-instagram-portada.png"
+      ],
+      "editable": "06-ferreteria/instagram/06-instagram-portada.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "07-facebook-1",
+      "perfil": 7,
+      "red": "facebook",
+      "angulo": 1,
+      "angulos": [
+        1
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/07.png",
+      "exportaciones": [
+        "07-moda/facebook/07-facebook-1.png"
+      ],
+      "editable": "07-moda/facebook/07-facebook-1.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "07-facebook-2",
+      "perfil": 7,
+      "red": "facebook",
+      "angulo": 2,
+      "angulos": [
+        2
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/07.png",
+      "exportaciones": [
+        "07-moda/facebook/07-facebook-2.png"
+      ],
+      "editable": "07-moda/facebook/07-facebook-2.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "07-facebook-3",
+      "perfil": 7,
+      "red": "facebook",
+      "angulo": 3,
+      "angulos": [
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/07.png",
+      "exportaciones": [
+        "07-moda/facebook/07-facebook-3.png"
+      ],
+      "editable": "07-moda/facebook/07-facebook-3.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "07-instagram-portada",
+      "perfil": 7,
+      "red": "instagram",
+      "angulo": null,
+      "angulos": [
+        1,
+        2,
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1350,
+      "original": "recursos/originales/07.png",
+      "exportaciones": [
+        "07-moda/instagram/07-instagram-portada.png"
+      ],
+      "editable": "07-moda/instagram/07-instagram-portada.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "08-facebook-1",
+      "perfil": 8,
+      "red": "facebook",
+      "angulo": 1,
+      "angulos": [
+        1
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/08.png",
+      "exportaciones": [
+        "08-distribuidor-pequeno/facebook/08-facebook-1.png"
+      ],
+      "editable": "08-distribuidor-pequeno/facebook/08-facebook-1.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "08-facebook-2",
+      "perfil": 8,
+      "red": "facebook",
+      "angulo": 2,
+      "angulos": [
+        2
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/08.png",
+      "exportaciones": [
+        "08-distribuidor-pequeno/facebook/08-facebook-2.png"
+      ],
+      "editable": "08-distribuidor-pequeno/facebook/08-facebook-2.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "08-facebook-3",
+      "perfil": 8,
+      "red": "facebook",
+      "angulo": 3,
+      "angulos": [
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/08.png",
+      "exportaciones": [
+        "08-distribuidor-pequeno/facebook/08-facebook-3.png"
+      ],
+      "editable": "08-distribuidor-pequeno/facebook/08-facebook-3.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "08-instagram-portada",
+      "perfil": 8,
+      "red": "instagram",
+      "angulo": null,
+      "angulos": [
+        1,
+        2,
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1350,
+      "original": "recursos/originales/08.png",
+      "exportaciones": [
+        "08-distribuidor-pequeno/instagram/08-instagram-portada.png"
+      ],
+      "editable": "08-distribuidor-pequeno/instagram/08-instagram-portada.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "09-facebook-1",
+      "perfil": 9,
+      "red": "facebook",
+      "angulo": 1,
+      "angulos": [
+        1
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/09.png",
+      "exportaciones": [
+        "09-admin-finanzas/facebook/09-facebook-1.png"
+      ],
+      "editable": "09-admin-finanzas/facebook/09-facebook-1.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "09-facebook-2",
+      "perfil": 9,
+      "red": "facebook",
+      "angulo": 2,
+      "angulos": [
+        2
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/09.png",
+      "exportaciones": [
+        "09-admin-finanzas/facebook/09-facebook-2.png"
+      ],
+      "editable": "09-admin-finanzas/facebook/09-facebook-2.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "09-facebook-3",
+      "perfil": 9,
+      "red": "facebook",
+      "angulo": 3,
+      "angulos": [
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/09.png",
+      "exportaciones": [
+        "09-admin-finanzas/facebook/09-facebook-3.png"
+      ],
+      "editable": "09-admin-finanzas/facebook/09-facebook-3.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "09-instagram-portada",
+      "perfil": 9,
+      "red": "instagram",
+      "angulo": null,
+      "angulos": [
+        1,
+        2,
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1350,
+      "original": "recursos/originales/09.png",
+      "exportaciones": [
+        "09-admin-finanzas/instagram/09-instagram-portada.png"
+      ],
+      "editable": "09-admin-finanzas/instagram/09-instagram-portada.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "10-facebook-1",
+      "perfil": 10,
+      "red": "facebook",
+      "angulo": 1,
+      "angulos": [
+        1
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/10.png",
+      "exportaciones": [
+        "10-coordinador-inventario/facebook/10-facebook-1.png"
+      ],
+      "editable": "10-coordinador-inventario/facebook/10-facebook-1.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "10-facebook-2",
+      "perfil": 10,
+      "red": "facebook",
+      "angulo": 2,
+      "angulos": [
+        2
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/10.png",
+      "exportaciones": [
+        "10-coordinador-inventario/facebook/10-facebook-2.png"
+      ],
+      "editable": "10-coordinador-inventario/facebook/10-facebook-2.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "10-facebook-3",
+      "perfil": 10,
+      "red": "facebook",
+      "angulo": 3,
+      "angulos": [
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/10.png",
+      "exportaciones": [
+        "10-coordinador-inventario/facebook/10-facebook-3.png"
+      ],
+      "editable": "10-coordinador-inventario/facebook/10-facebook-3.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "10-instagram-portada",
+      "perfil": 10,
+      "red": "instagram",
+      "angulo": null,
+      "angulos": [
+        1,
+        2,
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1350,
+      "original": "recursos/originales/10.png",
+      "exportaciones": [
+        "10-coordinador-inventario/instagram/10-instagram-portada.png"
+      ],
+      "editable": "10-coordinador-inventario/instagram/10-instagram-portada.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "11-facebook-1",
+      "perfil": 11,
+      "red": "facebook",
+      "angulo": 1,
+      "angulos": [
+        1
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/11.png",
+      "exportaciones": [
+        "11-droguerias/facebook/11-facebook-1.png"
+      ],
+      "editable": "11-droguerias/facebook/11-facebook-1.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "11-facebook-2",
+      "perfil": 11,
+      "red": "facebook",
+      "angulo": 2,
+      "angulos": [
+        2
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/11.png",
+      "exportaciones": [
+        "11-droguerias/facebook/11-facebook-2.png"
+      ],
+      "editable": "11-droguerias/facebook/11-facebook-2.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "11-facebook-3",
+      "perfil": 11,
+      "red": "facebook",
+      "angulo": 3,
+      "angulos": [
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/11.png",
+      "exportaciones": [
+        "11-droguerias/facebook/11-facebook-3.png"
+      ],
+      "editable": "11-droguerias/facebook/11-facebook-3.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "11-instagram-portada",
+      "perfil": 11,
+      "red": "instagram",
+      "angulo": null,
+      "angulos": [
+        1,
+        2,
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1350,
+      "original": "recursos/originales/11.png",
+      "exportaciones": [
+        "11-droguerias/instagram/11-instagram-portada.png"
+      ],
+      "editable": "11-droguerias/instagram/11-instagram-portada.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "12-facebook-1",
+      "perfil": 12,
+      "red": "facebook",
+      "angulo": 1,
+      "angulos": [
+        1
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/12.png",
+      "exportaciones": [
+        "12-empresarial-corporativo/facebook/12-facebook-1.png"
+      ],
+      "editable": "12-empresarial-corporativo/facebook/12-facebook-1.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "12-facebook-2",
+      "perfil": 12,
+      "red": "facebook",
+      "angulo": 2,
+      "angulos": [
+        2
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/12.png",
+      "exportaciones": [
+        "12-empresarial-corporativo/facebook/12-facebook-2.png"
+      ],
+      "editable": "12-empresarial-corporativo/facebook/12-facebook-2.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "12-facebook-3",
+      "perfil": 12,
+      "red": "facebook",
+      "angulo": 3,
+      "angulos": [
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1080,
+      "original": "recursos/originales/12.png",
+      "exportaciones": [
+        "12-empresarial-corporativo/facebook/12-facebook-3.png"
+      ],
+      "editable": "12-empresarial-corporativo/facebook/12-facebook-3.svg",
+      "enfoques": "A/B solo textuales"
+    },
+    {
+      "id": "12-instagram-portada",
+      "perfil": 12,
+      "red": "instagram",
+      "angulo": null,
+      "angulos": [
+        1,
+        2,
+        3
+      ],
+      "ancho": 1080,
+      "alto": 1350,
+      "original": "recursos/originales/12.png",
+      "exportaciones": [
+        "12-empresarial-corporativo/instagram/12-instagram-portada.png"
+      ],
+      "editable": "12-empresarial-corporativo/instagram/12-instagram-portada.svg",
+      "enfoques": "A/B solo textuales"
+    }
+  ]
+}

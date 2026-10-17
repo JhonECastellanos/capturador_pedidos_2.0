@@ -1,0 +1,25 @@
+{
+  "fecha": "2026-10-16T17:48:51.308Z",
+  "entorno": "QA local 8180",
+  "version": "V8P4",
+  "navegador": "Chrome",
+  "resolucion": "390x844",
+  "datos": "ficticios, conservados en QA",
+  "escriturasComerciales": 0,
+  "proveedorExterno": false,
+  "errores": [],
+  "solicitudesBloqueadas": [
+    "GET /css2",
+    "GET /css2",
+    "GET /css2",
+    "GET /css2",
+    "GET /css2"
+  ],
+  "imagenes": [
+    "chat",
+    "ventas",
+    "inventario",
+    "productos",
+    "acceso"
+  ]
+}

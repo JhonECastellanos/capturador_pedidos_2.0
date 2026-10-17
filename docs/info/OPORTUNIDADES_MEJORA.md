@@ -1,4 +1,4 @@
-# Oportunidades de mejora — Synchronic.JO
+# Oportunidades de mejora — ABINOVA
 
 ## Estado actualizado — conteos y listas, 09/10/2026
 
@@ -36,7 +36,7 @@ Cada oportunidad tiene el mismo formato:
 
 1. Si toca dominio: primero `Backend/prisma/schema.prisma` → luego `Compartido/src/enums.ts` → `npm run contrato:verificar` → actualizar `EQUIVALENCIA_VARIABLES.txt`.
 2. Toda escritura de negocio (pedidos, pagos, caja, stock, cierres) va en transacción con los bloqueos existentes (`pg_advisory_xact_lock`, `FOR UPDATE`, consecutivos en `Backend/src/common/consecutivos.ts`).
-3. Probar en QA (`ambie-integracion`, puertos 8180/3100), **nunca** contra la base del negocio.
+3. Probar en QA (`abinova-integracion`, puertos 8180/3100), **nunca** contra la base del negocio.
 4. Cerrar con `npm run verificar` desde la raíz.
 
 ## Resumen ejecutivo — por dónde empezar
@@ -166,7 +166,7 @@ Cada oportunidad tiene el mismo formato:
 
 **Por qué:** formularios usan `required/minLength/min` nativo (`CajaAdmin.tsx:143-145`, `FormularioProducto.tsx:60-63`, `FormularioGasto.tsx:29-36`); precio/stock viajan como `string` y se convierten al vuelo. El backend valida con Zod pero el frontend no comparte el schema: doble fuente de verdad y `NaN` si pegan `$12.000`.
 
-**Solución:** reutilizar el `zod` de `@synchronic-jo/contrato` con `react-hook-form` + resolver, inputs numéricos con `valueAsNumber` y errores por campo en español.
+**Solución:** reutilizar el `zod` de `@abinova/contrato` con `react-hook-form` + resolver, inputs numéricos con `valueAsNumber` y errores por campo en español.
 
 **Integración sin romper:** migrar formulario por formulario manteniendo los mismos mensajes visibles; el contrato ya existe, solo se importa. Validar que los errores del frontend coincidan con los del backend.
 
@@ -450,9 +450,9 @@ Contexto: `Backend/prisma/schema.prisma` (763 líneas), 37 modelos, 14 enums, 7 
 
 ## INF-03 — `api` y `postgres` sin el endurecimiento que sí tienen los demás · Severidad: MEDIA
 
-**Solución:** en QA añadir a `api`: `read_only:true + tmpfs [/tmp,/home/ambie/.cache] + cap_drop + pids_limit 256`, validando `migrate + uploads 5MB + MinIO`. A `postgres` NO `read_only` (necesita escribir PGDATA), solo `cap_drop + no-new-privileges + pids_limit`.
+**Solución:** en QA añadir a `api`: `read_only:true + tmpfs [/tmp,/home/abinova/.cache] + cap_drop + pids_limit 256`, validando `migrate + uploads 5MB + MinIO`. A `postgres` NO `read_only` (necesita escribir PGDATA), solo `cap_drop + no-new-privileges + pids_limit`.
 
-**Integración sin romper:** probar en `ambie-integracion` primero (`prueba:humo` + subida de comprobante); llevar al negocio solo tras verde completo.
+**Integración sin romper:** probar en `abinova-integracion` primero (`prueba:humo` + subida de comprobante); llevar al negocio solo tras verde completo.
 
 ## INF-04 — `depends_on: redis service_started` en vez de `healthy` · Severidad: BAJA-MEDIA
 
@@ -472,9 +472,9 @@ Contexto: `Backend/prisma/schema.prisma` (763 líneas), 37 modelos, 14 enums, 7 
 
 ## INF-06 — Dockerfile backend con `npm install -g` y sin limpieza de caché · Severidad: BAJA
 
-**Por qué:** `Backend/Dockerfile:9-50` es multi-stage correcto (5 etapas, `USER ambie`), pero `L72-75` instala `tsx+prisma` global y no limpia caché de npm: capas más grandes y más superficie.
+**Por qué:** `Backend/Dockerfile:9-50` es multi-stage correcto (5 etapas, `USER abinova`), pero `L72-75` instala `tsx+prisma` global y no limpia caché de npm: capas más grandes y más superficie.
 
-**Solución:** `npm cache clean --force` tras `L75`; mantener stages y el `USER root→ambie` del target `agente`.
+**Solución:** `npm cache clean --force` tras `L75`; mantener stages y el `USER root→abinova` del target `agente`.
 
 **Integración sin romper:** probar `migrate deploy + seed` en QA tras el cambio; comparar tamaño de imagen.
 
@@ -500,7 +500,7 @@ Contexto: `Backend/prisma/schema.prisma` (763 líneas), 37 modelos, 14 enums, 7 
 
 **Por qué:** `docs/AUDITORIA_PROFESIONAL.md:39,62`: dumps verificados con `pg_restore --file=/dev/null` / `--list` (solo lectura): "no equivale a ensayo en otra base". `docs/arquitectura-backend.md:76` pide `pg_dump` diario no implementado. Backup no probado = backup inexistente.
 
-**Solución:** ensayo en `ambie-integracion` (`createdb + pg_restore + smoke login + conteos`), documentar fecha/resultado en la auditoría; programar `pg_dump` diario (cron del host o contenedor lateral, no dentro de `api` para respetar 1 proceso/contenedor).
+**Solución:** ensayo en `abinova-integracion` (`createdb + pg_restore + smoke login + conteos`), documentar fecha/resultado en la auditoría; programar `pg_dump` diario (cron del host o contenedor lateral, no dentro de `api` para respetar 1 proceso/contenedor).
 
 **Integración sin romper:** el ensayo corre contra QA, nunca contra el negocio; no usar `down -v`.
 
@@ -690,7 +690,7 @@ NEG-14 (DIAN, requiere NEG-03) → NEG-15 fase 2 (offline con idempotencia) → 
 - [ ] ¿Endpoint nuevo? → envelope `{data}`/`{data,meta}` + OpenAPI + rate-limit acorde.
 - [ ] ¿Escritura nueva? → `Idempotency-Key` + auditoría con `requestId`.
 - [ ] ¿Tabla operativa nueva? → agregarla a triggers `invalidar_dashboard` + `invalidar_sincronizacion`.
-- [ ] Probado en `ambie-integracion` (8180/3100), nunca contra el negocio.
+- [ ] Probado en `abinova-integracion` (8180/3100), nunca contra el negocio.
 - [ ] `npm run verificar` verde + recorrido 390×844 y 1440 px si toca UI.
 - [ ] Respaldo previo si toca datos; restore ensayado si toca respaldos.
 

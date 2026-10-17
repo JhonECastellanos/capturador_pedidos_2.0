@@ -24,7 +24,7 @@ const PERMISOS = [
 /**
  * Permisos por rol, indexados por el `codigo` de `roles`.
  *
- * El código va en minúscula porque es el valor del contrato (`@synchronic-jo/contrato`)
+ * El código va en minúscula porque es el valor del contrato (`@abinova/contrato`)
  * y el `@map(...)` del enum en Prisma; los nombres del enum del cliente
  * (`RolUsuario.ADMINISTRADOR`) son otra cosa y no coinciden con esta columna.
  */

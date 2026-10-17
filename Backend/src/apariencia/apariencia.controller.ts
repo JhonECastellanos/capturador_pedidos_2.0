@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Put, Res } from "@nestjs/common";
 import { RolUsuario } from "@prisma/client";
 import { FastifyReply } from "fastify";
-import { AparienciaEsquema } from "@synchronic-jo/contrato";
+import { AparienciaEsquema } from "@abinova/contrato";
 import { Public, Roles } from "../common/guards";
 import { AparienciaService } from "./apariencia.service";
 @Controller("apariencia")

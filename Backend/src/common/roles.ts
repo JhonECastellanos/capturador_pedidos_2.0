@@ -1,5 +1,5 @@
 import { RolUsuario } from "@prisma/client";
-import type { RolUsuario as RolContrato } from "@synchronic-jo/contrato";
+import type { RolUsuario as RolContrato } from "@abinova/contrato";
 
 /**
  * El contrato y la base de datos identifican los roles con el código en

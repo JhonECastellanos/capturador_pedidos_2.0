@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { DashboardResumenDTO, Envelope } from "@synchronic-jo/contrato";
+import type { DashboardResumenDTO, Envelope } from "@abinova/contrato";
 import { respuestaRed, usaApi } from "./api";
 import { claveConsulta } from "./query";
 import { useAuth } from "../context/auth";

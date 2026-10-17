@@ -1,0 +1,621 @@
+{
+  "resultado": "APROBADO",
+  "pngActualizados": 48,
+  "comparacionFueraDelSello": [
+    {
+      "archivo": "marketing/01-tendero-independiente/facebook/01-facebook-1.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "9f082e3530064623e394278c0e601b5d2113afb4439fb02b98b67f68cf4a523f",
+      "sha256Actual": "f3754c3f5b2774cfc262dcdc6b02784118389e44b282e2fbc581b35182b12de1"
+    },
+    {
+      "archivo": "marketing/01-tendero-independiente/facebook/01-facebook-2.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "2db7638eeab237bb62f24fed02d3490f446e1f5af23da01b4f5196e8f91c0e17",
+      "sha256Actual": "5cdd70115efe93be6759df032e0a63a8e59188a8cceca4d6a22e283d5d436ffa"
+    },
+    {
+      "archivo": "marketing/01-tendero-independiente/facebook/01-facebook-3.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "651040604e9fa5a8d56fae0cf4a93e5109a539ed0726e45c7552fc4e6be20827",
+      "sha256Actual": "8c1a0a5772c206a55adcea7df3242370760f21cc65489944b54ce74ec7bc7e42"
+    },
+    {
+      "archivo": "marketing/01-tendero-independiente/instagram/01-instagram-portada.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        875,
+        106,
+        931
+      ],
+      "sha256AnteriorVerificado": "485c569e3eb15979bc944d15b16642f7bd07005b1537117a2f785028001a41fe",
+      "sha256Actual": "28529b9df404a451e35ae40f1964bc4816d120ec61acb6d56c4552a8a3b47fc5"
+    },
+    {
+      "archivo": "marketing/02-tienda-crecimiento/facebook/02-facebook-1.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "93f9f20a3eac68f2ac6b666bd03c274e393709f05e7ff1adfbcbdf1213909653",
+      "sha256Actual": "a01a05a15df42c8b51c0e5a55bed624d2fbe9400de325f6a5897789fa1b97210"
+    },
+    {
+      "archivo": "marketing/02-tienda-crecimiento/facebook/02-facebook-2.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "8b609ee2a7606aa180c79e06e7e15563bcfcddd82141cdd5d6c0b585b1d1744e",
+      "sha256Actual": "edf037a8a9140b53cf3cd43ce96399931de490951c87d80cc1a9ee9bdd3b304c"
+    },
+    {
+      "archivo": "marketing/02-tienda-crecimiento/facebook/02-facebook-3.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "925798d8e7a4e5125982f371bea57a118ccf117f2b4e4b66cd0db9c23d54e996",
+      "sha256Actual": "659bcca9cc7ee6392ad55aec8530b1aa8aae4cf734944ad35d8a4bc121432347"
+    },
+    {
+      "archivo": "marketing/02-tienda-crecimiento/instagram/02-instagram-portada.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        875,
+        106,
+        931
+      ],
+      "sha256AnteriorVerificado": "6f7aa3b23c30fe6c40800ffab66cf5f627e71c0b5d9a03a6fbcc6528d7a68c0d",
+      "sha256Actual": "5c265b7286d454473aac4061c2eeb1f8ae3197ce6498722e6b7047d298f19a63"
+    },
+    {
+      "archivo": "marketing/03-cafeteria-comidas-rapidas/facebook/03-facebook-1.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "7b76aa1c3548fd1c7ae0de008c052f029a138f0c7e645d9cd9d519df687121a5",
+      "sha256Actual": "f38a850e25000c39dbd8c749256a1aca2223b0ef8187bcfaa3a5798a5d6c4cbb"
+    },
+    {
+      "archivo": "marketing/03-cafeteria-comidas-rapidas/facebook/03-facebook-2.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "fccfc2a5736e69ce2c163c9c15f0837953a87c2177580b6b22c4da2f01fbc792",
+      "sha256Actual": "41800721d0450d914861da678b0d89659c196ff86be0935b8b9637657d33ac5a"
+    },
+    {
+      "archivo": "marketing/03-cafeteria-comidas-rapidas/facebook/03-facebook-3.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "610b72db8f4e1269fd6304e70d392a9a0dee39bd5d097830eeba38bad80d67cb",
+      "sha256Actual": "32905fb3cc6df7a26944bde2d704449fae750ec5f79ccca2ab21e54e4aea2852"
+    },
+    {
+      "archivo": "marketing/03-cafeteria-comidas-rapidas/instagram/03-instagram-portada.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        875,
+        106,
+        931
+      ],
+      "sha256AnteriorVerificado": "3f08c915076f042a12543de3d28feffc169b7db8c33994ed5088a33707f96bbf",
+      "sha256Actual": "220324476c46dac007683e3ad7381146e612a28e0fb4ef5be704243ac15bd1fb"
+    },
+    {
+      "archivo": "marketing/04-restaurante-pequeno/facebook/04-facebook-1.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "2d646c547e55df2c6b61bab70b9b910bf421d901b09ce11f8cbb8cd335f53454",
+      "sha256Actual": "8c4fa2d5c0303d7486a9c4fbf4bcf5ebed6c46de891f91625be5d4f7d0ec4ca5"
+    },
+    {
+      "archivo": "marketing/04-restaurante-pequeno/facebook/04-facebook-2.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "0a55308c0195898760ed31aeb510168136053228b827e41d2c76ee2da59829e5",
+      "sha256Actual": "80617d66d3fb1acbb06019e309257391a802e61cfa16aec31bdd707cb524a3c1"
+    },
+    {
+      "archivo": "marketing/04-restaurante-pequeno/facebook/04-facebook-3.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "51aca5634c187eae6fc96bde9f5bf966a021a9266e93c8128be699a93881a414",
+      "sha256Actual": "45777402c27d11659fd00b288c2d919188e687b68ce5cf77086ee6c44e8749b7"
+    },
+    {
+      "archivo": "marketing/04-restaurante-pequeno/instagram/04-instagram-portada.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        875,
+        106,
+        931
+      ],
+      "sha256AnteriorVerificado": "f8b817c7faf537bfa97354be939de77c0c63ce252644ddf5219cbb69dd3e1a7d",
+      "sha256Actual": "a1781a3eb657b63b351673c0c50f39e3afd608a6ba6f5c07215f30a8fa4fc515"
+    },
+    {
+      "archivo": "marketing/05-minimercado/facebook/05-facebook-1.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "8dd6f5d94ce786df5ee6be0bb2ea3cb2156d6dddec978554710e5a3ac8bb049d",
+      "sha256Actual": "ba9c947fa477ef11f74fb19bd97e9071dfd4f39470a8efd96c28d03be9a97e1f"
+    },
+    {
+      "archivo": "marketing/05-minimercado/facebook/05-facebook-2.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "77003ed6f93afd7bfe113ebd80f70bf4b9736cf7dcdfe58aacc14ae7fccf6949",
+      "sha256Actual": "9eeb0982167594ebe990f122d66630823615f30306e21cf5977f60c6b66a4e27"
+    },
+    {
+      "archivo": "marketing/05-minimercado/facebook/05-facebook-3.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "4acf6f4f76d9b65780ba3f05c45e0df134a535616492ead96b5427766d3d3b07",
+      "sha256Actual": "9b29e7da53039fd1187e0de440eedf824c432e077215ad3361e57fd6513f582d"
+    },
+    {
+      "archivo": "marketing/05-minimercado/instagram/05-instagram-portada.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        875,
+        106,
+        931
+      ],
+      "sha256AnteriorVerificado": "70de9fe9883f3d1bbf0fe46e831836b2f8eb771960add800e07e953b4e146bac",
+      "sha256Actual": "2b355bddb743072af9ff6eeb8a52d1f4ee70cc112e7eccb14fc90408e5c79340"
+    },
+    {
+      "archivo": "marketing/06-ferreteria/facebook/06-facebook-1.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "fd622e39968807154cea4f396785eeec7aaefd69f5ff5325e73ce840cc965510",
+      "sha256Actual": "4593d486eadb9fda64239a8cba3a612dbd121e8d18ac9990ab280205c3969ef1"
+    },
+    {
+      "archivo": "marketing/06-ferreteria/facebook/06-facebook-2.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "b04a935c190c83c5e2372953f8b406608f4ca278dfe3cc9b11e4c9cd409f1dc4",
+      "sha256Actual": "8ac642176cc0d2428825c8d25fa888b3036f73222cdcfd157744721ef0d80f97"
+    },
+    {
+      "archivo": "marketing/06-ferreteria/facebook/06-facebook-3.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "ed52159db4f1677c295a132258ca663765088724e790628d4f1ac41307e04ecc",
+      "sha256Actual": "e4ea013d24bcbcac292a905e2bdb6aaf3ebd9e403c89245f265d9ae7b9908949"
+    },
+    {
+      "archivo": "marketing/06-ferreteria/instagram/06-instagram-portada.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        875,
+        106,
+        931
+      ],
+      "sha256AnteriorVerificado": "514013f71389904503ecf1a145829222cb0bdd1aaff2cadc14c7eb48ecf5bb2e",
+      "sha256Actual": "88140876919fbff87a0d7904270464acfd62aeee9b632202475a578df1b3d5ba"
+    },
+    {
+      "archivo": "marketing/07-moda/facebook/07-facebook-1.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "2d508bb09dee5e3fbe1eb751df98c9236c2f3160ff69ff741cadea1c0259a335",
+      "sha256Actual": "d7d10026dcd5642bf48cd40336f848c16e1ed1fe1766dcfaa986b199cbc41c24"
+    },
+    {
+      "archivo": "marketing/07-moda/facebook/07-facebook-2.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "87539abbc091d7e9489968b06f8873e53f3d9d0677f5f664c6abb3f4875193ab",
+      "sha256Actual": "6ef788fd69750c38adcdf372b05dd23858c4c97d678b4374bd584cf5fa5c6d12"
+    },
+    {
+      "archivo": "marketing/07-moda/facebook/07-facebook-3.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "f3e8b80c10c69719df282e8eb1ebfc13a566023fd85246037059e525c8393346",
+      "sha256Actual": "6b8f8863c4e1180664c46b824d684fb9a81feb4bb5c540b8df3c61f0b57f6896"
+    },
+    {
+      "archivo": "marketing/07-moda/instagram/07-instagram-portada.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        875,
+        106,
+        931
+      ],
+      "sha256AnteriorVerificado": "a175c0ff9c4a10515e41b1ebfb070947fd116d17b63a77c71091878e74343412",
+      "sha256Actual": "05f4b3a6fe21146fbe8fe660cdc3ad34939eb1d05fbd83f406405b6ab1358d26"
+    },
+    {
+      "archivo": "marketing/08-distribuidor-pequeno/facebook/08-facebook-1.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "df6f829ceab4e7f027e9be663c5ec6ac52e89c995c9967467a5f1f5ca757672e",
+      "sha256Actual": "c135da02347559f8bf68aa22b771625502905462b196d030689a99529678ddc5"
+    },
+    {
+      "archivo": "marketing/08-distribuidor-pequeno/facebook/08-facebook-2.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "a0f70037ff59a0067f0f3f8a8db5c4f8ada6ad73652919fc6d0a9ca4a89d0721",
+      "sha256Actual": "4676fa3eccc95e3fcf190b489371aee6d329f3439b19b2362c397e8da18ec2a5"
+    },
+    {
+      "archivo": "marketing/08-distribuidor-pequeno/facebook/08-facebook-3.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "58d283bf308df489aae08da32b13ce5887cfd2823cc3a95bea9fba64262c7824",
+      "sha256Actual": "74bad0adbeac2e97c603d1ae0cb50ca66237bf6fe098cf77537dc3738766ef3f"
+    },
+    {
+      "archivo": "marketing/08-distribuidor-pequeno/instagram/08-instagram-portada.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        875,
+        106,
+        931
+      ],
+      "sha256AnteriorVerificado": "683dd4a8d8b936bd3b10ee496bd5cc742b40e05951fbc275c7537ecd13ca0117",
+      "sha256Actual": "f25014046627190d9bc2ae3f4d536659903d64847bf22258d067535cd7329b12"
+    },
+    {
+      "archivo": "marketing/09-admin-finanzas/facebook/09-facebook-1.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "63091183fe8a3d07f88990d318a3387d096a2e5b09f1e90cfa605fc6ee8c4923",
+      "sha256Actual": "cd92e2171a02c2a667146bfe2cf5ee745790037f8801737493ece5b1399e2691"
+    },
+    {
+      "archivo": "marketing/09-admin-finanzas/facebook/09-facebook-2.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "c38f10567761db943a25623455946440c2e137e2d79e200e385631678356849f",
+      "sha256Actual": "19f498d89548b3063be68947c4059eb5ff366493ee452ca42b39317512aa1534"
+    },
+    {
+      "archivo": "marketing/09-admin-finanzas/facebook/09-facebook-3.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "83170ae534eb16077c9b1cf34d8cc3d61b67965406847bb473f7a28037fdd8e5",
+      "sha256Actual": "d261894e0b2e44dc584bf092cd464de366da2f2385317c5b3665bcba6e877d1a"
+    },
+    {
+      "archivo": "marketing/09-admin-finanzas/instagram/09-instagram-portada.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        875,
+        106,
+        931
+      ],
+      "sha256AnteriorVerificado": "3f8a03bd9701697323882f88a2a297872cab3ae86a3d2bb473e22bddd40125ec",
+      "sha256Actual": "359185b27407b70dc2737e2922b912851f3374c344330bd8cec9da92f66f347e"
+    },
+    {
+      "archivo": "marketing/10-coordinador-inventario/facebook/10-facebook-1.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "86ddb1889f56226b7b464c36fe541aedb6908588cb2efc2b07c91c9fc193f8c0",
+      "sha256Actual": "7dec2f7a2d17798e4d165f9bb95aff334f31f0e9a826d3554ca40ddcf7867466"
+    },
+    {
+      "archivo": "marketing/10-coordinador-inventario/facebook/10-facebook-2.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "f389c9f9355d41698baf69616bfa9cb05f98dd6d6b1214b8d3ef093228464223",
+      "sha256Actual": "d51e125630303450e90c980a4df5bf7052679ffcaacd6d748f770c1953b35ba9"
+    },
+    {
+      "archivo": "marketing/10-coordinador-inventario/facebook/10-facebook-3.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "239e9e5b88c0c4cf7897885c43c7254cbfe5ab2100026b5fef5e39a1465f20cc",
+      "sha256Actual": "85c2745107b51ab05eaf7d751811e281ff36c8b01092c79de600c18065cb5401"
+    },
+    {
+      "archivo": "marketing/10-coordinador-inventario/instagram/10-instagram-portada.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        875,
+        106,
+        931
+      ],
+      "sha256AnteriorVerificado": "f15a36b888a2fbe82f0482496d6b79c3e5a602fb5ff181c1c1a9326d3b70a4c0",
+      "sha256Actual": "245044d6b928afe1bad0ce7011bd67a362ab2958f290eeb059ef93a1ef2060ff"
+    },
+    {
+      "archivo": "marketing/11-droguerias/facebook/11-facebook-1.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "e400156e2c36c22f0a09c2dddbcb54f7f3bf63a5595257af0bd6f1f6158e4395",
+      "sha256Actual": "29cfc2484e57287f6088f2caad9264dba7e823875d30de17e06932b783ad8039"
+    },
+    {
+      "archivo": "marketing/11-droguerias/facebook/11-facebook-2.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "475c04ae0f5a6dae9bcd7ac2d0d4d445e206eb1397bd376ca596ed2ca4978d2f",
+      "sha256Actual": "cc89940fce0d95bc153b371ffb857654304f47d791989cf1a9c0565a5d852f6f"
+    },
+    {
+      "archivo": "marketing/11-droguerias/facebook/11-facebook-3.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "413511369f206a3ae86e6433c8aabe0ef66790e667aee07f7465d9e87054e93c",
+      "sha256Actual": "6844804d001be3b0daa6760d7fce8b0d3565eaeca2085525194703f417eff5a9"
+    },
+    {
+      "archivo": "marketing/11-droguerias/instagram/11-instagram-portada.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        875,
+        106,
+        931
+      ],
+      "sha256AnteriorVerificado": "8e94480c7177fd82e5c4013713fadc8ff3dca9fe6318d47d732f60522e1eccee",
+      "sha256Actual": "672da1450949b8b837e160f1cabca19320efb8d282de38c670f05e93f7afde17"
+    },
+    {
+      "archivo": "marketing/12-empresarial-corporativo/facebook/12-facebook-1.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "3f4dc83128a0940b5204a1eca8c4761739a9cc250e9c7cef9db61add7d682c70",
+      "sha256Actual": "98122a6ca369a6df87541fda15141312bbde7855e0daac393b3b25b5905959be"
+    },
+    {
+      "archivo": "marketing/12-empresarial-corporativo/facebook/12-facebook-2.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "daa852f55bfe2c337593dae3bd3f4f53571015e2704a70ef31385bb92ce80617",
+      "sha256Actual": "c09de883193b97488ec66891d6b0170e0b3aaaf5f27a50ce56f7068121c9db43"
+    },
+    {
+      "archivo": "marketing/12-empresarial-corporativo/facebook/12-facebook-3.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        605,
+        106,
+        661
+      ],
+      "sha256AnteriorVerificado": "4a3364c0741016869839c616d9cc2004d1b7483d8b0d729429a61b0d816ce746",
+      "sha256Actual": "213d5d2b66d05bf765e7d8530f93c36747e957d57d7a5eee6ea717219d672808"
+    },
+    {
+      "archivo": "marketing/12-empresarial-corporativo/instagram/12-instagram-portada.png",
+      "pixelesFueraDelSelloIguales": true,
+      "regionModificada": [
+        50,
+        875,
+        106,
+        931
+      ],
+      "sha256AnteriorVerificado": "a69615dfa78ee2a9bdba1f93015f3147deda2999075f650d49cde2800df09e15",
+      "sha256Actual": "d039f3f02a619657ec6406bb6fab0c47290030b3e4177adab0dba48550ef74df"
+    }
+  ],
+  "personajeYOriginalesConservados": true,
+  "iconos": [
+    {
+      "tamano": 16,
+      "PNGvalido": true
+    },
+    {
+      "tamano": 32,
+      "PNGvalido": true
+    },
+    {
+      "tamano": 192,
+      "PNGvalido": true
+    },
+    {
+      "tamano": 512,
+      "PNGvalido": true
+    }
+  ],
+  "metodo": "Render anterior reconstruido; SHA256 cotejado contra el registro original de reorganización",
+  "assetsActualizados": {
+    "Frontend/public/favicon.svg": "f5238304babe182c64cc128f415a13657411b71032c3cd01c20c43407acd56d3",
+    "Frontend/public/assets/branding/simbolo.svg": "f5238304babe182c64cc128f415a13657411b71032c3cd01c20c43407acd56d3",
+    "Frontend/public/assets/branding/logo.svg": "d950ab704f4e24dd9dabdf169dd1a47786845bc654a9ce290c76abc1cc05633f",
+    "Frontend/public/icons/icon-192.png": "155d653dcc58fabc86429fccb1342856df0764d8e09ce50fd5e00d0234ed1ee3",
+    "Frontend/public/icons/icon-512.png": "e3b233058de404f982d1f6b26b02f39a30d4f928368dd4fe78a4e4fdd4655125",
+    "marketing/branding_logo_abi/simbolo.svg": "f5238304babe182c64cc128f415a13657411b71032c3cd01c20c43407acd56d3",
+    "marketing/branding_logo_abi/logo.svg": "d950ab704f4e24dd9dabdf169dd1a47786845bc654a9ce290c76abc1cc05633f",
+    "marketing/12-landing-page/assets/marca.svg": "f5238304babe182c64cc128f415a13657411b71032c3cd01c20c43407acd56d3",
+    "marketing/12-landing-page/assets/branding/logo.svg": "d950ab704f4e24dd9dabdf169dd1a47786845bc654a9ce290c76abc1cc05633f",
+    "marketing/12-landing-page/assets/branding/simbolo.svg": "f5238304babe182c64cc128f415a13657411b71032c3cd01c20c43407acd56d3"
+  },
+  "alcance": "8 SVG estáticos, iconos PWA 192/512, 48 PNG y sus SVG. Sin React/TS/CSS/JS/infra ni commit. No prueba build ni Nginx.",
+  "revisionVisual": [
+    "PNG de icono a 32 px",
+    "PNG de icono a 192 px",
+    "Muestra Facebook con fotografía completa"
+  ],
+  "validacionCLIagentBrowser": "No disponible: conexión agotada. Render real en Chrome mediante Playwright y revisión de PNG con view_image."
+}

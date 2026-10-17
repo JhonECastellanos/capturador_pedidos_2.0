@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import type { ImportarProductosDTO, ProductoDTO, ResultadoImportacionProductosDTO } from "@synchronic-jo/contrato";
+import type { ImportarProductosDTO, ProductoDTO, ResultadoImportacionProductosDTO } from "@abinova/contrato";
 import { Boton } from "../../../components/Boton";
 import { api, listaApi } from "../../../data/api";
 import { COLUMNAS_PRODUCTOS_CSV, descargarCSV, exportarProductosCSV } from "../../../utils/exportar";

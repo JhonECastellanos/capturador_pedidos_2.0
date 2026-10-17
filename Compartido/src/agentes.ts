@@ -12,6 +12,7 @@ export const ProveedorAgenteEsquema = z.object({
   apiKey: z.string().trim().max(4096).refine(clave => !/[\r\n]/.test(clave), "La clave debe ir en una sola línea, sin encabezados ni comentarios").optional(), borrarClave: z.boolean().optional(),
 }).strict();
 export const ConfiguracionAgenteEsquema = z.object({
+  financiacion: z.enum(["propia", "creditos"]).default("propia"),
   habilitado: z.boolean(), modo: z.enum(ModosAgente),
   proveedorId: z.string().uuid().nullable(), respaldoId: z.string().uuid().nullable().default(null),
   proveedores: z.array(ProveedorAgenteEsquema).max(20),
@@ -25,6 +26,7 @@ export type ConfiguracionAgentePublica = Omit<ConfiguracionAgente, "proveedores"
   proveedores: Array<Omit<ConfiguracionAgente["proveedores"][number], "apiKey" | "borrarClave"> & { tieneClave: boolean }>;
 };
 export const ConfiguracionAgenteInicial: ConfiguracionAgente = {
+  financiacion: "propia",
   habilitado: false, modo: "hibrido", proveedorId: null, respaldoId: null, proveedores: [],
   audio: { stt: "whisper", modeloStt: "tiny", idioma: "es", tts: "navegador", voz: "", velocidad: 1, volumen: 1 },
   local: { modelo: "", dispositivo: "auto" },

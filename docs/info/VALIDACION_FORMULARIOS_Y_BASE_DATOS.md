@@ -50,7 +50,7 @@ $baseConsulta = (docker.exe compose exec -T postgres printenv POSTGRES_DB).Trim(
 docker.exe compose exec postgres psql -U $usuarioConsulta -d $baseConsulta
 ```
 
-No hace falta publicar PostgreSQL ni compartir contraseñas. Para QA, añadir `-p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml` después de `compose` en las tres instrucciones. QA usa `ambie_test` y el frontend `http://localhost:8180`; el negocio usa `http://localhost:8080`. Verificar la conexión antes de consultar:
+No hace falta publicar PostgreSQL ni compartir contraseñas. Para QA, añadir `-p abinova-integracion -f docker-compose.yml -f docker-compose.pruebas.yml` después de `compose` en las tres instrucciones. QA usa `abinova_test` y el frontend `http://localhost:8180`; el negocio usa `http://localhost:8080`. Verificar la conexión antes de consultar:
 
 ```sql
 SELECT current_database(), current_user;
@@ -284,7 +284,7 @@ node --env-file=.env Backend/scripts/probar-conteo-diario.cjs
 npm.cmd run prueba:inventario:inicial
 ```
 
-Estos scripts conservan el historial QA y escriben solo contra 8180/ambie_test. El ensayo de cobertura usa fechas históricas simuladas únicamente en QA. Su tiempo p95 más reciente fue **148,9 ms** para 21 capturas, con 17 productos; no es una garantía de latencia en otro equipo.
+Estos scripts conservan el historial QA y escriben solo contra 8180/abinova_test. El ensayo de cobertura usa fechas históricas simuladas únicamente en QA. Su tiempo p95 más reciente fue **148,9 ms** para 21 capturas, con 17 productos; no es una garantía de latencia en otro equipo.
 
 ### Corrección visual de paginadores — 10/10/2026
 
@@ -366,7 +366,7 @@ node Backend/scripts/probar-conteo-compartido.cjs
 node Backend/scripts/probar-escaner-ui.cjs
 ```
 
-La prueba de códigos crea una base nueva `ambie_v7_pruebas_<fecha>` dentro de PostgreSQL QA y una API temporal 3110, que detiene al terminar; conserva los resultados y la base. La prueba de interfaz usa Chrome real con cámara sintética: decodifica imágenes QR/EAN-13 mediante el lector real y guarda conteos en QA. El robot utiliza transporte de audio simulado para comprobar sus controles, sin afirmar reconocimiento acústico real. No equivale a probar cámaras, altavoces, conexión HTTPS ni proveedor de voz en celulares físicos. Informes y capturas quedan en `.local/pruebas-v7/`.
+La prueba de códigos crea una base nueva `abinova_v7_pruebas_<fecha>` dentro de PostgreSQL QA y una API temporal 3110, que detiene al terminar; conserva los resultados y la base. La prueba de interfaz usa Chrome real con cámara sintética: decodifica imágenes QR/EAN-13 mediante el lector real y guarda conteos en QA. El robot utiliza transporte de audio simulado para comprobar sus controles, sin afirmar reconocimiento acústico real. No equivale a probar cámaras, altavoces, conexión HTTPS ni proveedor de voz en celulares físicos. Informes y capturas quedan en `.local/pruebas-v7/`.
 
 ### Consultas de lectura
 
@@ -413,14 +413,14 @@ Validación de esta revisión (11/10/2026): contrato de 14 enums, API, tipos, fr
 
 `GET /auth/me` es una consulta opcional: devuelve usuario válido o `data: null`. Para indicar `renovable: true`, verifica el hash de la cookie en `sesiones`, su vencimiento, revocación y el estado activo del usuario. Si la sesión terminó, elimina las cookies antiguas; el frontend limpia la sesión y presenta el ingreso sin intentar renovar una cookie inválida. Un acceso JWT vencido puede recuperarse si su renovación sigue vigente. Esta respuesta no autoriza operaciones privadas.
 
-Prueba reproducible: `node Backend/scripts/probar-sesion-ui.cjs --api-real`. Requiere API QA en 8180 y PostgreSQL QA en 5433, base `ambie_test`, con el administrador ficticio de pruebas. Se aprobaron 12 casos: seis de transporte controlado (anticipación, respuestas tardías, revocación, caída de red, cancelación y reintento de guardado) y seis con API/PostgreSQL reales (sin cookies, cookies inexistentes, sesión revocada, renovación vencida, acceso vencido y solo cookie de renovación). Se verifican cookies HttpOnly, nuevo ingreso y cierre. Solo modifica sesiones ficticias; conserva documentos del negocio.
+Prueba reproducible: `node Backend/scripts/probar-sesion-ui.cjs --api-real`. Requiere API QA en 8180 y PostgreSQL QA en 5433, base `abinova_test`, con el administrador ficticio de pruebas. Se aprobaron 12 casos: seis de transporte controlado (anticipación, respuestas tardías, revocación, caída de red, cancelación y reintento de guardado) y seis con API/PostgreSQL reales (sin cookies, cookies inexistentes, sesión revocada, renovación vencida, acceso vencido y solo cookie de renovación). Se verifican cookies HttpOnly, nuevo ingreso y cierre. Solo modifica sesiones ficticias; conserva documentos del negocio.
 
 Ejercicio manual: recarga `http://127.0.0.1:8180`, inicia sesión, navega a un módulo y vuelve a recargar. Debe conservar una sesión válida. Al salir, la recarga debe mostrar el ingreso sin llamar a renovación. Usa el mismo dominio durante la prueba: `localhost` y `127.0.0.1` conservan cookies diferentes. Un 401 directo de `/auth/refresh` sigue siendo correcto si la sesión fue revocada, venció o no existe; no se permite recuperar una sesión inválida ni se oculta ese rechazo.
 
 
 ## V8P4 · Marca, acceso, apariencia e instalación
 
-Prueba: `node Backend/scripts/probar-v8p4.cjs` contra API QA 8180, PostgreSQL QA 5433 (`ambie_test`) y Chrome. Comprueba 13 grupos: acceso system por correo y rechazo de duplicados; roles; apariencia persistida y modificación exclusiva del administrador; validación de contraste y firmas de imágenes; retiro conservando cantidad, responsable y fecha del conteo; protección de system; permisos individuales y revocación; interfaz 390×844, 768×1024, 1440×900 y acceso con scroll 320×320; vendedor dirigido a su pantalla y conteo diario; manifiesto/iconos/service worker válidos para instalación, sin CacheStorage privado y recuperación tras desconexión. Incluye guardar una imagen propia desde el formulario y comprobar su persistencia al recargar. El perfil PWA es normal: Chrome no instala en incógnito.
+Prueba: `node Backend/scripts/probar-v8p4.cjs` contra API QA 8180, PostgreSQL QA 5433 (`abinova_test`) y Chrome. Comprueba 13 grupos: acceso system por correo y rechazo de duplicados; roles; apariencia persistida y modificación exclusiva del administrador; validación de contraste y firmas de imágenes; retiro conservando cantidad, responsable y fecha del conteo; protección de system; permisos individuales y revocación; interfaz 390×844, 768×1024, 1440×900 y acceso con scroll 320×320; vendedor dirigido a su pantalla y conteo diario; manifiesto/iconos/service worker válidos para instalación, sin CacheStorage privado y recuperación tras desconexión. Incluye guardar una imagen propia desde el formulario y comprobar su persistencia al recargar. El perfil PWA es normal: Chrome no instala en incógnito.
 
 Se aprobaron también los 12 casos de sesión, caché y reintentos (23 solicitudes para cuatro operaciones distintas). Los datos de prueba permanecen en QA; la apariencia de QA se restaura al terminar. La instalación física en Android/iOS y la cámara física requieren validación del usuario.
 

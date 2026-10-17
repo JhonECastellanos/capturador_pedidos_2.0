@@ -1,4 +1,4 @@
-# Arquitectura backend — Synchronic.JO
+# Arquitectura backend — ABINOVA
 
 ## Stack
 
@@ -49,8 +49,8 @@ cd Backend && npm run bootstrap
 - `SESSION_SECRET` → firma/rotación de sesiones.
 - `BOOTSTRAP_EMAIL`/`BOOTSTRAP_PASSWORD` → solo el primer arranque; elimínalos después.
 - El frontend no recibe ningún secreto; solo `VITE_API_BASE_URL` (público).
-- No se siembran usuarios con contraseñas conocidas (se eliminan `admin@ambie.local/admin123` y
-  `vendedor@ambie.local/vendedor123` del frontend en la Fase 4).
+- No se siembran usuarios con contraseñas conocidas (se eliminan `admin@abinova.local/admin123` y
+  `vendedor@abinova.local/vendedor123` del frontend en la Fase 4).
 
 ## Sesiones y autorización
 

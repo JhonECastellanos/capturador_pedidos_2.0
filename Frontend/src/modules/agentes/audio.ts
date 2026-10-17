@@ -1,5 +1,5 @@
 import { api } from "../../data/api";
-import type { ConfiguracionAgente } from "@synchronic-jo/contrato";
+import type { ConfiguracionAgente } from "@abinova/contrato";
 let locucion = { texto: "", hasta: 0 };
 let turnoVoz = 0;
 let limiteVoz: ReturnType<typeof setTimeout> | undefined;
@@ -19,13 +19,13 @@ export function hablar(texto: string, audio: ConfiguracionAgente["audio"]) {
   const turno = ++turnoVoz;
   clearTimeout(limiteVoz);
   window.speechSynthesis.cancel();
-  window.dispatchEvent(new CustomEvent("synchronic:agente-hablando", { detail: false }));
+  window.dispatchEvent(new CustomEvent("abinova:agente-hablando", { detail: false }));
   const mensaje = new SpeechSynthesisUtterance(texto);
   locucion = { texto: limpiar(texto), hasta: Date.now() + 30_000 };
   mensaje.lang = audio.idioma; mensaje.rate = audio.velocidad; mensaje.volume = audio.volumen;
   const voz = window.speechSynthesis.getVoices().find(v => v.voiceURI === audio.voz); if (voz) mensaje.voice = voz;
-  mensaje.onstart = () => { if (turno === turnoVoz) window.dispatchEvent(new CustomEvent("synchronic:agente-hablando", { detail: true })); };
-  const terminar = () => { if (turno !== turnoVoz) return; clearTimeout(limiteVoz); window.dispatchEvent(new CustomEvent("synchronic:agente-hablando", { detail: false })); };
+  mensaje.onstart = () => { if (turno === turnoVoz) window.dispatchEvent(new CustomEvent("abinova:agente-hablando", { detail: true })); };
+  const terminar = () => { if (turno !== turnoVoz) return; clearTimeout(limiteVoz); window.dispatchEvent(new CustomEvent("abinova:agente-hablando", { detail: false })); };
   mensaje.onend = terminar; mensaje.onerror = terminar;
   // Algunos navegadores omiten onend al interrumpir: no dejar el micrófono bloqueado indefinidamente.
   limiteVoz = setTimeout(() => { if (turno === turnoVoz) { window.speechSynthesis.cancel(); terminar(); } }, Math.min(60000, Math.max(5000, texto.length * 120 / audio.velocidad)));

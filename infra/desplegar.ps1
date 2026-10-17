@@ -12,8 +12,9 @@ if ($Actualizar) {
   & git pull --ff-only
   if ($LASTEXITCODE -ne 0) { throw 'No se pudo actualizar el repositorio.' }
 }
+Docker run --rm --mount "type=bind,source=$((Get-Location).Path),target=/workspace" --workdir /workspace node:24-alpine node infra/workflows/preparar.mjs
 Docker compose config --quiet
-Docker compose build api frontend
+Docker compose build api frontend operador workflow-control
 $postgres = & docker compose ps --status running -q postgres
 if ($LASTEXITCODE -ne 0) { throw 'No se pudo revisar PostgreSQL.' }
 if ($postgres) {
@@ -25,8 +26,8 @@ if ($postgres) {
   if ($LASTEXITCODE -ne 0) { throw 'No se pudo consultar el usuario de BD.' }
   $nombreBd = & docker compose exec -T postgres printenv POSTGRES_DB
   if ($LASTEXITCODE -ne 0) { throw 'No se pudo consultar el nombre de BD.' }
-  Docker compose exec -T postgres pg_dump -U $usuarioBd.Trim() -d $nombreBd.Trim() -Fc -f /tmp/ambie-despliegue.dump
-  Docker cp "${postgres}:/tmp/ambie-despliegue.dump" $respaldo
+  Docker compose exec -T postgres pg_dump -U $usuarioBd.Trim() -d $nombreBd.Trim() -Fc -f /tmp/abinova-despliegue.dump
+  Docker cp "${postgres}:/tmp/abinova-despliegue.dump" $respaldo
   if ((Get-Item -LiteralPath $respaldo).Length -eq 0) { throw 'Respaldo vacío.' }
   Write-Host "Respaldo creado: $respaldo"
 }

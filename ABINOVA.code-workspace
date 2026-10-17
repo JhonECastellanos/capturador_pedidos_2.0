@@ -1,0 +1,11 @@
+{
+  "folders": [
+    {
+      "name": "ABINOVA",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "window.title": "${activeEditorShort}${separator}ABINOVA · V8P4${separator}${appName}"
+  }
+}

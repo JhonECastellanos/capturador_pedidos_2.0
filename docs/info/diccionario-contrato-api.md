@@ -1,4 +1,4 @@
-# Contrato de API — Synchronic.JO
+# Contrato de API — ABINOVA
 
 Base URL: `/api/v1`. Respuesta estándar:
 
@@ -10,7 +10,7 @@ Errores: `{ "code": "CODIGO_ESTABLE", "message": "Mensaje legible" }`.
 
 - Dinero: cadena decimal (`"12500.00"`), nunca `float`.
 - Fechas operativas: `YYYY-MM-DD`. Marcas de auditoría: ISO-8601 UTC.
-- Autenticación: cookie `HttpOnly` `ambie_session` (no se envían tokens en el cuerpo).
+- Autenticación: cookie `HttpOnly` `abinova_session` (no se envían tokens en el cuerpo).
 - `nequi` ya no existe como valor de negocio: el método es `billetera`.
 
 ## Auth

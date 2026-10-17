@@ -18,7 +18,7 @@ import { useOperaciones } from "../../../context/operaciones";
 import { lineasContadasDe, resumenConteo } from "../../../dominio/servicios";
 import { formatoMoneda } from "../../../utils/formato";
 import { InventarioInicial } from "../components/InventarioInicial";
-import type { TipoConteo, ConteoInventarioDTO, CabeceraConteoCompartidoDTO, DescuadreInventarioDTO } from "@synchronic-jo/contrato";
+import type { TipoConteo, ConteoInventarioDTO, CabeceraConteoCompartidoDTO, DescuadreInventarioDTO } from "@abinova/contrato";
 import type { Producto, AjusteInventario } from "../../../types";
 import { ConteosCompartidos } from "../components/ConteosCompartidos";
 import { api, usaApi } from "../../../data/api";

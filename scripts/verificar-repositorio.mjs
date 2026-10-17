@@ -9,7 +9,7 @@ const secretosLocales = existsSync('.env') ? readFileSync('.env', 'utf8').split(
 }) : [];
 const patrones = [/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/, /\bgh[pousr]_[A-Za-z0-9]{30,}\b/, /\bgithub_pat_[A-Za-z0-9_]{40,}\b/, /\bsk-(?:proj-)?[A-Za-z0-9_-]{40,}\b/, /\bAKIA[0-9A-Z]{16}\b/, /postgres(?:ql)?:\/\/(?:\$\{[^}]+\}|[^\s:/]+):([^\s@]+)@/g];
 for (const archivo of archivos) {
-  if (/(^|\/)(\.env(?:\..*)?|\.local|\.aws|\.ambie|node_modules|dist)(\/|$)/.test(archivo) && !archivo.endsWith('.env.example')) problemas.push(`${archivo}: archivo privado o generado`);
+  if (/(^|\/)(\.env(?:\..*)?|\.local|\.aws|\.abinova|node_modules|dist)(\/|$)/.test(archivo) && !archivo.endsWith('.env.example')) problemas.push(`${archivo}: archivo privado o generado`);
   if (/\.(dump|backup|pem|key|pfx|p12|sqlite|db)$/i.test(archivo)) problemas.push(`${archivo}: datos o credenciales`);
   let contenido; try { contenido = readFileSync(archivo, 'utf8'); } catch { continue; }
   if (secretosLocales.some(valor => contenido.includes(valor))) problemas.push(`${archivo}: coincide con un secreto local (valor oculto)`);

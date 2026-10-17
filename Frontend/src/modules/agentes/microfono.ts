@@ -9,7 +9,7 @@ export async function abrirMicrofono(texto: (valor: string) => void, estado: (va
   let reintento: ReturnType<typeof setTimeout> | undefined, limite: ReturnType<typeof setTimeout> | undefined;
   let cancelarEspera: (() => void) | undefined;
   const inicio = performance.now();
-  const diagnostico = (fase: string, codigo?: number) => window.dispatchEvent(new CustomEvent("synchronic:audio-diagnostico", { detail: { fase, milisegundos: Math.round(performance.now() - inicio), ...(codigo === undefined ? {} : { codigo }) } }));
+  const diagnostico = (fase: string, codigo?: number) => window.dispatchEvent(new CustomEvent("abinova:audio-diagnostico", { detail: { fase, milisegundos: Math.round(performance.now() - inicio), ...(codigo === undefined ? {} : { codigo }) } }));
   const reanudar = () => { if (!cerrada && contexto.state !== "running") void contexto.resume().catch(() => estado("Toca el robot para reanudar el audio suspendido por el navegador")); };
   const cambioAudio = () => { if (!cerrada && contexto.state !== "running") { diagnostico(`audio-${contexto.state}`); reanudar(); } };
   function cerrar() {
@@ -60,7 +60,7 @@ export async function abrirMicrofono(texto: (valor: string) => void, estado: (va
         if (mensaje.tipo === "listo") { preparada = true; lista = true; intentos = 0; diagnostico("listo"); terminar(); estado(silenciado ? "Micrófono silenciado · sigo procesando tu instrucción" : "Escuchando. Puedes dictar la operación completa"); }
         else if (mensaje.tipo === "reconectar") { diagnostico("renovando"); socket.close(); }
         else if (mensaje.tipo === "error") { const error = new Error(typeof mensaje.mensaje === "string" ? mensaje.mensaje : "No se pudo procesar el audio"); terminar(error); cerrar(); estado(error.message); }
-        else if (mensaje.tipo === "hablando" && !pausado()) { window.speechSynthesis?.cancel(); window.dispatchEvent(new CustomEvent("synchronic:agente-hablando", { detail: false })); }
+        else if (mensaje.tipo === "hablando" && !pausado()) { window.speechSynthesis?.cancel(); window.dispatchEvent(new CustomEvent("abinova:agente-hablando", { detail: false })); }
         else if (mensaje.tipo === "texto" && typeof mensaje.texto === "string" && mensaje.texto.trim() && mensaje.texto.length <= 6000) vistaPrevia?.(mensaje.texto.trim());
         else if (mensaje.tipo === "instruccion" && typeof mensaje.texto === "string" && mensaje.texto.trim() && mensaje.texto.length <= 6000) texto(mensaje.texto.trim());
       };
@@ -82,7 +82,7 @@ export async function abrirMicrofono(texto: (valor: string) => void, estado: (va
     medios!.getAudioTracks().forEach(pista => { pista.enabled = !silenciado; pista.addEventListener?.("ended", () => { if (!cerrada) { diagnostico("pista-terminada"); cerrar(); estado("El dispositivo cerró el micrófono. Toca el robot para volver a activarlo"); } }); });
     await conectar();
     if (cerrada) return cerrar;
-    capturador = new AudioWorkletNode(contexto, "captura-synchronic");
+    capturador = new AudioWorkletNode(contexto, "captura-abinova");
     capturador.port.onmessage = evento => {
       if (cerrada || !lista || conexion?.readyState !== WebSocket.OPEN) return;
       if (conexion.bufferedAmount > 128000) { diagnostico("audio-acumulado"); conexion.close(); return; }

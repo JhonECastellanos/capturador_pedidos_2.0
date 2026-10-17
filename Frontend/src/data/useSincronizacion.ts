@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { INTERVALO_SINCRONIZACION_MS, type Envelope, type RevisionDatosDTO } from "@synchronic-jo/contrato";
+import { INTERVALO_SINCRONIZACION_MS, type Envelope, type RevisionDatosDTO } from "@abinova/contrato";
 import { respuestaRed } from "./api";
 
 /** Una consulta pequeña por pestaña visible; las listas solo se releen si cambian. */
@@ -21,7 +21,7 @@ export function useSincronizacion(usuarioId?: string) {
         // También refresca en la primera lectura y tras una desconexión.
         if (data.revision !== revision) {
           revision = data.revision;
-          window.dispatchEvent(new Event("synchronic:datos-actualizados"));
+          window.dispatchEvent(new Event("abinova:datos-actualizados"));
         }
       } catch {
         if (activo) { revision = undefined; setConectado(false); }

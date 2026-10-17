@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { Envelope, InventarioInicialDTO } from "@synchronic-jo/contrato";
+import type { Envelope, InventarioInicialDTO } from "@abinova/contrato";
 import type { ConteoInventario } from "../../../types";
 import { respuestaRed, usaApi } from "../../../data/api";
 import { claveConsulta } from "../../../data/query";

@@ -134,7 +134,7 @@ async def iniciar_preparacion(ajustes: Ajustes):
 
 
 async def convertir(datos: bytes) -> bytes:
-    with tempfile.TemporaryDirectory(prefix="synchronic-audio-") as carpeta:
+    with tempfile.TemporaryDirectory(prefix="abinova-audio-") as carpeta:
         origen = Path(carpeta) / "entrada"
         destino = Path(carpeta) / "salida.pcm"
         origen.write_bytes(datos)

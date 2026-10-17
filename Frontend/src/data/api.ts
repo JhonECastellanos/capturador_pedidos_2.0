@@ -1,4 +1,4 @@
-import type { Envelope, EnvelopeLista } from "@synchronic-jo/contrato";
+import type { Envelope, EnvelopeLista } from "@abinova/contrato";
 import { consultas, claveConsulta } from "./query";
 import { claveGuardado, resolverGuardado } from "./guardados";
 
@@ -19,7 +19,7 @@ function registrarAcceso(cuerpo: { data?: { expiraEn?: string } } | null, renova
 function expirarSesion() {
   if (sesionExpirada) return;
   sesionExpirada = true; expiraEn = 0; revisionAcceso++;
-  window.dispatchEvent(new Event("synchronic:sesion-expirada"));
+  window.dispatchEvent(new Event("abinova:sesion-expirada"));
 }
 
 function renovarAcceso() {

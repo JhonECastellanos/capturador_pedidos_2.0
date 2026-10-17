@@ -1,7 +1,7 @@
-# Modelo de datos — Synchronic.JO (PostgreSQL)
+# Modelo de datos — ABINOVA (PostgreSQL)
 
 Base de datos PostgreSQL que reemplaza a `localStorage` como fuente de verdad.
-Una sola empresa por instalación. Las instalaciones nuevas empiezan sin operaciones comerciales; las existentes se actualizan mediante migraciones que conservan datos e historial. No se importan datos de `ambie:v1:*` automáticamente.
+Una sola empresa por instalación. Las instalaciones nuevas empiezan sin operaciones comerciales; las existentes se actualizan mediante migraciones que conservan datos e historial. No se importan datos de `abinova:v1:*` automáticamente.
 
 Salir de un conteo conserva su estado abierto, participantes y líneas guardadas; libera únicamente la asignación del usuario que sale. Cancelarlo definitivamente es exclusivo del administrador: cambia estado/fecha de cierre y libera todas las asignaciones dentro de la misma transacción, sin eliminar cantidades/responsables/fechas ni modificar productos o movimientos de stock. Se reutilizan `conteosInventario`, `conteoLineas` y `participantesConteo`; no requiere tablas nuevas.
 

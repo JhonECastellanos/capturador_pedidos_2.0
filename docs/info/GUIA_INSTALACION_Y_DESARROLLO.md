@@ -2,7 +2,7 @@
 
 Contenido trasladado del README el 10/10/2026. Se conserva íntegro como referencia; las cifras y pendientes históricos corresponden a las fechas de sus secciones. Las novedades de CSV y descuadres se explican en [guardado y conciliación](GUARDADO_Y_CONCILIACION_V4P2.md).
 
-# Synchronic.JO
+# ABINOVA
 
 Aplicación para llevar el día a día de un negocio de ventas: clientes, productos, pedidos, cobros, inventario, compras, valores de venta y caja.
 
@@ -141,8 +141,8 @@ npm run front:dev                       # http://localhost:5173
 
 Dos cosas que conviene tener presentes:
 
-- La API no aplica migraciones al arrancar: se aplican con el paso `migrate` de arriba (o `npm run prisma:deploy --workspace synchronic-jo-backend`).
-- Al correr la API fuera de Docker necesita sus propias variables: crea `Backend/.env` con `DATABASE_URL` apuntando a `localhost` (`postgresql://ambie:<clave>@localhost:5432/ambie?schema=public`), no al nombre del servicio del compose, y con el resto de secretos del `.env` de la raíz.
+- La API no aplica migraciones al arrancar: se aplican con el paso `migrate` de arriba (o `npm run prisma:deploy --workspace abinova-backend`).
+- Al correr la API fuera de Docker necesita sus propias variables: crea `Backend/.env` con `DATABASE_URL` apuntando a `localhost` (`postgresql://abinova:<clave>@localhost:5432/abinova?schema=public`), no al nombre del servicio del compose, y con el resto de secretos del `.env` de la raíz.
 
 ## Autenticación
 
@@ -168,8 +168,8 @@ El acceso usa dos tokens:
 
 | Token | Vida | Dónde vive |
 |---|---|---|
-| Acceso | 15 minutos | Cookie `ambie_access` o Bearer para integraciones |
-| Refresco | 7 días | Cookie `ambie_refresh`; registro hasheado en PostgreSQL |
+| Acceso | 15 minutos | Cookie `abinova_access` o Bearer para integraciones |
+| Refresco | 7 días | Cookie `abinova_refresh`; registro hasheado en PostgreSQL |
 
 La firma del JWT se verifica localmente; además, cada solicitud consulta sesión y usuario para aplicar revocaciones, actividad y rol actual. El token de refresco es opaco, se almacena hasheado y se rota en cada uso.
 
@@ -184,7 +184,7 @@ npm run prueba:humo -- --url http://localhost:3100/api/v1
 Recorre el camino completo: entrar, crear cliente, crear producto, registrar pedido, cobrar, contar inventario y previsualizar el cierre. Cada paso dice si pasó y por qué falló si no pasó.
 
 ```bash
-npm run prueba:humo -- --url http://localhost:3100/api/v1 --email admin@ambie.local --password tu-clave
+npm run prueba:humo -- --url http://localhost:3100/api/v1 --email admin@abinova.local --password tu-clave
 ```
 
 ## Accesos
@@ -226,7 +226,7 @@ Desde la raíz, con Docker Desktop iniciado y el `.env` existente:
 powershell -ExecutionPolicy Bypass -File infra/desplegar.ps1
 ```
 
-El script construye las imágenes, respalda PostgreSQL si ya está funcionando, aplica las migraciones existentes y espera la salud de los servicios. No elimina volúmenes y conserva los datos existentes. Todos quedan en el proyecto `capturador_pedidos_20`: frontend/Nginx, API, PostgreSQL, Redis y MinIO. Cloudflare es optativo.
+El script construye las imágenes, respalda PostgreSQL si ya está funcionando, aplica las migraciones existentes y espera la salud de los servicios. No elimina volúmenes y conserva los datos existentes. Todos quedan en el proyecto `abinova`: frontend/Nginx, API, PostgreSQL, Redis y MinIO. Cloudflare es optativo.
 
 Enlaces para validar:
 
@@ -268,11 +268,11 @@ Frontend: 128 MB/0,5 CPU; API y PostgreSQL: 512 MB/1 CPU por servicio; MinIO: 38
 ```bash
 npm run verificar
 npm run prueba:cache
-docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml up -d --wait
+docker compose -p abinova-integracion -f docker-compose.yml -f docker-compose.pruebas.yml up -d --wait
 npm run prueba:integracion
 ```
 
-En Windows, con QA arriba, `node --env-file=.env Backend/scripts/probar-cache-caida.cjs` detiene únicamente Redis de `ambie-integracion`, escribe un gasto QA, verifica los totales y restaura Redis en `finally`. No ejecutes esa prueba contra producción. Al actualizar el frontend, recarga las pestañas abiertas para usar la nueva compilación.
+En Windows, con QA arriba, `node --env-file=.env Backend/scripts/probar-cache-caida.cjs` detiene únicamente Redis de `abinova-integracion`, escribe un gasto QA, verifica los totales y restaura Redis en `finally`. No ejecutes esa prueba contra producción. Al actualizar el frontend, recarga las pestañas abiertas para usar la nueva compilación.
 
 ## Organización del código
 
@@ -296,7 +296,7 @@ pantalla → contexto/fachada → dominio → repositorios
 
 Las pantallas no llevan reglas de negocio. Si una regla afecta pedidos, stock, caja o créditos, pasa por el dominio.
 
-El modo predeterminado usa la API: sesión con cookies, datos compartidos entre dispositivos y escrituras confirmadas antes de cerrar formularios. `VITE_API_BASE_URL=/api` se normaliza a `/api/v1`; `API_PROXY_TARGET` apunta por defecto a `http://localhost:3000`. Para conservar el modo local explícito usa `VITE_DATOS_ORIGEN=local`. Las claves existentes `ambie:v2:` no se borran ni se importan automáticamente a PostgreSQL.
+El modo predeterminado usa la API: sesión con cookies, datos compartidos entre dispositivos y escrituras confirmadas antes de cerrar formularios. `VITE_API_BASE_URL=/api` se normaliza a `/api/v1`; `API_PROXY_TARGET` apunta por defecto a `http://localhost:3000`. Para conservar el modo local explícito usa `VITE_DATOS_ORIGEN=local`. Las claves existentes `abinova:v2:` no se borran ni se importan automáticamente a PostgreSQL.
 
 ## Reglas importantes
 
@@ -364,12 +364,12 @@ Los paneles conservan los registros y formularios durante el refresco en segundo
 Pruebas de navegador requieren Chrome instalado y las dependencias de desarrollo (`npm install` desde la raíz). En PowerShell usar `npm.cmd`:
 
 ```powershell
-docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml up -d --build --wait
+docker compose -p abinova-integracion -f docker-compose.yml -f docker-compose.pruebas.yml up -d --build --wait
 $env:BASE_PRUEBAS_API='http://localhost:3100/api/v1'
 npm.cmd run prueba:integracion
 npm.cmd run demo:catalogo
 npm.cmd run prueba:paneles
-docker compose -p ambie-integracion -f docker-compose.yml -f docker-compose.pruebas.yml down
+docker compose -p abinova-integracion -f docker-compose.yml -f docker-compose.pruebas.yml down
 ```
 
 `demo:catalogo` carga 32 productos (Coca-Cola, Pepsi, papas, Doritos, De Todito, jugos naturales, sándwiches, entre otros), 8 clientes **ficticios** y pedidos con cantidades, estados y pagos variados. No contactes sus teléfonos ni trates esas ventas como reales. Repetirlo reutiliza nombres/teléfonos y las combinaciones de pedido ya existentes. `--solo-catalogo` omite los pedidos. No borra ejemplos anteriores ni se ejecuta automáticamente. Si se autoriza una instalación local de demostración, desde el host: `BASE_PRUEBAS_API=http://localhost:8080/api/v1` y `npm run demo:catalogo -- --demo-local-autorizado`. No usar en una empresa con datos reales para hacer pruebas.
@@ -418,7 +418,7 @@ La construcción inicial usa `VOICE_BUILD_TARGET=voz-hibrida`. La etapa posterio
 
 ### Comprobaciones actuales adicionales
 
-Se aplicaron las migraciones pendientes únicamente en `ambie_test`. Una configuración de prueba se confirmó, se releyó tras desconectar/reconectar PostgreSQL, conservó la clave cifrada y rechazó una versión antigua. Pedidos y productos mantuvieron sus cantidades de registros; la configuración ficticia se retiró al terminar. El ejercicio completo tomó 4.906 ms; esta cifra incluye varias lecturas y una reconexión y no representa la latencia de un solo guardado.
+Se aplicaron las migraciones pendientes únicamente en `abinova_test`. Una configuración de prueba se confirmó, se releyó tras desconectar/reconectar PostgreSQL, conservó la clave cifrada y rechazó una versión antigua. Pedidos y productos mantuvieron sus cantidades de registros; la configuración ficticia se retiró al terminar. El ejercicio completo tomó 4.906 ms; esta cifra incluye varias lecturas y una reconexión y no representa la latencia de un solo guardado.
 
 El servicio de voz QA confirmó salud HTTP 200, rechazo 401 sin autorización privada, estado 200 y aviso 409 al intentar transcribir sin preparar el reconocimiento. El WebSocket validó el ticket y devolvió el aviso de preparación. Estas pruebas no transcribieron un audio ni descargaron modelos.
 
@@ -438,7 +438,7 @@ Comprobación final de esta etapa V6P4: verificar completó compilación, tipos 
 
 ### Configurar un proveedor externo y probarlo en desarrollo
 
-El frontend de trabajo conserva la dirección `http://127.0.0.1:8180/admin/configuracion`, ahora con Vite en desarrollo y actualización automática. La API de pruebas sigue en 3100 y utiliza `ambie_test`; producción en 8080 permanece independiente. No se crea otro túnel público en esta etapa.
+El frontend de trabajo conserva la dirección `http://127.0.0.1:8180/admin/configuracion`, ahora con Vite en desarrollo y actualización automática. La API de pruebas sigue en 3100 y utiliza `abinova_test`; producción en 8080 permanece independiente. No se crea otro túnel público en esta etapa.
 
 | Campo | Qué debes colocar |
 |---|---|
@@ -466,7 +466,7 @@ Después de reemplazar la clave en la pantalla y obtener una prueba verde, habil
 La pantalla utiliza un único selector de proveedor, clave y catálogo buscable. URL, protocolo y límites quedan en Ajustes avanzados; audio y respaldo también se pliegan. Seleccionar un proveedor completa su conexión oficial y evita crear otra conexión idéntica. Una clave guardada no se muestra ni se sustituye al dejar el campo vacío.
 
 - Gemini: se corrigió la declaración de herramientas para enviar `parametersJsonSchema`. El campo anterior `parameters` rechazaba `additionalProperties` con HTTP 400. El catálogo híbrido excluye modelos que únicamente admiten audio Live.
-- OpenCode Go: es distinto de Zen; base `https://opencode.ai/zen/go/v1`. Envía identificación real `AMBIE/1.0` y `x-opencode-session`, estable al corregir el mismo borrador. La conexión QA conserva su clave cifrada y utiliza `mimo-v2.6-pro`, que completó un gasto ficticio y corrigió su pago. `glm-5.3-flash` respondió al transporte, pero omitió datos del ejercicio completo; no se considera validado para ese ejercicio.
+- OpenCode Go: es distinto de Zen; base `https://opencode.ai/zen/go/v1`. Envía identificación real `ABINOVA/1.0` y `x-opencode-session`, estable al corregir el mismo borrador. La conexión QA conserva su clave cifrada y utiliza `mimo-v2.6-pro`, que completó un gasto ficticio y corrigió su pago. `glm-5.3-flash` respondió al transporte, pero omitió datos del ejercicio completo; no se considera validado para ese ejercicio.
 - Zen: base `https://opencode.ai/zen/v1`. La clave probada corresponde a Go y Zen rechazó su acceso; el catálogo público no demuestra autorización. No se cambian claves entre servicios automáticamente.
 - OpenRouter: el filtro inicial muestra modelos gratuitos según valores de venta publicados de entrada, salida y solicitud; la búsqueda permite encontrar los demás. Se consultaron 458 modelos, 19 gratuitos en ese momento. Los que declaran no admitir herramientas quedan deshabilitados. La prueba real aprobó `apodex/apodex-1.1-mini:free`.
 - OpenCode complementa el catálogo con metadatos públicos de Models.dev, sin enviar claves ni datos comerciales. Caché de cinco minutos, límite de ocho MB y diez segundos; si falla, el catálogo principal sigue disponible y los ajustes avanzados permiten revisar el protocolo. Solo se marca incluido en Go si figura en sus metadatos. Las cuotas, modelos y valores de venta pueden cambiar.
@@ -557,7 +557,7 @@ Estos códigos pertenecen a la respuesta de la API; la consola del navegador sol
 
 Si el principal y el respaldo fallan, AGENTE_PROVEEDORES muestra los motivos de ambos, sin publicar el cuerpo privado ni credenciales, y usa el estado del último fallo. Por eso un rechazo de acceso inicial puede terminar en 502 del respaldo. Se conserva el borrador; interpretar no guarda una transacción.
 
-La documentación oficial consultada en https://docs.opencode.ai/docs/go/#where-can-i-use-it indica que Go está orientado a agentes de programación y supervisa el tráfico. Synchronic.JO envía User-Agent propio y x-opencode-session estable, pero sus pedidos comerciales no son tráfico de programación; esto podría contribuir al rechazo, sin que se haya confirmado su causa interna. No se simula otro cliente. Para el negocio se debe elegir un proveedor que admita aplicaciones comerciales; comprobar sus permisos y cuota en su consola. Go tiene ventanas de cinco horas, semana y mes según modelo; Step 5 Preview Free aparece sin límite de uso por tiempo limitado en la documentación, por lo que no se atribuye su rechazo observado a cuota agotada sin evidencia. Zen permite restringir modelos desde su consola (https://docs.opencode.ai/docs/zen/).
+La documentación oficial consultada en https://docs.opencode.ai/docs/go/#where-can-i-use-it indica que Go está orientado a agentes de programación y supervisa el tráfico. ABINOVA envía User-Agent propio y x-opencode-session estable, pero sus pedidos comerciales no son tráfico de programación; esto podría contribuir al rechazo, sin que se haya confirmado su causa interna. No se simula otro cliente. Para el negocio se debe elegir un proveedor que admita aplicaciones comerciales; comprobar sus permisos y cuota en su consola. Go tiene ventanas de cinco horas, semana y mes según modelo; Step 5 Preview Free aparece sin límite de uso por tiempo limitado en la documentación, por lo que no se atribuye su rechazo observado a cuota agotada sin evidencia. Zen permite restringir modelos desde su consola (https://docs.opencode.ai/docs/zen/).
 
 Prueba actual con proveedor configurado: dos sándwiches de pollo, cliente ocasional y crédito quedaron bloqueados; corregir únicamente a billetera conservó los productos y $23.000, con respuestas en 1.951 y 1.551 ms. No se confirmó ninguna venta. No se garantiza disponibilidad del proveedor ni se modificó producción.
 Validación actual: 32 pruebas del asistente aprobadas, incluida la combinación principal 403 y respaldo 503; ambas causas permanecen visibles y el cuerpo privado no se publica.
@@ -572,9 +572,9 @@ El lector de QR/barras se integra al buscador de ventas y conteos, con bip y lib
 No incluye VibeVoice, descargas de modelos locales ni cambio de la rama principal o despliegue del negocio. Antes de publicar en producción: respaldo, migración no destructiva, compilación, salud de servicios y prueba HTTPS en un teléfono físico. Las pruebas de cámara sintética y transporte simulado se distinguen de esa prueba.
 
 
-## Synchronic.JO · V8P4
+## ABINOVA · V8P4
 
-La marca y los workspaces son Synchronic.JO; la versión aparece en el acceso y el encabezado. Una instalación existente conserva su `COMPOSE_PROJECT_NAME`, sus volúmenes, correos, cookies y claves históricas de compatibilidad. Renombrar estos identificadores sin migrarlos produciría otra base vacía; el cambio visual no borra ni reemplaza los documentos.
+La marca y los workspaces son ABINOVA; la versión aparece en el acceso y el encabezado. Una instalación existente conserva su `COMPOSE_PROJECT_NAME`, sus volúmenes, correos, cookies y claves históricas de compatibilidad. Renombrar estos identificadores sin migrarlos produciría otra base vacía; el cambio visual no borra ni reemplaza los documentos.
 
 Configuración → Apariencia permite elegir una paleta, colores con selector o código hexadecimal, fuente, tres portadas empresariales y una imagen propia. La vista previa no guarda hasta pulsar Guardar apariencia. Los ajustes se confirman en PostgreSQL y llegan a los otros dispositivos mediante la revisión compartida y una lectura de respaldo. Se valida contraste y contenido de imágenes; estas portadas son públicas porque aparecen antes del ingreso. No subir imágenes con datos privados.
 
@@ -594,6 +594,6 @@ El servicio precalienta un motor Faster-Whisper ya instalado antes de declarar s
 
 El capturador prepara su módulo en paralelo al permiso del navegador. Ante un corte de red solicita un ticket nuevo, con hasta tres reintentos fallidos, conservando el micrófono, muteo y borrador. Descarta el audio del corte y no repite órdenes anteriores. Un cierre voluntario o la pérdida del dispositivo requiere volver a tocar el robot. La locución dispone de recuperación si el navegador omite su evento de finalización. Una suspensión de audio intenta reanudarse; si el navegador exige un gesto, se indica tocar el robot.
 
-Para diagnosticar una interrupción en DevTools: `monitorEvents(window, "synchronic:audio-diagnostico")`. Muestra fase, tiempo y código de cierre, sin transcripciones ni claves. Los logs de `voice-agent` añaden `audio-listo` con tiempo y `audio-cerrado` con duración y categoría de cierre. Comparar estos eventos con Network > WS; detener el seguimiento con `unmonitorEvents`.
+Para diagnosticar una interrupción en DevTools: `monitorEvents(window, "abinova:audio-diagnostico")`. Muestra fase, tiempo y código de cierre, sin transcripciones ni claves. Los logs de `voice-agent` añaden `audio-listo` con tiempo y `audio-cerrado` con duración y categoría de cierre. Comparar estos eventos con Network > WS; detener el seguimiento con `unmonitorEvents`.
 
 Ventas comparte el flujo entre administrador/vendedor: Cliente → Productos → Revisar pedido. «Entregado ahora» y «Por preparar» quedan después de las líneas y antes del pago. El crédito exige un cliente registrado.

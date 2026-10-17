@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { useNavigate } from "react-router-dom";
-import type { InstruccionAgente, RevisionAgente } from "@synchronic-jo/contrato";
+import type { InstruccionAgente, RevisionAgente } from "@abinova/contrato";
 import { api } from "../../data/api";
 
 let revision: RevisionAgente | null = null;
@@ -23,7 +23,7 @@ export function elegirOpcionDictada(texto: string, actual?: RevisionAgente | nul
   return { ...actual.instruccion, lineas: actual.instruccion.lineas?.map(l => l.producto === grupo.texto ? { ...l, producto: opcion.nombre } : l) };
 }
 export function cambiarRevisionAgente(r: RevisionAgente | null) { revision = r; listeners.forEach(l => l()); }
-export function avisoAgente(mensaje: string) { window.dispatchEvent(new CustomEvent("ambie:agente-aviso", { detail: mensaje })); }
+export function avisoAgente(mensaje: string) { window.dispatchEvent(new CustomEvent("abinova:agente-aviso", { detail: mensaje })); }
 export function useRevisionAgente() { return useSyncExternalStore(l => { listeners.add(l); return () => { listeners.delete(l); }; }, revisionAgente); }
 export async function confirmarDesdeAgente() {
   if (!revision || revision.faltantes.length) { avisoAgente(revision?.resumen ?? "Primero prepara una operación para revisar"); return false; }
@@ -58,7 +58,7 @@ export function useOperacionAgente(operacion: InstruccionAgente["operacion"], ap
         try { resultado = await funciones.current.guardar(); }
         finally { escriturasPendientes--; }
         if (!resultado) { if (propia) avisoAgente("No se confirmó el guardado. El detalle sigue disponible para corregir o reintentar"); return false; }
-        if (propia) window.dispatchEvent(new CustomEvent("synchronic:agente-guardado", { detail: propia.id }));
+        if (propia) window.dispatchEvent(new CustomEvent("abinova:agente-guardado", { detail: propia.id }));
         if (propia && revisionAgente() === anterior) { cambiarRevisionAgente(null); avisoAgente("Operación guardada correctamente"); if (volverAlInicio) navegar(propia.ruta.startsWith("/admin") ? "/admin" : propia.ruta.startsWith("/inventario") ? "/inventario" : "/vendedor", { replace: true }); }
         return true;
       } catch (e) { avisoAgente(e instanceof Error ? e.message : "No se pudo confirmar; conserva el detalle y reintenta"); return false; }

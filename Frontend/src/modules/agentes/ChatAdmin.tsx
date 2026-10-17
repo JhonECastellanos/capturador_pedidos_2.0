@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import type { RevisionAgente } from "@synchronic-jo/contrato";
+import type { RevisionAgente } from "@abinova/contrato";
 import { useAuth } from "../../context/auth";
 import { api } from "../../data/api";
 import { cambiarRevisionAgente, elegirOpcionDictada, revisionAgente, useRevisionAgente, useOperacionAgente } from "./operacion-agente";
@@ -21,8 +21,8 @@ export default function ChatAdmin() {
   useEffect(() => { vigente.current = true; return () => { vigente.current = false; }; }, []);
   useEffect(() => {
     const actualizar = () => { if (sesionChatVigente(sesion)) setMensajes(sesion.mensajes); };
-    window.addEventListener("synchronic:chat-consulta", actualizar);
-    return () => window.removeEventListener("synchronic:chat-consulta", actualizar);
+    window.addEventListener("abinova:chat-consulta", actualizar);
+    return () => window.removeEventListener("abinova:chat-consulta", actualizar);
   }, [sesion]);
   useEffect(() => { ultimo.current?.scrollIntoView({ block: "nearest" }); }, [mensajes, ocupado]);
   function agregar(mensaje: MensajeChat) { actualizarChat(sesion, { mensajes: [...sesion.mensajes, mensaje].slice(-40) }); setMensajes(sesion.mensajes); }

@@ -1,6 +1,6 @@
 /* global AudioWorkletProcessor, sampleRate, registerProcessor */
 /* La salida permanece en silencio; solo se envía PCM mono a 16 kHz. */
-class CapturaSynchronic extends AudioWorkletProcessor {
+class CapturaABINOVA extends AudioWorkletProcessor {
   constructor() {
     super(); this.pendiente = []; this.fase = 0; this.suma = 0; this.muestras = 0;
   }
@@ -23,4 +23,4 @@ class CapturaSynchronic extends AudioWorkletProcessor {
     return true;
   }
 }
-registerProcessor("captura-synchronic", CapturaSynchronic);
+registerProcessor("captura-abinova", CapturaABINOVA);

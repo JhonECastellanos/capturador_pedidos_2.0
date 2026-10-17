@@ -1,28 +1,32 @@
 @import "tailwindcss";
+@source "../src";
+@source "../../Control/src";
+@font-face { font-family: "Inter"; src: url("/assets/branding/Inter.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Space Grotesk"; src: url("/assets/branding/SpaceGrotesk.ttf") format("truetype"); font-weight: 300 700; font-display: swap; }
 
 
 /*
- * Paleta inicial Synchronic.JO: superficies claras, tinta oscura y naranja.
+ * Paleta inicial ABINOVA: superficies claras, tinta oscura y naranja.
  * Los tokens permiten personalizar todas las pantallas sin duplicar flujos.
  */
 @theme {
   --color-header: #ffffff;
-  --color-header-ink: #182638;
-  --color-accent-ink: #182638;
-  --color-ink: #182638;
-  --color-ink-soft: #506075;
+  --color-header-ink: #211d55;
+  --color-accent-ink: #211d55;
+  --color-ink: #211d55;
+  --color-ink-soft: #575a7c;
   --color-ink-faint: #64748b;
 
-  --color-paper: #f5f7fa;
+  --color-paper: #f7f8ff;
   --color-paper-raised: #ffffff;
   --color-paper-sunken: #edf0f5;
 
-  --color-accent: #f97316;
-  --color-accent-dark: #c2410c;
-  --color-accent-soft: #fff0e5;
+  --color-accent: #4e4cdb;
+  --color-accent-dark: #3d3bb4;
+  --color-accent-soft: #efeeff;
 
-  --color-teal: #4a7c3a;
-  --color-teal-soft: #e2ecd9;
+  --color-teal: #625bba;
+  --color-teal-soft: #eeedff;
 
   --color-cafe: #7d5a38;
   --color-rosa: #d97b96;

@@ -1,4 +1,4 @@
-# La API vive en un monorepo: depende de @synchronic-jo/contrato, que está en
+# La API vive en un monorepo: depende de @abinova/contrato, que está en
 # ../Compartido. Por eso el contexto de Docker es la raíz del proyecto y no
 # Backend/. Con el contexto dentro de Backend la instalación falla, porque el
 # paquete del contrato no se encuentra.
@@ -19,8 +19,8 @@ COPY Frontend/package.json ./Frontend/
 # imagen del servidor y con sus dependencias casi doblaría el tamaño.
 # `npm rebuild` ejecuta los scripts de instalación que npm no corre por
 # defecto (argon2 nativo y los motores de Prisma).
-RUN npm ci --workspace @synchronic-jo/contrato --workspace synchronic-jo-backend --include-workspace-root \
- && npm rebuild --workspace synchronic-jo-backend
+RUN npm ci --workspace @abinova/contrato --workspace abinova-backend --include-workspace-root \
+ && npm rebuild --workspace abinova-backend
 
 # ─── 2. Compilación ────────────────────────────────────────────────
 FROM deps AS build
@@ -31,9 +31,9 @@ COPY Backend ./Backend
 # Orden obligatorio: el contrato primero (la API importa su código generado),
 # después el cliente de Prisma (la API importa sus tipos) y al final la API.
 # npm exec resuelve el binario instalado aunque npm lo hoistee a la raíz.
-RUN npm run build --workspace @synchronic-jo/contrato \
+RUN npm run build --workspace @abinova/contrato \
  && npm exec --no -- prisma generate --schema Backend/prisma/schema.prisma \
- && npm run build --workspace synchronic-jo-backend
+ && npm run build --workspace abinova-backend
 
 # ─── 3. Dependencias de producción ─────────────────────────────────
 FROM node:24-alpine AS prod-deps
@@ -45,8 +45,8 @@ COPY Frontend/package.json ./Frontend/
 # npm hoistea las dependencias del contrato a /app/node_modules. Si el
 # workspace no tiene dependencias propias, su carpeta node_modules no llega a
 # existir y el COPY de la etapa final falla; la creamos para que sea determinista.
-RUN npm ci --omit=dev --workspace @synchronic-jo/contrato --workspace synchronic-jo-backend --include-workspace-root \
- && npm rebuild argon2 --workspace synchronic-jo-backend \
+RUN npm ci --omit=dev --workspace @abinova/contrato --workspace abinova-backend --include-workspace-root \
+ && npm rebuild argon2 --workspace abinova-backend \
  && mkdir -p Compartido/node_modules Backend/node_modules
 
 # ─── 4. Imagen final ───────────────────────────────────────────────
@@ -64,7 +64,7 @@ COPY --from=build /app/Compartido/dist ./Compartido/dist
 COPY --from=prod-deps /app/Compartido/package.json ./Compartido/package.json
 COPY --from=prod-deps /app/Backend/package.json ./package.json
 
-# tsx ejecuta la semilla y los scripts; Prisma aplica las migraciones del
+# tsx ejecuta la semilla y el bootstrap; Prisma aplica las migraciones del
 # servicio `migrate`. Se instalan de forma global porque con NODE_ENV=production
 # npm omite las dependencias de desarrollo y así no alteran el árbol de la API.
 # La versión de Prisma se toma del cliente instalado para que no queden
@@ -78,12 +78,11 @@ RUN TSX_VERSION=$(node -p "require('./package.json').devDependencies.tsx.replace
 COPY --from=build /app/Backend/dist ./dist
 COPY --from=build /app/Backend/prisma ./prisma
 COPY --from=build /app/Backend/src/common/consecutivos.ts ./src/common/consecutivos.ts
-COPY --from=build /app/Backend/scripts ./scripts
 RUN prisma generate --schema prisma/schema.prisma
 
 # La API no debería ejecutarse como root.
-RUN addgroup -S synchronic && adduser -S synchronic -G synchronic
-USER synchronic
+RUN addgroup -S abinova && adduser -S abinova -G abinova
+USER abinova
 
 EXPOSE 3000
 
@@ -92,7 +91,7 @@ EXPOSE 3000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/v1/salud').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-LABEL org.opencontainers.image.title="Synchronic.JO" org.opencontainers.image.version="V8P4"
+LABEL org.opencontainers.image.title="ABINOVA" org.opencontainers.image.version="V8P4"
 CMD ["node", "dist/main.js"]
 
 # La imagen por defecto sigue siendo la API existente.

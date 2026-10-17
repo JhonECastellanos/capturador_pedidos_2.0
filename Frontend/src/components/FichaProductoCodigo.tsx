@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { ProductoDTO } from "@synchronic-jo/contrato";
+import type { ProductoDTO } from "@abinova/contrato";
 import { categorias } from "../data/semilla";
 import { useOperaciones } from "../context/operaciones";
 import { api } from "../data/api";
@@ -39,7 +39,7 @@ export function FichaProductoCodigo({ codigoInicial = "", productoInicial, produ
         resultado = { producto: await api<ProductoDTO>("/productos", "POST", { nombre, unidad, precioVenta: Number(precio), costoActual: Number(costo), stockMinimo: Number(minimo), stock: 0, ...(extension.trim() ? { extension: extension.trim() } : {}), ...(categoria.trim() ? { categoria: categoria.trim() } : {}), ...(base ? { productoBaseId: base.id, extension } : {}), ...(codigo.trim() ? { codigosLectura: [codigo.trim()] } : {}) }) };
       }
       if (archivo && !conteoId) { try { await actualizarImagenProducto(resultado.producto.id, archivo); } catch { resultado.aviso = "Producto guardado; no se pudo subir la foto. Puedes cargarla desde Inventario sin repetir el alta"; } }
-      window.dispatchEvent(new Event("synchronic:datos-actualizados")); if (abierta.current) onGuardado(resultado);
+      window.dispatchEvent(new Event("abinova:datos-actualizados")); if (abierta.current) onGuardado(resultado);
     } catch (e) { setError(e instanceof Error ? e.message : "No se pudo guardar el producto."); } finally { setOcupado(false); }
   }
   const campo = "mt-1 w-full rounded-lg border border-line bg-paper-raised px-3 py-2";

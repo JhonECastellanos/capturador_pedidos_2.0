@@ -1,8 +1,8 @@
 {
-  "name": "synchronic-jo-backend",
+  "name": "abinova-backend",
   "version": "0.1.0",
   "private": true,
-  "description": "API de Synchronic.JO — capturador de pedidos",
+  "description": "API de ABINOVA — capturador de pedidos",
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"
   },
@@ -16,12 +16,10 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "prisma db seed",
     "bootstrap": "tsx prisma/bootstrap.ts",
-    "verificar": "tsc -p tsconfig.scripts.json",
-    "prueba:humo": "tsx scripts/humo-api.ts",
-    "prueba:integracion": "node --env-file=../.env scripts/integracion-api.ts"
+    "verificar": "tsc -p tsconfig.scripts.json"
   },
   "dependencies": {
-    "@synchronic-jo/contrato": "^1.0.0",
+    "@abinova/contrato": "^1.0.0",
     "@fastify/cookie": "^11.0.2",
     "@fastify/rate-limit": "^10.3.0",
     "@keyv/redis": "^5.1.6",

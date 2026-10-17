@@ -1,0 +1,333 @@
+{
+  "fecha": "2026-10-16T19:02:12.508Z",
+  "origen": "http://127.0.0.1:8790/",
+  "resultado": "APROBADO",
+  "navegador": "Chrome real automatizado",
+  "resultados": [
+    {
+      "ancho": 390,
+      "alto": 844,
+      "tarjetas": [
+        {
+          "nombre": "Esencial",
+          "alto": 426,
+          "ancho": 358,
+          "recorte": false
+        },
+        {
+          "nombre": "Negocios",
+          "alto": 426,
+          "ancho": 358,
+          "recorte": false
+        },
+        {
+          "nombre": "Profesional",
+          "alto": 426,
+          "ancho": 358,
+          "recorte": false
+        },
+        {
+          "nombre": "Empresarial",
+          "alto": 426,
+          "ancho": 358,
+          "recorte": false
+        }
+      ],
+      "sinRecorte": true,
+      "errores": 0
+    },
+    {
+      "ancho": 412,
+      "alto": 915,
+      "tarjetas": [
+        {
+          "nombre": "Esencial",
+          "alto": 426,
+          "ancho": 380,
+          "recorte": false
+        },
+        {
+          "nombre": "Negocios",
+          "alto": 426,
+          "ancho": 380,
+          "recorte": false
+        },
+        {
+          "nombre": "Profesional",
+          "alto": 426,
+          "ancho": 380,
+          "recorte": false
+        },
+        {
+          "nombre": "Empresarial",
+          "alto": 426,
+          "ancho": 380,
+          "recorte": false
+        }
+      ],
+      "sinRecorte": true,
+      "errores": 0
+    },
+    {
+      "ancho": 390,
+      "alto": 700,
+      "tarjetas": [
+        {
+          "nombre": "Esencial",
+          "alto": 426,
+          "ancho": 358,
+          "recorte": false
+        },
+        {
+          "nombre": "Negocios",
+          "alto": 426,
+          "ancho": 358,
+          "recorte": false
+        },
+        {
+          "nombre": "Profesional",
+          "alto": 426,
+          "ancho": 358,
+          "recorte": false
+        },
+        {
+          "nombre": "Empresarial",
+          "alto": 426,
+          "ancho": 358,
+          "recorte": false
+        }
+      ],
+      "sinRecorte": true,
+      "errores": 0
+    },
+    {
+      "ancho": 412,
+      "alto": 700,
+      "tarjetas": [
+        {
+          "nombre": "Esencial",
+          "alto": 426,
+          "ancho": 380,
+          "recorte": false
+        },
+        {
+          "nombre": "Negocios",
+          "alto": 426,
+          "ancho": 380,
+          "recorte": false
+        },
+        {
+          "nombre": "Profesional",
+          "alto": 426,
+          "ancho": 380,
+          "recorte": false
+        },
+        {
+          "nombre": "Empresarial",
+          "alto": 426,
+          "ancho": 380,
+          "recorte": false
+        }
+      ],
+      "sinRecorte": true,
+      "errores": 0
+    },
+    {
+      "ancho": 768,
+      "alto": 700,
+      "tarjetas": [
+        {
+          "nombre": "Esencial",
+          "alto": 448,
+          "ancho": 600,
+          "recorte": false
+        },
+        {
+          "nombre": "Negocios",
+          "alto": 448,
+          "ancho": 600,
+          "recorte": false
+        },
+        {
+          "nombre": "Profesional",
+          "alto": 448,
+          "ancho": 600,
+          "recorte": false
+        },
+        {
+          "nombre": "Empresarial",
+          "alto": 448,
+          "ancho": 600,
+          "recorte": false
+        }
+      ],
+      "sinRecorte": true,
+      "errores": 0
+    },
+    {
+      "ancho": 1440,
+      "alto": 700,
+      "tarjetas": [
+        {
+          "nombre": "Esencial",
+          "alto": 430,
+          "ancho": 315,
+          "recorte": false
+        },
+        {
+          "nombre": "Negocios",
+          "alto": 430,
+          "ancho": 315,
+          "recorte": false
+        },
+        {
+          "nombre": "Profesional",
+          "alto": 430,
+          "ancho": 315,
+          "recorte": false
+        },
+        {
+          "nombre": "Empresarial",
+          "alto": 430,
+          "ancho": 315,
+          "recorte": false
+        }
+      ],
+      "sinRecorte": true,
+      "errores": 0
+    },
+    {
+      "ancho": 1440,
+      "alto": 900,
+      "tarjetas": [
+        {
+          "nombre": "Esencial",
+          "alto": 430,
+          "ancho": 315,
+          "recorte": false
+        },
+        {
+          "nombre": "Negocios",
+          "alto": 430,
+          "ancho": 315,
+          "recorte": false
+        },
+        {
+          "nombre": "Profesional",
+          "alto": 430,
+          "ancho": 315,
+          "recorte": false
+        },
+        {
+          "nombre": "Empresarial",
+          "alto": 430,
+          "ancho": 315,
+          "recorte": false
+        }
+      ],
+      "sinRecorte": true,
+      "errores": 0
+    },
+    {
+      "ancho": 320,
+      "alto": 568,
+      "tarjetas": [
+        {
+          "nombre": "Esencial",
+          "alto": 511,
+          "ancho": 288,
+          "recorte": false
+        },
+        {
+          "nombre": "Negocios",
+          "alto": 511,
+          "ancho": 288,
+          "recorte": false
+        },
+        {
+          "nombre": "Profesional",
+          "alto": 511,
+          "ancho": 288,
+          "recorte": false
+        },
+        {
+          "nombre": "Empresarial",
+          "alto": 511,
+          "ancho": 288,
+          "recorte": false
+        }
+      ],
+      "sinRecorte": true,
+      "errores": 0
+    },
+    {
+      "ancho": 390,
+      "alto": 500,
+      "tarjetas": [
+        {
+          "nombre": "Esencial",
+          "alto": 416,
+          "ancho": 358,
+          "recorte": false
+        },
+        {
+          "nombre": "Negocios",
+          "alto": 416,
+          "ancho": 358,
+          "recorte": false
+        },
+        {
+          "nombre": "Profesional",
+          "alto": 416,
+          "ancho": 358,
+          "recorte": false
+        },
+        {
+          "nombre": "Empresarial",
+          "alto": 416,
+          "ancho": 358,
+          "recorte": false
+        }
+      ],
+      "sinRecorte": true,
+      "errores": 0
+    },
+    {
+      "ancho": 844,
+      "alto": 390,
+      "tarjetas": [
+        {
+          "nombre": "Esencial",
+          "alto": 430,
+          "ancho": 600,
+          "recorte": false
+        },
+        {
+          "nombre": "Negocios",
+          "alto": 430,
+          "ancho": 600,
+          "recorte": false
+        },
+        {
+          "nombre": "Profesional",
+          "alto": 430,
+          "ancho": 600,
+          "recorte": false
+        },
+        {
+          "nombre": "Empresarial",
+          "alto": 430,
+          "ancho": 600,
+          "recorte": false
+        }
+      ],
+      "sinRecorte": true,
+      "errores": 0
+    }
+  ],
+  "movimientoReducido": true,
+  "catalogoAPI": "Contrato simulado: actualización, compra, 404, red e inválido",
+  "sinJavaScript": true,
+  "audioFisico": "No probado; sin cambios en audio",
+  "produccion": "Nginx Docker local, catálogo público y experiencia publicados"
+}

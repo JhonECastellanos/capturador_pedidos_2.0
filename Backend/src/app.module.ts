@@ -24,6 +24,8 @@ import { CierresModule } from "./cierres/cierres.module";
 import { DashboardModule } from "./dashboard/dashboard.module";
 import { AgentesModule } from "./agentes/agentes.module";
 import { NotificacionesModule } from "./notificaciones/notificaciones.module";
+import { WorkflowsModule } from "./workflows/workflows.module";
+import { LicenciasModule } from "./licencias/licencias.module";
 
 @Module({
   imports: [
@@ -32,6 +34,7 @@ import { NotificacionesModule } from "./notificaciones/notificaciones.module";
     // cualquier módulo, no solo desde AuthModule.
     JwtModule.register({ global: true }),
     PrismaModule,
+    LicenciasModule,
     SincronizacionModule,
     AuthModule,
     CatalogosModule,
@@ -50,6 +53,7 @@ import { NotificacionesModule } from "./notificaciones/notificaciones.module";
     AgentesModule,
     NotificacionesModule,
     AparienciaModule,
+    WorkflowsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: AuthGuard }, { provide: APP_INTERCEPTOR, useClass: GuardadoInterceptor }, { provide: APP_INTERCEPTOR, useClass: AuditoriaInterceptor }],
 })
